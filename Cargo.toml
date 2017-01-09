@@ -5,3 +5,4 @@ authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
 dragorust-engine = {path = "engine"}
+dragorust-vertexdeclaration-derive = {path = "vertexdeclaration-derive"}

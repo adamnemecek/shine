@@ -123,9 +123,9 @@ impl From<(f32, f32, f32, f32)> for Float32x4 {
 /// assert!( f32x4!() == Float32x4(0., 0., 0., 0.) );
 #[macro_export]
 macro_rules! f32x4 {
-    ($_x:expr, $_y:expr, $_z:expr, $_w:expr) => { render::Float32x4($_x as f32, $_y as f32, $_z as f32, $_w as f32) };
-    ($_x:expr) => { render::Float32x4($_x as f32, $_x as f32, $_x as f32, $_x as f32) };
-    () => { {let f : render::Float32x4 = Default::default(); f} };
+    ($_x:expr, $_y:expr, $_z:expr, $_w:expr) => { $crate::render::Float32x4($_x as f32, $_y as f32, $_z as f32, $_w as f32) };
+    ($_x:expr) => { $crate::render::Float32x4($_x as f32, $_x as f32, $_x as f32, $_x as f32) };
+    () => { {let f : $crate::render::Float32x4 = Default::default(); f} };
 }
 
 
@@ -162,9 +162,9 @@ impl From<(f32, f32, f32)> for Float32x3 {
 /// assert!( f32x3!() == Float32x3(0., 0., 0.) );
 #[macro_export]
 macro_rules! f32x3 {
-    ($_x:expr, $_y:expr, $_z:expr) => { render::Float32x3($_x as f32, $_y as f32, $_z as f32) };
-    ($_x:expr) => { render::Float32x3::new($_x as f32, $_x as f32, $_x as f32) };
-    () => { {let f : render::Float32x3 = Default::default(); f} };
+    ($_x:expr, $_y:expr, $_z:expr) => { $crate::render::Float32x3($_x as f32, $_y as f32, $_z as f32) };
+    ($_x:expr) => { $crate::render::Float32x3::new($_x as f32, $_x as f32, $_x as f32) };
+    () => { {let f : $crate::render::Float32x3 = Default::default(); f} };
 }
 
 
@@ -201,8 +201,8 @@ impl From<(f32, f32)> for Float32x2 {
 /// assert!( f32x2!() == Float32x2(0., 0.) );
 #[macro_export]
 macro_rules! f32x2 {
-    ($_x:expr, $_y:expr) => { render::Float32x2($_x as f32, $_y as f32) };
-    ($_x:expr) => { render::Float32x2::new($_x as f32, $_x as f32) };
-    () => { {let f : render::Float32x2 = Default::default(); f} };
+    ($_x:expr, $_y:expr) => { $crate::render::Float32x2($_x as f32, $_y as f32) };
+    ($_x:expr) => { $crate::render::Float32x2::new($_x as f32, $_x as f32) };
+    () => { {let f : $crate::render::Float32x2 = Default::default(); f} };
 }
 

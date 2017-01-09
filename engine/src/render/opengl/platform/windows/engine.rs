@@ -133,7 +133,7 @@ impl GLEngine {
                 self.window_count -= 1;
             }
 
-            /// messages are delegated to the window in the window proc
+            // messages are delegated to the window in the window proc
             user32::TranslateMessage(&msg);
             user32::DispatchMessageW(&msg);
         }
