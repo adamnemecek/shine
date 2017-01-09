@@ -15,14 +15,12 @@ use world::*;
 use viewdata::*;
 
 
-
 #[derive(Copy, Clone, Debug)]
 #[derive(VertexDeclaration)]
 struct VxLine {
     position: render::Float32x4,
     normal: render::Float32x3,
 }
-
 
 /*trace_macros!(true);
 vertex_declaration! { VxLine, VxLineLocation,
@@ -35,10 +33,11 @@ trace_macros!(false);
 */
 
 pub fn main() {
-    //println!("{:?}", VxLine::get_declaration());
-    println!("{:?}", VxLine::get_declaration(1));
+    let vx_decl = VxLine::get_declaration(1);
+    println!("{:?}", vx_decl);
+    println!("{:?}", vx_decl[VxLineLocation::position]);
 
-   /* let mut engine = render::Engine::new().expect("Could not initialize render engine");
+    let mut engine = render::Engine::new().expect("Could not initialize render engine");
 
     let world = WorldWrapper::new();
 
@@ -92,5 +91,5 @@ pub fn main() {
 
             sub_window.end_render().unwrap();
         }
-    }*/
+    }
 }

@@ -36,41 +36,32 @@ fn impl_offset_of(container: &Ident, field: &Ident) -> quote::Tokens {
 
 fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
     let name = &ast.ident;
-    let enum_name = Ident::new(format!("{}Location", name));
 
     let impl_get_declaration;
-    let impl_location_enums;
+    let impl_location;
     if let Body::Struct(VariantData::Struct(ref fields)) = ast.body {
         impl_get_declaration = impl_get_declaration_for_struct(name, fields);
-        impl_location_enums = impl_location_enum_for_struct(name, fields);
+        impl_location = impl_location_for_struct(name, fields);
     } else {
         panic!("VertexDeclaration is not implemented for {:?}", ast.body)
     }
 
-    println!("{}", impl_get_declaration.as_str());
-    //println!("{}", impl_location_enums.as_str());
+    println!("{}", impl_location.as_str());
 
-    let result = quote! {
+    quote! {
         impl #name {
             #impl_get_declaration
         }
 
-        enum #enum_name {
-            #impl_location_enums
-            Count
-        }
-    };
-
-    println!("{}", result.as_str());
-
-    result
+        #impl_location
+    }
 }
 
 
 fn impl_get_declaration_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::Tokens {
     let field_count = fields.len();
 
-    let gen_va: Vec<quote::Tokens> = fields.iter().map(|ref field| {
+    let gen: Vec<quote::Tokens> = fields.iter().map(|ref field| {
         let ident = field.ident.as_ref().unwrap();
         let ty = &field.ty;
 
@@ -83,19 +74,28 @@ fn impl_get_declaration_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::
     quote! {
         fn get_declaration(vertex_count: usize) -> [dragorust_engine::render::VertexAttributeImpl; #field_count] {
             use std::mem;
-            #gen_va
+            #gen
         }
     }
 }
 
-fn impl_location_enum_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::Tokens {
-    let mut gen = quote::Tokens::new();
+fn impl_location_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::Tokens {
+    let mod_name = Ident::new(format!("{}Location", name));
 
-    for ref field in fields.iter() {
-        let ident = field.ident.as_ref().unwrap();
-        gen.append(ident);
-        gen.append(",");
+    let gen: Vec<quote::Tokens> = fields.iter().enumerate().map(|(idx, ref field)| {
+        let ident = &field.ident;
+
+        quote! {
+            #[allow(non_upper_case_globals)]
+            #[allow(dead_code)]
+            pub const #ident : usize = #idx;
+        }
+    }).collect();
+
+    quote! {
+        #[allow(non_snake_case)]
+        mod #mod_name {
+            #(#gen)*
+        }
     }
-
-    gen
 }

@@ -4,7 +4,7 @@ use std::cell::{RefCell};
 use render::*;
 
 use render::opengl::lowlevel::*;
-use render::opengl::commandqueue::*;
+//use render::opengl::commandqueue::*;
 
 
 pub struct GLVertexBuffer {

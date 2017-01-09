@@ -7,8 +7,6 @@ extern crate kernel32;
 extern crate gdi32;
 #[cfg(target_os = "windows")]
 extern crate user32;
-#[cfg(target_os = "windows")]
-extern crate dwmapi;
 
 #[macro_use]
 mod types;
