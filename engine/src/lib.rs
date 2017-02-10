@@ -3,10 +3,8 @@
 
 #[macro_reexport(PrimitiveEnum)]
 extern crate dragorust_primitiveenum_derive;
-#[macro_reexport(VertexDeclaration)]
-extern crate dragorust_vertexdeclaration_derive;
-#[macro_reexport(ShaderDeclaration)]
-extern crate dragorust_shaderdeclaration_derive;
+#[macro_reexport(VertexDeclaration,ShaderDeclaration)]
+extern crate dragorust_render_derive;
 
 extern crate arrayvec;
 

@@ -18,6 +18,14 @@ struct VxColorTex {
     tex_coord: Float32x2,
 }
 
+#[derive(Copy, Clone, Debug)]
+#[derive(ShaderDeclaration)]
+struct ShSimple {}
+
+impl ShaderDeclaration for ShSimple {
+    type Attribute = ShSimpleAttribute;
+    type Uniform = ShSimpleUniform;
+}
 
 #[derive(Copy, Clone, Debug)]
 #[derive(PrimitiveEnum)]
@@ -44,14 +52,7 @@ enum ShSimpleUniform {
     Color,
 }
 
-#[derive(Copy, Clone, Debug)]
-//#[derive(ShaderDeclaration)]
-struct ShSimple {}
 
-impl ShaderDeclaration for ShSimple {
-    type Attribute = ShSimpleAttribute;
-    type Uniform = ShSimpleUniform;
-}
 
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]

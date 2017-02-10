@@ -1,21 +1,7 @@
-extern crate proc_macro;
-extern crate syn;
-#[macro_use]
-extern crate quote;
+use syn;
+use quote;
 
-use proc_macro::TokenStream;
-use syn::{Ident, Field};
-
-#[proc_macro_derive(ShaderDeclaration)]
-pub fn shader_declaration(input: TokenStream) -> TokenStream {
-    let s = input.to_string();
-    let ast = syn::parse_derive_input(&s).unwrap();
-    let gen = impl_shader_declaration(&ast);
-    gen.parse().unwrap()
-}
-
-
-fn convert_snake_to_camel_case(intput: &str) -> String {
+pub fn convert_snake_to_camel_case(intput: &str) -> String {
     let mut is_snake = true;
     let mut result = String::new();
     result.reserve(intput.len());
@@ -42,7 +28,7 @@ fn convert_snake_to_camel_case(intput: &str) -> String {
 }
 
 
-fn impl_offset_of(container: &Ident, field: &Ident) -> quote::Tokens {
+pub fn impl_offset_of(container: &syn::Ident, field: &syn::Ident) -> quote::Tokens {
     quote! { unsafe {
         use std::mem;
         // Make sure the field actually exists. This line ensures that a
@@ -59,28 +45,4 @@ fn impl_offset_of(container: &Ident, field: &Ident) -> quote::Tokens {
 
         result as usize
     } }
-}
-
-
-fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
-    let name = &ast.ident;
-
-    //let impl_get_declaration;
-    //let impl_location;
-    /*if let Body::Enum(VariantData::Enum(ref fields)) = ast.body {
-        impl_location = impl_get_declaration_for_enum(name, fields);
-    } else*/ {
-        // panic!("Derive proc-macro ShaderDeclaration: no implemented for {:?}", ast.body)
-    }
-
-    //println!("impl_location = \n{}", impl_location.as_str());
-
-    quote! {
-        //#impl_location
-    }
-}
-
-
-fn impl_get_declaration_for_enum(name: &Ident, fields: &Vec<Field>) -> quote::Tokens {
-    quote! {}
 }

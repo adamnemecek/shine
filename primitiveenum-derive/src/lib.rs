@@ -17,6 +17,7 @@ pub fn primitive_enum(input: TokenStream) -> TokenStream {
 
 fn impl_primitive_enum(ast: &syn::DeriveInput) -> quote::Tokens {
     let name = &ast.ident;
+    println!("{:?}", ast);
 
     if let Body::Enum(ref enum_values) = ast.body {
         return impl_get_declaration_for_enum(name, enum_values);
