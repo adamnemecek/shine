@@ -110,10 +110,6 @@ impl GLWindowImpl {
             glutin::WindowEvent::KeyboardInput { .. } => {
                 println!("kb input")
             }
-            glutin::WindowEvent::Closing => {
-                return PostMassageAction::SurfaceLost;
-            }
-
             glutin::WindowEvent::Closed => {
                 return PostMassageAction::Remove;
             }
@@ -273,6 +269,10 @@ impl GLEngineImpl {
                 // process message
                 match window.handle_message(event) {
                     PostMassageAction::Remove => {
+                        if let Some(ref mut handler) = surface_handler {
+                            handler.borrow_mut().on_lost(&window);
+                        }
+
                         window.borrow_mut().as_mut().unwrap().release();
                         *window.borrow_mut() = None;
                         self.windows.remove(&window_id);

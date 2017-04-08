@@ -6,6 +6,7 @@ pub use render::*;
 
 mod renderer;
 mod world;
+mod foo;
 
 use world::World;
 //use renderer::Render;
@@ -47,6 +48,7 @@ void main()
 }
 
 fn main() {
+    foo::do_foo();
     let world = World::new();
 
     let mut render_engine = render::create_engine().expect("Could not initialize render engine");
