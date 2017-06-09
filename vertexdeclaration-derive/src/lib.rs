@@ -46,10 +46,11 @@ fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         panic!("VertexDeclaration is not implemented for {:?}", ast.body)
     }
 
-    println!("{}", impl_location.as_str());
+    //println!("{}", impl_get_declaration.as_str());
+    //println!("{}", impl_location.as_str());
 
     quote! {
-        impl #name {
+        impl ::dragorust_engine::render::VertexDeclaration for #name {
             #impl_get_declaration
         }
 
@@ -59,20 +60,23 @@ fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 
 
 fn impl_get_declaration_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::Tokens {
-    let field_count = fields.len();
+    //let field_count = fields.len();
 
-    let gen: Vec<quote::Tokens> = fields.iter().map(|ref field| {
+    let mut gen: Vec<quote::Tokens> = fields.iter().map(|ref field| {
         let ident = field.ident.as_ref().unwrap();
         let ty = &field.ty;
 
         let offset_of = impl_offset_of(name, &ident);
         quote! {
-            dragorust_engine::render::VertexAttributeImpl::new_from_element::< #ty > ( vertex_count, #offset_of, mem::size_of::< #name > () )
+            ::dragorust_engine::render::VertexAttributeImpl::new_from_element::< #ty > ( #offset_of, mem::size_of::< #name > () )
         }
     }).collect();
 
+    gen.resize(16, quote! {::dragorust_engine::render::VertexAttributeImpl::new()});
+
     quote! {
-        fn get_declaration(vertex_count: usize) -> [dragorust_engine::render::VertexAttributeImpl; #field_count] {
+        #[allow(dead_code)]
+        fn get_declaration() -> [::dragorust_engine::render::VertexAttributeImpl; ::dragorust_engine::render::MAX_VERTEX_ATTRIBUTE_COUNT /*#field_count*/] {
             use std::mem;
             #gen
         }

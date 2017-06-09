@@ -131,25 +131,25 @@ impl Drop for GLShaderProgram {
 
 /// Low level render command to set the source and compile (link) a shader program
 struct CreateCommand {
-    program: Rc<RefCell<GLShaderProgram>>,
+    target: Rc<RefCell<GLShaderProgram>>,
     sources: ShaderSources,
 }
 
 impl GLCommand for CreateCommand {
     fn process(&mut self, ll: &mut LowLevel) {
-        self.program.borrow_mut().create_program(ll, &mut self.sources);
+        self.target.borrow_mut().create_program(ll, &mut self.sources);
     }
 }
 
 
 /// Low level render command to release a shader program
 struct ReleaseCommand {
-    program: Rc<RefCell<GLShaderProgram>>,
+    target: Rc<RefCell<GLShaderProgram>>,
 }
 
 impl GLCommand for ReleaseCommand {
     fn process(&mut self, ll: &mut LowLevel) {
-        self.program.borrow_mut().release(ll);
+        self.target.borrow_mut().release(ll);
     }
 }
 
@@ -172,12 +172,11 @@ impl GLShaderProgramWrapper {
         self.wrapped.clone()
     }
 
-    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut CommandQueue, sources: I)
-    {
-        println!("set_sources");
+    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut CommandQueue, sources: I) {
+        println!("GLShaderProgram - set_sources");
         queue.platform.add(
             CreateCommand {
-                program: self.wrapped.clone(),
+                target: self.wrapped.clone(),
                 sources: sources
                     .map(|&(t, s)| ShaderSource(gl_get_shader_enum(t), s.as_bytes().to_vec()))
                     .collect()
@@ -185,12 +184,11 @@ impl GLShaderProgramWrapper {
         );
     }
 
-    pub fn release(&mut self, queue: &mut CommandQueue)
-    {
-        println!("release shader");
+    pub fn release(&mut self, queue: &mut CommandQueue) {
+        println!("GLShaderProgram - release");
         queue.platform.add(
             ReleaseCommand {
-                program: self.wrapped.clone()
+                target: self.wrapped.clone()
             }
         );
     }

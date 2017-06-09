@@ -2,8 +2,6 @@
 
 #[macro_use]
 extern crate dragorust_engine;
-#[macro_use]
-extern crate dragorust_vertexdeclaration_derive;
 
 use std::time::Duration;
 
@@ -13,6 +11,7 @@ mod viewdata;
 pub use dragorust_engine::*;
 use world::*;
 use viewdata::*;
+use render::VertexDeclaration;
 
 
 #[derive(Copy, Clone, Debug)]
@@ -33,7 +32,7 @@ trace_macros!(false);
 */
 
 pub fn main() {
-    let vx_decl = VxLine::get_declaration(1);
+    let vx_decl = VxLine::get_declaration();
     println!("{:?}", vx_decl);
     println!("{:?}", vx_decl[VxLineLocation::position]);
 

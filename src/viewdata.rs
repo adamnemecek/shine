@@ -5,27 +5,17 @@ use std::ops::Deref;
 use world::*;
 use dragorust_engine::render::*;
 
-/*
-static sh_source = [
-    (ShaderType::VertexShader, r#"
- attribute vec4 vPosition;
- void main()
- {
-     gl_Position = vPosition;
- }"#),
-    (ShaderType::FragmentShader, r#"
- void main()
- {
-  gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
- }"#)];
-*/
-
+#[derive(Copy, Clone, Debug, VertexDeclaration)]
+struct VxPos {
+    position: Float32x3,
+}
 
 /// Structure to store view dependent data
 pub struct ViewData {
     world: WorldWrapper,
     pub render_queue: CommandQueue,
     shader: ShaderProgram,
+    vertex_buffer: VertexBuffer,
 }
 
 impl ViewData {
@@ -34,6 +24,7 @@ impl ViewData {
             world: world,
             render_queue: CommandQueue::new(),
             shader: ShaderProgram::new(),
+            vertex_buffer: VertexBuffer::new(),
         }
     }
 
@@ -64,7 +55,24 @@ impl SurfaceEventHandler for ViewDataWrapper {
         let ref mut view_data = *self.0.borrow_mut();
         let queue = &mut view_data.render_queue;
 
-        //view_data.shader.set_sources(&mut view_data.queue, sh_source.iter());
+        let sh_source = [
+            (ShaderType::VertexShader, r#"
+ attribute vec4 vPosition;
+ void main()
+ {
+     gl_Position = vPosition;
+ }"#),
+            (ShaderType::FragmentShader, r#"
+ void main()
+ {
+  gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+ }"#)];
+
+        let vertices = [VxPos { position: f32x3!(1f32, 0f32, 0f32) }, VxPos { position: f32x3!(1f32, 1f32, 0f32) }, VxPos { position: f32x3!(0f32, 1f32, 0f32) }].to_vec();
+
+        view_data.shader.set_sources(queue, sh_source.iter());
+        view_data.vertex_buffer.set_transient(queue, &vertices );
+        //VxPos::get_declaration(vertices.len()).iter(), unsafe { slice::from_raw_parts(vertices.as_ptr() as *const u8, vertices.len() * mem::size_of::<VxPos>()) }
 
         window.start_render().unwrap();
         window.process_queue(queue).unwrap();
@@ -89,7 +97,7 @@ impl SurfaceEventHandler for ViewDataWrapper {
 }
 
 impl InputEventHandler for ViewDataWrapper {
-    fn on_key(&mut self, window: &mut Window, sc: ScanCode, vk: Option<VirtualKeyCode>, is_down: bool) {
+    fn on_key(&mut self, _: &mut Window, sc: ScanCode, vk: Option<VirtualKeyCode>, is_down: bool) {
         println!("key: {}, {:?}, {}", sc, vk, is_down);
     }
 }

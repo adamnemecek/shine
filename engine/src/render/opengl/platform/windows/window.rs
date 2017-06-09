@@ -273,6 +273,7 @@ pub struct GLWindowWrapper {
     size: Size,
     position: Position,
     context: Context,
+    ll: LowLevel,
     surface_handler: Option<Rc<RefCell<SurfaceEventHandler>>>,
     input_handler: Option<Rc<RefCell<InputEventHandler>>>,
 }
@@ -340,6 +341,7 @@ impl GLWindow {
             surface_handler: None,
             input_handler: None,
             context: context,
+            ll: LowLevel::new(),
         }));
 
         //connect the OS and rust window
@@ -432,6 +434,12 @@ impl GLWindow {
 
     pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
         let queue = &mut queue.platform;
+        let ref mut window = self.0.borrow_mut();
+
+        for ref mut cmd in queue.iter_mut() {
+            cmd.process(&mut window.ll);
+        }
+
         queue.clear();
         Ok(())
     }

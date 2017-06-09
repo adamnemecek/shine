@@ -23,8 +23,7 @@ impl VertexAttribute {
         }
     }
 
-    #[allow(unused_variables)]
-    pub fn new_from_element<T: VertexAttributeInfo>(vertex_count: usize, offset: usize, stride: usize) -> VertexAttribute {
+    pub fn new_from_element<T: VertexAttributeInfo>(offset: usize, stride: usize) -> VertexAttribute {
         VertexAttribute {
             component_type: T::get_gl_type_id(),
             components: T::get_component_count(),

@@ -4,73 +4,98 @@
 /// Maximum number of vertex attributes stored in a buffer.
 pub const MAX_VERTEX_ATTRIBUTE_COUNT: usize = 16;
 
-#[macro_export]
-macro_rules! vertex_declaration {
-    // internal rule init
-    (@init $type:ty = $default:expr) => { $default };
-    (@init $type:ty) => { Default::default() };
+use std::mem;
+use std::slice;
 
-    // internal rule offset_of
-    (@offset_of $s:tt, $m:ident) => {0};
+use render::*;
 
-    // internal rule as_item
-    (@as_item $i:ident) => {$i};
+/// Trait to get the vertex declaration.
+///
+/// Vertex declaration is map from location to VertexAttributes, but as location
+/// mapping is continuous an array is used instead.
+pub trait VertexDeclaration {
+    /// Return an iterator to iterate over the vertex components.
+    //fn iter() -> Iterator<Item=VertexAttribute> where Self : Sized;
 
-    //(@concat_ident $i:ident,$i2:ident) => {$i2};
-
-    // the macro implementation
-    ($decl:ident, $loc: ident, attributes{$($name:ident: $type:ty $(= $default:expr)* ),+})  => {
-
-        #[allow(non_camel_case_types)]
-        #[derive(Debug)]
-        pub enum $loc {
-            $($name,)*
-            Count,
-        }
-
-        #[allow(dead_code, non_camel_case_types)]
-        #[derive(Copy, Clone, Debug)]
-        #[repr(C)]
-        pub struct $decl {
-            $(pub $name: $type),*
-        }
-
-        impl $decl {
-            pub fn new() -> $decl {
-                $decl {
-                    $($name: vertex_declaration!{@init $type $(= $default)*}),*
-                }
-            }
-
-            fn get_declaration(vertex_count: usize) -> [render::VertexAttributeImpl; $loc::Count as usize] {
-                use std::mem;
-                [
-                    $(render::VertexAttributeImpl::new_from_element::<$type>(
-                        vertex_count,
-                        vertex_declaration!{@offset_of $decl, $name},
-                        mem::size_of::<$decl>()
-                    )),*
-                ]
-            }
-
-            pub fn get_location_by_name(name: &str) -> $loc {
-                match name {
-                    $(stringify!($name) => $loc::$name),*,
-                    _ => $loc::Count,
-                }
-            }
-        }
-
-        impl Default for $decl {
-            fn default() -> $decl {
-                $decl::new()
-            }
-        }
-    };
-
-    // handle trailing comma
-    ($decl:ident, $loc: ident, attributes{$($name:ident: $type:ty $(= $default:expr)* ),*,})  => {
-        vertex_declaration!{ $decl, $loc, attributes{ $( $name: $type $(= $default)*),* }}
-    };
+    fn get_declaration() -> [VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT];
 }
 
+
+/// Trait to define vertex declaration.
+pub trait TransientVertexSource {
+    /// Return the vertex declaration and vertex source
+    fn to_vertex_source<'a>(&self) -> ([VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8]);
+}
+
+impl<'a, V: 'a + VertexDeclaration + Sized> TransientVertexSource for &'a [V] {
+    fn to_vertex_source<'b>(&self) -> ([VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT], &'b [u8])
+    {
+        let mut attributes = [VertexAttribute::new(); MAX_VERTEX_ATTRIBUTE_COUNT];
+
+        /*for (src, dst) in attributes.iter_mut().zip(V::iter()) {
+            *src = *dst;
+        }*/
+
+        for (src, dst) in attributes.iter_mut().zip(V::get_declaration().iter()) {
+            *src = *dst;
+        }
+
+        (
+            attributes,
+            unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<V>()) }
+        )
+    }
+}
+
+impl<V: VertexDeclaration + Sized> TransientVertexSource for Vec<V> {
+    fn to_vertex_source<'a>(&self) -> ([VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8])
+    {
+        let mut attributes = [VertexAttribute::new(); MAX_VERTEX_ATTRIBUTE_COUNT];
+
+        /*for (src, dst) in attributes.iter_mut().zip(V::iter()) {
+            *src = *dst;
+        }*/
+
+        for (src, dst) in attributes.iter_mut().zip(V::get_declaration().iter()) {
+            *src = *dst;
+        }
+
+        (
+            attributes,
+            unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<V>()) }
+        )
+    }
+}
+
+
+/// Structure to store a vertex buffer
+pub struct VertexBuffer {
+    /// Stores the platform dependent implementation.
+    pub platform: VertexBufferImpl
+}
+
+impl VertexBuffer {
+    /// Creates an empty shader.
+    pub fn new() -> VertexBuffer {
+        VertexBuffer { platform: VertexBufferImpl::new() }
+    }
+
+    /// Sets the content of the buffer from a transient source.
+    ///
+    /// Transient means that, the source my be modified, droped after the function call, thus
+    /// a copy is created from the data.
+    ///
+    /// No render operation is processed, only a command in the queue is stored.
+    /// The HW data is access only during queue processing.
+    pub fn set_transient<'a, VS: TransientVertexSource>(&mut self, queue: &mut CommandQueue, vertex_source: &VS) {
+        self.platform.set_transient(queue, vertex_source);
+    }
+
+    /// Releases the hw resources of the buffer.
+    ///
+    /// No render operation is processed, only a command in the queue is stored.
+    /// The HW data is access only during queue processing.
+    pub fn release(&mut self, queue: &mut CommandQueue) {
+        self.platform.release(queue);
+    }
+}
