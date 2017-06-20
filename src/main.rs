@@ -7,11 +7,15 @@ type SPSCInt = SPSCState<i32>;
 fn main() {
     let state = SPSCInt::new();
 
-    let mut p = state.produce();
-    let c = state.consume();
+    for x in 0..500 {
+        {
+            let mut p = state.produce();
+            *p = x;
+        }
 
-    *p = 123;
-    println!("{}", *c);
-
-    println!("Hello, world!");
+        {
+            let c = state.consume();
+            assert_eq!(*c, x);
+        }
+    }
 }
