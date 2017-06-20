@@ -1,2 +1,5 @@
 target/
 **/*.rs.bk
+.idea/workspace.xml
+.idea/tasks.xml
+Cargo.lock
