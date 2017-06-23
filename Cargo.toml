@@ -4,3 +4,8 @@ version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
+libc = "*"
+gl = "*"
+glutin = "*"
+
+

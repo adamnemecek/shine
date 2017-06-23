@@ -1,20 +1,21 @@
+#![allow(dead_code)]
+
 use std::cell::{UnsafeCell};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc};
 use std::ops::{Deref, DerefMut};
 
-
 type AtomicFlag = AtomicUsize;
 
 /// Triple buffer that uses atomic operations to rotate the 3 buffers during consume/produce operations
-/// It is not an spsc queue as some massages can be dropped based.
-// flag bits:
-// newWrite   = (flags & 0x40)
-// produceIndex = (flags & 0x30) >> 4       buffer to be produced, write to
-// intermediateIndex = (flags & 0xC) >> 2   intermediate buffer (transit zone)
-// consumeIndex  = (flags & 0x3)            buffer to consume, consume from
-struct TripleBuffer<T> {
+pub struct TripleBuffer<T> {
     buffers: UnsafeCell<[T; 3]>,
+
+    // flag bits:
+    // newWrite   = (flags & 0x40)
+    // produceIndex = (flags & 0x30) >> 4       buffer to be produced, write to
+    // intermediateIndex = (flags & 0xC) >> 2   intermediate buffer (transit zone)
+    // consumeIndex  = (flags & 0x3)            buffer to consume, consume from
     flags: AtomicFlag,
 }
 
@@ -76,22 +77,26 @@ impl<T> TripleBuffer<T> {
 }
 
 
-/// Producer part of the communication.
-pub struct Producer<T>(Arc<TripleBuffer<T>>);
+/// Sender part of the communication.
+pub struct Sender<T>(Arc<TripleBuffer<T>>);
 
 // The receiver can be sent from place to place, so long as it
 // is not used to receive non-sendable things.
-unsafe impl<T: Send> Send for Producer<T> {}
+unsafe impl<T: Send> Send for Sender<T> {}
 
-//impl<T> !Sync for Producer<T> { }
+//impl<T> !Sync for Sender<T> { }
 
-impl<T> Producer<T> {
-    pub fn send_buffer(&self) -> Result<RefProduced<T>, ()> {
-        Ok(RefProduced(&self.0, self.0.get_produce_index()))
+impl<T> Sender<T> {
+    pub fn new(owner: &Arc<TripleBuffer<T>>) -> Sender<T> {
+        Sender(owner.clone())
+    }
+
+    pub fn send_buffer(&self) -> Result<RefSendBuffer<T>, ()> {
+        Ok(RefSendBuffer(&self.0, self.0.get_produce_index()))
     }
 }
 
-impl<T: Copy> Producer<T> {
+impl<T: Copy> Sender<T> {
     pub fn send(&self, value: T) -> Result<(), ()> {
         match self.send_buffer() {
             Ok(mut b) => {
@@ -104,47 +109,51 @@ impl<T: Copy> Producer<T> {
 }
 
 /// Reference to the buffer held by the producer
-pub struct RefProduced<'a, T: 'a>(&'a TripleBuffer<T>, usize);
+pub struct RefSendBuffer<'a, T: 'a>(&'a TripleBuffer<T>, usize);
 
-impl<'a, T> Drop for RefProduced<'a, T> {
+impl<'a, T> Drop for RefSendBuffer<'a, T> {
     fn drop(&mut self) {
         self.0.set_produce();
     }
 }
 
-impl<'a, T> Deref for RefProduced<'a, T> {
+impl<'a, T> Deref for RefSendBuffer<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
         unsafe { &(*self.0.buffers.get())[self.1] }
     }
 }
 
-impl<'a, T> DerefMut for RefProduced<'a, T> {
+impl<'a, T> DerefMut for RefSendBuffer<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { &mut (*self.0.buffers.get())[self.1] }
     }
 }
 
 
-/// Consumer part of the communication
-pub struct Consumer<T>(Arc<TripleBuffer<T>>);
+/// Receiver part of the communication
+pub struct Receiver<T>(Arc<TripleBuffer<T>>);
 
 // The consumer can be sent from place to place, so long as it
 // is not used to receive non-sendable things.
-unsafe impl<T: Send> Send for Consumer<T> {}
+unsafe impl<T: Send> Send for Receiver<T> {}
 
-//impl<T> !Sync for Consumer<T> { }
+//impl<T> !Sync for Receiver<T> { }
 
-impl<T> Consumer<T> {
-    pub fn receive_buffer(&self) -> Result<RefConsumed<T>, ()> {
+impl<T> Receiver<T> {
+    pub fn new(owner: &Arc<TripleBuffer<T>>) -> Receiver<T> {
+        Receiver(owner.clone())
+    }
+
+    pub fn receive_buffer(&self) -> Result<RefReceiveBuffer<T>, ()> {
         match self.0.try_get_consume_index() {
-            Ok(idx) => Ok(RefConsumed(&self.0, idx)),
+            Ok(idx) => Ok(RefReceiveBuffer(&self.0, idx)),
             Err(_) => Err(())
         }
     }
 }
 
-impl<T: Copy> Consumer<T> {
+impl<T: Copy> Receiver<T> {
     pub fn receive(&self) -> Result<T, ()> {
         match self.receive_buffer() {
             Ok(b) => Ok(*b),
@@ -154,23 +163,17 @@ impl<T: Copy> Consumer<T> {
 }
 
 /// Reference to the buffer held by the consumer
-pub struct RefConsumed<'a, T: 'a>(&'a TripleBuffer<T>, usize);
+pub struct RefReceiveBuffer<'a, T: 'a>(&'a TripleBuffer<T>, usize);
 
-impl<'a, T> Deref for RefConsumed<'a, T> {
+impl<'a, T> Deref for RefReceiveBuffer<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
         unsafe { &(*self.0.buffers.get())[self.1] }
     }
 }
 
-impl<'a, T> DerefMut for RefConsumed<'a, T> {
+impl<'a, T> DerefMut for RefReceiveBuffer<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { &mut (*self.0.buffers.get())[self.1] }
     }
-}
-
-
-pub fn channel<T: Default>() -> (Producer<T>, Consumer<T>) {
-    let a = Arc::new(TripleBuffer::new());
-    (Producer(a.clone()), Consumer(a.clone()))
 }
