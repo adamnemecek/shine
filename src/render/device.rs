@@ -1,4 +1,6 @@
 use std::time::Duration;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 #[derive(Debug)]
 pub enum EngineFeatures {
@@ -19,7 +21,7 @@ pub enum EngineError {
 pub enum WindowError {
     IoError(::std::io::Error),
     ContextLost,
-    Unknown,
+    //Unknown,
 }
 
 pub trait RenderWindow {
@@ -28,14 +30,13 @@ pub trait RenderWindow {
 
     fn set_title(&self, title: &str) -> Result<(), WindowError>;
 
-    fn handle_message(&mut self, timeout: Option<Duration>);
-    fn render_start(&self) -> Result<(), WindowError>;
-    fn render_end(&self) -> Result<(), WindowError>;
+    fn handle_message(&mut self, timeout: Option<Duration>) -> bool;
+    fn render_start(&mut self) -> Result<&mut Self, WindowError>;
+    fn render_end(&mut self) -> Result<&mut Self, WindowError>;
 }
 
 pub trait RenderEngine: Drop + Sized {
     type Window: RenderWindow;
-    fn new() -> Result<Self, ()>;
 
-    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Self::Window, EngineError>;
+    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Rc<RefCell<Self::Window>>, EngineError>;
 }
