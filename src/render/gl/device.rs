@@ -4,115 +4,118 @@ extern crate gl;
 use std::time::{Duration};
 use std::rc::{Rc, Weak};
 use std::cell::{RefCell};
-use render::{RenderEngine, RenderWindow};
+use std::ops::{Deref, DerefMut};
+use render::{IEngine, IWindow};
 use render::{EngineFeatures, EngineError, WindowError};
 
 use render::gl::lowlevel::LowLevel;
 
 #[allow(dead_code)]
-pub struct GLWindow {
-    window: Option<glutin::Window>,
+pub struct GLWindowImpl {
+    window: glutin::Window,
     event_loop: glutin::EventsLoop,
     ll: LowLevel,
 }
 
-pub type GLWindowHandle = Rc<RefCell<GLWindow>>;
-
-impl GLWindow {
-    fn new<T: Into<String>>(width: u32, height: u32, title: T) -> Result<GLWindowHandle, EngineError> {
+impl GLWindowImpl {
+    fn new<T: Into<String>>(width: u32, height: u32, title: T) -> Result<GLWindowImpl, EngineError> {
         let event_loop = glutin::EventsLoop::new();
-        glutin::WindowBuilder::new()
+        match glutin::WindowBuilder::new()
             .with_title(title)
             .with_dimensions(width, height)
             .with_vsync()
             .build(&event_loop)
-            .map_err(|e|
-                match e {
-                    glutin::CreationError::OsError(str) => EngineError::OsError(str),
-                    glutin::CreationError::RobustnessNotSupported => EngineError::FeatureNotSupported(EngineFeatures::Robustness),
-                    glutin::CreationError::OpenGlVersionNotSupported => EngineError::VersionNotSupported,
-                    glutin::CreationError::NoAvailablePixelFormat => EngineError::NoAvailableFormat,
-                    _ => EngineError::Unknown,
-                })
-            //.map(|window| window.make_current())
-            .map(|window|
-                Rc::new(RefCell::new(GLWindow {
-                    window: Some(window),
+            {
+                Err(glutin::CreationError::OsError(str)) => Err(EngineError::OsError(str)),
+                Err(glutin::CreationError::RobustnessNotSupported) => Err(EngineError::FeatureNotSupported(EngineFeatures::Robustness)),
+                Err(glutin::CreationError::OpenGlVersionNotSupported) => Err(EngineError::VersionNotSupported),
+                Err(glutin::CreationError::NoAvailablePixelFormat) => Err(EngineError::NoAvailableFormat),
+                Err(_) => Err(EngineError::Unknown),
+                Ok(win) => Ok(GLWindowImpl {
+                    window: win,
                     event_loop: event_loop,
                     ll: LowLevel::new()
-                })))
+                })
+            }
     }
 
-    fn make_current(&mut self) -> Result<&mut GLWindow, WindowError> {
-        self.window.as_ref().ok_or(WindowError::ContextLost)
-            .and_then(|win| unsafe { (*win).make_current() }
-                .map_err(|e| (match e {
-                    glutin::ContextError::IoError(ioe) => WindowError::IoError(ioe),
-                    glutin::ContextError::ContextLost => WindowError::ContextLost,
-                    //_ => WindowError::Unknown,
-                }))
-            )?;
-
-        Ok(self)
+    fn make_current(&mut self) -> Result<&mut GLWindowImpl, WindowError> {
+        match unsafe { self.window.make_current() } {
+            Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
+            Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
+            //Err(_) => WindowError::Unknown,
+            Ok(_) => Ok(&mut self)
+        }
     }
 
-    fn swap_buffers(&mut self) -> Result<&mut GLWindow, WindowError> {
-        self.window.as_ref().ok_or(WindowError::ContextLost)
-            .and_then(|win| (*win).swap_buffers()
-                .map_err(|e| (match e {
-                    glutin::ContextError::IoError(ioe) => WindowError::IoError(ioe),
-                    glutin::ContextError::ContextLost => WindowError::ContextLost,
-                    //_ => WindowError::Unknown,
-                })))?;
-
-        Ok(self)
+    fn swap_buffers(&mut self) -> Result<&mut GLWindowImpl, WindowError> {
+        match self.window.swap_buffers() {
+            Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
+            Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
+            //Err(_) => WindowError::Unknown,
+            Ok(_) => Ok(&mut self),
+        }
     }
 
-    fn init_gl_functions(&mut self) -> Result<&mut GLWindow, WindowError> {
-        self.window.as_ref().ok_or(WindowError::ContextLost)
-            .and_then(|win| {
-                gl::load_with(|symbol| (*win).get_proc_address(symbol) as *const _);
-                Ok(())
-            })?;
-
-        Ok(self)
+    fn init_gl_functions(&mut self) -> Result<&mut GLWindowImpl, WindowError> {
+        gl::load_with(|symbol| self.window.get_proc_address(symbol) as *const _);
+        Ok(&mut self)
     }
 }
 
-impl RenderWindow for GLWindow {
+
+pub struct GLWindow {
+    win_impl: Rc<RefCell<GLWindow>>,
+}
+/*
+impl Deref for GLWindow {
+    type Target = GLWindowImpl;
+
+    fn deref(&self) -> &GLWindowImpl {
+        &self.win_impl.borrow()
+    }
+}
+
+impl DerefMut for GLWindow {
+    fn deref_mut(&mut self) -> &mut GLWindowImpl {
+        &mut self.win_impl.borrow_mut()
+    }
+}*/
+
+impl IWindow for GLWindow {
     fn close(&mut self) {
         if self.is_closed() {
             return;
         }
-        self.window = None;
+        drop(self.win_impl);
     }
 
     fn is_closed(&self) -> bool {
-        self.window.is_none()
+        Rc::strong_count(&self.win_impl) > 0
     }
 
-    fn set_title(&self, title: &str) -> Result<(), WindowError> {
-        self.window.as_ref().ok_or(WindowError::ContextLost)
+    fn set_title(&mut self, title: &str) -> Result<(), WindowError> {
+        Rc::get_mut(&mut self.win_impl).ok_or(WindowError::ContextLost)
             .and_then(|win| {
-                (*win).set_title(&title);
+                win.window.set_title(&title);
                 Ok(())
             })
     }
 
     #[allow(unused_variables)]
     fn handle_message(&mut self, timeout: Option<Duration>) -> bool {
-        if self.window.is_none() {
+        if self.is_closed() {
             return false;
         }
 
         let mut is_closing = false;
+        let winId = self.win_impl.id();
 
         {
-            let win = self.window.as_ref().unwrap();
             self.event_loop.poll_events(|event|
                 match event {
                     glutin::Event::WindowEvent { event, window_id } => {
-                        assert_eq! (window_id, (*win).id());
+                        assert_eq! (window_id, winId);
                         match event {
                             glutin::WindowEvent::Closed => {
                                 is_closing = true;
@@ -159,11 +162,11 @@ impl GLEngine {
     }
 }
 
-impl RenderEngine for GLEngine {
+impl IEngine for GLEngine {
     type Window = GLWindow;
 
-    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<GLWindowHandle, EngineError> {
-        GLWindow::new(width, height, title).and_then(
+    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<GLWindow, EngineError> {
+        GLWindowImpl::new(width, height, title).and_then(
             |hwin| {
                 // init opengl function
                 if let Err(e) = hwin.borrow_mut()
@@ -179,7 +182,7 @@ impl RenderEngine for GLEngine {
                 }
 
                 self.windows.push(Rc::downgrade(&hwin));
-                Ok(hwin)
+                Ok(GLWindow { hwin })
             })
     }
 }
