@@ -1,6 +1,4 @@
 use std::time::Duration;
-use std::rc::Rc;
-use std::cell::RefCell;
 
 #[derive(Debug)]
 pub enum EngineFeatures {
@@ -25,17 +23,17 @@ pub enum WindowError {
 }
 
 pub trait IWindow {
-    fn close(&mut self);
     fn is_closed(&self) -> bool;
+    fn close(&mut self);
 
     fn set_title(&mut self, title: &str) -> Result<(), WindowError>;
 
     fn handle_message(&mut self, timeout: Option<Duration>) -> bool;
-    fn render_start(&mut self) -> Result<&mut Self, WindowError>;
-    fn render_end(&mut self) -> Result<&mut Self, WindowError>;
+    fn render_start(&mut self) -> Result<(), WindowError>;
+    fn render_end(&mut self) -> Result<(), WindowError>;
 }
 
-pub trait IEngine: Drop + Sized {
+pub trait IEngine {
     type Window: IWindow;
 
     fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Self::Window, EngineError>;

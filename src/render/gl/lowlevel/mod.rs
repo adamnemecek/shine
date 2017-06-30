@@ -4,7 +4,7 @@ pub struct LowLevel {
 
 impl LowLevel {
     pub fn new() -> LowLevel {
-        LowLevel{}
+        LowLevel {}
     }
 }
 
