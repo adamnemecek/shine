@@ -1,11 +1,13 @@
 mod device;
 mod programs;
-mod buffers;
+#[macro_use]
+mod vertexbuffer;
+#[macro_use]
 mod types;
 
 pub use self::device::*;
 pub use self::programs::*;
-pub use self::buffers::*;
+pub use self::vertexbuffer::*;
 pub use self::types::*;
 
 mod gl;

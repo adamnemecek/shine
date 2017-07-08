@@ -52,18 +52,17 @@ impl Drop for VertexBufferImpl {
 }
 
 
-/*struct CreateCommand {
-    program: Rc<RefCell<ShaderProgramImpl>>,
-    sources: ShaderSources,
+struct CreateCommand<V> {
+    vertex_buffer: Rc<RefCell<VertexBufferImpl>>,
+    vertex_data: Vec<V>,
 }
 
-impl ICommand for CreateCommand {
+impl<V: 'static> ICommand for CreateCommand<V> {
     fn process(&mut self, ll: &mut LowLevel) {
-        println!("{:?}", self);
-        self.program.borrow_mut().create_program(ll, &mut self.sources);
+        println!("creating vertex buffer");
+        //self.program.borrow_mut().create_program(ll, &mut self.sources);
     }
 }
-*/
 
 struct ReleaseCommand {
     vertex_buffer: Rc<RefCell<VertexBufferImpl>>,
@@ -85,18 +84,14 @@ impl VertexBuffer {
 }
 
 impl IVertexBuffer for VertexBuffer {
-    /*fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut CommandQueue, sources: I)
-    {
-        println!("set_sources");
+    fn iter_mut<'a, V: 'static>(&mut self, queue: &mut CommandQueue, count: usize) /*-> Iterator<Item=&'a V>*/ {
         queue.add(
-            CreateCommand {
-                program: self.0.clone(),
-                sources: sources
-                    .map(|&(t, s)| ShaderSource(gl_get_shader_enum(t), s.as_bytes().to_vec()))
-                    .collect()
+            CreateCommand::<V> {
+                vertex_buffer: self.0.clone(),
+                vertex_data: vec!()
             }
-        );
-    }*/
+        )
+    }
 
     fn release(&mut self, queue: &mut CommandQueue)
     {

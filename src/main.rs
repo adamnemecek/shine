@@ -1,16 +1,37 @@
 extern crate gl;
 
 pub mod container;
+#[macro_use]
 pub mod render;
 pub use render::*;
 
 mod renderer;
 mod world;
-mod foo;
 
 use world::World;
 //use renderer::Render;
 
+vertex_declaration!(Alma{
+    position: Float32x4 = f32x4!(),
+    color: Float32x2 = f32x2!(0.,1.),
+});
+
+fn foo() {
+    let a = Alma::Vertex::new();
+    println!("{}", a);
+    println!("{:?}", a.position);
+
+    let mut buf = Alma::StaticSource::new(10);
+    buf.push(Alma::Vertex { position: f32x4!(30), color: Float32x2::new(41., 34.) });
+    buf.push(a);
+
+    println!("{}, {}, {}", Alma::Location::position, Alma::Location::color, Alma::Location::Count);
+    println!("{}", Alma::get_location_by_name("position"));
+    println!("{}", Alma::get_location_by_name("color"));
+    println!("{}", Alma::get_location_by_name("sdf"));
+
+    println!("{:?}", buf[0].position);
+}
 
 
 struct SurfaceHandler {
@@ -48,7 +69,7 @@ void main()
 }
 
 fn main() {
-    foo::do_foo();
+    foo();
     let world = World::new();
 
     let mut render_engine = render::create_engine().expect("Could not initialize render engine");
