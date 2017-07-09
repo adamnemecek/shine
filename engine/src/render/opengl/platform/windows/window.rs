@@ -9,7 +9,7 @@ use render::user32;
 use render::winapi;
 
 use render::*;
-use render::opengl::context::wgl::Context;
+use render::opengl::context::Context;
 
 
 /// User window message indicating the window creating has completed and surface ready
@@ -319,7 +319,7 @@ impl GLWindow {
         }
 
         //create context
-        let context = match Context::new(app_instance, hwnd, &settings) {
+        let context = match Context::new_wgl(app_instance, hwnd, &settings) {
             Err(err) => {
                 unsafe {
                     user32::DestroyWindow(hwnd);

@@ -52,6 +52,7 @@ pub fn main() {
     let mut sub_window = render::WindowSettings::new()
         .title("sub")
         .size((100u32, 100u32))
+        //.gl_profile(render::OpenGLProfile::ES2)
         .build(&mut engine).expect("Could not initialize main window");
     let sub_window_data = ViewDataWrapper::new(world.clone());
     sub_window.set_surface_handler(sub_window_data.clone());

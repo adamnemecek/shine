@@ -4,13 +4,26 @@
 use render::*;
 
 /// Enum defining the type of shader source
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum ShaderType {
     /// Vertex shader
     VertexShader,
     /// Fragment (pixel) shader
     FragmentShader,
 }
+
+
+/// Geometry primitive type
+#[derive(Copy, Clone, Debug)]
+pub enum Primitive {
+    /// Point primitive (1 vertex per primitive)
+    Point,
+    /// Line primitive (2 vertex per primitive)
+    Line,
+    /// Triangle primitive (3 vertex per primitive)
+    Triangle,
+}
+
 
 /// Structure to store the shader abstraction.
 pub struct ShaderProgram {
@@ -49,7 +62,7 @@ impl ShaderProgram {
 
 
     /// Submits a geometry for rendering
-    pub fn draw(&mut self, queue: &mut CommandQueue, vertices: &VertexBuffer) {
-        self.platform.draw(queue, &vertices.platform);
+    pub fn draw(&mut self, queue: &mut CommandQueue, vertices: &VertexBuffer, primitive: Primitive, start: usize, vertex_count: usize) {
+        self.platform.draw(queue, &vertices.platform, primitive, start, vertex_count);
     }
 }

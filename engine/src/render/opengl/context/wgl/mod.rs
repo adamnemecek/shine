@@ -109,27 +109,13 @@ pub struct Context {
 
 impl Context {
     /// Creates a Wgl context with the given config.
-   ///
-   /// # Error
-   /// If context connat be created an error is returned describing the reason.
+    ///
+    /// # Error
+    /// If context connat be created an error is returned describing the reason.
     pub fn new(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &WindowSettings) -> Result<Context, Error> {
         unsafe {
-            let h1 = user32::GetDC(hwnd);
-            if h1.is_null() {
-                return Err(Error::CreationError(format!("h1 WGL: Failed to get dc: {}", io::Error::last_os_error())));
-            }
-            let h4 = user32::GetDC(hwnd);
-            if h4.is_null() {
-                return Err(Error::CreationError(format!("h4 WGL: Failed to get dc: {}", io::Error::last_os_error())));
-            }
-
-
             let gl_library = try!(load_gl_library());
             let (wgl_ext, wgl_extensions) = try!(load_wgl_extension(app_instance, hwnd));
-            let h2 = user32::GetDC(hwnd);
-            if h2.is_null() {
-                return Err(Error::CreationError(format!("h2 WGL: Failed to get dc: {}", io::Error::last_os_error())));
-            }
 
             //println!("wgl extensions: {}", wgl_extensions);
             let mut context = Context {
@@ -167,7 +153,7 @@ impl Context {
         }
     }
 
-    /// Makes this context active for.
+    /// Makes this context active.
     #[inline]
     pub fn make_current(&self) -> Result<(), Error> {
         assert!(!self.hglrc.is_null());

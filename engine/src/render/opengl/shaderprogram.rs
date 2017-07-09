@@ -193,7 +193,15 @@ impl GLShaderProgramWrapper {
         );
     }
 
-    pub fn draw(&mut self, _: &mut CommandQueue, _: &GLVertexBufferWrapper) {
+    pub fn draw(&mut self, _: &mut CommandQueue, _: &GLVertexBufferWrapper, primitive: Primitive, _: usize, vertex_count: usize) {
+        assert!({
+            match primitive {
+                Primitive::Point => true,
+                Primitive::Line => vertex_count % 2 == 0,
+                Primitive::Triangle => vertex_count % 2 == 0,
+            }
+        }, format!("invalid vertex count ({}) for primitive {:?}", vertex_count, primitive));
+
         println!("GLShaderProgram - draw");
     }
 }
