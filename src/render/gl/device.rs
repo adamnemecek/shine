@@ -10,11 +10,11 @@ use render::{EngineFeatures, EngineError, WindowError};
 
 use render::gl::lowlevel::LowLevel;
 
-#[allow(dead_code)]
+struct GLWindowAndLowLevel(glutin::Window, LowLevel);
+
 pub struct GLWindowImpl {
-    window: Option<glutin::Window>,
+    window: Option<GLWindowAndLowLevel>,
     event_loop: glutin::EventsLoop,
-    ll: LowLevel,
 }
 
 impl GLWindowImpl {
@@ -32,11 +32,28 @@ impl GLWindowImpl {
                 Err(glutin::CreationError::NoAvailablePixelFormat) => Err(EngineError::NoAvailableFormat),
                 Err(_) => Err(EngineError::Unknown),
                 Ok(win) => Ok(GLWindowImpl {
-                    window: Some(win),
+                    window: Some(GLWindowAndLowLevel(win, LowLevel::new())),
                     event_loop: event_loop,
-                    ll: LowLevel::new()
                 })
             }
+    }
+
+    fn mut_window(&mut self) -> &glutin::Window {
+        &self.window.as_ref().as_mut().expect("window already closed").0
+    }
+
+    fn get_window(&self) -> &glutin::Window {
+        &self.window.as_ref().expect("window already closed").0
+    }
+
+    #[allow(dead_code)]
+    fn mut_ll(&mut self) -> &LowLevel {
+      &self.window.as_ref().as_mut().expect("window already closed").1
+    }
+
+    #[allow(dead_code)]
+    fn get_ll(&self) -> &LowLevel {
+        &self.window.as_ref().expect("window already closed").1
     }
 
     fn is_closed(&self) -> bool {
@@ -46,19 +63,18 @@ impl GLWindowImpl {
     fn close(&mut self) {
         if !self.is_closed() {
             println!("closing a window impl");
-            //self.ll.unload();
-            //self.window.as_ref().map(|w| w.hide());
+            //self.window.as_ref().map(|GLWindowAndLowLevel(w,ll)| w.hide());
             self.window = None;
         }
     }
 
     fn get_id(&self) -> glutin::WindowId {
-        self.window.as_ref().expect("no id, window already closed").id()
+        self.get_window().id()
     }
 
     fn set_title(&mut self, title: &str) -> Result<(), WindowError> {
         if !self.is_closed() {
-            self.window.as_ref().as_mut().unwrap().set_title(title);
+            self.mut_window().set_title(title);
             Ok(())
         } else {
             Err(WindowError::ContextLost)
@@ -67,7 +83,7 @@ impl GLWindowImpl {
 
     fn make_current(&mut self) -> Result<(), WindowError> {
         if !self.is_closed() {
-            match unsafe { self.window.as_ref().as_mut().unwrap().make_current() } {
+            match unsafe { self.mut_window().make_current() } {
                 Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
                 Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
                 //Err(_) => WindowError::Unknown,
@@ -80,7 +96,7 @@ impl GLWindowImpl {
 
     fn swap_buffers(&mut self) -> Result<(), WindowError> {
         if !self.is_closed() {
-            match self.window.as_ref().as_mut().unwrap().swap_buffers() {
+            match self.mut_window().swap_buffers() {
                 Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
                 Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
                 //Err(_) => WindowError::Unknown,
@@ -95,7 +111,7 @@ impl GLWindowImpl {
         match self.make_current() {
             Err(e) => Err(e),
             Ok(_) => {
-                gl::load_with(|symbol| self.window.as_ref().as_mut().unwrap().get_proc_address(symbol) as *const _);
+                gl::load_with(|symbol| self.mut_window().get_proc_address(symbol) as *const _);
                 Ok(())
             }
         }
@@ -186,6 +202,18 @@ impl GLEngineImpl {
             windows: vec!(),
         }
     }
+
+    fn close_all_windows(&mut self) {
+        println!("closing all windows");
+        for win in self.windows.iter_mut() {
+            println!("converting weak ptr");
+            if let Some(rc_win) = win.upgrade() {
+                println!("closing an existing window");
+                rc_win.borrow_mut().close();
+            }
+        }
+
+    }
 }
 
 impl Drop for GLEngineImpl {
@@ -194,7 +222,7 @@ impl Drop for GLEngineImpl {
         for win in self.windows.iter_mut() {
             println!("check weak ptr");
             if let Some(rc_win) = win.upgrade() {
-                println!("closing am existing window");
+                println!("closing an existing window");
                 rc_win.borrow_mut().close();
             }
         }
@@ -235,6 +263,10 @@ impl IEngine for GLEngine {
                     }
                 }
         }
+    }
+
+    fn close_all_windows(&mut self) {
+        self.borrow_mut().close_all_windows();
     }
 }
 

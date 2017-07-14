@@ -37,4 +37,5 @@ pub trait IEngine {
     type Window: IWindow;
 
     fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Self::Window, EngineError>;
+    fn close_all_windows(&mut self);
 }

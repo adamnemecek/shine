@@ -10,6 +10,7 @@ fn main() {
     let mut main_window = render_engine.create_window(1024, 1024, "alma").expect("Could not initialize main window");
     let mut sub_window = render_engine.create_window(100, 100, "sub_alma").expect("Could not initialize secondary window");
 
+    println!("main window loop");
     while main_window.handle_message(None) {
         if main_window.render_start().is_ok() {
             unsafe {
@@ -30,7 +31,12 @@ fn main() {
         }
     }
 
+    println!("close all window");
+    render_engine.close_all_windows();
+
     drop(main_window);
+
+    println!("sub window loop");
     while sub_window.handle_message(None) {
         if sub_window.render_start().is_ok() {
             unsafe {
@@ -40,4 +46,6 @@ fn main() {
             sub_window.render_end().unwrap();
         }
     }
+
+    println!("main end");
 }
