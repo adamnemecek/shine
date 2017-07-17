@@ -5,6 +5,9 @@ pub use self::device::{EngineFeatures, EngineError, WindowError};
 
 pub mod gl;
 
-//pub type Window = self::gl::GLWindow;
-//pub type Engine = self::gl::GLEngine;
+#[allow(dead_code)]
+pub type Window = self::gl::GLWindow;
+#[allow(dead_code)]
+pub type Engine = self::gl::GLEngine;
+
 pub use self::gl::device::create_engine;
