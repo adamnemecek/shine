@@ -3,12 +3,40 @@ extern crate gl;
 mod container;
 mod render;
 
-use render::{IEngine, IWindow};
+use std::rc::Rc;
+use render::{IWindow, IEngine, SurfaceHandler};
+use render::{Window};
+use render::ShaderProgram;
+
+struct World {
+    shader: ShaderProgram,
+}
+
+impl SurfaceHandler for World {
+    fn on_ready(&mut self, win: &mut Window) {
+        println!("on_surface_ready");
+        let sh_source = [(0, "a"), (1, "b")];
+        win.render_process(|ref mut ll| {
+            self.shader.create_program(ll, sh_source.iter());
+        }).unwrap();
+    }
+    fn on_lost(&mut self, win: &mut Window) {
+        println!("on_surface_lost");
+        win.render_process(|ref mut ll| {
+            self.shader.release(ll);
+        }).unwrap();
+    }
+}
+
 
 fn main() {
+    println!("main");
     let mut render_engine = render::create_engine().expect("Could not initialize render engine");
     let mut main_window = render_engine.create_window(1024, 1024, "alma").expect("Could not initialize main window");
     let mut sub_window = render_engine.create_window(100, 100, "sub_alma").expect("Could not initialize secondary window");
+
+    let world = Rc::new(World { shader: ShaderProgram::new() });
+    main_window.set_surface_handler(world);
 
     println!("main window loop");
     while main_window.handle_message(None) {

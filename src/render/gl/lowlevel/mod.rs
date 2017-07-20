@@ -1,21 +1,20 @@
 #![allow(dead_code)]
 extern crate gl;
 
-mod utils;
 mod vertexbinding;
 mod indexbinding;
 mod programbinding;
 
-use self::gl::types::{GLenum, GLint, GLuint, GLsizei, GLvoid};
-use self::utils::{gl_check_error, gl_get_primitive_name};
+use self::gl::types::*;
+use render::gl::utils::{gl_check_error, gl_get_primitive_name};
 use self::vertexbinding::VertexBinding;
 use self::indexbinding::IndexBinding;
 use self::programbinding::ProgramBinding;
 
 pub struct LowLevel {
-    vertex_binding: VertexBinding,
-    index_binding: IndexBinding,
-    program_binding: ProgramBinding,
+    pub vertex_binding: VertexBinding,
+    pub index_binding: IndexBinding,
+    pub program_binding: ProgramBinding,
 }
 
 impl LowLevel {
@@ -29,8 +28,6 @@ impl LowLevel {
 
     pub fn close(&mut self) {
         println!("close LowLevel");
-        use std::{thread, time};
-        thread::sleep(time::Duration::from_secs(3));
         println!("close LowLevel done");
     }
 

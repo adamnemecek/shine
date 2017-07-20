@@ -5,8 +5,8 @@ use std::time::{Duration};
 use std::rc::{Rc, Weak};
 use std::cell::{RefCell};
 use std::ops::{Deref, DerefMut};
-use render::{IEngine, IWindow};
-use render::{EngineFeatures, EngineError, WindowError};
+use render::{IWindow, WindowError, SurfaceHandler};
+use render::{IEngine, EngineFeatures, EngineError};
 use render::gl::lowlevel::LowLevel;
 use render::gl::device::glutin::GlContext;
 
@@ -104,48 +104,57 @@ impl GLWindowImpl {
             }
         }
     }
-}
 
-
-pub struct GLWindow(Rc<RefCell<Option<GLWindowImpl>>>);
-
-impl Deref for GLWindow {
-    type Target = Rc<RefCell<Option<GLWindowImpl>>>;
-
-    fn deref(&self) -> &Rc<RefCell<Option<GLWindowImpl>>> {
-        &self.0
+    pub fn mut_ll(&mut self) -> &mut LowLevel {
+        &mut self.ll
     }
 }
 
-impl DerefMut for GLWindow {
-    fn deref_mut(&mut self) -> &mut Rc<RefCell<Option<GLWindowImpl>>> {
-        &mut self.0
+
+pub struct Window {
+    imp: Rc<RefCell<Option<GLWindowImpl>>>,
+    surface_handler: Option<Rc<SurfaceHandler>>,
+}
+
+impl Window {
+    pub fn render_process<F: FnMut(&mut LowLevel)>(&mut self, mut fun: F) -> Result<(), WindowError> {
+        if let Some(ref mut win) = *self.imp.borrow_mut() {
+            fun(win.mut_ll());
+            Ok(())
+        } else {
+            Err(WindowError::ContextLost)
+        }
     }
 }
 
-impl IWindow for GLWindow {
+impl IWindow for Window {
     fn is_closed(&self) -> bool {
-        self.borrow().is_none()
+        self.imp.borrow().is_none()
     }
 
     fn close(&mut self) {
-        if let Some(ref mut win) = *self.borrow_mut() {
+        if let Some(ref mut win) = *self.imp.borrow_mut() {
             win.close();
         }
-        *self.borrow_mut() = None;
+        *self.imp.borrow_mut() = None;
     }
 
     fn set_title(&mut self, title: &str) -> Result<(), WindowError> {
-        if let Some(ref mut win) = *self.borrow_mut() {
+        if let Some(ref mut win) = *self.imp.borrow_mut() {
             win.set_title(&title)
         } else {
             Err(WindowError::ContextLost)
         }
     }
 
+    fn set_surface_handler(&mut self, handler: Rc<SurfaceHandler>)
+    {
+        self.surface_handler = Some(handler);
+    }
+
     fn handle_message(&mut self, timeout: Option<Duration>) -> bool {
         assert!(timeout.is_none());
-        let result = if let Some(ref mut win) = *self.borrow_mut() {
+        let result = if let Some(ref mut win) = *self.imp.borrow_mut() {
             win.handle_message(/*timeout*/)
         } else {
             false
@@ -158,7 +167,7 @@ impl IWindow for GLWindow {
     }
 
     fn render_start(&mut self) -> Result<(), WindowError> {
-        if let Some(ref mut win) = *self.borrow_mut() {
+        if let Some(ref mut win) = *self.imp.borrow_mut() {
             win.make_current()
         } else {
             Err(WindowError::ContextLost)
@@ -166,7 +175,7 @@ impl IWindow for GLWindow {
     }
 
     fn render_end(&mut self) -> Result<(), WindowError> {
-        if let Some(ref mut win) = *self.borrow_mut() {
+        if let Some(ref mut win) = *self.imp.borrow_mut() {
             win.swap_buffers()
         } else {
             Err(WindowError::ContextLost)
@@ -223,9 +232,9 @@ impl Drop for GLEngineImpl {
 }
 
 
-pub struct GLEngine(Rc<RefCell<GLEngineImpl>>);
+pub struct Engine(Rc<RefCell<GLEngineImpl>>);
 
-impl Deref for GLEngine {
+impl Deref for Engine {
     type Target = Rc<RefCell<GLEngineImpl>>;
 
     fn deref(&self) -> &Rc<RefCell<GLEngineImpl>> {
@@ -233,16 +242,14 @@ impl Deref for GLEngine {
     }
 }
 
-impl DerefMut for GLEngine {
+impl DerefMut for Engine {
     fn deref_mut(&mut self) -> &mut Rc<RefCell<GLEngineImpl>> {
         &mut self.0
     }
 }
 
-impl IEngine for GLEngine {
-    type Window = GLWindow;
-
-    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<GLWindow, EngineError> {
+impl IEngine for Engine {
+    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Window, EngineError> {
         self.borrow_mut().remove_closed_windows();
 
         match GLWindowImpl::new(width, height, title) {
@@ -253,7 +260,10 @@ impl IEngine for GLEngine {
                     Ok(_) => {
                         let rc_window = Rc::new(RefCell::new(Some(window)));
                         self.borrow_mut().windows.push(Rc::downgrade(&rc_window));
-                        Ok(GLWindow(rc_window))
+                        Ok(Window {
+                            imp: rc_window,
+                            surface_handler: None
+                        })
                     }
                 }
         }
@@ -265,6 +275,6 @@ impl IEngine for GLEngine {
 }
 
 
-pub fn create_engine() -> Result<GLEngine, EngineError> {
-    Ok(GLEngine(Rc::new(RefCell::new(GLEngineImpl::new()))))
+pub fn create_engine() -> Result<Engine, EngineError> {
+    Ok(Engine(Rc::new(RefCell::new(GLEngineImpl::new()))))
 }

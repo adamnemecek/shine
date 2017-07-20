@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 extern crate gl;
 
-use self::gl::types::{GLuint};
-use super::utils::gl_check_error;
+use self::gl::types::*;
+use render::gl::utils::gl_check_error;
 
 pub struct ProgramBinding {
     force: bool,
@@ -29,6 +29,7 @@ impl ProgramBinding {
 
     /// Sets the current program and returns if it was just activated.
     pub fn bind(&mut self, program_id: GLuint) -> bool {
+        println!("binding program: {} (current:{})", program_id, self.bound_id);
         if !self.force && self.bound_id == program_id {
             return false;
         }

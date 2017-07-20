@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 extern crate gl;
 
-use self::gl::types::{GLenum, GLbyte, GLubyte, GLshort, GLushort, GLint, GLuint,
-                      GLfloat, GLdouble};
+use self::gl::types::*;
 use std::mem;
 
 #[allow(dead_code)]
-pub fn gl_check_error() {}
+pub fn gl_check_error() {
+
+}
 
 
 /// Returns the size (in bytes) of a gl type identified by the type-enum.
