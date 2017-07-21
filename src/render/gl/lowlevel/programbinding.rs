@@ -2,7 +2,7 @@
 extern crate gl;
 
 use self::gl::types::*;
-use render::gl::utils::gl_check_error;
+use render::gl::utils::*;
 
 pub struct ProgramBinding {
     force: bool,

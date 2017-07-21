@@ -1,6 +1,5 @@
 use std::time::Duration;
-use std::rc::Rc;
-use render::{Window/*, Engine*/};
+use super::Window;
 
 #[derive(Debug)]
 pub enum EngineFeatures {
@@ -24,7 +23,7 @@ pub enum WindowError {
     //Unknown,
 }
 
-pub trait SurfaceHandler {
+pub trait ISurfaceHandler: 'static {
     fn on_ready(&mut self, w: &mut Window);
     fn on_lost(&mut self, w: &mut Window);
 }
@@ -35,7 +34,7 @@ pub trait IWindow {
 
     fn set_title(&mut self, title: &str) -> Result<(), WindowError>;
 
-    fn set_surface_handler(&mut self, handler: Rc<SurfaceHandler>);
+    fn set_surface_handler<H: ISurfaceHandler>(&mut self, handler: H);
     fn handle_message(&mut self, timeout: Option<Duration>) -> bool;
 
     fn render_start(&mut self) -> Result<(), WindowError>;

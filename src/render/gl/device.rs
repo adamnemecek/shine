@@ -5,10 +5,14 @@ use std::time::{Duration};
 use std::rc::{Rc, Weak};
 use std::cell::{RefCell};
 use std::ops::{Deref, DerefMut};
-use render::{IWindow, WindowError, SurfaceHandler};
+
 use render::{IEngine, EngineFeatures, EngineError};
+use render::{IWindow, WindowError};
+use render::{ISurfaceHandler};
+
+
+use self::glutin::GlContext;
 use render::gl::lowlevel::LowLevel;
-use render::gl::device::glutin::GlContext;
 
 pub struct GLWindowImpl
 {
@@ -55,28 +59,6 @@ impl GLWindowImpl {
         Ok(())
     }
 
-    fn handle_message(&mut self) -> bool {
-        let mut is_running = true;
-        let my_window_id = self.get_window_id();
-
-        self.events_loop.poll_events(|event|
-            match event {
-                glutin::Event::WindowEvent { event, window_id } => {
-                    assert_eq! (window_id, my_window_id);
-                    match event {
-                        glutin::WindowEvent::Closed => {
-                            is_running = false;
-                        }
-                        _ => (),
-                    }
-                }
-                _ => ()
-                //glutin::Event::Awakened => {}
-            });
-
-        is_running
-    }
-
     fn make_current(&mut self) -> Result<(), WindowError> {
         match unsafe { self.window.make_current() } {
             Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
@@ -113,7 +95,9 @@ impl GLWindowImpl {
 
 pub struct Window {
     imp: Rc<RefCell<Option<GLWindowImpl>>>,
-    surface_handler: Option<Rc<SurfaceHandler>>,
+    surface_handler: Option<Rc<RefCell<ISurfaceHandler>>>,
+
+    trigger_surface_ready: bool,
 }
 
 impl Window {
@@ -147,23 +131,47 @@ impl IWindow for Window {
         }
     }
 
-    fn set_surface_handler(&mut self, handler: Rc<SurfaceHandler>)
-    {
-        self.surface_handler = Some(handler);
+    fn set_surface_handler<H: ISurfaceHandler>(&mut self, handler: H) {
+        self.surface_handler = Some(Rc::new(RefCell::new(handler)));
     }
 
     fn handle_message(&mut self, timeout: Option<Duration>) -> bool {
         assert!(timeout.is_none());
-        let result = if let Some(ref mut win) = *self.imp.borrow_mut() {
-            win.handle_message(/*timeout*/)
-        } else {
-            false
-        };
 
-        if !result {
-            self.close();
+        // hack to emulate create events
+        if self.trigger_surface_ready && self.imp.borrow().is_some() && self.surface_handler.is_some() {
+            if let Some(ref mut handler) = self.surface_handler.clone() {
+                handler.borrow_mut().on_ready(self);
+                self.trigger_surface_ready = false;
+            }
         }
-        result
+
+        let mut event_list = Vec::new();
+
+        if let Some(ref mut win) = *self.imp.borrow_mut() {
+            let my_window_id = win.get_window_id();
+            win.events_loop.poll_events(|event| {
+                if let glutin::Event::WindowEvent { event, window_id } = event {
+                    assert_eq! (window_id, my_window_id);
+                    event_list.push(event);
+                }
+            });
+        }
+
+        for event in event_list.into_iter() {
+            match event {
+                glutin::WindowEvent::Closed => {
+                    if let Some(ref mut handler) = self.surface_handler.clone() {
+                        handler.borrow_mut().on_lost(self);
+                    }
+                    self.close();
+                }
+                _ => (),
+            }
+        }
+
+
+        !self.is_closed()
     }
 
     fn render_start(&mut self) -> Result<(), WindowError> {
@@ -262,7 +270,8 @@ impl IEngine for Engine {
                         self.borrow_mut().windows.push(Rc::downgrade(&rc_window));
                         Ok(Window {
                             imp: rc_window,
-                            surface_handler: None
+                            surface_handler: None,
+                            trigger_surface_ready: true,
                         })
                     }
                 }

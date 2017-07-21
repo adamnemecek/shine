@@ -3,7 +3,7 @@ extern crate gl;
 
 //use self::gl::types::{GLenum, GLuint};
 use self::gl::types::*;
-use render::gl::utils::{gl_check_error, gl_get_type_size};
+use render::gl::utils::*;
 
 #[derive(Clone, Copy)]
 struct BoundIndex

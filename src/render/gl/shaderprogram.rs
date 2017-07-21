@@ -2,7 +2,7 @@
 extern crate gl;
 
 use self::gl::types::*;
-//use super::device::Window;
+use render::IShaderProgram;
 use super::lowlevel::LowLevel;
 use super::utils::{gl_check_error};
 
@@ -47,11 +47,16 @@ impl ShaderProgram {
             gl::DeleteProgram(self.hw_id);
         }
         self.hw_id = 0;
+        println!("program released");
     }
 }
 
 impl Drop for ShaderProgram {
     fn drop(&mut self) {
-        assert!(self.hw_id == 0, "shader was not released" );
+        //assert!(self.hw_id == 0, "shader was not released" );
     }
+}
+
+impl IShaderProgram for ShaderProgram {
+
 }

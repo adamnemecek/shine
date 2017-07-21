@@ -3,27 +3,54 @@ extern crate gl;
 mod container;
 mod render;
 
-use std::rc::Rc;
-use render::{IWindow, IEngine, SurfaceHandler};
-use render::{Window};
-use render::ShaderProgram;
+use std::rc::{Rc};
+use std::cell::{RefCell};
+use render::*;
 
 struct World {
     shader: ShaderProgram,
+    alma: i32,
 }
 
-impl SurfaceHandler for World {
+impl World {
+    fn new() -> World {
+        World {
+            shader: ShaderProgram::new(),
+            alma: 1,
+        }
+    }
+}
+
+impl Drop for World {
+    fn drop(&mut self) {
+        println!("dropping world");
+    }
+}
+
+
+struct SurfaceHandler {
+    world: Rc<RefCell<World>>,
+}
+
+impl Drop for SurfaceHandler {
+    fn drop(&mut self) {
+        println!("SurfaceHandler  dropped");
+    }
+}
+
+impl ISurfaceHandler for SurfaceHandler {
     fn on_ready(&mut self, win: &mut Window) {
         println!("on_surface_ready");
-        let sh_source = [(0, "a"), (1, "b")];
+        let sh_source = [(0, "a"), (0, "b")];
         win.render_process(|ref mut ll| {
-            self.shader.create_program(ll, sh_source.iter());
+            self.world.borrow_mut().shader.create_program(ll, sh_source.iter());
         }).unwrap();
     }
+
     fn on_lost(&mut self, win: &mut Window) {
         println!("on_surface_lost");
         win.render_process(|ref mut ll| {
-            self.shader.release(ll);
+            self.world.borrow_mut().shader.release(ll);
         }).unwrap();
     }
 }
@@ -35,8 +62,9 @@ fn main() {
     let mut main_window = render_engine.create_window(1024, 1024, "alma").expect("Could not initialize main window");
     let mut sub_window = render_engine.create_window(100, 100, "sub_alma").expect("Could not initialize secondary window");
 
-    let world = Rc::new(World { shader: ShaderProgram::new() });
-    main_window.set_surface_handler(world);
+    let world = Rc::new(RefCell::new(World::new()));
+    main_window.set_surface_handler(SurfaceHandler { world: world.clone() });
+    world.borrow_mut().alma = 1;
 
     println!("main window loop");
     while main_window.handle_message(None) {

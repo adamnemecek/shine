@@ -6,7 +6,8 @@ mod indexbinding;
 mod programbinding;
 
 use self::gl::types::*;
-use render::gl::utils::{gl_check_error, gl_get_primitive_name};
+use render::gl::utils::*;
+
 use self::vertexbinding::VertexBinding;
 use self::indexbinding::IndexBinding;
 use self::programbinding::ProgramBinding;
