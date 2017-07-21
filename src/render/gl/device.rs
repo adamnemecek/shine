@@ -44,19 +44,10 @@ impl GLWindowImpl {
         }
     }
 
-    fn close(&mut self) {
+    fn release(&mut self) {
         println!("closing a window impl");
-        self.ll.close();
+        self.ll.release();
         self.window.hide();
-    }
-
-    fn get_window_id(&self) -> glutin::WindowId {
-        self.window.id()
-    }
-
-    fn set_title(&mut self, title: &str) -> Result<(), WindowError> {
-        self.window.set_title(title);
-        Ok(())
     }
 
     fn make_current(&mut self) -> Result<(), WindowError> {
@@ -65,15 +56,6 @@ impl GLWindowImpl {
             Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
             //Err(_) => WindowError::Unknown,
             Ok(_) => Ok(())
-        }
-    }
-
-    fn swap_buffers(&mut self) -> Result<(), WindowError> {
-        match self.window.swap_buffers() {
-            Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
-            Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
-            //Err(_) => WindowError::Unknown,
-            Ok(_) => Ok(()),
         }
     }
 
@@ -86,24 +68,19 @@ impl GLWindowImpl {
             }
         }
     }
-
-    pub fn mut_ll(&mut self) -> &mut LowLevel {
-        &mut self.ll
-    }
 }
 
 
 pub struct Window {
     imp: Rc<RefCell<Option<GLWindowImpl>>>,
     surface_handler: Option<Rc<RefCell<ISurfaceHandler>>>,
-
     trigger_surface_ready: bool,
 }
 
 impl Window {
     pub fn render_process<F: FnMut(&mut LowLevel)>(&mut self, mut fun: F) -> Result<(), WindowError> {
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            fun(win.mut_ll());
+            fun(&mut win.ll);
             Ok(())
         } else {
             Err(WindowError::ContextLost)
@@ -118,14 +95,15 @@ impl IWindow for Window {
 
     fn close(&mut self) {
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            win.close();
+            win.release();
         }
         *self.imp.borrow_mut() = None;
     }
 
     fn set_title(&mut self, title: &str) -> Result<(), WindowError> {
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            win.set_title(&title)
+            win.window.set_title(title);
+            Ok(())
         } else {
             Err(WindowError::ContextLost)
         }
@@ -149,7 +127,7 @@ impl IWindow for Window {
         let mut event_list = Vec::new();
 
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            let my_window_id = win.get_window_id();
+            let my_window_id = win.window.id();
             win.events_loop.poll_events(|event| {
                 if let glutin::Event::WindowEvent { event, window_id } = event {
                     assert_eq! (window_id, my_window_id);
@@ -176,7 +154,12 @@ impl IWindow for Window {
 
     fn render_start(&mut self) -> Result<(), WindowError> {
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            win.make_current()
+            match unsafe { win.window.make_current() } {
+                Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
+                Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
+                //Err(_) => WindowError::Unknown,
+                Ok(_) => Ok(())
+            }
         } else {
             Err(WindowError::ContextLost)
         }
@@ -184,7 +167,12 @@ impl IWindow for Window {
 
     fn render_end(&mut self) -> Result<(), WindowError> {
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            win.swap_buffers()
+            match win.window.swap_buffers() {
+                Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
+                Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
+                //Err(_) => WindowError::Unknown,
+                Ok(_) => Ok(()),
+            }
         } else {
             Err(WindowError::ContextLost)
         }
@@ -217,14 +205,10 @@ impl GLEngineImpl {
     }
 
     fn close_all_windows(&mut self) {
-        println!("closing all windows");
         for win in self.windows.iter_mut() {
-            println!("converting weak ptr");
             if let Some(rc_win) = win.upgrade() {
-                println!("checking for closed window");
                 if let Some(ref mut win) = *rc_win.borrow_mut() {
-                    println!("closing an open window");
-                    win.close();
+                    win.release();
                 }
                 *rc_win.borrow_mut() = None;
             }
