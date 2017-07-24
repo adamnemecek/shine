@@ -29,7 +29,6 @@ impl LowLevel {
 
     pub fn release(&mut self) {
         println!("release LowLevel");
-        println!("release LowLevel done");
     }
 
     /// Draws a geometry using the current states.

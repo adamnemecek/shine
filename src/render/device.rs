@@ -7,20 +7,14 @@ pub enum EngineFeatures {
 }
 
 #[derive(Debug)]
-pub enum EngineError {
+pub enum ContextError {
     OsError(String),
     VersionNotSupported,
     FeatureNotSupported(EngineFeatures),
     NoAvailableFormat,
-    WindowCreation(WindowError),
-    Unknown,
-}
-
-#[derive(Debug)]
-pub enum WindowError {
     IoError(::std::io::Error),
     ContextLost,
-    //Unknown,
+    Unknown,
 }
 
 pub trait ISurfaceHandler: 'static {
@@ -29,19 +23,22 @@ pub trait ISurfaceHandler: 'static {
 }
 
 pub trait IWindow {
-    fn is_closed(&self) -> bool;
     fn close(&mut self);
+    fn is_closed(&self) -> bool;
 
-    fn set_title(&mut self, title: &str) -> Result<(), WindowError>;
+    fn set_title(&mut self, title: &str) -> Result<(), ContextError>;
+    //fn set_fullscreen();
+    //fn set_size(width:u32, height: u32);
+    //fn set_fullscreen();
 
     fn set_surface_handler<H: ISurfaceHandler>(&mut self, handler: H);
     fn handle_message(&mut self, timeout: Option<Duration>) -> bool;
 
-    fn render_start(&mut self) -> Result<(), WindowError>;
-    fn render_end(&mut self) -> Result<(), WindowError>;
+    fn render_start(&mut self) -> Result<(), ContextError>;
+    fn render_end(&mut self) -> Result<(), ContextError>;
 }
 
 pub trait IEngine {
-    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Window, EngineError>;
+    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Window, ContextError>;
     fn close_all_windows(&mut self);
 }

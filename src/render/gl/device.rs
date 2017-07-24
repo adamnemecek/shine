@@ -6,67 +6,76 @@ use std::rc::{Rc, Weak};
 use std::cell::{RefCell};
 use std::ops::{Deref, DerefMut};
 
-use render::{IEngine, EngineFeatures, EngineError};
-use render::{IWindow, WindowError};
+use render::{IEngine, EngineFeatures, IWindow, ContextError};
 use render::{ISurfaceHandler};
-
 
 use self::glutin::GlContext;
 use render::gl::lowlevel::LowLevel;
 
+
+impl From<glutin::ContextError> for ContextError {
+    fn from(error: glutin::ContextError) -> ContextError {
+        match error {
+            glutin::ContextError::IoError(ioe) => ContextError::IoError(ioe),
+            glutin::ContextError::ContextLost => ContextError::ContextLost,
+            //_ => ContextError::Unknown,
+        }
+    }
+}
+
+impl From<glutin::CreationError> for ContextError {
+    fn from(error: glutin::CreationError) -> ContextError {
+        match error {
+            glutin::CreationError::OsError(str) => ContextError::OsError(str),
+            glutin::CreationError::RobustnessNotSupported => ContextError::FeatureNotSupported(EngineFeatures::Robustness),
+            glutin::CreationError::OpenGlVersionNotSupported => ContextError::VersionNotSupported,
+            glutin::CreationError::NoAvailablePixelFormat => ContextError::NoAvailableFormat,
+            _ => ContextError::Unknown,
+        }
+    }
+}
+
+
 pub struct GLWindowImpl
 {
-    events_loop: glutin::EventsLoop,
-    window: glutin::GlWindow,
+    glutin_window: glutin::GlWindow,
     ll: LowLevel,
 }
 
 impl GLWindowImpl {
-    fn new<T: Into<String>>(width: u32, height: u32, title: T) -> Result<GLWindowImpl, EngineError> {
-        let events_loop = glutin::EventsLoop::new();
+    pub fn new<T: Into<String>>(events_loop: &glutin::EventsLoop, width: u32, height: u32, title: T, init_gl: bool) -> Result<GLWindowImpl, ContextError> {
         let window_builder = glutin::WindowBuilder::new()
             .with_title(title)
             .with_dimensions(width, height);
         let context_builder = glutin::ContextBuilder::new()
             .with_vsync(true);
 
-        match glutin::GlWindow::new(window_builder, context_builder, &events_loop) {
-            Err(glutin::CreationError::OsError(str)) => Err(EngineError::OsError(str)),
-            Err(glutin::CreationError::RobustnessNotSupported) => Err(EngineError::FeatureNotSupported(EngineFeatures::Robustness)),
-            Err(glutin::CreationError::OpenGlVersionNotSupported) => Err(EngineError::VersionNotSupported),
-            Err(glutin::CreationError::NoAvailablePixelFormat) => Err(EngineError::NoAvailableFormat),
-            Err(_) => Err(EngineError::Unknown),
-            Ok(win) => Ok(GLWindowImpl {
-                events_loop: events_loop,
-                window: win,
-                ll: LowLevel::new()
-            }),
+        let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &events_loop));
+
+        if init_gl {
+            unsafe {
+                try!(glutin_window.make_current());
+            }
+        } else {
+            unsafe {
+                try!(glutin_window.make_current());
+                gl::load_with(|symbol| glutin_window.get_proc_address(symbol) as *const _);
+            }
         }
+
+        Ok(GLWindowImpl {
+            events_loop: events_loop,
+            glutin_window: glutin_window,
+            ll: LowLevel::new()
+        })
     }
 
     fn release(&mut self) {
-        println!("closing a window impl");
-        self.ll.release();
-        self.window.hide();
-    }
-
-    fn make_current(&mut self) -> Result<(), WindowError> {
-        match unsafe { self.window.make_current() } {
-            Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
-            Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
-            //Err(_) => WindowError::Unknown,
-            Ok(_) => Ok(())
+        let is_current = unsafe { self.glutin_window.make_current() }.is_ok();
+        if is_current {
+            self.ll.release();
         }
-    }
-
-    fn init_gl_functions(&mut self) -> Result<(), WindowError> {
-        match self.make_current() {
-            Err(e) => Err(e),
-            Ok(_) => {
-                gl::load_with(|symbol| self.window.get_proc_address(symbol) as *const _);
-                Ok(())
-            }
-        }
+        self.glutin_window.hide();
     }
 }
 
@@ -78,34 +87,41 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn render_process<F: FnMut(&mut LowLevel)>(&mut self, mut fun: F) -> Result<(), WindowError> {
+    pub fn new<T: Into<String>>(events_loop: &glutin::EventsLoop, width: u32, height: u32, title: T, init_gl: bool) -> Result<Window, ContextError> {
+        let imp = try!(GLWindowImpl::new(&events_loop, width, height, title, init_gl));
+
+        Ok(Window {
+            imp: Rc::new(RefCell::new(Some(imp))),
+            surface_handler: None,
+            trigger_surface_ready: true,
+        })
+    }
+
+    pub fn render_process<F: FnMut(&mut LowLevel)>(&mut self, mut fun: F) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.imp.borrow_mut() {
             fun(&mut win.ll);
             Ok(())
         } else {
-            Err(WindowError::ContextLost)
+            Err(ContextError::ContextLost)
         }
     }
 }
 
 impl IWindow for Window {
+    fn close(&mut self) {
+        *self.imp.borrow_mut() = None;
+    }
+
     fn is_closed(&self) -> bool {
         self.imp.borrow().is_none()
     }
 
-    fn close(&mut self) {
+    fn set_title(&mut self, title: &str) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            win.release();
-        }
-        *self.imp.borrow_mut() = None;
-    }
-
-    fn set_title(&mut self, title: &str) -> Result<(), WindowError> {
-        if let Some(ref mut win) = *self.imp.borrow_mut() {
-            win.window.set_title(title);
+            win.glutin_window.set_title(title);
             Ok(())
         } else {
-            Err(WindowError::ContextLost)
+            Err(ContextError::ContextLost)
         }
     }
 
@@ -127,7 +143,7 @@ impl IWindow for Window {
         let mut event_list = Vec::new();
 
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            let my_window_id = win.window.id();
+            let my_window_id = win.glutin_window.id();
             win.events_loop.poll_events(|event| {
                 if let glutin::Event::WindowEvent { event, window_id } = event {
                     assert_eq! (window_id, my_window_id);
@@ -139,55 +155,52 @@ impl IWindow for Window {
         for event in event_list.into_iter() {
             match event {
                 glutin::WindowEvent::Closed => {
+                    println!("closed!!!");
                     if let Some(ref mut handler) = self.surface_handler.clone() {
                         handler.borrow_mut().on_lost(self);
                     }
-                    self.close();
+                    if let Some(ref mut win) = *self.imp.borrow_mut() {
+                        win.release();
+                    }
+                    *self.imp.borrow_mut() = None;
                 }
                 _ => (),
             }
         }
 
-
         !self.is_closed()
     }
 
-    fn render_start(&mut self) -> Result<(), WindowError> {
+    fn render_start(&mut self) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            match unsafe { win.window.make_current() } {
-                Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
-                Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
-                //Err(_) => WindowError::Unknown,
-                Ok(_) => Ok(())
-            }
+            try!(unsafe { win.glutin_window.make_current() });
+            Ok(())
         } else {
-            Err(WindowError::ContextLost)
+            Err(ContextError::ContextLost)
         }
     }
 
-    fn render_end(&mut self) -> Result<(), WindowError> {
+    fn render_end(&mut self) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.imp.borrow_mut() {
-            match win.window.swap_buffers() {
-                Err(glutin::ContextError::IoError(ioe)) => Err(WindowError::IoError(ioe)),
-                Err(glutin::ContextError::ContextLost) => Err(WindowError::ContextLost),
-                //Err(_) => WindowError::Unknown,
-                Ok(_) => Ok(()),
-            }
+            try!(win.glutin_window.swap_buffers());
+            Ok(())
         } else {
-            Err(WindowError::ContextLost)
+            Err(ContextError::ContextLost)
         }
     }
 }
 
 
 pub struct GLEngineImpl {
+    events_loop: glutin::EventsLoop,
     is_gl_initialized: bool,
-    windows: Vec<Weak<RefCell<Option<GLWindowImpl>>>>,
+    windows: Vec<Weak<RefCell<Option<GLWindowImpl>>>>, // map from winid -> weakptr
 }
 
 impl GLEngineImpl {
     fn new() -> GLEngineImpl {
         GLEngineImpl {
+            events_loop: glutin::EventsLoop::new(),
             is_gl_initialized: false,
             windows: vec!(),
         }
@@ -196,7 +209,6 @@ impl GLEngineImpl {
     fn remove_closed_windows(&mut self) {
         self.windows.retain(|weak_win| {
             if let Some(rc_win) = weak_win.upgrade() {
-                println!("can remove: {}", rc_win.borrow().is_none());
                 rc_win.borrow().is_none()
             } else {
                 false
@@ -207,10 +219,7 @@ impl GLEngineImpl {
     fn close_all_windows(&mut self) {
         for win in self.windows.iter_mut() {
             if let Some(rc_win) = win.upgrade() {
-                if let Some(ref mut win) = *rc_win.borrow_mut() {
-                    win.release();
-                }
-                *rc_win.borrow_mut() = None;
+                *rc_win.borrow_mut()  = None;
             }
         }
         self.remove_closed_windows();
@@ -241,33 +250,55 @@ impl DerefMut for Engine {
 }
 
 impl IEngine for Engine {
-    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Window, EngineError> {
+    fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Window, ContextError> {
         self.borrow_mut().remove_closed_windows();
 
-        match GLWindowImpl::new(width, height, title) {
-            Err(e) => Err(e),
-            Ok(mut window) =>
-                match if self.borrow().is_gl_initialized { window.make_current() } else { window.init_gl_functions() } {
-                    Err(e) => Err(EngineError::WindowCreation(e)),
-                    Ok(_) => {
-                        let rc_window = Rc::new(RefCell::new(Some(window)));
-                        self.borrow_mut().windows.push(Rc::downgrade(&rc_window));
-                        Ok(Window {
-                            imp: rc_window,
-                            surface_handler: None,
-                            trigger_surface_ready: true,
-                        })
-                    }
-                }
-        }
+        let window = try!(Window::new(&self.events_loop, width, height, title, self.borrow().is_gl_initialized));
+        self.borrow_mut().is_gl_initialized = true;
+        self.borrow_mut().windows.push(Rc::downgrade(&window.imp));
+        Ok(window)
     }
 
     fn close_all_windows(&mut self) {
         self.borrow_mut().close_all_windows();
     }
+
+    fn handle_message(&mut self, timeout: Option<Duration>) -> bool {
+        assert!(timeout.is_none());
+
+        let mut event_list = Vec::new();
+
+        if let Some(ref mut win) = *self.imp.borrow_mut() {
+            let my_window_id = win.glutin_window.id();
+            win.events_loop.poll_events(|event| {
+                if let glutin::Event::WindowEvent { event, window_id } = event {
+                    assert_eq! (window_id, my_window_id);
+                    event_list.push(event);
+                }
+            });
+        }
+
+        for event in event_list.into_iter() {
+            match event {
+                glutin::WindowEvent::Closed => {
+                    println!("closed!!!");
+                    if let Some(ref mut handler) = self.surface_handler.clone() {
+                        handler.borrow_mut().on_lost(self);
+                    }
+                    if let Some(ref mut win) = *self.imp.borrow_mut() {
+                        win.release();
+                    }
+                    *self.imp.borrow_mut() = None;
+                }
+                _ => (),
+            }
+        }
+
+        !self.is_closed()
+    }
 }
 
 
-pub fn create_engine() -> Result<Engine, EngineError> {
+pub fn create_engine() -> Result<Engine, ContextError> {
     Ok(Engine(Rc::new(RefCell::new(GLEngineImpl::new()))))
 }

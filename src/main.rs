@@ -21,21 +21,9 @@ impl World {
     }
 }
 
-impl Drop for World {
-    fn drop(&mut self) {
-        println!("dropping world");
-    }
-}
-
 
 struct SurfaceHandler {
     world: Rc<RefCell<World>>,
-}
-
-impl Drop for SurfaceHandler {
-    fn drop(&mut self) {
-        println!("SurfaceHandler  dropped");
-    }
 }
 
 impl ISurfaceHandler for SurfaceHandler {
