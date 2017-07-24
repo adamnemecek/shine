@@ -54,42 +54,26 @@ fn main() {
     main_window.set_surface_handler(SurfaceHandler { world: world.clone() });
     world.borrow_mut().alma = 1;
 
-    println!("main window loop");
-    while main_window.handle_message(None) {
-        if main_window.render_start().is_ok() {
-            unsafe {
-                gl::ClearColor(0.3, 0.3, 0.3, 1.0);
-                gl::Clear(gl::COLOR_BUFFER_BIT);
+    println!("window loop");
+    while render_engine.handle_message(None) {
+        if main_window.is_open() {
+            if main_window.render_start().is_ok() {
+                unsafe {
+                    gl::ClearColor(0.2, 0.5, 0.2, 1.0);
+                    gl::Clear(gl::COLOR_BUFFER_BIT);
+                }
+                main_window.render_end().unwrap();
             }
-            main_window.render_end().unwrap();
         }
 
-        if sub_window.handle_message(None) {
+        if sub_window.is_open() {
             if sub_window.render_start().is_ok() {
                 unsafe {
-                    gl::ClearColor(0.3, 0.3, 0.3, 1.0);
+                    gl::ClearColor(0.5, 0.2, 0.2, 1.0);
                     gl::Clear(gl::COLOR_BUFFER_BIT);
                 }
                 sub_window.render_end().unwrap();
             }
         }
     }
-
-    println!("close all window");
-    render_engine.close_all_windows();
-
-    drop(main_window);
-
-    println!("sub window loop");
-    while sub_window.handle_message(None) {
-        if sub_window.render_start().is_ok() {
-            unsafe {
-                gl::ClearColor(0.3, 0.3, 0.3, 1.0);
-                gl::Clear(gl::COLOR_BUFFER_BIT);
-            }
-            sub_window.render_end().unwrap();
-        }
-    }
-
-    println!("main end");
 }
