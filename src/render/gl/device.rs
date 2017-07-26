@@ -7,11 +7,10 @@ use std::cell::{RefCell};
 use std::ops::{Deref, DerefMut};
 use std::collections::HashMap;
 
-use render::{IEngine, EngineFeatures, IWindow, ContextError};
-use render::{ISurfaceHandler};
-
 use self::glutin::GlContext;
+use render::*;
 use render::gl::lowlevel::LowLevel;
+use render::gl::commandqueue::CommandQueue;
 
 
 impl From<glutin::ContextError> for ContextError {
@@ -54,7 +53,7 @@ pub struct GLWindowImpl
 }
 
 impl GLWindowImpl {
-    pub fn new<T: Into<String>>(events_loop: &glutin::EventsLoop, width: u32, height: u32, title: T, init_gl: bool) -> Result<GLWindowImpl, ContextError> {
+    pub fn new<T: Into<String>>(events_loop: &glutin::EventsLoop, width: u32, height: u32, title: T) -> Result<GLWindowImpl, ContextError> {
         let window_builder = glutin::WindowBuilder::new()
             .with_title(title)
             .with_dimensions(width, height);
@@ -63,15 +62,9 @@ impl GLWindowImpl {
 
         let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &events_loop));
 
-        if init_gl {
-            unsafe {
-                try!(glutin_window.make_current());
-            }
-        } else {
-            unsafe {
-                try!(glutin_window.make_current());
-                gl::load_with(|symbol| glutin_window.get_proc_address(symbol) as *const _);
-            }
+        unsafe {
+            try!(glutin_window.make_current());
+            gl::load_with(|symbol| glutin_window.get_proc_address(symbol) as *const _);
         }
 
         Ok(GLWindowImpl {
@@ -105,6 +98,7 @@ impl GLWindowImpl {
                     self.trigger_surface_ready = false;
                     return PostMassageAction::SurfaceReady
                 }
+                self.ll.set_size(width, height);
             }
             glutin::WindowEvent::Suspended(is_suspended) => {
                 if is_suspended {
@@ -117,7 +111,7 @@ impl GLWindowImpl {
                 println!("kb input")
             }
             glutin::WindowEvent::Closed => {
-                self.release();
+                // due to handler, all cleanup is performed in the caller at engine level
                 return PostMassageAction::Remove;
             }
             _ => {}
@@ -125,17 +119,21 @@ impl GLWindowImpl {
         PostMassageAction::None
     }
 
-    fn render_start(&mut self) -> Result<(), ContextError> {
+    fn start_render(&mut self) -> Result<(), ContextError> {
         try!(unsafe { self.glutin_window.make_current() });
+        self.ll.start_render();
         Ok(())
     }
 
-    fn render_process<F: FnMut(&mut LowLevel)>(&mut self, mut fun: F) -> Result<(), ContextError> {
-        fun(&mut self.ll);
+    fn process_queue(&mut self, queue: &mut CommandQueue) -> Result<(), ContextError> {
+        for ref mut cmd in queue.commands.iter_mut() {
+            cmd.process(&mut self.ll);
+        }
         Ok(())
     }
 
-    fn render_end(&mut self) -> Result<(), ContextError> {
+    fn end_render(&mut self) -> Result<(), ContextError> {
+        self.ll.end_render();
         try!(self.glutin_window.swap_buffers());
         Ok(())
     }
@@ -159,25 +157,17 @@ impl DerefMut for Window {
 }
 
 impl Window {
-    fn handle_message(&mut self, event: glutin::WindowEvent) -> PostMassageAction {
+    fn handle_message(&self, event: glutin::WindowEvent) -> PostMassageAction {
         if let Some(ref mut win) = *self.borrow_mut() {
             win.handle_message(event)
         } else {
             PostMassageAction::None
         }
     }
-
-    pub fn render_process<F: FnMut(&mut LowLevel)>(&mut self, fun: F) -> Result<(), ContextError> {
-        if let Some(ref mut win) = *self.borrow_mut() {
-            win.render_process(fun)
-        } else {
-            Err(ContextError::ContextLost)
-        }
-    }
 }
 
 impl IWindow for Window {
-    fn close(&mut self) {
+    fn close(&self) {
         *self.borrow_mut() = None;
     }
 
@@ -185,7 +175,7 @@ impl IWindow for Window {
         self.borrow().is_none()
     }
 
-    fn set_title(&mut self, title: &str) -> Result<(), ContextError> {
+    fn set_title(&self, title: &str) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.borrow_mut() {
             win.set_title(title);
             Ok(())
@@ -194,7 +184,7 @@ impl IWindow for Window {
         }
     }
 
-    fn set_surface_handler<H: ISurfaceHandler>(&mut self, handler: H) -> Result<(), ContextError> {
+    fn set_surface_handler<H: ISurfaceHandler>(&self, handler: H) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.borrow_mut() {
             win.set_surface_handler(handler);
             Ok(())
@@ -203,17 +193,25 @@ impl IWindow for Window {
         }
     }
 
-    fn render_start(&mut self) -> Result<(), ContextError> {
+    fn start_render(&self) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.borrow_mut() {
-            win.render_start()
+            win.start_render()
         } else {
             Err(ContextError::ContextLost)
         }
     }
 
-    fn render_end(&mut self) -> Result<(), ContextError> {
+    fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.borrow_mut() {
-            win.render_end()
+            win.process_queue(queue)
+        } else {
+            Err(ContextError::ContextLost)
+        }
+    }
+
+    fn end_render(&self) -> Result<(), ContextError> {
+        if let Some(ref mut win) = *self.borrow_mut() {
+            win.end_render()
         } else {
             Err(ContextError::ContextLost)
         }
@@ -223,7 +221,6 @@ impl IWindow for Window {
 
 pub struct GLEngineImpl {
     events_loop: glutin::EventsLoop,
-    is_gl_initialized: bool,
     windows: HashMap<glutin::WindowId, Weak<RefCell<Option<GLWindowImpl>>>>,
 }
 
@@ -231,18 +228,14 @@ impl GLEngineImpl {
     fn new() -> GLEngineImpl {
         GLEngineImpl {
             events_loop: glutin::EventsLoop::new(),
-            is_gl_initialized: false,
             windows: HashMap::new(),
         }
     }
 
     fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<Window, ContextError> {
-        let imp = try!(GLWindowImpl::new(&self.events_loop, width, height, title, self.is_gl_initialized));
-
+        let imp = try!(GLWindowImpl::new(&self.events_loop, width, height, title));
         let window_id = imp.glutin_window.id();
         let window = Window(Rc::new(RefCell::new(Some(imp))));
-
-        self.is_gl_initialized = true;
         self.windows.insert(window_id, Rc::downgrade(&window.0));
         Ok(window)
     }
@@ -263,7 +256,7 @@ impl GLEngineImpl {
         for event in events.into_iter() {
             if let glutin::Event::WindowEvent { event, window_id } = event {
                 // find the window by id
-                let mut window;
+                let window;
                 let mut surface_handler;
                 if let Some(rc_win) = self.windows.get(&window_id).map_or(None, |item| item.upgrade()) {
                     surface_handler = rc_win.borrow().as_ref().map_or(None, |win| win.surface_handler.clone());
@@ -278,21 +271,25 @@ impl GLEngineImpl {
                     PostMassageAction::Remove => {
                         //todo: shall be triggered by a glutin::WindowEvent::Closing
                         if let Some(ref mut handler) = surface_handler {
-                            handler.borrow_mut().on_lost(&mut window);
+                            handler.borrow_mut().on_lost();
                         }
+                        window.borrow_mut().as_mut().unwrap().release();
+                        *window.borrow_mut() = None;
                         self.windows.remove(&window_id);
-                        println!("window count: {}", self.windows.len());
                     }
+
                     PostMassageAction::SurfaceReady => {
                         if let Some(ref mut handler) = surface_handler {
-                            handler.borrow_mut().on_ready(&mut window);
+                            handler.borrow_mut().on_ready();
                         }
                     }
+
                     PostMassageAction::SurfaceLost => {
                         if let Some(ref mut handler) = surface_handler {
-                            handler.borrow_mut().on_lost(&mut window);
+                            handler.borrow_mut().on_lost();
                         }
                     }
+
                     PostMassageAction::None => {}
                 }
             }

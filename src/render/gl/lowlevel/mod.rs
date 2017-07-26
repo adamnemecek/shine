@@ -13,6 +13,8 @@ use self::indexbinding::IndexBinding;
 use self::programbinding::ProgramBinding;
 
 pub struct LowLevel {
+    pub width: u32,
+    pub height: u32,
     pub vertex_binding: VertexBinding,
     pub index_binding: IndexBinding,
     pub program_binding: ProgramBinding,
@@ -21,6 +23,8 @@ pub struct LowLevel {
 impl LowLevel {
     pub fn new() -> LowLevel {
         LowLevel {
+            width: 0,
+            height: 0,
             vertex_binding: VertexBinding::new(),
             index_binding: IndexBinding::new(),
             program_binding: ProgramBinding::new(),
@@ -29,6 +33,17 @@ impl LowLevel {
 
     pub fn release(&mut self) {
         println!("release LowLevel");
+    }
+
+    pub fn set_size(&mut self, width: u32, height: u32) {
+        self.width = width;
+        self.height = height;
+    }
+
+    pub fn start_render(&mut self) {
+    }
+
+    pub fn end_render(&mut self) {
     }
 
     /// Draws a geometry using the current states.

@@ -1,5 +1,5 @@
 use std::time::Duration;
-use super::Window;
+use super::{Window, CommandQueue};
 
 #[derive(Debug)]
 pub enum EngineFeatures {
@@ -18,26 +18,28 @@ pub enum ContextError {
 }
 
 pub trait ISurfaceHandler: 'static {
-    fn on_ready<'a>(&mut self, win: &'a mut Window);
-    fn on_lost<'a>(&mut self, win: &'a mut Window);
+    fn on_ready(&mut self);
+    fn on_lost(&mut self);
 }
 
 pub trait IWindow {
-    fn close(&mut self);
+    fn close(&self);
 
     fn is_closed(&self) -> bool;
     fn is_open(&self) -> bool {
         !self.is_closed()
     }
 
-    fn set_title(&mut self, title: &str) -> Result<(), ContextError>;
+    fn set_title(&self, title: &str) -> Result<(), ContextError>;
     //fn set_fullscreen();
     //fn set_size(width:u32, height: u32);
     //fn set_fullscreen();
 
-    fn set_surface_handler<H: ISurfaceHandler>(&mut self, handler: H) -> Result<(), ContextError>;
-    fn render_start(&mut self) -> Result<(), ContextError>;
-    fn render_end(&mut self) -> Result<(), ContextError>;
+    fn set_surface_handler<H: ISurfaceHandler>(&self, handler: H) -> Result<(), ContextError>;
+
+    fn start_render(&self) -> Result<(), ContextError>;
+    fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), ContextError>;
+    fn end_render(&self) -> Result<(), ContextError>;
 }
 
 pub trait IEngine {
