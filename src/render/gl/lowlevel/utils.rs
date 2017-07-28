@@ -1,10 +1,10 @@
 #![allow(dead_code)]
 extern crate gl;
 
-use self::gl::types::*;
 use std::mem;
+use render::gl::lowlevel::*;
 
-#[allow(dead_code)]
+
 pub fn gl_check_error() {
 
 }

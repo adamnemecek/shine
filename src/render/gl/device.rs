@@ -7,10 +7,10 @@ use std::cell::{RefCell};
 use std::ops::{Deref, DerefMut};
 use std::collections::HashMap;
 
-use self::glutin::GlContext;
 use render::*;
-use render::gl::lowlevel::LowLevel;
-use render::gl::commandqueue::CommandQueue;
+use render::gl::*;
+
+use self::glutin::GlContext;
 
 
 impl From<glutin::ContextError> for ContextError {
@@ -110,8 +110,11 @@ impl GLWindowImpl {
             glutin::WindowEvent::KeyboardInput { .. } => {
                 println!("kb input")
             }
+            glutin::WindowEvent::Closing => {
+                return PostMassageAction::SurfaceLost;
+            }
+
             glutin::WindowEvent::Closed => {
-                // due to handler, all cleanup is performed in the caller at engine level
                 return PostMassageAction::Remove;
             }
             _ => {}
@@ -126,9 +129,10 @@ impl GLWindowImpl {
     }
 
     fn process_queue(&mut self, queue: &mut CommandQueue) -> Result<(), ContextError> {
-        for ref mut cmd in queue.commands.iter_mut() {
+        for ref mut cmd in queue.iter_mut() {
             cmd.process(&mut self.ll);
         }
+        queue.clear();
         Ok(())
     }
 
@@ -269,10 +273,6 @@ impl GLEngineImpl {
                 // process message
                 match window.handle_message(event) {
                     PostMassageAction::Remove => {
-                        //todo: shall be triggered by a glutin::WindowEvent::Closing
-                        if let Some(ref mut handler) = surface_handler {
-                            handler.borrow_mut().on_lost();
-                        }
                         window.borrow_mut().as_mut().unwrap().release();
                         *window.borrow_mut() = None;
                         self.windows.remove(&window_id);
@@ -280,13 +280,13 @@ impl GLEngineImpl {
 
                     PostMassageAction::SurfaceReady => {
                         if let Some(ref mut handler) = surface_handler {
-                            handler.borrow_mut().on_ready();
+                            handler.borrow_mut().on_ready(&window);
                         }
                     }
 
                     PostMassageAction::SurfaceLost => {
                         if let Some(ref mut handler) = surface_handler {
-                            handler.borrow_mut().on_lost();
+                            handler.borrow_mut().on_lost(&window);
                         }
                     }
 

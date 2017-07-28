@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 extern crate gl;
 
-use self::gl::types::*;
-use render::gl::utils::*;
+use render::gl::lowlevel::*;
 
 const MAX_ATTRIBUTE_COUNT: usize = 16;
 
@@ -97,7 +96,8 @@ impl VertexBinding {
     }
 
     /// Binds a vertex attribute to the given location.
-    pub fn bind_attribute(&mut self, location: GLuint, hw_id: GLuint, attribute: &VertexAttribute) {
+    /// The actual gl calls are delayed until the call of the commit.
+    pub fn delayed_bind_attribute(&mut self, location: GLuint, hw_id: GLuint, attribute: &VertexAttribute) {
         assert!( hw_id != 0 );
 
         let attr = &mut self.bound_attributes[location as usize];

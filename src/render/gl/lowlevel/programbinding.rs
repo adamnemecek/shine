@@ -1,8 +1,7 @@
 #![allow(dead_code)]
 extern crate gl;
 
-use self::gl::types::*;
-use render::gl::utils::*;
+use render::gl::lowlevel::*;
 
 pub struct ProgramBinding {
     force: bool,

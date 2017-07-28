@@ -1,26 +1,32 @@
-#![allow(dead_code)]
 extern crate gl;
 
+use std::slice::IterMut;
+
 use render::*;
-use super::lowlevel::LowLevel;
+use render::gl::*;
+
 
 pub trait ICommand: 'static {
     fn process(&mut self, ll: &mut LowLevel);
 }
 
 pub struct CommandQueue {
-   pub commands: Vec<Box<ICommand>>,
+    commands: Vec<Box<ICommand>>,
 }
 
 impl CommandQueue {
     pub fn new() -> CommandQueue {
-        CommandQueue{
+        CommandQueue {
             commands: vec!(),
         }
     }
 
     pub fn add<Cmd: ICommand>(&mut self, cmd: Cmd) {
         self.commands.push(Box::new(cmd));
+    }
+
+    pub fn iter_mut<'a>(&'a mut self) -> IterMut<'a, Box<ICommand>> {
+        self.commands.iter_mut()
     }
 
     pub fn clear(&mut self) {
@@ -32,5 +38,4 @@ impl Drop for CommandQueue {
     fn drop(&mut self) {}
 }
 
-impl ICommandQueue for CommandQueue {
-}
+impl ICommandQueue for CommandQueue {}

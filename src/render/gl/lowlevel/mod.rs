@@ -1,12 +1,13 @@
 #![allow(dead_code)]
 extern crate gl;
 
+pub mod utils;
 mod vertexbinding;
 mod indexbinding;
 mod programbinding;
 
-use self::gl::types::*;
-use render::gl::utils::*;
+pub use self::gl::types::*;
+pub use self::utils::*;
 
 use self::vertexbinding::VertexBinding;
 use self::indexbinding::IndexBinding;

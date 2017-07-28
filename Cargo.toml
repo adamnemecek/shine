@@ -3,6 +3,13 @@ name = "dragorust"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
+#[patch.crates-io]
+#winit = {git = "https://github.com/zpgaal/winit.git" }
+#winit = {git = "https://github.com/zpgaal/winit.git", branch = "gzp_sandbox" }
+
+[replace]
+"winit:0.7.5" = {git = "https://github.com/zpgaal/winit.git", branch = "issue_240" }
+
 [dependencies]
 libc = "*"
 gl = "*"

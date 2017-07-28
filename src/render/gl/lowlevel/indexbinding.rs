@@ -1,9 +1,7 @@
 #![allow(dead_code)]
 extern crate gl;
 
-//use self::gl::types::{GLenum, GLuint};
-use self::gl::types::*;
-use render::gl::utils::*;
+use render::gl::lowlevel::*;
 
 #[derive(Clone, Copy)]
 struct BoundIndex
@@ -79,7 +77,7 @@ impl IndexBinding {
     }
 
     /// Prepares for rendering without index buffer.
-    pub fn bind_no_index(&mut self) {
+    pub fn delayed_bind_no_index(&mut self) {
         self.bound_index.time_stamp = self.time_stamp;
         if self.bound_index.hw_id == 0 {
             return;
@@ -90,7 +88,7 @@ impl IndexBinding {
     }
 
     /// Prepares for rendering with index buffer.
-    pub fn bind_index(&mut self, hw_id: GLuint, index_type: GLenum) {
+    pub fn delayed_bind_index(&mut self, hw_id: GLuint, index_type: GLenum) {
         assert!(hw_id != 0);
         assert!(index_type != 0);
 
@@ -115,7 +113,7 @@ impl IndexBinding {
     /// (ex. bind_index was not called) non-index rendering is assumed.
     pub fn commit(&mut self) {
         if self.bound_index.time_stamp != self.time_stamp {
-            self.bind_no_index();
+            self.delayed_bind_no_index();
         }
 
         let hw_id = self.bound_index.hw_id;

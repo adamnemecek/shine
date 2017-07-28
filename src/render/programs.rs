@@ -1,5 +1,6 @@
-use super::CommandQueue;
+use render::*;
 
+#[derive(Copy,Clone)]
 pub enum ShaderType {
     VertexShader,
     FragmentShader,
