@@ -3,8 +3,6 @@ extern crate gl;
 
 use std::rc::{Rc, Weak};
 use std::cell::{RefCell};
-use std::ops::{Deref, DerefMut};
-use std::collections::HashMap;
 
 use render::*;
 use render::gl::*;
@@ -29,7 +27,6 @@ pub enum MessageAction {
 
 pub struct GLWindow
 {
-    engine: RcGLEngine,
     glutin_window: glutin::GlWindow,
     ll: LowLevel,
 
@@ -39,14 +36,14 @@ pub struct GLWindow
 }
 
 impl GLWindow {
-    pub fn new<T: Into<String>>(engine: RcGLEngine, width: u32, height: u32, title: T) -> Result<GLWindow, ContextError> {
+    pub fn new<T: Into<String>>(events_loop: &glutin::EventsLoop, width: u32, height: u32, title: T) -> Result<GLWindow, ContextError> {
         let window_builder = glutin::WindowBuilder::new()
             .with_title(title)
             .with_dimensions(width, height);
         let context_builder = glutin::ContextBuilder::new()
             .with_vsync(true);
 
-        let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &engine.borrow().get_events_loop()));
+        let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &events_loop));
 
         unsafe {
             try!(glutin_window.make_current());
@@ -54,7 +51,6 @@ impl GLWindow {
         }
 
         Ok(GLWindow {
-            engine: engine,
             glutin_window: glutin_window,
             ll: LowLevel::new(),
             surface_handler: None,
@@ -148,7 +144,7 @@ pub struct GLWindowWrapper {
 impl GLWindowWrapper {
     pub fn new<T: Into<String>>(engine: &GLEngineWrapper, width: u32, height: u32, title: T) -> Result<GLWindowWrapper, ContextError> {
         let e = engine.unwrap();
-        let imp = try!(GLWindow::new(e.clone(), width, height, title));
+        let imp = try!(GLWindow::new(e.borrow().get_events_loop(), width, height, title));
         let window_id = imp.glutin_window.id();
         let rc_window = Rc::new(RefCell::new(Some(imp)));
         let weak_window = Rc::downgrade(&rc_window);
@@ -168,18 +164,14 @@ impl GLWindowWrapper {
         Window::new_from_impl(GLWindowWrapper { wrapped: self.wrapped.clone() })
     }
 
-    pub fn close_from_os(&self) {
-        if let Some(ref mut win) = *self.wrapped.borrow_mut() {
-            win.release();
-        }
-        *self.wrapped.borrow_mut() = None;
-    }
-
     pub fn is_closed(&self) -> bool {
         self.wrapped.borrow().is_none()
     }
 
     pub fn close(&self) {
+        //This function is used in two scenario
+        //  - when the window is closed by explicitly calling the close function
+        //  - when the OS requested the close (ex by pressing the "close" window button (X)
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.release();
         }

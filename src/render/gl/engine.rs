@@ -7,9 +7,8 @@ use std::cell::{RefCell};
 use std::collections::HashMap;
 
 use render::*;
-use render::gl::*;
+//use render::gl::*;
 use render::gl::window::*;
-use self::glutin::GlContext;
 
 impl From<glutin::ContextError> for ContextError {
     fn from(error: glutin::ContextError) -> ContextError {
@@ -81,20 +80,18 @@ impl GLEngine {
         // process event
         for event in events.into_iter() {
             if let glutin::Event::WindowEvent { event, window_id } = event {
+                let window_found = self.get_window_by_id(window_id);
                 let window_wrapper;
-                let mut remove_window = false;
-                if let Some(ref item) = self.windows.get(&window_id) {
-                    if let Some(rc_win) = item.upgrade() {
+                if let Some(rc_win) = window_found {
+                    if rc_win.borrow().is_some() {
                         // this is an active window
                         window_wrapper = GLWindowWrapper::wrap(rc_win);
                     } else {
-                        // this window is controlled by this engine, but has been closed
-                        println!("remove_window");
-                        remove_window = true;
+                        // this window was controlled by this engine, but has been closed
+                        self.remove_window(window_id);
                         continue;
                     }
                 } else {
-                    println!("window not found");
                     // this window is not controlled by this engine
                     continue;
                 }
@@ -117,8 +114,8 @@ impl GLEngine {
                         if let Some(h) = handler {
                             h.borrow_mut().on_lost(&window_wrapper.as_window());
                         }
-                        window_wrapper.close_from_os();
-                        remove_window = true;
+                        window_wrapper.close();
+                        self.remove_window(window_id);
                     }
 
                     MessageAction::InputKey(handler) => {
@@ -128,11 +125,6 @@ impl GLEngine {
                     }
 
                     MessageAction::None => {}
-                }
-
-
-                if remove_window {
-                    self.remove_window(window_id);
                 }
             }
         }

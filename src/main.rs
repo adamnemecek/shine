@@ -10,7 +10,7 @@ use std::cell::{RefCell};
 
 pub use render::*;
 use world::*;
-use renderer::*;
+//use renderer::*;
 
 /*vertex_declaration!(Alma{
     position: Float32x4 = f32x4!(),
@@ -36,7 +36,7 @@ fn foo() {
 */
 
 struct SurfaceHandler {
-    world: Rc<RefCell<World>>,
+    //world: Rc<RefCell<World>>,
     //shader: ShaderProgram,
 }
 
@@ -71,14 +71,10 @@ impl render::SurfaceHandler for SurfaceHandler {
     }
 }
 
-struct InputHandler {
-    world: Rc<RefCell<World>>,
-}
+struct InputHandler();
 
 impl render::InputHandler for InputHandler {
     fn on_key(&mut self, window: &Window) {
-        println!("on_key handler");
-        //self.world.borrow_mut().test = true;
         window.close()
     }
 }
@@ -88,17 +84,10 @@ fn main() {
 
     let render_engine = Engine::new().expect("Could not initialize render engine");
     let main_window = Window::new(&render_engine, 1024, 1024, "main").expect("Could not initialize main window");
-    let sub_window = Window::new(&render_engine, 1024, 1024, "sub").expect("Could not initialize main window");
-    main_window.set_input_handler(InputHandler { world: world.clone() }).unwrap();
-    sub_window.set_input_handler(InputHandler { world: world.clone() }).unwrap();
-    main_window.set_surface_handler(SurfaceHandler { world: world.clone() /*shader: ShaderProgram::new(),*/ }).unwrap();
+    main_window.set_input_handler(InputHandler()).unwrap();
+    main_window.set_surface_handler(SurfaceHandler { /*world: world.clone()*/ /*,shader: ShaderProgram::new()*/ }).unwrap();
 
     while render_engine.handle_message(None) {
-        if world.borrow().test && sub_window.is_open() {
-            println!("close sub");
-            sub_window.close();
-        }
-
         if main_window.is_open() {
             //            let render = &mut *world.render.borrow_mut();
 
