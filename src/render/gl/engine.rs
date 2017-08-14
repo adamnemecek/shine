@@ -4,14 +4,12 @@ extern crate gl;
 use std::time::Duration;
 use std::rc::{Rc, Weak};
 use std::cell::{RefCell};
-use std::ops::{Deref, DerefMut};
 use std::collections::HashMap;
 
 use render::*;
 use render::gl::*;
 use render::gl::window::*;
 use self::glutin::GlContext;
-
 
 impl From<glutin::ContextError> for ContextError {
     fn from(error: glutin::ContextError) -> ContextError {
@@ -35,13 +33,6 @@ impl From<glutin::CreationError> for ContextError {
     }
 }
 
-pub enum PostMassageAction {
-    None,
-    Remove,
-    SurfaceReady,
-    SurfaceLost,
-}
-
 pub struct GLEngine {
     events_loop: glutin::EventsLoop,
     windows: HashMap<glutin::WindowId, Weak<RefCell<Option<GLWindow>>>>,
@@ -55,10 +46,24 @@ impl GLEngine {
         }
     }
 
-    pub fn create_window<T: Into<String>>(&mut self, width: u32, height: u32, title: T) -> Result<GLWindowWrapper, ContextError> {
-        let (window_id, window, window_ref) = try!(GLWindowWrapper::new(&self.events_loop, width, height, title));
-        self.windows.insert(window_id, window_ref);
-        Ok(window)
+    pub fn store_window(&mut self, id: glutin::WindowId, window_ref: WeakGLWindow) {
+        self.windows.insert(id, window_ref);
+    }
+
+    pub fn remove_window(&mut self, id: glutin::WindowId) {
+        self.windows.remove(&id);
+    }
+
+    pub fn get_window_by_id(&self, id: glutin::WindowId) -> Option<RcGLWindow> {
+        if let Some(ref item) = self.windows.get(&id) {
+            item.upgrade()
+        } else {
+            None
+        }
+    }
+
+    pub fn get_events_loop(&self) -> &glutin::EventsLoop {
+        &self.events_loop
     }
 
     pub fn handle_message(&mut self, timeout: Option<Duration>) -> bool {
@@ -76,39 +81,58 @@ impl GLEngine {
         // process event
         for event in events.into_iter() {
             if let glutin::Event::WindowEvent { event, window_id } = event {
-                // find the window by id
-                let mut window_wrapper;
-                if let Some(rc_win) = self.windows.get(&window_id).map_or(None, |item| item.upgrade()) {
-                    window_wrapper = GLWindowWrapper::new_from_rc(rc_win);
+                let window_wrapper;
+                let mut remove_window = false;
+                if let Some(ref item) = self.windows.get(&window_id) {
+                    if let Some(rc_win) = item.upgrade() {
+                        // this is an active window
+                        window_wrapper = GLWindowWrapper::wrap(rc_win);
+                    } else {
+                        // this window is controlled by this engine, but has been closed
+                        println!("remove_window");
+                        remove_window = true;
+                        continue;
+                    }
                 } else {
-                    //some unknown, unhandled window
+                    println!("window not found");
+                    // this window is not controlled by this engine
                     continue;
                 }
 
-                // process message
-                match window_wrapper.handle_message(event) {
-                    PostMassageAction::Remove => {
-                        //if let Some(ref mut handler) = surface_handler {
-//                            handler.borrow_mut().on_lost(Window::new_from_impl(window_wrapper));
-//                        }
-
-                        //window_wrapper.release();
-                        self.windows.remove(&window_id);
+                let action = window_wrapper.handle_message(event);
+                match action {
+                    MessageAction::SurfaceReady(handler) => {
+                        if let Some(h) = handler {
+                            h.borrow_mut().on_ready(&window_wrapper.as_window());
+                        }
                     }
 
-                    PostMassageAction::SurfaceReady => {
-//                        if let Some(ref mut handler) = surface_handler {
-  //                          handler.borrow_mut().on_ready(Window::new_from_impl(window_wrapper));
-    //                    }
+                    MessageAction::SurfaceLost(handler) => {
+                        if let Some(h) = handler {
+                            h.borrow_mut().on_lost(&window_wrapper.as_window());
+                        }
                     }
 
-                    PostMassageAction::SurfaceLost => {
-      //                  if let Some(ref mut handler) = surface_handler {
-      //                      handler.borrow_mut().on_lost(Window::new_from_impl(window_wrapper));
-      //                  }
+                    MessageAction::Destroyed(handler) => {
+                        if let Some(h) = handler {
+                            h.borrow_mut().on_lost(&window_wrapper.as_window());
+                        }
+                        window_wrapper.close_from_os();
+                        remove_window = true;
                     }
 
-                    PostMassageAction::None => {}
+                    MessageAction::InputKey(handler) => {
+                        if let Some(h) = handler {
+                            h.borrow_mut().on_key(&window_wrapper.as_window());
+                        }
+                    }
+
+                    MessageAction::None => {}
+                }
+
+
+                if remove_window {
+                    self.remove_window(window_id);
                 }
             }
         }
@@ -132,8 +156,10 @@ impl Drop for GLEngine {
 }
 
 
+pub type RcGLEngine = Rc<RefCell<GLEngine>>;
+
 pub struct GLEngineWrapper {
-    wrapped: Rc<RefCell<GLEngine>>
+    wrapped: RcGLEngine
 }
 
 impl GLEngineWrapper {
@@ -141,8 +167,12 @@ impl GLEngineWrapper {
         Ok(GLEngineWrapper { wrapped: Rc::new(RefCell::new(GLEngine::new())) })
     }
 
-    pub fn create_window<T: Into<String>>(&self, width: u32, height: u32, title: T) -> Result<GLWindowWrapper, ContextError> {
-        self.wrapped.borrow_mut().create_window(width, height, title)
+    pub fn wrap(wrapped: RcGLEngine) -> GLEngineWrapper {
+        GLEngineWrapper { wrapped: wrapped }
+    }
+
+    pub fn unwrap(&self) -> RcGLEngine {
+        self.wrapped.clone()
     }
 
     pub fn request_quit(&self) {

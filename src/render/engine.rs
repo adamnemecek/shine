@@ -15,6 +15,10 @@ impl Engine {
         &self.d
     }
 
+    pub fn platform_mut(&mut self) -> &mut EngineImpl {
+        &mut self.d
+    }
+
     pub fn handle_message(&self, timeout: Option<Duration>) -> bool {
         self.d.handle_message(timeout)
     }

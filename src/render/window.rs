@@ -1,8 +1,12 @@
 use render::*;
 
 pub trait SurfaceHandler: 'static {
-    fn on_ready(&mut self, window: Window);
-    fn on_lost(&mut self, window: Window);
+    fn on_ready(&mut self, window: &Window);
+    fn on_lost(&mut self, window: &Window);
+}
+
+pub trait InputHandler: 'static {
+    fn on_key(&mut self, window: &Window);
 }
 
 pub struct Window {
@@ -10,8 +14,8 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn new<T: Into<String>>(e: &Engine, width: u32, height: u32, title: T) -> Result<Window, ContextError> {
-        let win = try!(e.platform().create_window(width, height, title));
+    pub fn new<T: Into<String>>(engine: &Engine, width: u32, height: u32, title: T) -> Result<Window, ContextError> {
+        let win = try!(WindowImpl::new(&engine.platform(), width, height, title));
         Ok(Window { d: win })
     }
 
@@ -35,13 +39,21 @@ impl Window {
         !self.d.is_closed()
     }
 
+    pub fn close(&self) {
+        self.d.close()
+    }
+
     pub fn set_title(&self, title: &str) -> Result<(), ContextError> {
         self.d.set_title(title)
     }
 
-    //fn set_surface_handler(&self, handler: RC<RefCell<ISurfaceHandler>>) -> Result<(), ContextError> {
-    //		self.d.set_surface_handler(
-    //	}
+    pub fn set_surface_handler<S: SurfaceHandler>(&self, handler: S) -> Result<(), ContextError> {
+        self.d.set_surface_handler(handler)
+    }
+
+    pub fn set_input_handler<S: InputHandler>(&self, handler: S) -> Result<(), ContextError> {
+        self.d.set_input_handler(handler)
+    }
 
     pub fn start_render(&self) -> Result<(), ContextError> {
         self.d.start_render()
@@ -61,4 +73,5 @@ impl Window {
     try!(self.end_render());
     Ok(())
 }*/
+
 }

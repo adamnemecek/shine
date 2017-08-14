@@ -1,7 +1,6 @@
 extern crate glutin;
 extern crate gl;
 
-use std::time::{Duration};
 use std::rc::{Rc, Weak};
 use std::cell::{RefCell};
 use std::ops::{Deref, DerefMut};
@@ -12,26 +11,42 @@ use render::gl::*;
 use render::gl::engine::*;
 use self::glutin::GlContext;
 
-pub type SurfaceHandlerWrapper = Rc<RefCell<SurfaceHandler>>;
+pub type OptionSurfaceHandler = Option<Rc<RefCell<SurfaceHandler>>>;
+pub type OptionInputHandler = Option<Rc<RefCell<InputHandler>>>;
+
+//Message handler callbacks cannot be called while the window is borrowed.
+// So instead of calling the callbacks directly the parameters are
+// collected and called when after the scope of borrowing over
+pub enum MessageAction {
+    None,
+    Destroyed(OptionSurfaceHandler),
+    SurfaceReady(OptionSurfaceHandler),
+    SurfaceLost(OptionSurfaceHandler),
+
+    InputKey(OptionInputHandler),
+}
+
 
 pub struct GLWindow
 {
+    engine: RcGLEngine,
     glutin_window: glutin::GlWindow,
     ll: LowLevel,
 
-    surface_handler: Option<SurfaceHandlerWrapper>,
+    surface_handler: OptionSurfaceHandler,
+    input_handler: OptionInputHandler,
     trigger_surface_ready: bool,
 }
 
 impl GLWindow {
-    pub fn new<T: Into<String>>(events_loop: &glutin::EventsLoop, width: u32, height: u32, title: T) -> Result<GLWindow, ContextError> {
+    pub fn new<T: Into<String>>(engine: RcGLEngine, width: u32, height: u32, title: T) -> Result<GLWindow, ContextError> {
         let window_builder = glutin::WindowBuilder::new()
             .with_title(title)
             .with_dimensions(width, height);
         let context_builder = glutin::ContextBuilder::new()
             .with_vsync(true);
 
-        let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &events_loop));
+        let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &engine.borrow().get_events_loop()));
 
         unsafe {
             try!(glutin_window.make_current());
@@ -39,14 +54,17 @@ impl GLWindow {
         }
 
         Ok(GLWindow {
+            engine: engine,
             glutin_window: glutin_window,
             ll: LowLevel::new(),
             surface_handler: None,
+            input_handler: None,
             trigger_surface_ready: true,
         })
     }
 
     fn release(&mut self) {
+        println!("win release");
         let is_current = unsafe { self.glutin_window.make_current() }.is_ok();
         if is_current {
             self.ll.release();
@@ -62,35 +80,41 @@ impl GLWindow {
         self.surface_handler = Some(Rc::new(RefCell::new(handler)));
     }
 
-    fn get_surface_handler(&self) -> Option<SurfaceHandlerWrapper> {
-        self.surface_handler.map(|sh| sh.clone())
+    fn set_input_handler<S: InputHandler>(&mut self, handler: S) {
+        self.input_handler = Some(Rc::new(RefCell::new(handler)));
     }
 
-    fn handle_message(&mut self, event: glutin::WindowEvent) -> PostMassageAction {
+    fn handle_message(&mut self, event: glutin::WindowEvent) -> MessageAction {
         match event {
             glutin::WindowEvent::Resized(width, height) => {
+                self.ll.set_size(width, height);
                 if self.trigger_surface_ready {
                     self.trigger_surface_ready = false;
-                    return PostMassageAction::SurfaceReady
+                    MessageAction::SurfaceReady(self.surface_handler.clone())
+                } else {
+                    MessageAction::None
                 }
-                self.ll.set_size(width, height);
             }
+
             glutin::WindowEvent::Suspended(is_suspended) => {
                 if is_suspended {
-                    return PostMassageAction::SurfaceLost;
+                    MessageAction::SurfaceLost(self.surface_handler.clone())
                 } else {
-                    return PostMassageAction::SurfaceReady;
+                    MessageAction::SurfaceReady(self.surface_handler.clone())
                 }
             }
+
             glutin::WindowEvent::KeyboardInput { .. } => {
-                println!("kb input")
+                println!("kb input");
+                MessageAction::InputKey(self.input_handler.clone())
             }
+
             glutin::WindowEvent::Closed => {
-                return PostMassageAction::Remove;
+                MessageAction::Destroyed(self.surface_handler.clone())
             }
-            _ => {}
+
+            _ => MessageAction::None
         }
-        PostMassageAction::None
     }
 
     fn start_render(&mut self) -> Result<(), ContextError> {
@@ -122,23 +146,29 @@ pub struct GLWindowWrapper {
 }
 
 impl GLWindowWrapper {
-    pub fn new<T: Into<String>>(events_loop: &glutin::EventsLoop, width: u32, height: u32, title: T)
-                                -> Result<(glutin::WindowId, GLWindowWrapper, WeakGLWindow), ContextError> {
-        let imp = try!(GLWindow::new(&events_loop, width, height, title));
+    pub fn new<T: Into<String>>(engine: &GLEngineWrapper, width: u32, height: u32, title: T) -> Result<GLWindowWrapper, ContextError> {
+        let e = engine.unwrap();
+        let imp = try!(GLWindow::new(e.clone(), width, height, title));
         let window_id = imp.glutin_window.id();
         let rc_window = Rc::new(RefCell::new(Some(imp)));
         let weak_window = Rc::downgrade(&rc_window);
-        Ok((window_id, GLWindowWrapper { wrapped: rc_window }, weak_window))
+        e.borrow_mut().store_window(window_id, weak_window);
+        Ok(GLWindowWrapper { wrapped: rc_window })
     }
 
-    pub fn new_from_rc(rc_window: RcGLWindow) -> GLWindowWrapper {
-        GLWindowWrapper { wrapped: rc_window }
+    pub fn wrap(wrapped: RcGLWindow) -> GLWindowWrapper {
+        GLWindowWrapper { wrapped: wrapped }
     }
 
-    pub fn release(&mut self) {
-        // This function is used to close the window from the program, and it is also called when the OS
-        // event handler handles the close event. As the option is nulled after the first call,
-        // double-release is possible.
+    pub fn unwrap(&self) -> RcGLWindow {
+        self.wrapped.clone()
+    }
+
+    pub fn as_window(&self) -> Window {
+        Window::new_from_impl(GLWindowWrapper { wrapped: self.wrapped.clone() })
+    }
+
+    pub fn close_from_os(&self) {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.release();
         }
@@ -147,6 +177,13 @@ impl GLWindowWrapper {
 
     pub fn is_closed(&self) -> bool {
         self.wrapped.borrow().is_none()
+    }
+
+    pub fn close(&self) {
+        if let Some(ref mut win) = *self.wrapped.borrow_mut() {
+            win.release();
+        }
+        *self.wrapped.borrow_mut() = None;
     }
 
     pub fn set_title(&self, title: &str) -> Result<(), ContextError> {
@@ -158,7 +195,7 @@ impl GLWindowWrapper {
         }
     }
 
-    pub fn set_surface_handler<S:SurfaceHandler>(&self, handler: S) -> Result<(), ContextError> {
+    pub fn set_surface_handler<S: SurfaceHandler>(&self, handler: S) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.set_surface_handler(handler);
             Ok(())
@@ -167,19 +204,20 @@ impl GLWindowWrapper {
         }
     }
 
-    pub fn get_surface_handler(&self) -> Option<SurfaceHandlerWrapper> {
-        if let Some(ref win) = *self.wrapped.borrow() {
-            win.get_surface_handler()
+    pub fn set_input_handler<S: InputHandler>(&self, handler: S) -> Result<(), ContextError> {
+        if let Some(ref mut win) = *self.wrapped.borrow_mut() {
+            win.set_input_handler(handler);
+            Ok(())
         } else {
-            None
+            Err(ContextError::ContextLost)
         }
     }
 
-    pub fn handle_message(&self, event: glutin::WindowEvent) -> PostMassageAction {
+    pub fn handle_message(&self, event: glutin::WindowEvent) -> MessageAction {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.handle_message(event)
         } else {
-            PostMassageAction::None
+            MessageAction::None
         }
     }
 

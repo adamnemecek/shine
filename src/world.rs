@@ -5,12 +5,14 @@ use renderer::*;
 #[derive(Clone)]
 pub struct World {
     pub render: Rc<RefCell<Render>>,
+    pub test: bool,
 }
 
 impl World {
     pub fn new() -> World {
         World {
             render: Rc::new(RefCell::new(Render::new())),
+            test: false,
         }
     }
 }
