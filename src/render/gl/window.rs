@@ -1,8 +1,8 @@
 extern crate glutin;
 extern crate gl;
 
-use std::rc::{Rc, Weak};
-use std::cell::{RefCell};
+use std::rc::Rc;
+use std::cell::RefCell;
 
 use render::*;
 use render::gl::*;
@@ -27,6 +27,7 @@ pub enum MessageAction {
 
 pub struct GLWindow
 {
+    engine: Rc<RefCell<GLEngine>>,
     glutin_window: glutin::GlWindow,
     ll: LowLevel,
 
@@ -36,14 +37,14 @@ pub struct GLWindow
 }
 
 impl GLWindow {
-    pub fn new<T: Into<String>>(events_loop: &glutin::EventsLoop, width: u32, height: u32, title: T) -> Result<GLWindow, ContextError> {
+    pub fn new<T: Into<String>>(engine: Rc<RefCell<GLEngine>>, width: u32, height: u32, title: T) -> Result<GLWindow, ContextError> {
         let window_builder = glutin::WindowBuilder::new()
             .with_title(title)
             .with_dimensions(width, height);
         let context_builder = glutin::ContextBuilder::new()
             .with_vsync(true);
 
-        let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &events_loop));
+        let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &engine.borrow().get_events_loop()));
 
         unsafe {
             try!(glutin_window.make_current());
@@ -51,6 +52,7 @@ impl GLWindow {
         }
 
         Ok(GLWindow {
+            engine: engine,
             glutin_window: glutin_window,
             ll: LowLevel::new(),
             surface_handler: None,
@@ -119,13 +121,13 @@ impl GLWindow {
         Ok(())
     }
 
-    /*fn process_queue(&mut self, queue: &mut CommandQueue) -> Result<(), ContextError> {
-        for ref mut cmd in queue.iter_mut() {
+    fn process_queue(&mut self, queue: &mut CommandQueue) -> Result<(), ContextError> {
+        for ref mut cmd in queue.platform.iter_mut() {
             cmd.process(&mut self.ll);
         }
-        queue.clear();
+        queue.platform.clear();
         Ok(())
-    }*/
+    }
 
     fn end_render(&mut self) -> Result<(), ContextError> {
         self.ll.end_render();
@@ -134,34 +136,32 @@ impl GLWindow {
     }
 }
 
-pub type WeakGLWindow = Weak<RefCell<Option<GLWindow>>>;
-pub type RcGLWindow = Rc<RefCell<Option<GLWindow>>>;
-
 pub struct GLWindowWrapper {
-    wrapped: RcGLWindow
+    wrapped: Rc<RefCell<Option<GLWindow>>>
 }
 
 impl GLWindowWrapper {
-    pub fn new<T: Into<String>>(engine: &GLEngineWrapper, width: u32, height: u32, title: T) -> Result<GLWindowWrapper, ContextError> {
-        let e = engine.unwrap();
-        let imp = try!(GLWindow::new(e.borrow().get_events_loop(), width, height, title));
+    pub fn new<T: Into<String>>(engine: &Engine, width: u32, height: u32, title: T) -> Result<GLWindowWrapper, ContextError> {
+        let engine = engine.platform.unwrap();
+        let imp = try!(GLWindow::new(engine.clone(), width, height, title));
         let window_id = imp.glutin_window.id();
         let rc_window = Rc::new(RefCell::new(Some(imp)));
         let weak_window = Rc::downgrade(&rc_window);
-        e.borrow_mut().store_window(window_id, weak_window);
+        let mut engine = engine.borrow_mut();
+        engine.store_window(window_id, weak_window);
         Ok(GLWindowWrapper { wrapped: rc_window })
     }
 
-    pub fn wrap(wrapped: RcGLWindow) -> GLWindowWrapper {
+    pub fn wrap(wrapped: Rc<RefCell<Option<GLWindow>>>) -> GLWindowWrapper {
         GLWindowWrapper { wrapped: wrapped }
     }
 
-    pub fn unwrap(&self) -> RcGLWindow {
+    pub fn unwrap(&self) -> Rc<RefCell<Option<GLWindow>>> {
         self.wrapped.clone()
     }
 
     pub fn as_window(&self) -> Window {
-        Window::new_from_impl(GLWindowWrapper { wrapped: self.wrapped.clone() })
+        Window::new_platform(GLWindowWrapper { wrapped: self.wrapped.clone() })
     }
 
     pub fn is_closed(&self) -> bool {
@@ -169,13 +169,9 @@ impl GLWindowWrapper {
     }
 
     pub fn close(&self) {
-        //This function is used in two scenario
-        //  - when the window is closed by explicitly calling the close function
-        //  - when the OS requested the close (ex by pressing the "close" window button (X)
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
-            win.release();
+            win.engine.borrow_mut().request_close(win.glutin_window.id());
         }
-        *self.wrapped.borrow_mut() = None;
     }
 
     pub fn set_title(&self, title: &str) -> Result<(), ContextError> {
@@ -213,6 +209,7 @@ impl GLWindowWrapper {
         }
     }
 
+
     pub fn start_render(&self) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.start_render()
@@ -221,13 +218,13 @@ impl GLWindowWrapper {
         }
     }
 
-    /*fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), ContextError> {
+    pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.process_queue(queue)
         } else {
             Err(ContextError::ContextLost)
         }
-    }*/
+    }
 
     pub fn end_render(&self) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {

@@ -1,7 +1,7 @@
-//use render::*;
+use render::*;
 
 pub struct Render {
-    //pub render_queue: CommandQueue,
+    pub render_queue: CommandQueue,
     //texture_sote: Store<Texture>,
     //shader_sote: Store<Shader>,
     //mesh_sote: Store<Mesh>,
@@ -10,7 +10,7 @@ pub struct Render {
 impl Render {
     pub fn new() -> Render {
         Render {
-            //render_queue: CommandQueue::new(),
+            render_queue: CommandQueue::new(),
         }
     }
 }

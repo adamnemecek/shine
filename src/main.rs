@@ -5,9 +5,6 @@ pub mod render;
 mod renderer;
 mod world;
 
-use std::rc::{Rc};
-use std::cell::{RefCell};
-
 pub use render::*;
 use world::*;
 //use renderer::*;
@@ -36,38 +33,38 @@ fn foo() {
 */
 
 struct SurfaceHandler {
-    //world: Rc<RefCell<World>>,
-    //shader: ShaderProgram,
+    world: World,
+    shader: ShaderProgram,
 }
 
 impl render::SurfaceHandler for SurfaceHandler {
     fn on_ready(&mut self, window: &Window) {
         println!("on_ready");
-        /* let sh_source = [(ShaderType::VertexShader, r#"
+        let sh_source = [(ShaderType::VertexShader, r#"
  attribute vec4 vPosition;
  void main()
  {
      gl_Position = vPosition;
  }"#
-         ), (ShaderType::FragmentShader, r#"
+        ), (ShaderType::FragmentShader, r#"
  void main()
  {
   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
  }"#
-         )];
-         let render = &mut self.world.render.borrow_mut();*/
+        )];
+        let render = &mut self.world.render.borrow_mut();
 
-        // self.shader.set_sources(&mut render.render_queue, sh_source.iter());
-        // window.process_single_queue(&mut render.render_queue).unwrap();
+        self.shader.set_sources(&mut render.render_queue, sh_source.iter());
+        window.process_single_queue(&mut render.render_queue).unwrap();
     }
 
     #[allow(unused_variables)]
     fn on_lost(&mut self, window: &Window) {
         println!("on_lost");
-        /*let render = &mut self.world.render.borrow_mut();
+        let render = &mut self.world.render.borrow_mut();
 
         self.shader.release(&mut render.render_queue);
-        window.process_single_queue(&mut render.render_queue).unwrap();*/
+        window.process_single_queue(&mut render.render_queue).unwrap();
     }
 }
 
@@ -80,23 +77,23 @@ impl render::InputHandler for InputHandler {
 }
 
 fn main() {
-    let world = Rc::new(RefCell::new(World::new()));
+    let world = World::new();
 
     let render_engine = Engine::new().expect("Could not initialize render engine");
     let main_window = Window::new(&render_engine, 1024, 1024, "main").expect("Could not initialize main window");
     main_window.set_input_handler(InputHandler()).unwrap();
-    main_window.set_surface_handler(SurfaceHandler { /*world: world.clone()*/ /*,shader: ShaderProgram::new()*/ }).unwrap();
+    main_window.set_surface_handler(SurfaceHandler { world: world.clone(), shader: ShaderProgram::new() }).unwrap();
 
     while render_engine.handle_message(None) {
         if main_window.is_open() {
-            //            let render = &mut *world.render.borrow_mut();
+            let render = &mut *world.render.borrow_mut();
 
             if main_window.start_render().is_ok() {
                 //unsafe {
                 //  gl::ClearColor(0.2, 0.5, 0.2, 1.0);
                 //gl::Clear(gl::COLOR_BUFFER_BIT);
                 //}
-                //                main_window.process_queue(&mut render.render_queue).unwrap();
+                main_window.process_queue(&mut render.render_queue).unwrap();
                 main_window.end_render().unwrap();
             }
         }

@@ -4,7 +4,7 @@ extern crate gl;
 use std::time::Duration;
 use std::rc::{Rc, Weak};
 use std::cell::{RefCell};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use render::*;
 //use render::gl::*;
@@ -32,9 +32,16 @@ impl From<glutin::CreationError> for ContextError {
     }
 }
 
+pub enum FindWindowResult {
+    None,
+    Some(GLWindowWrapper),
+    Remove,
+}
+
 pub struct GLEngine {
     events_loop: glutin::EventsLoop,
     windows: HashMap<glutin::WindowId, Weak<RefCell<Option<GLWindow>>>>,
+    close_requests: HashSet<glutin::WindowId>,
 }
 
 impl GLEngine {
@@ -42,10 +49,11 @@ impl GLEngine {
         GLEngine {
             events_loop: glutin::EventsLoop::new(),
             windows: HashMap::new(),
+            close_requests: HashSet::new(),
         }
     }
 
-    pub fn store_window(&mut self, id: glutin::WindowId, window_ref: WeakGLWindow) {
+    pub fn store_window(&mut self, id: glutin::WindowId, window_ref: Weak<RefCell<Option<GLWindow>>>) {
         self.windows.insert(id, window_ref);
     }
 
@@ -53,16 +61,32 @@ impl GLEngine {
         self.windows.remove(&id);
     }
 
-    pub fn get_window_by_id(&self, id: glutin::WindowId) -> Option<RcGLWindow> {
-        if let Some(ref item) = self.windows.get(&id) {
-            item.upgrade()
+    pub fn get_window_by_id(&mut self, window_id: glutin::WindowId) -> FindWindowResult {
+        if let Some(item) = self.windows.get(&window_id) {
+            if let Some(rc_win) = item.upgrade() {
+                if rc_win.borrow().is_some() {
+                    // this is an active window
+                    FindWindowResult::Some(GLWindowWrapper::wrap(rc_win))
+                } else {
+                    // this window was controlled by this engine, but has been closed
+                    // maybe we should assert here
+                    FindWindowResult::Remove
+                }
+            } else {
+                // this window is not controlled by this engine
+                FindWindowResult::None
+            }
         } else {
-            None
+            FindWindowResult::None
         }
     }
 
     pub fn get_events_loop(&self) -> &glutin::EventsLoop {
         &self.events_loop
+    }
+
+    pub fn request_close(&mut self, window_id: glutin::WindowId) {
+        self.close_requests.insert(window_id);
     }
 
     pub fn handle_message(&mut self, timeout: Option<Duration>) -> bool {
@@ -77,54 +101,66 @@ impl GLEngine {
             }
         });
 
+        // Add an explicit close event to trigger cleanup.
+        // It will also trigger an OS close when the glutin window is dropped,
+        // but we have already cleaned up everything by that time. So it shall be ok.
+        for closed_item in self.close_requests.iter() {
+            let event = glutin::Event::WindowEvent {
+                window_id: *closed_item,
+                event: glutin::WindowEvent::Closed
+            };
+            events.push(event);
+        }
+        self.close_requests.clear();
+
         // process event
         for event in events.into_iter() {
             if let glutin::Event::WindowEvent { event, window_id } = event {
-                let window_found = self.get_window_by_id(window_id);
-                let window_wrapper;
-                if let Some(rc_win) = window_found {
-                    if rc_win.borrow().is_some() {
-                        // this is an active window
-                        window_wrapper = GLWindowWrapper::wrap(rc_win);
-                    } else {
-                        // this window was controlled by this engine, but has been closed
-                        self.remove_window(window_id);
-                        continue;
-                    }
-                } else {
-                    // this window is not controlled by this engine
-                    continue;
-                }
+                let action = match self.get_window_by_id(window_id) {
+                    FindWindowResult::Some(window) => { window.handle_message(event) }
+                    FindWindowResult::Remove => { MessageAction::Remove }
+                    FindWindowResult::None => {}
+                };
 
-                let action = window_wrapper.handle_message(event);
                 match action {
                     MessageAction::SurfaceReady(handler) => {
                         if let Some(h) = handler {
-                            h.borrow_mut().on_ready(&window_wrapper.as_window());
+                            let window = self.as_window();
+                            h.borrow_mut().on_ready(&window);
                         }
+                        PostMessageAction::None
                     }
 
                     MessageAction::SurfaceLost(handler) => {
                         if let Some(h) = handler {
-                            h.borrow_mut().on_lost(&window_wrapper.as_window());
+                            let window = self.as_window();
+                            h.borrow_mut().on_lost(&window);
                         }
+                        PostMessageAction::None
                     }
 
                     MessageAction::Destroyed(handler) => {
                         if let Some(h) = handler {
-                            h.borrow_mut().on_lost(&window_wrapper.as_window());
+                            let window = self.as_window();
+                            h.borrow_mut().on_lost(&window);
                         }
-                        window_wrapper.close();
-                        self.remove_window(window_id);
+                        if let Some(ref mut win) = *self.wrapped.borrow_mut() {
+                            win.release();
+                        }
+                        PostMessageAction::Remove
                     }
 
                     MessageAction::InputKey(handler) => {
                         if let Some(h) = handler {
-                            h.borrow_mut().on_key(&window_wrapper.as_window());
+                            let window = self.as_window();
+                            h.borrow_mut().on_key(&window);
                         }
+                        PostMessageAction::None
                     }
 
-                    MessageAction::None => {}
+                    MessageAction::None => {
+                        PostMessageAction::None
+                    }
                 }
             }
         }
@@ -133,11 +169,10 @@ impl GLEngine {
     }
 
     fn close_all_windows(&mut self) {
-        /*for win in self.windows.iter_mut() {
-            if let Some(rc_win) = win.upgrade() {
-                *rc_win.borrow_mut() = None;
-            }
-        }*/
+        for item in self.windows.iter_mut() {
+            let window_wrapper = GLWindowWrapper::wrap(item.1.upgrade().unwrap());
+            window_wrapper.close();
+        }
     }
 }
 
@@ -148,10 +183,8 @@ impl Drop for GLEngine {
 }
 
 
-pub type RcGLEngine = Rc<RefCell<GLEngine>>;
-
 pub struct GLEngineWrapper {
-    wrapped: RcGLEngine
+    wrapped: Rc<RefCell<GLEngine>>
 }
 
 impl GLEngineWrapper {
@@ -159,11 +192,11 @@ impl GLEngineWrapper {
         Ok(GLEngineWrapper { wrapped: Rc::new(RefCell::new(GLEngine::new())) })
     }
 
-    pub fn wrap(wrapped: RcGLEngine) -> GLEngineWrapper {
+    pub fn wrap(wrapped: Rc<RefCell<GLEngine>>) -> GLEngineWrapper {
         GLEngineWrapper { wrapped: wrapped }
     }
 
-    pub fn unwrap(&self) -> RcGLEngine {
+    pub fn unwrap(&self) -> Rc<RefCell<GLEngine>> {
         self.wrapped.clone()
     }
 
