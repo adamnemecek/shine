@@ -72,7 +72,7 @@ struct InputHandler();
 
 impl render::InputHandler for InputHandler {
     fn on_key(&mut self, window: &Window) {
-        window.close()
+        window.request_close()
     }
 }
 

@@ -31,8 +31,12 @@ impl Window {
         !self.platform.is_closed()
     }
 
-    pub fn close(&self) {
-        self.platform.close()
+    pub fn request_close(&self) {
+        self.platform.request_close()
+    }
+
+    pub fn is_close_requested(&self) -> bool {
+        self.platform.is_close_requested()
     }
 
     pub fn set_title(&self, title: &str) -> Result<(), ContextError> {

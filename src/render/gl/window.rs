@@ -27,7 +27,7 @@ pub enum MessageAction {
 
 pub struct GLWindow
 {
-    engine: Rc<RefCell<GLEngine>>,
+    is_close_requested: bool,
     glutin_window: glutin::GlWindow,
     ll: LowLevel,
 
@@ -37,14 +37,14 @@ pub struct GLWindow
 }
 
 impl GLWindow {
-    pub fn new<T: Into<String>>(engine: Rc<RefCell<GLEngine>>, width: u32, height: u32, title: T) -> Result<GLWindow, ContextError> {
+    fn new<T: Into<String>>(events_loop: &glutin::EventsLoop, width: u32, height: u32, title: T) -> Result<GLWindow, ContextError> {
         let window_builder = glutin::WindowBuilder::new()
             .with_title(title)
             .with_dimensions(width, height);
         let context_builder = glutin::ContextBuilder::new()
             .with_vsync(true);
 
-        let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &engine.borrow().get_events_loop()));
+        let glutin_window = try!(glutin::GlWindow::new(window_builder, context_builder, &events_loop));
 
         unsafe {
             try!(glutin_window.make_current());
@@ -52,7 +52,7 @@ impl GLWindow {
         }
 
         Ok(GLWindow {
-            engine: engine,
+            is_close_requested: false,
             glutin_window: glutin_window,
             ll: LowLevel::new(),
             surface_handler: None,
@@ -68,6 +68,10 @@ impl GLWindow {
             self.ll.release();
         }
         self.glutin_window.hide();
+    }
+
+    pub fn is_close_requested(&self) -> bool {
+        self.is_close_requested
     }
 
     fn set_title(&mut self, title: &str) {
@@ -143,11 +147,11 @@ pub struct GLWindowWrapper {
 impl GLWindowWrapper {
     pub fn new<T: Into<String>>(engine: &Engine, width: u32, height: u32, title: T) -> Result<GLWindowWrapper, ContextError> {
         let engine = engine.platform.unwrap();
-        let imp = try!(GLWindow::new(engine.clone(), width, height, title));
+        let mut engine = engine.borrow_mut();
+        let imp = try!(GLWindow::new(engine.get_events_loop(), width, height, title));
         let window_id = imp.glutin_window.id();
         let rc_window = Rc::new(RefCell::new(Some(imp)));
         let weak_window = Rc::downgrade(&rc_window);
-        let mut engine = engine.borrow_mut();
         engine.store_window(window_id, weak_window);
         Ok(GLWindowWrapper { wrapped: rc_window })
     }
@@ -168,9 +172,17 @@ impl GLWindowWrapper {
         self.wrapped.borrow().is_none()
     }
 
-    pub fn close(&self) {
+    pub fn request_close(&self) {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
-            win.engine.borrow_mut().request_close(win.glutin_window.id());
+            win.is_close_requested = true;
+        }
+    }
+
+    pub fn is_close_requested(&self) -> bool {
+        if let Some(ref win) = *self.wrapped.borrow() {
+            win.is_close_requested
+        } else {
+            false
         }
     }
 
@@ -201,14 +213,55 @@ impl GLWindowWrapper {
         }
     }
 
-    pub fn handle_message(&self, event: glutin::WindowEvent) -> MessageAction {
-        if let Some(ref mut win) = *self.wrapped.borrow_mut() {
-            win.handle_message(event)
-        } else {
-            MessageAction::None
+    pub fn handle_message(&self, event: glutin::WindowEvent) -> PostMessageAction {
+        let action =
+            if let Some(ref mut win) = *self.wrapped.borrow_mut() {
+                win.handle_message(event)
+            } else {
+                MessageAction::None
+            };
+
+        match action {
+            MessageAction::SurfaceReady(handler) => {
+                if let Some(h) = handler {
+                    let window = self.as_window();
+                    h.borrow_mut().on_ready(&window);
+                }
+                PostMessageAction::None
+            }
+
+            MessageAction::SurfaceLost(handler) => {
+                if let Some(h) = handler {
+                    let window = self.as_window();
+                    h.borrow_mut().on_lost(&window);
+                }
+                PostMessageAction::None
+            }
+
+            MessageAction::Destroyed(handler) => {
+                if let Some(h) = handler {
+                    let window = self.as_window();
+                    h.borrow_mut().on_lost(&window);
+                }
+                if let Some(ref mut win) = *self.wrapped.borrow_mut() {
+                    win.release();
+                }
+                PostMessageAction::Remove
+            }
+
+            MessageAction::InputKey(handler) => {
+                if let Some(h) = handler {
+                    let window = self.as_window();
+                    h.borrow_mut().on_key(&window);
+                }
+                PostMessageAction::None
+            }
+
+            MessageAction::None => {
+                PostMessageAction::None
+            }
         }
     }
-
 
     pub fn start_render(&self) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
