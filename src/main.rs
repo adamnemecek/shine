@@ -79,8 +79,8 @@ impl render::InputHandler for InputHandler {
 fn main() {
     let world = World::new();
 
-    let render_engine = Engine::new().expect("Could not initialize render engine");
-    let main_window = Window::new(&render_engine, 1024, 1024, "main").expect("Could not initialize main window");
+    let mut render_engine = Engine::new().expect("Could not initialize render engine");
+    let main_window = Window::new(&mut render_engine, 1024, 1024, "main").expect("Could not initialize main window");
     main_window.set_input_handler(InputHandler()).unwrap();
     main_window.set_surface_handler(SurfaceHandler { world: world.clone(), shader: ShaderProgram::new() }).unwrap();
 

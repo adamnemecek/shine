@@ -2,8 +2,8 @@ extern crate glutin;
 extern crate gl;
 
 use std::time::Duration;
-use std::rc::{Rc, Weak};
-use std::cell::{RefCell};
+use std::rc::Weak;
+use std::cell::RefCell;
 use std::collections::HashMap;
 
 use render::*;
@@ -49,11 +49,11 @@ pub struct GLEngine {
 }
 
 impl GLEngine {
-    pub fn new() -> GLEngine {
-        GLEngine {
+    pub fn new() -> Result<GLEngine, ContextError> {
+        Ok(GLEngine {
             events_loop: glutin::EventsLoop::new(),
             windows: HashMap::new(),
-        }
+        })
     }
 
     pub fn store_window(&mut self, id: glutin::WindowId, window_ref: Weak<RefCell<Option<GLWindow>>>) {
@@ -138,7 +138,7 @@ impl GLEngine {
         !self.windows.is_empty()
     }
 
-    fn close_all_windows(&mut self) {
+    pub fn request_quit(&mut self) {
         for item in self.windows.iter() {
             if let Some(rc_win) = item.1.upgrade() {
                 let window_wrapper = GLWindowWrapper::wrap(rc_win);
@@ -150,36 +150,10 @@ impl GLEngine {
 
 impl Drop for GLEngine {
     fn drop(&mut self) {
-        self.close_all_windows();
+        self.request_quit();
+        // wait for the OS to close the windows
+        while self.handle_message(None) {}
     }
 }
 
-
-pub struct GLEngineWrapper {
-    wrapped: Rc<RefCell<GLEngine>>
-}
-
-impl GLEngineWrapper {
-    pub fn new() -> Result<GLEngineWrapper, ContextError> {
-        Ok(GLEngineWrapper { wrapped: Rc::new(RefCell::new(GLEngine::new())) })
-    }
-
-    pub fn wrap(wrapped: Rc<RefCell<GLEngine>>) -> GLEngineWrapper {
-        GLEngineWrapper { wrapped: wrapped }
-    }
-
-    pub fn unwrap(&self) -> Rc<RefCell<GLEngine>> {
-        self.wrapped.clone()
-    }
-
-    pub fn request_quit(&self) {
-        self.wrapped.borrow_mut().close_all_windows();
-    }
-
-    pub fn handle_message(&self, timeout: Option<Duration>) -> bool {
-        assert!(timeout.is_none());
-        self.wrapped.borrow_mut().handle_message(timeout)
-    }
-}
-
-pub type EngineImpl = GLEngineWrapper;
+pub type EngineImpl = GLEngine;

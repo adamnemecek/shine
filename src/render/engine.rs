@@ -11,7 +11,7 @@ impl Engine {
         Ok(Engine { platform: e })
     }
 
-    pub fn handle_message(&self, timeout: Option<Duration>) -> bool {
+    pub fn handle_message(&mut self, timeout: Option<Duration>) -> bool {
         self.platform.handle_message(timeout)
     }
 

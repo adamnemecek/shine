@@ -14,8 +14,8 @@ pub struct Window {
 }
 
 impl Window {
-    pub fn new<T: Into<String>>(engine: &Engine, width: u32, height: u32, title: T) -> Result<Window, ContextError> {
-        let win = try!(WindowImpl::new(&engine, width, height, title));
+    pub fn new<T: Into<String>>(engine: &mut Engine, width: u32, height: u32, title: T) -> Result<Window, ContextError> {
+        let win = try!(WindowImpl::new(engine, width, height, title));
         Ok(Window { platform: win })
     }
 

@@ -145,9 +145,8 @@ pub struct GLWindowWrapper {
 }
 
 impl GLWindowWrapper {
-    pub fn new<T: Into<String>>(engine: &Engine, width: u32, height: u32, title: T) -> Result<GLWindowWrapper, ContextError> {
-        let engine = engine.platform.unwrap();
-        let mut engine = engine.borrow_mut();
+    pub fn new<T: Into<String>>(engine: &mut Engine, width: u32, height: u32, title: T) -> Result<GLWindowWrapper, ContextError> {
+        let engine = &mut engine.platform;
         let imp = try!(GLWindow::new(engine.get_events_loop(), width, height, title));
         let window_id = imp.glutin_window.id();
         let rc_window = Rc::new(RefCell::new(Some(imp)));
