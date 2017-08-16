@@ -61,6 +61,7 @@ impl GLEngine {
     }
 
     pub fn remove_window(&mut self, id: glutin::WindowId) {
+        println!("removing window {:?}", id);
         self.windows.remove(&id);
     }
 
@@ -121,7 +122,7 @@ impl GLEngine {
         for event in events.into_iter() {
             if let glutin::Event::WindowEvent { event, window_id } = event {
                 match self.get_window_by_id(window_id) {
-                    FindWindowResult::Some(window) => {
+                    FindWindowResult::Some(mut window) => {
                         match window.handle_message(event) {
                             PostMessageAction::Remove => { self.remove_window(window_id); }
                             PostMessageAction::None => {}
@@ -141,8 +142,8 @@ impl GLEngine {
     pub fn request_quit(&mut self) {
         for item in self.windows.iter() {
             if let Some(rc_win) = item.1.upgrade() {
-                let window_wrapper = GLWindowWrapper::wrap(rc_win);
-                window_wrapper.request_close();
+                let mut window = GLWindowWrapper::wrap(rc_win);
+                window.request_close();
             }
         }
     }
@@ -150,9 +151,7 @@ impl GLEngine {
 
 impl Drop for GLEngine {
     fn drop(&mut self) {
-        self.request_quit();
-        // wait for the OS to close the windows
-        while self.handle_message(None) {}
+        assert!(self.windows.is_empty(), "close all windows and wait for release (handle messages) before dropping the engine")
     }
 }
 

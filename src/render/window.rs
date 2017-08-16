@@ -1,12 +1,12 @@
 use render::*;
 
 pub trait SurfaceHandler: 'static {
-    fn on_ready(&mut self, window: &Window);
-    fn on_lost(&mut self, window: &Window);
+    fn on_ready(&mut self, window: &mut Window);
+    fn on_lost(&mut self, window: &mut Window);
 }
 
 pub trait InputHandler: 'static {
-    fn on_key(&mut self, window: &Window);
+    fn on_key(&mut self, window: &mut Window);
 }
 
 pub struct Window {
@@ -23,6 +23,10 @@ impl Window {
         Window { platform: platform }
     }
 
+    pub fn is_close_requested(&self) -> bool {
+        self.platform.is_close_requested()
+    }
+
     pub fn is_closed(&self) -> bool {
         self.platform.is_closed()
     }
@@ -31,23 +35,19 @@ impl Window {
         !self.platform.is_closed()
     }
 
-    pub fn request_close(&self) {
+    pub fn request_close(&mut self) {
         self.platform.request_close()
     }
 
-    pub fn is_close_requested(&self) -> bool {
-        self.platform.is_close_requested()
-    }
-
-    pub fn set_title(&self, title: &str) -> Result<(), ContextError> {
+    pub fn set_title(&mut self, title: &str) -> Result<(), ContextError> {
         self.platform.set_title(title)
     }
 
-    pub fn set_surface_handler<S: SurfaceHandler>(&self, handler: S) -> Result<(), ContextError> {
+    pub fn set_surface_handler<S: SurfaceHandler>(&mut self, handler: S) -> Result<(), ContextError> {
         self.platform.set_surface_handler(handler)
     }
 
-    pub fn set_input_handler<S: InputHandler>(&self, handler: S) -> Result<(), ContextError> {
+    pub fn set_input_handler<S: InputHandler>(&mut self, handler: S) -> Result<(), ContextError> {
         self.platform.set_input_handler(handler)
     }
 
@@ -64,9 +64,13 @@ impl Window {
     }
 
     pub fn process_single_queue(&self, queue: &mut CommandQueue) -> Result<(), ContextError> {
+        println!("aa");
         try!(self.start_render());
+        println!("ab");
         try!(self.process_queue(queue));
+        println!("ac");
         try!(self.end_render());
+        println!("ad");
         Ok(())
     }
 }

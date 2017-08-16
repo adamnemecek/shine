@@ -120,7 +120,9 @@ impl GLWindow {
     }
 
     fn start_render(&mut self) -> Result<(), ContextError> {
+        println!("pre make" );
         try!(unsafe { self.glutin_window.make_current() });
+        println!("post make" );
         self.ll.start_render();
         Ok(())
     }
@@ -167,16 +169,6 @@ impl GLWindowWrapper {
         Window::new_platform(GLWindowWrapper { wrapped: self.wrapped.clone() })
     }
 
-    pub fn is_closed(&self) -> bool {
-        self.wrapped.borrow().is_none()
-    }
-
-    pub fn request_close(&self) {
-        if let Some(ref mut win) = *self.wrapped.borrow_mut() {
-            win.is_close_requested = true;
-        }
-    }
-
     pub fn is_close_requested(&self) -> bool {
         if let Some(ref win) = *self.wrapped.borrow() {
             win.is_close_requested
@@ -185,7 +177,17 @@ impl GLWindowWrapper {
         }
     }
 
-    pub fn set_title(&self, title: &str) -> Result<(), ContextError> {
+    pub fn is_closed(&self) -> bool {
+        self.wrapped.borrow().is_none()
+    }
+
+    pub fn request_close(&mut self) {
+        if let Some(ref mut win) = *self.wrapped.borrow_mut() {
+            win.is_close_requested = true;
+        }
+    }
+
+    pub fn set_title(&mut self, title: &str) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.set_title(title);
             Ok(())
@@ -194,7 +196,7 @@ impl GLWindowWrapper {
         }
     }
 
-    pub fn set_surface_handler<S: SurfaceHandler>(&self, handler: S) -> Result<(), ContextError> {
+    pub fn set_surface_handler<S: SurfaceHandler>(&mut self, handler: S) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.set_surface_handler(handler);
             Ok(())
@@ -203,7 +205,7 @@ impl GLWindowWrapper {
         }
     }
 
-    pub fn set_input_handler<S: InputHandler>(&self, handler: S) -> Result<(), ContextError> {
+    pub fn set_input_handler<S: InputHandler>(&mut self, handler: S) -> Result<(), ContextError> {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.set_input_handler(handler);
             Ok(())
@@ -212,7 +214,7 @@ impl GLWindowWrapper {
         }
     }
 
-    pub fn handle_message(&self, event: glutin::WindowEvent) -> PostMessageAction {
+    pub fn handle_message(&mut self, event: glutin::WindowEvent) -> PostMessageAction {
         let action =
             if let Some(ref mut win) = *self.wrapped.borrow_mut() {
                 win.handle_message(event)
@@ -222,37 +224,28 @@ impl GLWindowWrapper {
 
         match action {
             MessageAction::SurfaceReady(handler) => {
-                if let Some(h) = handler {
-                    let window = self.as_window();
-                    h.borrow_mut().on_ready(&window);
-                }
+                if let Some(h) = handler { h.borrow_mut().on_ready(&mut self.as_window()); }
                 PostMessageAction::None
             }
 
             MessageAction::SurfaceLost(handler) => {
-                if let Some(h) = handler {
-                    let window = self.as_window();
-                    h.borrow_mut().on_lost(&window);
-                }
+                if let Some(h) = handler { h.borrow_mut().on_lost(&mut self.as_window()); }
                 PostMessageAction::None
             }
 
             MessageAction::Destroyed(handler) => {
-                if let Some(h) = handler {
-                    let window = self.as_window();
-                    h.borrow_mut().on_lost(&window);
-                }
+                println!("before on_lst" );
+                if let Some(h) = handler { h.borrow_mut().on_lost(&mut self.as_window()); }
+                println!("after on_lst" );
                 if let Some(ref mut win) = *self.wrapped.borrow_mut() {
                     win.release();
                 }
+                println!("destroyed");
                 PostMessageAction::Remove
             }
 
             MessageAction::InputKey(handler) => {
-                if let Some(h) = handler {
-                    let window = self.as_window();
-                    h.borrow_mut().on_key(&window);
-                }
+                if let Some(h) = handler { h.borrow_mut().on_key(&mut self.as_window()); }
                 PostMessageAction::None
             }
 
@@ -266,6 +259,7 @@ impl GLWindowWrapper {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.start_render()
         } else {
+            println!("window is gone" );
             Err(ContextError::ContextLost)
         }
     }
@@ -274,6 +268,7 @@ impl GLWindowWrapper {
         if let Some(ref mut win) = *self.wrapped.borrow_mut() {
             win.process_queue(queue)
         } else {
+            println!("window is gone" );
             Err(ContextError::ContextLost)
         }
     }

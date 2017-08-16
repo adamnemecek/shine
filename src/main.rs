@@ -38,7 +38,7 @@ struct SurfaceHandler {
 }
 
 impl render::SurfaceHandler for SurfaceHandler {
-    fn on_ready(&mut self, window: &Window) {
+    fn on_ready(&mut self, window: &mut Window) {
         println!("on_ready");
         let sh_source = [(ShaderType::VertexShader, r#"
  attribute vec4 vPosition;
@@ -59,19 +59,22 @@ impl render::SurfaceHandler for SurfaceHandler {
     }
 
     #[allow(unused_variables)]
-    fn on_lost(&mut self, window: &Window) {
+    fn on_lost(&mut self, window: &mut Window) {
         println!("on_lost");
         let render = &mut self.world.render.borrow_mut();
 
+        println!("0");
         self.shader.release(&mut render.render_queue);
+        println!("a");
         window.process_single_queue(&mut render.render_queue).unwrap();
+        println!("b");
     }
 }
 
 struct InputHandler();
 
 impl render::InputHandler for InputHandler {
-    fn on_key(&mut self, window: &Window) {
+    fn on_key(&mut self, window: &mut Window) {
         window.request_close()
     }
 }
@@ -80,7 +83,7 @@ fn main() {
     let world = World::new();
 
     let mut render_engine = Engine::new().expect("Could not initialize render engine");
-    let main_window = Window::new(&mut render_engine, 1024, 1024, "main").expect("Could not initialize main window");
+    let mut main_window = Window::new(&mut render_engine, 1024, 1024, "main").expect("Could not initialize main window");
     main_window.set_input_handler(InputHandler()).unwrap();
     main_window.set_surface_handler(SurfaceHandler { world: world.clone(), shader: ShaderProgram::new() }).unwrap();
 
