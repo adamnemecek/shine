@@ -1,21 +1,31 @@
-use std::time::Duration;
+#![deny(missing_docs)]
+
 use render::*;
 
-pub struct Engine {
-    pub platform: EngineImpl
+/// Enum to store the error occurred during a window creation.
+#[derive(Debug, Clone)]
+pub enum EngineError {
+    /// Engine could not be initialized error.
+    /// The exact (OS) error message is also provided in the argument
+     InitializeError(String),
 }
 
+/// Structure to store the engine abstraction.
+pub struct Engine;
+
 impl Engine {
-    pub fn new() -> Result<Engine, ContextError> {
-        let e = try!(EngineImpl::new());
-        Ok(Engine { platform: e })
+    /// Initializes the engine.
+    pub fn init() -> Result<(), EngineError> {
+        EngineImpl::init()
     }
 
-    pub fn handle_message(&self, timeout: Option<Duration>) -> bool {
-        self.platform.handle_message(timeout)
+    /// Returns if engine was initialized.
+    pub fn is_initialzed() -> bool {
+        EngineImpl::is_initialzed()
     }
 
-    pub fn request_quit(&mut self) {
-        self.platform.request_quit()
+    /// Shuts down the engine.
+    pub fn shutdown() {
+        EngineImpl::shutdown();
     }
 }

@@ -1,7 +1,6 @@
 #![allow(dead_code)]
-extern crate gl;
 
-use render::gl::lowlevel::*;
+use render::opengl::lowlevel::*;
 
 const MAX_ATTRIBUTE_COUNT: usize = 16;
 

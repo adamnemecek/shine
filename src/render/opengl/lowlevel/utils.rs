@@ -1,9 +1,8 @@
 #![allow(dead_code)]
-extern crate gl;
 
 use std::mem;
-use render::gl::lowlevel::*;
 
+use render::opengl::lowlevel::*;
 
 pub fn gl_check_error() {
 

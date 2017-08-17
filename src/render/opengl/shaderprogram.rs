@@ -1,13 +1,12 @@
-extern crate gl;
-
 use std::rc::Rc;
 use std::cell::{RefCell};
 use std::str::from_utf8;
 use std::vec::Vec;
 
 use render::*;
-use self::gl::types::*;
-use render::gl::commandqueue::*;
+
+use render::opengl::lowlevel::*;
+use render::opengl::commandqueue::*;
 
 struct ShaderError(String);
 
