@@ -124,7 +124,7 @@ impl GLShaderProgram {
 
 impl Drop for GLShaderProgram {
     fn drop(&mut self) {
-        assert! ( self.hw_id == 0, "shader was not released" );
+        assert! ( self.hw_id == 0, "release shader through a render queue before dropping it" );
     }
 }
 

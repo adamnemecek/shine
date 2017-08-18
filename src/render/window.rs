@@ -1,7 +1,6 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
-use std::time::Duration;
 use render::*;
 
 /// Enum to store the error occurred during a window creation.
@@ -22,7 +21,7 @@ pub enum ContextError {
 
 /// Enum to store the window events.
 #[derive(Debug, Copy, Clone)]
-pub enum Event {
+pub enum WindowEvent {
     /// OS is releasing surface. All allocated resources shall be released here.
     SurfaceLost,
     /// OS has create surface and it is ready to use.
@@ -33,6 +32,8 @@ pub enum Event {
     Resized(Size),
     /// Window was moved.
     Moved(Position),
+    /// Dummy, for debug
+    Dummy,
 }
 
 /// Structure to store the window size.
@@ -175,8 +176,8 @@ impl WindowSettings {
     /// # Errors
     ///
     /// This function will return an error if thc current backend returns an error.
-    pub fn build(self) -> Result<Window, CreationError> {
-        Window::new(self)
+    pub fn build(self, engine: &mut Engine) -> Result<Window, CreationError> {
+        Window::new(self, engine)
     }
 
     /// Gets the title of built windows.
@@ -325,8 +326,8 @@ impl Window {
     ///
     /// This function will return an error if the current backend cannot create the
     /// window.
-    pub fn new(settings: WindowSettings) -> Result<Window, CreationError> {
-        let platform = try!(WindowImpl::new(settings));
+    pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<Window, CreationError> {
+        let platform = try!(WindowImpl::new(settings, engine));
         Ok(Window { platform: platform })
     }
 
@@ -353,17 +354,9 @@ impl Window {
         self.platform.draw_size()
     }
 
-    /// Wait indefinitely for an event to be available from the window.
-    pub fn wait_event(&mut self) -> Event {
-        self.platform.wait_event()
-    }
-
-    /// Wait for an event to be available from the window or for the
-    /// specified timeout.
-    ///
-    /// Returns `None` only if there is no event within the timeout.
-    pub fn wait_event_timeout(&mut self, timeout: Duration) -> Option<Event> {
-        self.platform.wait_event_timeout(timeout)
+    /// Polls for pending, unprocessed messages.
+    pub fn poll_event(&mut self) -> Option<WindowEvent> {
+        self.platform.poll_event()
     }
 
     /// Prepares the window for rendering.
@@ -386,8 +379,11 @@ impl Window {
     /// This function is a shortcut for star, process, end cycle.
     pub fn render_single_queue(&self, queue: &mut CommandQueue) -> Result<(), ContextError> {
         try!(self.start_render());
+        println!("ab");
         try!(self.process_queue(queue));
+        println!("ac");
         try!(self.end_render());
+        println!("ad");
         Ok(())
     }
 }

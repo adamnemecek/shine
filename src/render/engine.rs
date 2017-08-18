@@ -1,5 +1,6 @@
 #![deny(missing_docs)]
 
+use std::time::Duration;
 use render::*;
 
 /// Enum to store the error occurred during a window creation.
@@ -7,25 +8,41 @@ use render::*;
 pub enum EngineError {
     /// Engine could not be initialized error.
     /// The exact (OS) error message is also provided in the argument
-     InitializeError(String),
+    InitializeError(String),
 }
 
 /// Structure to store the engine abstraction.
-pub struct Engine;
+///
+/// The engine is responsible for the event loop and event dispatching.
+pub struct Engine {
+    /// Stores the platform dependent implementation.
+    pub platform: EngineImpl
+}
 
 impl Engine {
-    /// Initializes the engine.
-    pub fn init() -> Result<(), EngineError> {
-        EngineImpl::init()
+    /// Creates a new engine.
+    pub fn new() -> Result<Engine, EngineError> {
+        let platform = try!(EngineImpl::new());
+        Ok(Engine { platform: platform })
     }
 
-    /// Returns if engine was initialized.
-    pub fn is_initialzed() -> bool {
-        EngineImpl::is_initialzed()
+    /// Initiates the shutdown process.
+    ///
+    /// Engine is not shut down immediately, as some OS messages requires multiple cycle
+    /// in the message loop. Engine has completed the shut down process once dispatch_event
+    /// returns false
+    pub fn quit(&mut self) {
+        self.platform.quit();
     }
 
-    /// Shuts down the engine.
-    pub fn shutdown() {
-        EngineImpl::shutdown();
+    /// Wait for an event to be available or for the specified timeout.
+    ///
+    /// Window events are delegated to the windows and shall be handled through the window.
+    /// todo: If no handle event is called in a message cycle for a window, the unprocessed messages
+    /// are discarded.
+    /// # Return
+    ///  Returns true if application is terminating, false otherwise
+    pub fn dispatch_event(&mut self, timeout: Option<Duration>) -> bool {
+        self.platform.dispatch_event(timeout)
     }
 }

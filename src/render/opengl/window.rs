@@ -1,16 +1,17 @@
 use std::ptr;
 use std::io;
+use std::mem;
 use std::time::Duration;
+use std::rc::Rc;
+use std::cell::RefCell;
+use std::ffi::OsStr;
+use std::os::windows::ffi::OsStrExt;
 
 use render::user32;
 use render::winapi;
 
 use render::*;
 use render::opengl::engine::*;
-
-pub struct GLWindow {
-    hwnd: winapi::HWND,
-}
 
 /// Returns the window style for the specified settings
 fn get_window_style(settings: &WindowSettings) -> u32 {
@@ -40,13 +41,13 @@ fn get_window_style(settings: &WindowSettings) -> u32 {
 
 
 /// Returns the extended window style for the specified settings
+#[allow(unused_variables)]
 fn get_window_exstyle(settings: &WindowSettings) -> u32 {
-    use render::winapi::*;
+    let style = winapi::WS_EX_APPWINDOW;
 
-    let style = WS_EX_APPWINDOW;
-
-    //if (settings.monitor || settings.floating)
-    // style |= WS_EX_TOPMOST;
+    //if settings.monitor  {
+    //    style |= winapi::WS_EX_TOPMOST;
+    //}
 
     style
 }
@@ -71,61 +72,112 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
     }
 }
 
+pub struct GLWindowWrapper {
+    hwnd: winapi::HWND,
+    size: Size,
+    event_queue: Vec<WindowEvent>,
+}
+
+impl Drop for GLWindowWrapper {
+    fn drop(&mut self) {
+        println!("GLWindowWrapper dropped")
+    }
+}
+
+pub struct GLWindow(Rc<RefCell<GLWindowWrapper>>);
 
 impl GLWindow {
-    pub fn new(settings: WindowSettings) -> Result<GLWindow, CreationError> {
-        if !Engine::is_initialzed() {
-            return Err(CreationError::EngineNotInitialized)
-        }
-
+    pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<GLWindow, CreationError> {
+        // create window
+        let ref mut engine = engine.platform;
         let style = get_window_style(&settings);
         let exstyle = get_window_exstyle(&settings);
-
         let xpos = winapi::CW_USEDEFAULT;
         let ypos = winapi::CW_USEDEFAULT;
         let full_size = get_full_window_size(style, exstyle, settings.size);
-
-
+        let title = OsStr::new(&settings.title)
+            .encode_wide()
+            .chain(Some(0).into_iter())
+            .collect::<Vec<_>>();
         let hwnd = unsafe {
             user32::CreateWindowExW(exstyle,
-                                    GLEngine::get_window_class_name().as_ptr(),
-                                    settings.title.as_ptr() as winapi::LPCWSTR,
+                                    engine.get_window_class_name().as_ptr(),
+                                    title.as_ptr() as winapi::LPCWSTR,
                                     style,
                                     xpos, ypos,
                                     full_size.width as winapi::LONG, full_size.height as winapi::LONG,
                                     ptr::null_mut(), // No parent window
                                     ptr::null_mut(), // No window menu
-                                    GLEngine::get_instance(),
+                                    engine.get_instance(),
                                     ptr::null_mut())
         };
+        println!("created hwnd {:?}", hwnd);
 
         if hwnd.is_null() {
             return Err(CreationError::OsError(format!("CreateWindowEx function failed: {}", io::Error::last_os_error())));
         }
 
-        Ok(GLWindow { hwnd: hwnd })
+        let win =
+            Rc::new(RefCell::new(GLWindowWrapper {
+                hwnd: hwnd,
+                size: settings.size,
+                event_queue: vec!(),
+            }));
+
+        //connect the OS and rust window
+        unsafe {
+            // the connection string is same as the window class name for simplicity
+            let win_ptr = Rc::into_raw(win.clone());
+            user32::SetWindowLongPtrW(hwnd, 0, win_ptr as i64);
+        }
+
+        unsafe {
+            user32::ShowWindow(hwnd, winapi::SW_SHOW);
+        }
+
+        //if _glfw_ChangeWindowMessageFilterEx {
+        //_glfw_ChangeWindowMessageFilterEx(window->win32.handle, WM_DROPFILES, MSGFLT_ALLOW, NULL);
+        //_glfw_ChangeWindowMessageFilterEx(window->win32.handle, WM_COPYDATA, MSGFLT_ALLOW, NULL);
+        //_glfw_ChangeWindowMessageFilterEx(window->win32.handle, WM_COPYGLOBALDATA, MSGFLT_ALLOW, NULL);
+        //}
+        //DragAcceptFiles(window->win32.handle, TRUE);
+        // create context
+
+        Ok(GLWindow(win))
+    }
+
+    pub unsafe fn new_from_raw(ptr: winapi::LONG_PTR) -> GLWindow {
+        assert!(ptr != 0);
+        let rc = Rc::from_raw(ptr as *mut RefCell<GLWindowWrapper>);
+
+        // rc created by Rc::from_raw will decrement ref count on drop
+        // but we don't want to lose the window yet, so "leak" memory here.
+        // We will get it back during the close/destroy process.
+        Rc::into_raw(rc.clone());
+
+        GLWindow(rc)
     }
 
     pub fn close(&mut self) {}
 
     pub fn is_closed(&self) -> bool {
-        true
+        false
     }
 
     pub fn size(&self) -> Size {
-        Size { width: 0, height: 0 }
+        let ref window = self.0.borrow();
+        window.size
     }
 
     pub fn draw_size(&self) -> Size {
         Size { width: 0, height: 0 }
     }
 
-    pub fn wait_event(&mut self) -> Event {
-        Event::Closed
-    }
-
-    pub fn wait_event_timeout(&mut self, timeout: Duration) -> Option<Event> {
-        Some(Event::Closed)
+    pub fn poll_event(&mut self) -> Option<WindowEvent> {
+        println!("prepoll");
+        let ref mut window = self.0.borrow_mut();
+        println!("poll: {:?}", window.hwnd);
+        None
     }
 
     pub fn start_render(&self) -> Result<(), ContextError> {
@@ -138,6 +190,32 @@ impl GLWindow {
 
     pub fn end_render(&self) -> Result<(), ContextError> {
         Ok(())
+    }
+
+    pub fn get_hwnd(&self) -> winapi::HWND {
+        let ref window = self.0.borrow();
+        window.hwnd
+    }
+
+    pub fn handle_os_message(&mut self, hwnd: winapi::HWND, msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM)
+                             -> winapi::LRESULT {
+        let mut result: Option<winapi::LRESULT> = None;
+        {
+            let ref window = self.0.borrow();
+            assert!(window.hwnd == hwnd);
+
+            match msg {
+                winapi::WM_CLOSE => {}
+
+                winapi::WM_DESTROY => {}
+                _ => {}
+            }
+        }
+
+        if let Some(res) = result {
+            return res;
+        }
+        unsafe { user32::DefWindowProcW(hwnd, msg, wparam, lparam) }
     }
 }
 

@@ -64,30 +64,33 @@ fn render_frame(window: &mut Window, queue: &mut CommandQueue) {
 }
 
 fn main() {
-    render::Engine::init().expect("Could not initialize render engine");
-
+    let mut engine = render::Engine::new().expect("Could not initialize render engine");
     let mut window = WindowSettings::new()
         .title("main")
         .size((1024u32, 1024u32))
-        .build().expect("Could not initialize main window");
+        .build(&mut engine).expect("Could not initialize main window");
+    let mut sub_window = WindowSettings::new()
+        .title("sub")
+        .size((100u32, 100u32))
+        .build(&mut engine).expect("Could not initialize main window");
+
     let mut render_queue = render::CommandQueue::new();
 
-    let mut is_running = true;
-    while is_running {
-        //let render = &mut *world.render.borrow_mut();
+    while true {
+        if !engine.dispatch_event(None) {
+            break;
+        }
 
-        let event = window.wait_event();
-        match event {
-            render::Event::SurfaceReady => { on_surface_ready(&mut window, &mut render_queue) },
-            render::Event::SurfaceLost => { on_surface_lost(&mut window, &mut render_queue) },
-            render::Event::Closed => { is_running = false; },
+        match window.poll_event() {
+            Some(render::WindowEvent::SurfaceReady) => { on_surface_ready(&mut window, &mut render_queue) }
+            Some(render::WindowEvent::SurfaceLost) => { on_surface_lost(&mut window, &mut render_queue) }
             _ => {}
         }
+
+        sub_window.poll_event();
 
         if !window.is_closed() {
             render_frame(&mut window, &mut render_queue);
         }
     }
-
-    render::Engine::shutdown();
 }
