@@ -17,7 +17,7 @@ fn main() {
             .write_bindings(gl_generator::StaticGenerator, &mut file)
             .unwrap();
 
-        let mut file = File::create(&dest.join("wgl_extra_bindings.rs")).unwrap();
+        let mut file = File::create(&dest.join("wgl_ext_bindings.rs")).unwrap();
         Registry::new(Api::Wgl, (1, 0), Profile::Core, Fallbacks::All, [
                           "WGL_ARB_create_context",
                           "WGL_ARB_create_context_profile",

@@ -6,8 +6,8 @@ pub mod wgl {
 }
 
 /// Functions that are not necessarly always available
-pub mod wgl_extra {
-    include!(concat!(env!("OUT_DIR"), "/wgl_extra_bindings.rs"));
+pub mod wgl_ext {
+    include!(concat!(env!("OUT_DIR"), "/wgl_ext_bindings.rs"));
 }
 
 #[link(name = "opengl32")]
@@ -29,7 +29,7 @@ use render::*;
 use self::dummywindow::*;
 
 
-// Loads the gl library as we have static linking, sry.
+// Loads the gl library
 unsafe fn load_gl_library() -> Result<winapi::HMODULE, CreationError> {
     let name = OsStr::new("opengl32.dll").encode_wide().chain(Some(0).into_iter()).collect::<Vec<_>>();
 
@@ -41,7 +41,8 @@ unsafe fn load_gl_library() -> Result<winapi::HMODULE, CreationError> {
     Ok(lib)
 }
 
-unsafe fn load_wgl_extension(hdc: winapi::HDC) -> Result<wgl_extra::Wgl, CreationError> {
+// Loads the wgl extensions
+unsafe fn load_wgl_extension(hdc: winapi::HDC) -> Result<wgl_ext::Wgl, CreationError> {
     let mut pfd: winapi::PIXELFORMATDESCRIPTOR = mem::zeroed();
     pfd.nVersion = 1;
     pfd.dwFlags = winapi::PFD_DRAW_TO_WINDOW | winapi::PFD_SUPPORT_OPENGL | winapi::PFD_DOUBLEBUFFER;
@@ -63,7 +64,7 @@ unsafe fn load_wgl_extension(hdc: winapi::HDC) -> Result<wgl_extra::Wgl, Creatio
         return Err(CreationError::OsError(format!("WGL: Failed to make dummy context current: {}", io::Error::last_os_error())));
     }
 
-    let wgl_extra = wgl_extra::Wgl::load_with(|addr| {
+    let wgl_ext = wgl_ext::Wgl::load_with(|addr| {
         let addr = CString::new(addr.as_bytes()).unwrap();
         let addr = addr.as_ptr();
         wgl::GetProcAddress(addr) as *const c_void
@@ -71,14 +72,16 @@ unsafe fn load_wgl_extension(hdc: winapi::HDC) -> Result<wgl_extra::Wgl, Creatio
 
     wgl::MakeCurrent(hdc as *const c_void, ptr::null_mut());
     wgl::DeleteContext(rc);
-    Ok(wgl_extra)
+    Ok(wgl_ext)
 }
 
 pub struct Context {
     /// loaded gl library
     gl_library: winapi::HMODULE,
-    /// wgl extensions
-    wgl_ext: wgl_extra::Wgl,
+    /// supported wgl extensions reported by the API
+    wgl_extensions: String,
+    /// binding of the wgl extension functions
+    wgl_ext: wgl_ext::Wgl,
     // gl extensions
     //gl_ext: gl_extra::gl,
 }
@@ -92,7 +95,7 @@ impl Context {
             let wgl_ext = try!(load_wgl_extension(hdc));
 
             // getting the list of the supported extensions
-            let extensions = if wgl_ext.GetExtensionsStringARB.is_loaded() {
+            let wgl_extensions = if wgl_ext.GetExtensionsStringARB.is_loaded() {
                 let data = wgl_ext.GetExtensionsStringARB(hdc as *const _);
                 let data = CStr::from_ptr(data).to_bytes().to_vec();
                 String::from_utf8(data).unwrap()
@@ -101,14 +104,22 @@ impl Context {
                 let data = CStr::from_ptr(data).to_bytes().to_vec();
                 String::from_utf8(data).unwrap()
             } else {
-                format!("")
+                "".to_string()
             };
-            println!("wgl extensions: {}", extensions);
+            println!("wgl extensions: {}", wgl_extensions);
+
+            // select the best matching pixel format
+            //try!(selectPixelFormat());
+
+            //create context
+
+            //load gl extensions
 
 
             Ok(Context {
                 gl_library: gl_library,
                 wgl_ext: wgl_ext,
+                wgl_extensions: wgl_extensions,
                 //gl_ext: gl_ext,
             })
         }
