@@ -1,6 +1,5 @@
 use std::ptr;
 use std::io;
-use std::mem;
 use std::time::Duration;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -11,8 +10,7 @@ use render::user32;
 use render::winapi;
 
 use render::*;
-use render::opengl::engine::*;
-use render::opengl::context::wgl::*;
+use render::opengl::context::wgl::Context;
 
 
 /// User window message indicating the window creating has completed and surface ready
@@ -102,7 +100,7 @@ impl Drop for GLWindowWrapper {
 pub struct GLWindow(Rc<RefCell<GLWindowWrapper>>);
 
 impl GLWindow {
-    pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<GLWindow, CreationError> {
+    pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<GLWindow, Error> {
         // create window
         let ref mut engine = engine.platform;
         let (style, exstyle) = (get_window_style(&settings), get_window_exstyle(&settings));
@@ -124,17 +122,17 @@ impl GLWindow {
         println!("created hwnd {:?}", hwnd);
 
         if hwnd.is_null() {
-            return Err(CreationError::OsError(format!("CreateWindowEx function failed: {}", io::Error::last_os_error())));
+            return Err(Error::CreationError(format!("Window: CreateWindowEx function failed: {}", io::Error::last_os_error())));
         }
 
         let hdc = unsafe { user32::GetDC(hwnd) };
         if hdc.is_null() {
-            return Err(CreationError::OsError(format!("GetDC function failed: {}", io::Error::last_os_error())));
+            return Err(Error::CreationError(format!("Window: GetDC function failed: {}", io::Error::last_os_error())));
         }
 
 
         //create context
-        let context = match Context::new(engine.get_instance(), hwnd, hdc) {
+        let context = match Context::new(hwnd, hdc, &settings) {
             Err(err) => {
                 unsafe {
                     user32::ReleaseDC(hwnd, hdc);
@@ -146,7 +144,7 @@ impl GLWindow {
             Ok(context) => { context }
         };
 
-        
+
         // create rust window
         let win = Rc::new(RefCell::new(GLWindowWrapper {
             hwnd: hwnd,
@@ -212,15 +210,16 @@ impl GLWindow {
         Size { width: 0, height: 0 }
     }
 
-    pub fn start_render(&self) -> Result<(), ContextError> {
+    pub fn start_render(&self) -> Result<(), Error> {
+        let ref window = self.0.borrow();
+        window.context.make_current()
+    }
+
+    pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
         Ok(())
     }
 
-    pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), ContextError> {
-        Ok(())
-    }
-
-    pub fn end_render(&self) -> Result<(), ContextError> {
+    pub fn end_render(&self) -> Result<(), Error> {
         Ok(())
     }
 

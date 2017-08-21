@@ -4,21 +4,13 @@
 use render::*;
 
 
-/// Enum to store the error occurred during a window creation.
-#[derive(Debug, Clone)]
-pub enum CreationError {
-    /// Some error reported by the OS
-    OsError(String),
-    /// Engine is not initialized error. Call Engine::init prior using this functionality
-    EngineNotInitialized,
-    /// Some required is not implemented yet
-    NotImplemented(String),
-}
-
-
 /// Enum to store the error occurred during a call to a render function.
-#[derive(Debug, Copy, Clone)]
-pub enum ContextError {
+#[derive(Debug, Clone)]
+pub enum Error {
+    /// Error reported during a window creation.
+    CreationError(String),
+    /// Error reported by the OS during rendering
+    ContextError(String),
     /// Context is lost, ex window has been closed.
     ContextLost,
 }
@@ -126,6 +118,48 @@ pub trait SurfaceEventHandler: 'static {
 }
 
 
+/// Constant indicating a "don't" care for the render surface requirements
+pub const FBCONFIG_DONT_CARE: u8 = 255;
+
+/// Settings structure for render surface requirement
+#[derive(Debug, Copy, Clone)]
+pub struct FBConfig {
+    /// Request a specific pixel format by id, or 0
+    pub handle: u32,
+
+    /// Required number of red bits or FBCONFIG_DONT_CARE
+    pub red_bits: u8,
+    /// Required number of green bits or FBCONFIG_DONT_CARE
+    pub green_bits: u8,
+    /// Required number of blue bits or FBCONFIG_DONT_CARE
+    pub blue_bits: u8,
+    /// Required number of alpha bits or FBCONFIG_DONT_CARE
+    pub alpha_bits: u8,
+    /// Required number of depth bits or FBCONFIG_DONT_CARE
+    pub depth_bits: u8,
+    /// Required number of stencil bits or FBCONFIG_DONT_CARE
+    pub stencil_bits: u8,
+    /// Required number of red bits in the accumulation buffer or FBCONFIG_DONT_CARE
+    pub accum_red_bits: u8,
+    /// Required number of green bits in the accumulation buffer or FBCONFIG_DONT_CARE
+    pub accum_green_bits: u8,
+    /// Required number of blue bits in the accumulation buffer or FBCONFIG_DONT_CARE
+    pub accum_blue_bits: u8,
+    /// Required number of alpha bits in the accumulation buffer or FBCONFIG_DONT_CARE
+    pub accum_alpha_bits: u8,
+    /// Required number of auxilary buffers or FBCONFIG_DONT_CARE
+    pub aux_buffers: u8,
+    /// Required number of sub-samples or FBCONFIG_DONT_CARE
+    pub samples: u8,
+    /// Require stereo rendering or false
+    pub stereo: bool,
+    /// Require double buffering or false
+    pub double_buffer: bool,
+    /// Require hardware accelerated color conversion or false
+    pub srgb: bool,
+}
+
+
 /// Settings structure for window behavior.
 ///
 /// This structure stores everything that can be customized when
@@ -142,12 +176,12 @@ pub struct WindowSettings {
     pub fullscreen: bool,
     /// Enable vsync
     pub vsync: bool,
-    /// Enable hardware accelerated color conversion.
-    pub srgb: bool,
     /// Enable resizing of the window
     pub resizable: bool,
     /// Enable the OS to decorate of the window
     pub decorated: bool,
+    /// Rander surface requirements
+    pub fb_config: FBConfig,
 }
 
 impl WindowSettings {
@@ -167,9 +201,26 @@ impl WindowSettings {
             sub_samples: 0,
             fullscreen: false,
             vsync: false,
-            srgb: true,
             resizable: true,
             decorated: true,
+            fb_config: FBConfig {
+                handle: 0,
+                red_bits: FBCONFIG_DONT_CARE,
+                green_bits: FBCONFIG_DONT_CARE,
+                blue_bits: FBCONFIG_DONT_CARE,
+                alpha_bits: FBCONFIG_DONT_CARE,
+                depth_bits: FBCONFIG_DONT_CARE,
+                stencil_bits: FBCONFIG_DONT_CARE,
+                accum_red_bits: FBCONFIG_DONT_CARE,
+                accum_green_bits: FBCONFIG_DONT_CARE,
+                accum_blue_bits: FBCONFIG_DONT_CARE,
+                accum_alpha_bits: FBCONFIG_DONT_CARE,
+                aux_buffers: FBCONFIG_DONT_CARE,
+                samples: FBCONFIG_DONT_CARE,
+                stereo: false,
+                double_buffer: true,
+                srgb: false,
+            },
         }
     }
 
@@ -178,7 +229,7 @@ impl WindowSettings {
     /// # Errors
     ///
     /// This function will return an error if thc current backend returns an error.
-    pub fn build(self, engine: &mut Engine) -> Result<Window, CreationError> {
+    pub fn build(self, engine: &mut Engine) -> Result<Window, Error> {
         Window::new(self, engine)
     }
 
@@ -230,22 +281,6 @@ impl WindowSettings {
         self
     }
 
-    /// Gets the number of samples to use for anti-aliasing.
-    pub fn get_sub_samples(&self) -> u8 {
-        self.sub_samples
-    }
-
-    /// Sets the number of samples to use for anti-aliasing.
-    pub fn set_sub_samples(&mut self, value: u8) {
-        self.sub_samples = value;
-    }
-
-    /// Sets the number of samples to use for anti-aliasing in method chaining.
-    pub fn samples(mut self, value: u8) -> Self {
-        self.set_sub_samples(value);
-        self
-    }
-
     /// Gets whether built windows should use vsync.
     pub fn get_vsync(&self) -> bool {
         self.vsync
@@ -259,22 +294,6 @@ impl WindowSettings {
     /// Sets whether built windows should use vsync in method chaining.
     pub fn vsync(mut self, value: bool) -> Self {
         self.set_vsync(value);
-        self
-    }
-
-    /// Gets whether built windows should use hardware accelerated color conversion.
-    pub fn get_srgb(&self) -> bool {
-        self.srgb
-    }
-
-    /// Sets whether built windows should use hardware accelerated color conversion.
-    pub fn set_srgb(&mut self, value: bool) {
-        self.srgb = value;
-    }
-
-    /// Sets whether built windows should use hardware accelerated color conversion in method chaining.
-    pub fn srgb(mut self, value: bool) -> Self {
-        self.set_srgb(value);
         self
     }
 
@@ -309,6 +328,139 @@ impl WindowSettings {
         self.set_decorated(value);
         self
     }
+
+    /// Gets the explicitly selected pixel format id (OS dependent).
+    pub fn get_fb_handle(&self) -> u32 {
+        self.fb_config.handle
+    }
+
+    /// Sets the explicitly selected pixel format id (OS dependent).
+    pub fn set_fb_handle(&mut self, value: u32) {
+        self.fb_config.handle = value;
+    }
+
+    /// Sets the explicitly selected pixel format id (OS dependent) in method chaining.
+    pub fn fb_handle(mut self, value: u32) -> Self {
+        self.set_fb_handle(value);
+        self
+    }
+
+    /// Gets the requested number of bits in the color buffer.
+    pub fn get_fb_color_bits(&self) -> (u8, u8, u8, u8) {
+        (self.fb_config.red_bits, self.fb_config.green_bits, self.fb_config.blue_bits, self.fb_config.alpha_bits)
+    }
+
+    /// Sets the requested number of bits in the color buffer.
+    ///
+    /// If no constraint is required, set the ignored components to FBCONFIG_DONT_CARE.
+    pub fn set_fb_color_bits(&mut self, r: u8, g: u8, b: u8, a: u8) {
+        self.fb_config.red_bits = r;
+        self.fb_config.green_bits = g;
+        self.fb_config.blue_bits = b;
+        self.fb_config.alpha_bits = a;
+    }
+
+    /// Sets the requested number of bits in the color buffer.
+    ///
+    /// If no constraint is required, set the ignored components to FBCONFIG_DONT_CARE.
+    pub fn fb_color_bits(mut self, r: u8, g: u8, b: u8, a: u8) -> Self {
+        self.set_fb_color_bits(r, g, b, a);
+        self
+    }
+
+    /// Gets the requested number of bits in the depth and stencil buffers.
+    pub fn get_fb_depth_bits(&self) -> (u8, u8) {
+        (self.fb_config.depth_bits, self.fb_config.stencil_bits)
+    }
+
+    /// Sets the requested number of bits in the depth and stencil buffers.
+    ///
+    /// If no constraint is required, set the ignored components to FBCONFIG_DONT_CARE.
+    pub fn set_fb_depth_bits(&mut self, depth: u8, stencil: u8) {
+        self.fb_config.depth_bits = depth;
+        self.fb_config.stencil_bits = stencil;
+    }
+
+    /// Sets the requested number of bits in the depth and stencil buffers in method chaining.
+    ///
+    /// If no constraint is required, set the ignored components to FBCONFIG_DONT_CARE.
+    pub fn fb_depth_bits(mut self, depth: u8, stencil: u8) -> Self {
+        self.set_fb_depth_bits(depth, stencil);
+        self
+    }
+
+    /*
+    accum_red_bits: FBCONFIG_DONT_CARE,
+    accum_green_bits: FBCONFIG_DONT_CARE,
+    accum_blue_bits: FBCONFIG_DONT_CARE,
+    accum_alpha_bits: FBCONFIG_DONT_CARE,
+
+    aux_buffers: FBCONFIG_DONT_CARE,
+    */
+
+    /// Gets whether built windows should use stereo rendering.
+    pub fn get_fb_stereo(&self) -> bool {
+        self.fb_config.stereo
+    }
+
+    /// Sets whether built windows should use double buffering.
+    pub fn set_fb_stereo(&mut self, value: bool) {
+        self.fb_config.stereo = value;
+    }
+
+    /// Sets whether built windows should use stereo rendering in method chaining.
+    pub fn fb_stereo(mut self, value: bool) -> Self {
+        self.set_fb_stereo(value);
+        self
+    }
+
+    /// Gets whether built windows should use double buffering.
+    pub fn get_fb_double_buffer(&self) -> bool {
+        self.fb_config.double_buffer
+    }
+
+    /// Sets whether built windows should use double buffering.
+    pub fn set_fb_double_buffer(&mut self, value: bool) {
+        self.fb_config.double_buffer = value;
+    }
+
+    /// Sets whether built windows should use double buffering in method chaining.
+    pub fn fb_double_buffer(mut self, value: bool) -> Self {
+        self.set_fb_double_buffer(value);
+        self
+    }
+
+    /// Gets the number of samples to use for anti-aliasing.
+    pub fn get_fb_sub_samples(&self) -> u8 {
+        self.fb_config.samples
+    }
+
+    /// Sets the number of samples to use for anti-aliasing.
+    pub fn set_fb_sub_samples(&mut self, value: u8) {
+        self.fb_config.samples = value;
+    }
+
+    /// Sets the number of samples to use for anti-aliasing in method chaining.
+    pub fn fb_sub_samples(mut self, value: u8) -> Self {
+        self.set_fb_sub_samples(value);
+        self
+    }
+
+    /// Gets whether built windows should use hardware accelerated color conversion.
+    pub fn get_fb_srgb(&self) -> bool {
+        self.fb_config.srgb
+    }
+
+    /// Sets whether built windows should use hardware accelerated color conversion.
+    pub fn set_fb_srgb(&mut self, value: bool) {
+        self.fb_config.srgb = value;
+    }
+
+    /// Sets whether built windows should use hardware accelerated color conversion in method chaining.
+    pub fn fb_srgb(mut self, value: bool) -> Self {
+        self.set_fb_srgb(value);
+        self
+    }
 }
 
 
@@ -328,7 +480,7 @@ impl Window {
     ///
     /// This function will return an error if the current backend cannot create the
     /// window.
-    pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<Window, CreationError> {
+    pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<Window, Error> {
         let platform = try!(WindowImpl::new(settings, engine));
         Ok(Window { platform: platform })
     }
@@ -365,24 +517,24 @@ impl Window {
     }
 
     /// Prepares the window for rendering.
-    pub fn start_render(&self) -> Result<(), ContextError> {
+    pub fn start_render(&self) -> Result<(), Error> {
         self.platform.start_render()
     }
 
     /// Sends a command queue for rendering.
-    pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), ContextError> {
+    pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
         self.platform.process_queue(queue)
     }
 
     /// Swaps the buffers and perform post render tasks.
-    pub fn end_render(&self) -> Result<(), ContextError> {
+    pub fn end_render(&self) -> Result<(), Error> {
         self.platform.end_render()
     }
 
     /// Renders a single que.
     ///
     /// This function is a shortcut for star, process, end cycle.
-    pub fn render_single_queue(&self, queue: &mut CommandQueue) -> Result<(), ContextError> {
+    pub fn render_single_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
         try!(self.start_render());
         println!("ab");
         try!(self.process_queue(queue));
