@@ -12,7 +12,6 @@ extern crate user32;
 #[cfg(target_os = "windows")]
 extern crate dwmapi;
 
-
 mod engine;
 mod window;
 mod commandqueue;

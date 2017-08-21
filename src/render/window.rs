@@ -11,6 +11,8 @@ pub enum CreationError {
     OsError(String),
     /// Engine is not initialized error. Call Engine::init prior using this functionality
     EngineNotInitialized,
+    /// Some required is not implemented yet
+    NotImplemented(String),
 }
 
 
