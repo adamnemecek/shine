@@ -3,6 +3,7 @@
 
 use render::*;
 
+
 /// Enum to store the error occurred during a window creation.
 #[derive(Debug, Clone)]
 pub enum CreationError {
@@ -12,6 +13,7 @@ pub enum CreationError {
     EngineNotInitialized,
 }
 
+
 /// Enum to store the error occurred during a call to a render function.
 #[derive(Debug, Copy, Clone)]
 pub enum ContextError {
@@ -19,22 +21,6 @@ pub enum ContextError {
     ContextLost,
 }
 
-/// Enum to store the window events.
-#[derive(Debug, Copy, Clone)]
-pub enum WindowEvent {
-    /// OS is releasing surface. All allocated resources shall be released here.
-    SurfaceLost,
-    /// OS has create surface and it is ready to use.
-    SurfaceReady,
-    /// Window has been closed. It is trigger after resources has been release.
-    Closed,
-    /// Window got resized.
-    Resized(Size),
-    /// Window was moved.
-    Moved(Position),
-    /// Dummy, for debug
-    Dummy,
-}
 
 /// Structure to store the window size.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -121,6 +107,20 @@ impl From<Position> for (i32, i32) {
     fn from(value: Position) -> (i32, i32) {
         (value.x, value.y)
     }
+}
+
+
+/// Enum to store the window events.
+pub trait SurfaceEventHandler: 'static {
+    /// Handles to surface lost event.
+    ///
+    /// Window still has the OS resources, but will be released soon after this call.
+    fn on_lost(&mut self, &mut Window);
+
+    /// Handles to surface ready event.
+    ///
+    /// Window has create all the OS resources.
+    fn on_ready(&mut self, &mut Window);
 }
 
 
@@ -331,9 +331,17 @@ impl Window {
         Ok(Window { platform: platform })
     }
 
+    /// Sets the surface event handler.
+    ///
+    /// Event handler can be altered any time, but it is preferred to set them before
+    /// the show call no to miss the on_ready event.
+    pub fn set_surface_handler<H: SurfaceEventHandler>(&mut self, handler: H) {
+        self.platform.set_surface_handler(handler);
+    }
+
     /// Starts the closing process.
     ///
-    /// This function asks the OS to close the window. Window is not closed immediatelly,
+    /// This function asks the OS to close the window. Window is not closed immediately,
     /// event handling shall continue the execution until the OS close events arrive.
     pub fn close(&mut self) {
         self.platform.close()
@@ -352,11 +360,6 @@ impl Window {
     /// Gets the size of the draw area of the window.
     pub fn draw_size(&self) -> Size {
         self.platform.draw_size()
-    }
-
-    /// Polls for pending, unprocessed messages.
-    pub fn poll_event(&mut self) -> Option<WindowEvent> {
-        self.platform.poll_event()
     }
 
     /// Prepares the window for rendering.

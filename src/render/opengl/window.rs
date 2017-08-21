@@ -13,6 +13,12 @@ use render::winapi;
 use render::*;
 use render::opengl::engine::*;
 
+
+/// User window message indicating the window creating has completed and surface ready
+/// callback can be called.
+pub const WM_DR_READY: winapi::UINT = winapi::WM_USER + 1;
+
+
 /// Returns the window style for the specified settings
 fn get_window_style(settings: &WindowSettings) -> u32 {
     let mut style = winapi::WS_CLIPSIBLINGS | winapi::WS_CLIPCHILDREN;
@@ -75,7 +81,7 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
 pub struct GLWindowWrapper {
     hwnd: winapi::HWND,
     size: Size,
-    event_queue: Vec<WindowEvent>,
+    surface_handler: Option<Rc<RefCell<SurfaceEventHandler>>>,
 }
 
 impl Drop for GLWindowWrapper {
@@ -121,7 +127,7 @@ impl GLWindow {
             Rc::new(RefCell::new(GLWindowWrapper {
                 hwnd: hwnd,
                 size: settings.size,
-                event_queue: vec!(),
+                surface_handler: None,
             }));
 
         //connect the OS and rust window
@@ -131,10 +137,6 @@ impl GLWindow {
             user32::SetWindowLongPtrW(hwnd, 0, win_ptr as i64);
         }
 
-        unsafe {
-            user32::ShowWindow(hwnd, winapi::SW_SHOW);
-        }
-
         //if _glfw_ChangeWindowMessageFilterEx {
         //_glfw_ChangeWindowMessageFilterEx(window->win32.handle, WM_DROPFILES, MSGFLT_ALLOW, NULL);
         //_glfw_ChangeWindowMessageFilterEx(window->win32.handle, WM_COPYDATA, MSGFLT_ALLOW, NULL);
@@ -142,6 +144,15 @@ impl GLWindow {
         //}
         //DragAcceptFiles(window->win32.handle, TRUE);
         // create context
+
+        unsafe {
+            user32::ShowWindow(hwnd, winapi::SW_SHOW);
+
+            // The native window creation completes before our callback is injected into the system,
+            // thus  a delayed message is sent, that is delivered only when the message loop
+            // has started. (engine.dispatch_events)
+            user32::PostMessageW(hwnd, WM_DR_READY, 0, 0);
+        }
 
         Ok(GLWindow(win))
     }
@@ -158,6 +169,15 @@ impl GLWindow {
         GLWindow(rc)
     }
 
+    fn to_window(&self) -> Window {
+        Window { platform: GLWindow(self.0.clone()) }
+    }
+
+    pub fn set_surface_handler<H: SurfaceEventHandler>(&mut self, handler: H) {
+        let ref mut window = self.0.borrow_mut();
+        window.surface_handler = Some(Rc::new(RefCell::new(handler)));
+    }
+
     pub fn close(&mut self) {}
 
     pub fn is_closed(&self) -> bool {
@@ -171,13 +191,6 @@ impl GLWindow {
 
     pub fn draw_size(&self) -> Size {
         Size { width: 0, height: 0 }
-    }
-
-    pub fn poll_event(&mut self) -> Option<WindowEvent> {
-        println!("prepoll");
-        let ref mut window = self.0.borrow_mut();
-        println!("poll: {:?}", window.hwnd);
-        None
     }
 
     pub fn start_render(&self) -> Result<(), ContextError> {
@@ -199,13 +212,35 @@ impl GLWindow {
 
     pub fn handle_os_message(&mut self, hwnd: winapi::HWND, msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM)
                              -> winapi::LRESULT {
-        let mut result: Option<winapi::LRESULT> = None;
         {
             let ref window = self.0.borrow();
             assert!(window.hwnd == hwnd);
+        }
 
+        let mut result: Option<winapi::LRESULT> = None;
+        {
             match msg {
-                winapi::WM_CLOSE => {}
+                WM_DR_READY => {
+                    let handler;
+                    {
+                        let ref window = self.0.borrow();
+                        handler = window.surface_handler.clone();
+                    }
+                    if let Some(ref handler) = handler {
+                        handler.borrow_mut().on_ready(&mut self.to_window());
+                    }
+                }
+
+                winapi::WM_CLOSE => {
+                    let handler;
+                    {
+                        let ref window = self.0.borrow();
+                        handler = window.surface_handler.clone();
+                    }
+                    if let Some(ref handler) = handler {
+                        handler.borrow_mut().on_lost(&mut self.to_window());
+                    }
+                }
 
                 winapi::WM_DESTROY => {}
                 _ => {}

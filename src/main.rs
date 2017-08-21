@@ -27,9 +27,13 @@ fn foo() {
 }
 */
 
-fn on_surface_ready(window: &mut Window, queue: &mut CommandQueue) {
-    println!("on_ready");
-    /*
+#[derive(Clone)]
+struct SurfaceHandler;
+
+impl SurfaceEventHandler for SurfaceHandler {
+    fn on_ready(&mut self, window: &mut Window) {
+        println!("on_ready");
+        /*
     let sh_source = [(ShaderType::VertexShader, r#"
  attribute vec4 vPosition;
  void main()
@@ -44,12 +48,13 @@ fn on_surface_ready(window: &mut Window, queue: &mut CommandQueue) {
     )];
     shader.set_sources(&mut queue, sh_source.iter());
     window.process_single_queue(&mut queue).unwrap();*/
-}
+    }
 
-fn on_surface_lost(window: &mut Window, queue: &mut CommandQueue) {
-    println!("on_lost");
-    /*shader.release(&mut queue);
+    fn on_lost(&mut self, window: &mut Window) {
+        println!("on_lost");
+        /*shader.release(&mut queue);
     window.process_single_queue(&mut queue).unwrap();*/
+    }
 }
 
 
@@ -69,25 +74,20 @@ fn main() {
         .title("main")
         .size((1024u32, 1024u32))
         .build(&mut engine).expect("Could not initialize main window");
+    window.set_surface_handler(SurfaceHandler);
+
     let mut sub_window = WindowSettings::new()
         .title("sub")
         .size((100u32, 100u32))
         .build(&mut engine).expect("Could not initialize main window");
+    sub_window.set_surface_handler(SurfaceHandler);
 
     let mut render_queue = render::CommandQueue::new();
 
-    while true {
+    loop {
         if !engine.dispatch_event(None) {
             break;
         }
-
-        match window.poll_event() {
-            Some(render::WindowEvent::SurfaceReady) => { on_surface_ready(&mut window, &mut render_queue) }
-            Some(render::WindowEvent::SurfaceLost) => { on_surface_lost(&mut window, &mut render_queue) }
-            _ => {}
-        }
-
-        sub_window.poll_event();
 
         if !window.is_closed() {
             render_frame(&mut window, &mut render_queue);
