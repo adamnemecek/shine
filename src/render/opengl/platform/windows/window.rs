@@ -1,6 +1,5 @@
 use std::ptr;
 use std::io;
-use std::time::Duration;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::ffi::OsStr;
@@ -15,7 +14,8 @@ use render::opengl::context::wgl::Context;
 
 /// User window message indicating the window creating has completed and surface ready
 /// callback can be called.
-pub const WM_DR_READY: winapi::UINT = winapi::WM_USER + 1;
+pub const WM_DR_WINDOW_CREATED: winapi::UINT = winapi::WM_USER + 1;
+pub const WM_DR_WINDOW_DESTROYED: winapi::UINT = winapi::WM_USER + 2;
 
 
 /// Returns the window style for the specified settings
@@ -79,7 +79,7 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
 
 pub struct GLWindowWrapper {
     hwnd: winapi::HWND,
-    hdc: winapi::HDC,
+    is_closing: bool,
     size: Size,
     context: Context,
     surface_handler: Option<Rc<RefCell<SurfaceEventHandler>>>,
@@ -89,8 +89,6 @@ impl Drop for GLWindowWrapper {
     fn drop(&mut self) {
         println!("GLWindowWrapper dropped");
         unsafe {
-            user32::ReleaseDC(self.hwnd, self.hdc);
-
             user32::DestroyWindow(self.hwnd);
         }
     }
@@ -103,6 +101,8 @@ impl GLWindow {
     pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<GLWindow, Error> {
         // create window
         let ref mut engine = engine.platform;
+        let app_instance = engine.get_instance();
+
         let (style, exstyle) = (get_window_style(&settings), get_window_exstyle(&settings));
         let (xpos, ypos) = (winapi::CW_USEDEFAULT, winapi::CW_USEDEFAULT);
         let full_size = get_full_window_size(style, exstyle, settings.size);
@@ -116,7 +116,7 @@ impl GLWindow {
                                     full_size.width as winapi::LONG, full_size.height as winapi::LONG,
                                     ptr::null_mut(), // No parent window
                                     ptr::null_mut(), // No window menu
-                                    engine.get_instance(),
+                                    app_instance,
                                     ptr::null_mut())
         };
         println!("created hwnd {:?}", hwnd);
@@ -125,17 +125,10 @@ impl GLWindow {
             return Err(Error::CreationError(format!("Window: CreateWindowEx function failed: {}", io::Error::last_os_error())));
         }
 
-        let hdc = unsafe { user32::GetDC(hwnd) };
-        if hdc.is_null() {
-            return Err(Error::CreationError(format!("Window: GetDC function failed: {}", io::Error::last_os_error())));
-        }
-
-
         //create context
-        let context = match Context::new(hwnd, hdc, &settings) {
+        let context = match Context::new(app_instance, hwnd, &settings) {
             Err(err) => {
                 unsafe {
-                    user32::ReleaseDC(hwnd, hdc);
                     user32::DestroyWindow(hwnd);
                 }
                 return Err(err);
@@ -148,7 +141,7 @@ impl GLWindow {
         // create rust window
         let win = Rc::new(RefCell::new(GLWindowWrapper {
             hwnd: hwnd,
-            hdc: hdc,
+            is_closing: false,
             size: settings.size,
             surface_handler: None,
             context: context,
@@ -168,7 +161,7 @@ impl GLWindow {
             // The native window creation completes before our callback is injected into the system,
             // thus  a delayed message is sent, that is delivered only when the message loop
             // has started. (engine.dispatch_events)
-            user32::PostMessageW(hwnd, WM_DR_READY, 0, 0);
+            user32::PostMessageW(hwnd, WM_DR_WINDOW_CREATED, 0, 0);
         }
 
         Ok(GLWindow(win))
@@ -195,10 +188,20 @@ impl GLWindow {
         window.surface_handler = Some(Rc::new(RefCell::new(handler)));
     }
 
-    pub fn close(&mut self) {}
+    pub fn close(&mut self) {
+        if self.is_closed() {
+            return;
+        }
+
+        let ref window = self.0.borrow();
+        unsafe {
+            user32::PostMessageW(window.hwnd, winapi::WM_CLOSE, 0, 0);
+        }
+    }
 
     pub fn is_closed(&self) -> bool {
-        false
+        let ref window = self.0.borrow();
+        window.is_closing || window.hwnd == ptr::null_mut()
     }
 
     pub fn size(&self) -> Size {
@@ -220,7 +223,8 @@ impl GLWindow {
     }
 
     pub fn end_render(&self) -> Result<(), Error> {
-        Ok(())
+        let ref window = self.0.borrow();
+        window.context.swap_buffers()
     }
 
     pub fn get_hwnd(&self) -> winapi::HWND {
@@ -238,7 +242,7 @@ impl GLWindow {
         let mut result: Option<winapi::LRESULT> = None;
         {
             match msg {
-                WM_DR_READY => {
+                WM_DR_WINDOW_CREATED if !self.is_closed() => {
                     let handler;
                     {
                         let ref window = self.0.borrow();
@@ -252,7 +256,8 @@ impl GLWindow {
                 winapi::WM_CLOSE => {
                     let handler;
                     {
-                        let ref window = self.0.borrow();
+                        let ref mut window = self.0.borrow_mut();
+                        window.is_closing = true;
                         handler = window.surface_handler.clone();
                     }
                     if let Some(ref handler) = handler {
@@ -260,7 +265,11 @@ impl GLWindow {
                     }
                 }
 
-                winapi::WM_DESTROY => {}
+                winapi::WM_DESTROY => {
+                    unsafe {
+                        user32::PostMessageW(ptr::null_mut(), WM_DR_WINDOW_DESTROYED, 0, 0);
+                    }
+                }
                 _ => {}
             }
         }
@@ -272,3 +281,4 @@ impl GLWindow {
     }
 }
 
+pub type WindowImpl = GLWindow;

@@ -11,6 +11,17 @@ pub enum EngineError {
     InitializeError(String),
 }
 
+/// Enum to define the timeout policy for dispatch event
+#[derive(Debug, Copy, Clone)]
+pub enum DispatchTimeout {
+    /// Blocking, wait for os event
+    Infinite,
+    /// Non-blocking, return immediately independent of event availability
+    Immediate,
+    /// Blocking with timeout, Wait for an event or for at most the given time
+    Time(Duration),
+}
+
 /// Structure to store the engine abstraction.
 ///
 /// The engine is responsible for the event loop and event dispatching.
@@ -42,7 +53,7 @@ impl Engine {
     /// are discarded.
     /// # Return
     ///  Returns true if application is terminating, false otherwise
-    pub fn dispatch_event(&mut self, timeout: Option<Duration>) -> bool {
+    pub fn dispatch_event(&mut self, timeout: DispatchTimeout) -> bool {
         self.platform.dispatch_event(timeout)
     }
 }

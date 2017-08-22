@@ -3,6 +3,5 @@
 pub mod engine;
 
 
-pub use self::engine::GLEngine;
-pub type EngineImpl = GLEngine;
+pub use self::engine::EngineImpl;
 

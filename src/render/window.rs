@@ -121,6 +121,41 @@ pub trait SurfaceEventHandler: 'static {
 /// Constant indicating a "don't" care for the render surface requirements
 pub const FBCONFIG_DONT_CARE: u8 = 255;
 
+/// OpenGL profile selection.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum OpenGLProfile {
+    /// No specific profile is requested
+    DontCare,
+    /// Core profile
+    Core,
+    /// Compatibility profile
+    Compatibility,
+    /// OpenGL ES profile
+    ES2,
+}
+
+/// OpenGL driver robustness.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum OpenGLRobustness {
+    /// No specific robustness is requested
+    DontCare,
+    /// TBD
+    NoReset,
+    /// TBD
+    LoseContextOnReset,
+}
+
+/// OpenGL release behavior.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum OpenGLRelease {
+    /// No specific release method is requested
+    DontCare,
+    /// TBD
+    None,
+    /// TBD
+    Flush,
+}
+
 /// Settings structure for render surface requirement
 #[derive(Debug, Copy, Clone)]
 pub struct FBConfig {
@@ -157,6 +192,33 @@ pub struct FBConfig {
     pub double_buffer: bool,
     /// Require hardware accelerated color conversion or false
     pub srgb: bool,
+
+    /// Enable vertical sync
+    pub vsync: bool,
+    /// Enable debugging at driver level, if supported
+    pub debug: bool,
+
+    /// The selected a context version.
+    ///
+    /// This setting is valid only for OpenGL, other implementations ignore it.
+    pub gl_version: (u8, u8),
+    /// Indicates to remove "deprecated" functionality
+    ///
+    /// This setting is valid only for OpenGL for specific profiles, other implementations ignore it.
+    pub gl_forward_compatible: bool,
+    /// Selected the compatiblity profile, see https://www.khronos.org/opengl/wiki/Core_And_Compatibility_in_Contexts
+    ///
+    /// This setting is valid only for OpenGL, other implementations ignore it.
+    pub gl_profile: OpenGLProfile,
+    /// Selected robust mode of the driver
+    ///
+    /// This setting is valid only for OpenGL, other implementations ignore it.
+    pub gl_robustness: OpenGLRobustness,
+    /// Selected release mode
+    ///
+    /// This setting is valid only for OpenGL, other implementations ignore it.
+    pub gl_release: OpenGLRelease,
+
 }
 
 
@@ -174,8 +236,6 @@ pub struct WindowSettings {
     pub sub_samples: u8,
     /// Enable fullscreen
     pub fullscreen: bool,
-    /// Enable vsync
-    pub vsync: bool,
     /// Enable resizing of the window
     pub resizable: bool,
     /// Enable the OS to decorate of the window
@@ -200,7 +260,6 @@ impl WindowSettings {
             size: Size { width: 640, height: 480 },
             sub_samples: 0,
             fullscreen: false,
-            vsync: false,
             resizable: true,
             decorated: true,
             fb_config: FBConfig {
@@ -220,6 +279,15 @@ impl WindowSettings {
                 stereo: false,
                 double_buffer: true,
                 srgb: false,
+
+                vsync: true,
+                debug: false,
+
+                gl_version: (0, 0),
+                gl_forward_compatible: false,
+                gl_profile: OpenGLProfile::DontCare,
+                gl_robustness: OpenGLRobustness::DontCare,
+                gl_release: OpenGLRelease::DontCare,
             },
         }
     }
@@ -278,22 +346,6 @@ impl WindowSettings {
     /// Sets whether built windows will be fullscreen in method chaining.
     pub fn fullscreen(mut self, value: bool) -> Self {
         self.set_fullscreen(value);
-        self
-    }
-
-    /// Gets whether built windows should use vsync.
-    pub fn get_vsync(&self) -> bool {
-        self.vsync
-    }
-
-    /// Sets whether built windows should use vsync.
-    pub fn set_vsync(&mut self, value: bool) {
-        self.vsync = value;
-    }
-
-    /// Sets whether built windows should use vsync in method chaining.
-    pub fn vsync(mut self, value: bool) -> Self {
-        self.set_vsync(value);
         self
     }
 
@@ -459,6 +511,151 @@ impl WindowSettings {
     /// Sets whether built windows should use hardware accelerated color conversion in method chaining.
     pub fn fb_srgb(mut self, value: bool) -> Self {
         self.set_fb_srgb(value);
+        self
+    }
+
+    /// Gets whether built windows should use vsync.
+    pub fn get_fb_vsync(&self) -> bool {
+        self.fb_config.vsync
+    }
+
+    /// Sets whether built windows should use vsync.
+    pub fn set_fb_vsync(&mut self, value: bool) {
+        self.fb_config.vsync = value;
+    }
+
+    /// Sets whether built windows should use vsync in method chaining.
+    pub fn fb_vsync(mut self, value: bool) -> Self {
+        self.set_fb_vsync(value);
+        self
+    }
+
+    /// Gets whether built windows should enable driver level debugging.
+    pub fn get_fb_debug(&self) -> bool {
+        self.fb_config.debug
+    }
+
+    /// Sets whether built windows should enable driver level debugging.
+    pub fn set_fb_debug(&mut self, value: bool) {
+        self.fb_config.debug = value;
+    }
+
+    /// Sets whether built windows should enable driver level debugging in method chaining.
+    pub fn fb_debug(mut self, value: bool) -> Self {
+        self.set_fb_debug(value);
+        self
+    }
+
+
+    /// Gets the selected context version.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn get_gl_version(&self) -> (u8, u8) {
+        self.fb_config.gl_version
+    }
+
+    /// Sets the required context version.
+    ///
+    /// Only request an explicitly versioned context when necessary, as explicitly requesting
+    /// version 1.0 does not always return the highest version supported by the driver.
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn set_gl_version(&mut self, major: u8, minor: u8) {
+        self.fb_config.gl_version = (major, minor);
+    }
+
+    /// Sets the required context version in method chaining.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn gl_version(mut self, major: u8, minor: u8) -> Self {
+        self.set_gl_version(major, minor);
+        self
+    }
+
+    /// Gets whether built windows should remove the "deprecate" functionality.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn get_gl_forward_compatible(&self) -> bool {
+        self.fb_config.gl_forward_compatible
+    }
+
+    /// Sets whether built windows should remove the "deprecate" functionality.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn set_gl_forward_compatible(&mut self, value: bool) {
+        self.fb_config.gl_forward_compatible = value;
+    }
+
+    /// Sets whether built windows should remove the "deprecate" functionality in method chaining.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn gl_forward_compatible(mut self, value: bool) -> Self {
+        self.set_gl_forward_compatible(value);
+        self
+    }
+
+    /// Gets the selected API profile version.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn get_gl_profile(&self) -> OpenGLProfile {
+        self.fb_config.gl_profile
+    }
+
+    /// Sets the selected API profile version.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn set_gl_profile(&mut self, value: OpenGLProfile) {
+        self.fb_config.gl_profile = value;
+    }
+
+    /// Sets the selected API profile version in method chaining.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn gl_profile(mut self, value: OpenGLProfile) -> Self {
+        self.set_gl_profile(value);
+        self
+    }
+
+    /// Gets the selected OpenGl driver robustness.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn get_fb_gl_robustness(&self) -> OpenGLRobustness {
+        self.fb_config.gl_robustness
+    }
+
+    /// Selectes OpenGl driver robustness.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn set_fb_gl_robustness(&mut self, value: OpenGLRobustness) {
+        self.fb_config.gl_robustness = value;
+    }
+
+    /// Selectes OpenGl driver robustness in method chaining.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn fb_gl_robustness(mut self, value: OpenGLRobustness) -> Self {
+        self.set_fb_gl_robustness(value);
+        self
+    }
+
+    /// Gets the selected OpenGl release method.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn get_fb_gl_release(&self) -> OpenGLRelease {
+        self.fb_config.gl_release
+    }
+
+    /// Selectes OpenGl release method.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn set_fb_gl_release(&mut self, value: OpenGLRelease) {
+        self.fb_config.gl_release = value;
+    }
+
+    /// Selectes OpenGl release method in method chaining.
+    ///
+    /// This setting is valid for OpenGL context and ignored by other engine implementations.
+    pub fn fb_gl_release(mut self, value: OpenGLRelease) -> Self {
+        self.set_fb_gl_release(value);
         self
     }
 }

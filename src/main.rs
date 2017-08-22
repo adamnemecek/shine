@@ -27,46 +27,68 @@ fn foo() {
 }
 */
 
-#[derive(Clone)]
-struct SurfaceHandler;
-
-impl SurfaceEventHandler for SurfaceHandler {
-    fn on_ready(&mut self, window: &mut Window) {
-        println!("on_ready");
-        /*
-    let sh_source = [(ShaderType::VertexShader, r#"
+/*
+static sh_source = [
+    (ShaderType::VertexShader, r#"
  attribute vec4 vPosition;
  void main()
  {
      gl_Position = vPosition;
- }"#
-    ), (ShaderType::FragmentShader, r#"
+ }"#),
+    (ShaderType::FragmentShader, r#"
  void main()
  {
   gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
- }"#
-    )];
-    shader.set_sources(&mut queue, sh_source.iter());
-    window.process_single_queue(&mut queue).unwrap();*/
+ }"#)];
+*/
+
+struct PerViewData {}
+
+impl PerViewData {
+    fn new() -> PerViewData {
+        PerViewData {}
+    }
+}
+
+struct SurfaceHandler {
+    view_data: Option<PerViewData>
+}
+
+impl SurfaceHandler {
+    fn new() -> SurfaceHandler {
+        SurfaceHandler {
+            view_data: None
+        }
+    }
+}
+
+impl SurfaceEventHandler for SurfaceHandler {
+    fn on_ready(&mut self, window: &mut Window) {
+        println!("on_ready");
+        assert!(self.view_data.is_none());
+        self.view_data = Some(PerViewData::new());
+        //shader.set_sources(&mut queue, sh_source.iter());
+        //window.process_single_queue(&mut queue).unwrap();
     }
 
     fn on_lost(&mut self, window: &mut Window) {
         println!("on_lost");
-        /*shader.release(&mut queue);
-    window.process_single_queue(&mut queue).unwrap();*/
+        assert!(self.view_data.is_some());
+        //shader.release(&mut queue);
+        //window.process_single_queue(&mut queue).unwrap();
+        self.view_data = None;
     }
 }
 
-
-fn render_frame(window: &mut Window, queue: &mut CommandQueue) {
-    window.start_render().unwrap();
-    //unsafe {
-    //  gl::ClearColor(0.2, 0.5, 0.2, 1.0);
-    //  gl::Clear(gl::COLOR_BUFFER_BIT);
-    //}
-    window.process_queue(queue).unwrap();
-    window.end_render().unwrap();
+impl Clone for SurfaceHandler {
+    fn clone(&self) -> SurfaceHandler {
+        SurfaceHandler {
+            // view data cannot be cloned, it have to be regenerated
+            view_data: None,
+        }
+    }
 }
+
 
 fn main() {
     let mut engine = render::Engine::new().expect("Could not initialize render engine");
@@ -74,23 +96,32 @@ fn main() {
         .title("main")
         .size((1024u32, 1024u32))
         .build(&mut engine).expect("Could not initialize main window");
-    window.set_surface_handler(SurfaceHandler);
+    window.set_surface_handler(SurfaceHandler::new());
 
     let mut sub_window = WindowSettings::new()
         .title("sub")
         .size((100u32, 100u32))
         .build(&mut engine).expect("Could not initialize main window");
-    sub_window.set_surface_handler(SurfaceHandler);
+    sub_window.set_surface_handler(SurfaceHandler::new());
 
     let mut render_queue = render::CommandQueue::new();
 
+    let mut t = 0.;
     loop {
-        if !engine.dispatch_event(None) {
+        if !engine.dispatch_event(DispatchTimeout::Immediate) {
             break;
         }
+        t = t + 0.01;
+        if t > 1. { t = 0.; }
 
         if !window.is_closed() {
-            render_frame(&mut window, &mut render_queue);
+            window.start_render().unwrap();
+            unsafe {
+                gl::ClearColor(0.2, t, 0.2, 1.0);
+                gl::Clear(gl::COLOR_BUFFER_BIT);
+            }
+            //window.process_queue(queue).unwrap();
+            window.end_render().unwrap();
         }
     }
 }

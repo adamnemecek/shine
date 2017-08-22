@@ -4,6 +4,6 @@ pub mod window;
 
 
 
-pub use self::window::GLWindow;
-pub type WindowImpl = GLWindow;
+pub use self::window::WindowImpl;
+
 

@@ -1,15 +1,15 @@
 use std::mem;
 use std::ptr;
+use std::i32;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
-use std::time::Duration;
 
 use render::kernel32;
 use render::user32;
 use render::winapi;
 
 use render::*;
-use render::opengl::window::*;
+use render::opengl::window::window::*;
 
 pub unsafe extern "system" fn wnd_proc(hwnd: winapi::HWND, msg: winapi::UINT,
                                        wparam: winapi::WPARAM, lparam: winapi::LPARAM)
@@ -35,6 +35,8 @@ pub struct GLEngine {
     hinstance: winapi::HINSTANCE,
     window_class_name: Vec<u16>,
 
+    // Number of active/non-closed windows
+    window_count: i32,
 
 }
 
@@ -70,6 +72,10 @@ impl GLEngine {
         Ok(GLEngine {
             hinstance: hinstance,
             window_class_name: window_class_name,
+
+            // While no window is created it is set an extremal value, not to terminate dispatch event before
+            // the window creation has terminated.
+            window_count: i32::MAX,
         })
     }
 
@@ -77,21 +83,49 @@ impl GLEngine {
         unsafe { user32::UnregisterClassW(self.window_class_name.as_ptr(), self.hinstance); }
     }
 
-    pub fn dispatch_event(&mut self, timeout: Option<Duration>) -> bool {
+    pub fn dispatch_event(&mut self, timeout: DispatchTimeout) -> bool {
         unsafe {
-            let mut msg = mem::uninitialized();
-            if user32::GetMessageW(&mut msg, ptr::null_mut(), 0, 0) == 0 {
-                // Only happens if the message is `WM_QUIT`.
-                //debug_assert_eq!(msg.message, winapi::WM_QUIT);
-                return false;
+            let mut msg: winapi::MSG = mem::zeroed();
+
+            match timeout {
+                DispatchTimeout::Immediate => {
+                    if user32::PeekMessageW(&mut msg, ptr::null_mut(), 0, 0, winapi::PM_REMOVE) == 0 {
+                        return true;
+                    }
+                }
+
+                DispatchTimeout::Infinite => {
+                    if user32::GetMessageW(&mut msg, ptr::null_mut(), 0, 0) == 0 {
+                        // Only happens if the message is `WM_QUIT`.
+                        //debug_assert_eq!(msg.message, winapi::WM_QUIT);
+                        return false;
+                    }
+                }
+
+                _ => {
+                    return false;
+                }
+            }
+
+            if msg.message == WM_DR_WINDOW_CREATED {
+                println!("WM_DR_WINDOW_CREATED");
+                if self.window_count == i32::MAX {
+                    self.window_count = 1;
+                } else {
+                    self.window_count += 1;
+                }
+            } else if msg.message == WM_DR_WINDOW_DESTROYED {
+                println!("WM_DR_WINDOW_DESTROYED");
+                self.window_count -= 1;
             }
 
             /// messages are delegated to the window in the window proc
             user32::TranslateMessage(&msg);
             user32::DispatchMessageW(&msg);
         }
-        true
+        self.window_count > 0
     }
+
 
     pub fn get_window_class_name(&self) -> &Vec<u16> {
         &self.window_class_name
