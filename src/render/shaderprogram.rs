@@ -25,7 +25,7 @@ impl ShaderProgram {
     }
 
     /// Creates a shader and attach the given sources.
-    pub fn new_from_source<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut CommandQueue, sources: I) -> ShaderProgram {
+    pub fn from_source<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut CommandQueue, sources: I) -> ShaderProgram {
         let mut sh = ShaderProgram { platform: ShaderProgramImpl::new() };
         sh.set_sources(queue, sources);
         sh

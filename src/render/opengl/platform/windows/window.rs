@@ -1,5 +1,4 @@
 use std::ptr;
-use std::char;
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::io;
@@ -78,27 +77,11 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
     }
 }
 
-const MAPVK_VK_TO_CHAR: u32 = 2;
-const MAPVK_VSC_TO_VK_EX: u32 = 3;
-
-// This is needed as windows doesn't properly distinguish
-// some virtual key codes for different keyboard layouts
-/* fn map_text_keys(win_virtual_key: i32) -> Option<VirtualKeyCode> {
-    let char_key = unsafe { user32::MapVirtualKeyA(win_virtual_key as u32, MAPVK_VK_TO_CHAR) } & 0x7FFF;
-    match char::from_u32(char_key) {
-        Some(';') => Some(VirtualKeyCode::Semicolon),
-        Some('/') => Some(VirtualKeyCode::Slash),
-        Some('`') => Some(VirtualKeyCode::Grave),
-        Some('[') => Some(VirtualKeyCode::LBracket),
-        Some(']') => Some(VirtualKeyCode::RBracket),
-        Some('\'') => Some(VirtualKeyCode::Apostrophe),
-        Some('\\') => Some(VirtualKeyCode::Backslash),
-        _ => None
-    }
-}*/
 
 /// Maps from windows key code to our virtual key codes
 fn vkeycode_to_element(wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> (ScanCode, Option<VirtualKeyCode>) {
+    const MAPVK_VSC_TO_VK_EX: u32 = 3;
+
     let scancode = ((lparam >> 16) & 0xff) as u32;
     let extended = (lparam & 0x01000000) != 0;
     let vk = match wparam as i32 {
@@ -119,7 +102,7 @@ fn vkeycode_to_element(wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> (ScanC
         winapi::VK_BACK => Some(VirtualKeyCode::Backspace),
         winapi::VK_TAB => Some(VirtualKeyCode::Tab),
         //winapi::VK_CLEAR => Some(VirtualKeyCode::Clear),
-        winapi::VK_RETURN => if extended {Some(VirtualKeyCode::NumpadEnter)} else {Some(VirtualKeyCode::Enter)},
+        winapi::VK_RETURN => if extended { Some(VirtualKeyCode::NumpadEnter) } else { Some(VirtualKeyCode::Enter) },
         winapi::VK_LSHIFT => Some(VirtualKeyCode::LShift),
         winapi::VK_RSHIFT => Some(VirtualKeyCode::RShift),
         winapi::VK_LCONTROL => Some(VirtualKeyCode::LControl),
@@ -441,6 +424,8 @@ impl GLWindow {
     }
 
     pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
+        let queue = &mut queue.platform;
+        queue.clear();
         Ok(())
     }
 
@@ -495,9 +480,9 @@ impl GLWindow {
                     let w = winapi::LOWORD(lparam as winapi::DWORD) as u32;
                     let h = winapi::HIWORD(lparam as winapi::DWORD) as u32;
 
-                    let ref mut window = self.0.borrow_mut();
-                    window.size = Size { width: w, height: h };
-                    println!("size: {:?}", window.size);
+                    let size = Size { width: w, height: h };
+                    println!("size: {:?}", size);
+                    self.0.borrow_mut().size = size;
 
                     if let Some(ref handler) = handler {
                         handler.borrow_mut().on_changed(&mut self.to_window());
@@ -510,9 +495,9 @@ impl GLWindow {
                     let x = winapi::LOWORD(lparam as winapi::DWORD) as i32;
                     let y = winapi::HIWORD(lparam as winapi::DWORD) as i32;
 
-                    let ref mut window = self.0.borrow_mut();
-                    window.position = Position { x: x, y: y };
-                    println!("pos: {:?}", window.position);
+                    let pos = Position { x: x, y: y };
+                    println!("pos: {:?}", pos);
+                    self.0.borrow_mut().position = Position { x: x, y: y };
 
                     result = Some(0);
                 }
@@ -523,26 +508,28 @@ impl GLWindow {
                         result = None;
                     } else {
                         let handler = self.0.borrow().input_handler.clone();
+                        
                         if let Some(ref handler) = handler {
                             let (sc, vkey) = vkeycode_to_element(wparam, lparam);
                             handler.borrow_mut().on_key(&mut self.to_window(), sc, vkey, true);
                         }
+                        result = Some(0);
                     }
-                    result = Some(0);
                 }
 
-                winapi::WM_KEYDOWN | winapi::WM_SYSKEYDOWN => {
-                    if msg == winapi::WM_SYSKEYDOWN && wparam as i32 == winapi::VK_F4 {
+                winapi::WM_KEYUP | winapi::WM_SYSKEYUP => {
+                    if msg == winapi::WM_SYSKEYUP && wparam as i32 == winapi::VK_F4 {
                         // pass close by F4 key
                         result = None;
                     } else {
                         let handler = self.0.borrow().input_handler.clone();
+
                         if let Some(ref handler) = handler {
                             let (sc, vkey) = vkeycode_to_element(wparam, lparam);
                             handler.borrow_mut().on_key(&mut self.to_window(), sc, vkey, false);
                         }
+                        result = Some(0);
                     }
-                    result = Some(0);
                 }
 
                 _ => {}

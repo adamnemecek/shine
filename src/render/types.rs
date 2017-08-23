@@ -175,26 +175,15 @@ pub enum VirtualKeyCode {
     NumpadDecimal,
     NumpadEnter,
 
-
-    /// The '1' key over the letters.
     Key1,
-    /// The '2' key over the letters.
     Key2,
-    /// The '3' key over the letters.
     Key3,
-    /// The '4' key over the letters.
     Key4,
-    /// The '5' key over the letters.
     Key5,
-    /// The '6' key over the letters.
     Key6,
-    /// The '7' key over the letters.
     Key7,
-    /// The '8' key over the letters.
     Key8,
-    /// The '9' key over the letters.
     Key9,
-    /// The '0' key over the 'O' and 'P' keys.
     Key0,
 
     A,

@@ -3,6 +3,8 @@ pub mod container;
 pub mod render;
 
 use std::time::Duration;
+use std::rc::Rc;
+use std::cell::RefCell;
 use render::*;
 
 /*vertex_declaration!(Alma{
@@ -43,87 +45,95 @@ static sh_source = [
  }"#)];
 */
 
-struct PerViewData {}
+struct Data {}
 
-impl PerViewData {
-    fn new() -> PerViewData {
-        PerViewData {}
+impl Data {
+    fn new() -> Data {
+        Data {}
     }
 }
 
-struct SurfaceHandler {
-    view_data: Option<PerViewData>
+
+struct ViewData {
+    data: Rc<RefCell<Data>>,
+    render_queue: CommandQueue,
+    shader: ShaderProgram,
 }
 
-impl SurfaceHandler {
-    fn new() -> SurfaceHandler {
-        SurfaceHandler {
-            view_data: None
+impl ViewData {
+    fn new(data: Rc<RefCell<Data>>) -> ViewData {
+        ViewData {
+            data: data,
+            render_queue: CommandQueue::new(),
+            shader: ShaderProgram::new(),
         }
     }
+
+    fn update(&mut self) {}
 }
 
-impl SurfaceEventHandler for SurfaceHandler {
+#[derive(Clone)]
+struct ViewDataWrapper(Rc<RefCell<ViewData>>);
+
+impl SurfaceEventHandler for ViewDataWrapper {
     fn on_ready(&mut self, window: &mut Window) {
         println!("on_ready");
-        assert!(self.view_data.is_none());
-        self.view_data = Some(PerViewData::new());
-        //shader.set_sources(&mut queue, sh_source.iter());
-        //window.process_single_queue(&mut queue).unwrap();
+        let ref mut view_data = *self.0.borrow_mut();
+        let queue = &mut view_data.render_queue;
+
+        //view_data.shader.set_sources(&mut view_data.queue, sh_source.iter());
+
+        window.start_render().unwrap();
+        window.process_queue(queue).unwrap();
+        window.end_render().unwrap();
     }
 
     fn on_lost(&mut self, window: &mut Window) {
         println!("on_lost");
-        assert!(self.view_data.is_some());
-        //shader.release(&mut queue);
-        //window.process_single_queue(&mut queue).unwrap();
-        self.view_data = None;
+        let ref mut view_data = *self.0.borrow_mut();
+        let queue = &mut view_data.render_queue;
+
+        view_data.shader.release(queue);
+
+        window.start_render().unwrap();
+        window.process_queue(queue).unwrap();
+        window.end_render().unwrap();
     }
 
     fn on_changed(&mut self, window: &mut Window) {
         println!("on_changed: {:?}", window.get_size());
-        assert!(self.view_data.is_some());
-        //shader.release(&mut queue);
-        //window.process_single_queue(&mut queue).unwrap();
-        self.view_data = None;
     }
 }
 
-struct InputHandler;
-
-impl InputEventHandler for InputHandler {
+impl InputEventHandler for ViewDataWrapper {
     fn on_key(&mut self, window: &mut Window, sc: ScanCode, vk: Option<VirtualKeyCode>, is_down: bool) {
         println!("key: {}, {:?}, {}", sc, vk, is_down);
-    }
-}
-
-impl Clone for SurfaceHandler {
-    fn clone(&self) -> SurfaceHandler {
-        SurfaceHandler {
-            // view data cannot be cloned, it have to be regenerated
-            view_data: None,
-        }
     }
 }
 
 
 fn main() {
     let mut engine = render::Engine::new().expect("Could not initialize render engine");
+
+    let data = Rc::new(RefCell::new(Data::new()));
+
     let mut window = WindowSettings::new()
         .title("main")
         .size((1024u32, 1024u32))
         .build(&mut engine).expect("Could not initialize main window");
-    window.set_surface_handler(SurfaceHandler::new());
-    window.set_input_handler(InputHandler);
+    let window_data = ViewDataWrapper(Rc::new(RefCell::new(ViewData::new(data.clone()))));
+    window.set_surface_handler(window_data.clone());
+    window.set_input_handler(window_data.clone());
+
 
     let mut sub_window = WindowSettings::new()
         .title("sub")
         .size((100u32, 100u32))
         .build(&mut engine).expect("Could not initialize main window");
-    sub_window.set_surface_handler(SurfaceHandler::new());
-    sub_window.set_input_handler(InputHandler);
+    let sub_window_data = ViewDataWrapper(Rc::new(RefCell::new(ViewData::new(data.clone()))));
+    sub_window.set_surface_handler(sub_window_data.clone());
+    sub_window.set_input_handler(sub_window_data.clone());
 
-    let mut render_queue = render::CommandQueue::new();
 
     let mut t = 0.;
     loop {
@@ -142,8 +152,24 @@ fn main() {
                 gl::ClearColor(0.2, t, 0.2, 1.0);
                 gl::Clear(gl::COLOR_BUFFER_BIT);
             }
-            window.process_queue(&mut render_queue).unwrap();
+
+            let ref mut view_data = *window_data.0.borrow_mut();
+            view_data.update();
+            window.process_queue(&mut view_data.render_queue).unwrap();
             window.end_render().unwrap();
+        }
+
+        if !sub_window.is_closed() {
+            sub_window.start_render().unwrap();
+            unsafe {
+                gl::ClearColor(t, 0.2, 0.2, 1.0);
+                gl::Clear(gl::COLOR_BUFFER_BIT);
+            }
+
+            let ref mut view_data = *sub_window_data.0.borrow_mut();
+            view_data.update();
+            sub_window.process_queue(&mut view_data.render_queue).unwrap();
+            sub_window.end_render().unwrap();
         }
     }
 }
