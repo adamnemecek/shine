@@ -80,7 +80,7 @@ impl GLEngine {
     }
 
     pub fn quit(&mut self) {
-        unsafe { user32::UnregisterClassW(self.window_class_name.as_ptr(), self.hinstance); }
+        unsafe { user32::PostQuitMessage(0); }
     }
 
     pub fn dispatch_event(&mut self, timeout: DispatchTimeout) -> bool {
@@ -102,8 +102,22 @@ impl GLEngine {
                     }
                 }
 
-                _ => {
-                    return false;
+                DispatchTimeout::Time(timeout) => {
+                    if user32::PeekMessageW(&mut msg, ptr::null_mut(), 0, 0, winapi::PM_REMOVE) == 0 {
+                        let secs_part = (timeout.as_secs() * 1000) as i64;
+                        let nanos_part = (timeout.subsec_nanos() / 1000_000) as i64;
+                        let timeout_ms = secs_part + nanos_part;
+
+                        // no pending message, let's wait for some
+                        if user32::MsgWaitForMultipleObjects(0, ptr::null_mut(), winapi::FALSE, timeout_ms as u32, winapi::QS_ALLEVENTS) != winapi::WAIT_OBJECT_0 {
+                            return true;
+                        }
+
+                        if user32::PeekMessageW(&mut msg, ptr::null_mut(), 0, 0, winapi::PM_REMOVE) == 0 {
+                            // it shall never happen, but who knows, stay on the safe side :)
+                            return true;
+                        }
+                    }
                 }
             }
 
@@ -133,6 +147,12 @@ impl GLEngine {
 
     pub fn get_instance(&self) -> winapi::HINSTANCE {
         self.hinstance
+    }
+}
+
+impl Drop for GLEngine {
+    fn drop(&mut self) {
+        unsafe { user32::UnregisterClassW(self.window_class_name.as_ptr(), self.hinstance); }
     }
 }
 

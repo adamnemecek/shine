@@ -2,7 +2,8 @@ pub mod container;
 #[macro_use]
 pub mod render;
 
-pub use render::*;
+use std::time::Duration;
+use render::*;
 
 /*vertex_declaration!(Alma{
     position: Float32x4 = f32x4!(),
@@ -78,6 +79,22 @@ impl SurfaceEventHandler for SurfaceHandler {
         //window.process_single_queue(&mut queue).unwrap();
         self.view_data = None;
     }
+
+    fn on_changed(&mut self, window: &mut Window) {
+        println!("on_changed: {:?}", window.get_size());
+        assert!(self.view_data.is_some());
+        //shader.release(&mut queue);
+        //window.process_single_queue(&mut queue).unwrap();
+        self.view_data = None;
+    }
+}
+
+struct InputHandler;
+
+impl InputEventHandler for InputHandler {
+    fn on_key(&mut self, window: &mut Window, sc: ScanCode, vk: Option<VirtualKeyCode>, is_down: bool) {
+        println!("key: {}, {:?}, {}", sc, vk, is_down);
+    }
 }
 
 impl Clone for SurfaceHandler {
@@ -97,22 +114,27 @@ fn main() {
         .size((1024u32, 1024u32))
         .build(&mut engine).expect("Could not initialize main window");
     window.set_surface_handler(SurfaceHandler::new());
+    window.set_input_handler(InputHandler);
 
     let mut sub_window = WindowSettings::new()
         .title("sub")
         .size((100u32, 100u32))
         .build(&mut engine).expect("Could not initialize main window");
     sub_window.set_surface_handler(SurfaceHandler::new());
+    sub_window.set_input_handler(InputHandler);
 
     let mut render_queue = render::CommandQueue::new();
 
     let mut t = 0.;
     loop {
-        if !engine.dispatch_event(DispatchTimeout::Immediate) {
+        if !engine.dispatch_event(DispatchTimeout::Time(Duration::from_millis(17))) {
             break;
         }
         t = t + 0.01;
-        if t > 1. { t = 0.; }
+        if t > 1. {
+            engine.quit();
+            t = 0.;
+        }
 
         if !window.is_closed() {
             window.start_render().unwrap();
@@ -120,7 +142,7 @@ fn main() {
                 gl::ClearColor(0.2, t, 0.2, 1.0);
                 gl::Clear(gl::COLOR_BUFFER_BIT);
             }
-            //window.process_queue(queue).unwrap();
+            window.process_queue(&mut render_queue).unwrap();
             window.end_render().unwrap();
         }
     }
