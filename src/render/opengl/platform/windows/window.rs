@@ -119,7 +119,7 @@ fn vkeycode_to_element(wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> (ScanC
         winapi::VK_BACK => Some(VirtualKeyCode::Backspace),
         winapi::VK_TAB => Some(VirtualKeyCode::Tab),
         //winapi::VK_CLEAR => Some(VirtualKeyCode::Clear),
-        winapi::VK_RETURN => Some(VirtualKeyCode::Enter),
+        winapi::VK_RETURN => if extended {Some(VirtualKeyCode::NumpadEnter)} else {Some(VirtualKeyCode::Enter)},
         winapi::VK_LSHIFT => Some(VirtualKeyCode::LShift),
         winapi::VK_RSHIFT => Some(VirtualKeyCode::RShift),
         winapi::VK_LCONTROL => Some(VirtualKeyCode::LControl),
