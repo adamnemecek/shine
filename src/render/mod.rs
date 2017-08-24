@@ -12,7 +12,9 @@ extern crate user32;
 #[cfg(target_os = "windows")]
 extern crate dwmapi;
 
+#[macro_use]
 mod types;
+mod keycodes;
 mod engine;
 mod windowsettings;
 mod window;
@@ -23,6 +25,7 @@ mod opengl;
 pub use self::opengl::*;
 
 pub use self::types::*;
+pub use self::keycodes::*;
 pub use self::engine::*;
 pub use self::windowsettings::*;
 pub use self::window::*;

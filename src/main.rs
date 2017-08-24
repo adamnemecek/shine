@@ -113,6 +113,11 @@ impl InputEventHandler for ViewDataWrapper {
 
 
 fn main() {
+
+    assert!( f32x4!(1, 2, 3, 4) == Float32x4(1., 2., 3., 4.) );
+    assert!( f32x4!(1) == Float32x4(1., 1., 1, 1.) );
+    assert!( f32x4!() == Float32x4(0., 0., 0., 0.) );
+
     let mut engine = render::Engine::new().expect("Could not initialize render engine");
 
     let data = Rc::new(RefCell::new(Data::new()));

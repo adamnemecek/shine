@@ -90,150 +90,142 @@ impl From<Position> for (i32, i32) {
 }
 
 
-/// Type alias for keyboard scancopes
-pub type ScanCode = u32;
+/// Float array with 4 components
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Float32x4(pub f32, pub f32, pub f32, pub f32);
 
-
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
-#[repr(u32)]
-#[allow(missing_docs)]
-pub enum VirtualKeyCode {
-    /// The Escape key, next to F1.
-    Escape,
-
-    F1,
-    F2,
-    F3,
-    F4,
-    F5,
-    F6,
-    F7,
-    F8,
-    F9,
-    F10,
-    F11,
-    F12,
-    F13,
-    F14,
-    F15,
-
-    PrintScreen,
-    ScrollLock,
-    CapsLock,
-    NumLock,
-    Pause,
-    SysRq,
-
-    Power,
-    Sleep,
-    Wake,
-    Stop,
-
-    LAlt,
-    RAlt,
-    LControl,
-    RControl,
-    LMenu,
-    RMenu,
-    LShift,
-    RShift,
-    LWin,
-    RWin,
-    LinuxCompose,
-
-    Insert,
-    Home,
-    Delete,
-    End,
-    PageDown,
-    PageUp,
-
-    Left,
-    Up,
-    Right,
-    Down,
-
-    Backspace,
-    Tab,
-    Enter,
-    Space,
-
-    Numpad0,
-    Numpad1,
-    Numpad2,
-    Numpad3,
-    Numpad4,
-    Numpad5,
-    Numpad6,
-    Numpad7,
-    Numpad8,
-    Numpad9,
-    NumpadPlus,
-    NumpadMinus,
-    NumpadDivide,
-    NumpadMultiply,
-    NumpadDecimal,
-    NumpadEnter,
-
-    Key1,
-    Key2,
-    Key3,
-    Key4,
-    Key5,
-    Key6,
-    Key7,
-    Key8,
-    Key9,
-    Key0,
-
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
-    I,
-    J,
-    K,
-    L,
-    M,
-    N,
-    O,
-    P,
-    Q,
-    R,
-    S,
-    T,
-    U,
-    V,
-    W,
-    X,
-    Y,
-    Z,
-
-    Mail,
-    MyComputer,
-    Apps,
-    NavigateForward,
-    NavigateBackward,
-    MediaSelect,
-    MediaStop,
-    Mute,
-    PlayPause,
-    NextTrack,
-    PrevTrack,
-    VolumeDown,
-    VolumeUp,
-
-    OEM102,
-
-    WebBack,
-    WebFavorites,
-    WebForward,
-    WebHome,
-    WebRefresh,
-    WebSearch,
-    WebStop,
+impl Float32x4 {
+    /// Creates Float32x4
+    #[inline(always)]
+    pub fn new(x: f32, y: f32, z: f32, w: f32) -> Float32x4 {
+        Float32x4(x, y, z, w)
+    }
 }
+
+impl Default for Float32x4 {
+    fn default() -> Float32x4 {
+        Float32x4(0., 0., 0., 0.)
+    }
+}
+
+impl From<[f32; 4]> for Float32x4 {
+    #[inline(always)]
+    fn from(value: [f32; 4]) -> Float32x4 {
+        Float32x4(value[0], value[1], value[2], value[3])
+    }
+}
+
+impl From<(f32, f32, f32, f32)> for Float32x4 {
+    #[inline(always)]
+    fn from(value: (f32, f32, f32, f32)) -> Float32x4 {
+        Float32x4(value.0, value.1, value.2, value.3)
+    }
+}
+
+/// Constructs Float32x4 from multiple expressions
+/// # Example
+/// assert!( f32x4!(1, 2, 3, 4) == Float32x4(1., 2., 3., 4.) );
+/// assert!( f32x4!(1) == Float32x4(1., 1., 1, 1.) );
+/// assert!( f32x4!() == Float32x4(0., 0., 0., 0.) );
+#[macro_export]
+macro_rules! f32x4 {
+    ($_x:expr, $_y:expr, $_z:expr, $_w:expr) => { Float32x4::new($_x as f32, $_y as f32, $_z as f32, $_w as f32) };
+    ($_x:expr) => { Float32x4::new($_x as f32, $_x as f32, $_x as f32, $_x as f32) };
+    () => { Default::default() };
+}
+
+
+/// Float array with 3 components
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Float32x3(pub f32, pub f32, pub f32);
+
+impl Float32x3 {
+    /// Creates Float32x3
+    #[inline(always)]
+    pub fn new(x: f32, y: f32, z: f32) -> Float32x3 {
+        Float32x3(x, y, z)
+    }
+}
+
+impl Default for Float32x3 {
+    fn default() -> Float32x3 {
+        Float32x3(0., 0., 0.)
+    }
+}
+
+impl From<[f32; 3]> for Float32x3 {
+    #[inline(always)]
+    fn from(value: [f32; 3]) -> Float32x3 {
+        Float32x3(value[0], value[1], value[2])
+    }
+}
+
+impl From<(f32, f32, f32)> for Float32x3 {
+    #[inline(always)]
+    fn from(value: (f32, f32, f32)) -> Float32x3 {
+        Float32x3(value.0, value.1, value.2)
+    }
+}
+
+/// Constructs Float32x3 from multiple expressions
+///
+/// # Example
+/// assert!( f32x3!(1, 2, 3) == Float32x3(1., 2., 3.) );
+/// assert!( f32x3!(1) == Float32x3(1., 1., 1) );
+/// assert!( f32x3!() == Float32x3(0., 0., 0.) );
+#[macro_export]
+macro_rules! f32x3 {
+    ($_x:expr, $_y:expr, $_z:expr) => { Float32x3::new($_x as f32, $_y as f32, $_z as f32) };
+    ($_x:expr) => { Float32x3::new($_x as f32, $_x as f32, $_x as f32) };
+    () => { Default::default() };
+}
+
+
+/// Float array with 2 components
+#[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Float32x2(pub f32, pub f32);
+
+impl Float32x2 {
+    /// Creates Float32x2
+    #[inline(always)]
+    pub fn new(x: f32, y: f32) -> Float32x2 {
+        Float32x2(x, y)
+    }
+}
+
+impl Default for Float32x2 {
+    fn default() -> Float32x2 {
+        Float32x2(0., 0.)
+    }
+}
+
+impl From<[f32; 2]> for Float32x2 {
+    #[inline(always)]
+    fn from(value: [f32; 2]) -> Float32x2 {
+        Float32x2(value[0], value[1])
+    }
+}
+
+impl From<(f32, f32)> for Float32x2 {
+    #[inline(always)]
+    fn from(value: (f32, f32)) -> Float32x2 {
+        Float32x2(value.0, value.1)
+    }
+}
+
+/// Constructs Float32x3 from multiple expressions
+///
+/// # Example
+/// assert!( f32x2!(1, 2, 3) == Float32x2(1., 2.) );
+/// assert!( f32x2!(1) == Float32x2(1., 1.) );
+/// assert!( f32x2!() == Float32x2(0., 0.) );
+#[macro_export]
+macro_rules! f32x2 {
+    ($_x:expr, $_y:expr) => { Float32x2::new($_x as f32, $_y as f32) };
+    ($_x:expr) => { Float32x2::new($_x as f32, $_x as f32) };
+    () => { Default::default() };
+}
+
