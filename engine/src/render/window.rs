@@ -107,6 +107,11 @@ impl Window {
         self.platform.start_render()
     }
 
+    /// Some dummy debug function. To be removed
+    pub fn hello_world(&self, t: f32) {
+        self.platform.hello_world(t)
+    }
+
     /// Sends a command queue for rendering.
     pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
         self.platform.process_queue(queue)

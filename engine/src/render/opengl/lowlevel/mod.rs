@@ -1,4 +1,5 @@
-pub mod utils;
+mod utils;
+mod vertexattribute;
 mod vertexbinding;
 mod indexbinding;
 mod programbinding;
@@ -7,10 +8,17 @@ pub use render::opengl::gl;
 pub use render::opengl::gl::types::*;
 
 pub use self::utils::*;
+pub use self::vertexattribute::*;
 use self::vertexbinding::VertexBinding;
 use self::indexbinding::IndexBinding;
 use self::programbinding::ProgramBinding;
 
+
+/// Structure to manage the GL state machine at a low level.
+///
+/// It tries to collect and minimize the states changes between the render calls.
+/// by caching the bound attributes. Also it tries to move the API into a stateless
+/// direction where one draw call does not effects the next calls.
 pub struct LowLevel {
     pub width: u32,
     pub height: u32,
@@ -69,11 +77,5 @@ impl LowLevel {
             }
         }
         gl_check_error();
-    }
-}
-
-impl Drop for LowLevel {
-    fn drop(&mut self) {
-        println!("drop LowLevel");
     }
 }

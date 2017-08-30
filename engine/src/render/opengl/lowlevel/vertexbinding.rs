@@ -1,39 +1,6 @@
-#![allow(dead_code)]
-
 use render::opengl::lowlevel::*;
 
-const MAX_ATTRIBUTE_COUNT: usize = 16;
-
-#[derive(Clone, Copy)]
-pub struct VertexAttribute {
-    component_type: GLenum,
-    components: GLint,
-    normalize: GLboolean,
-    stride: GLsizei,
-    offset: GLintptr
-}
-
-impl VertexAttribute {
-    fn new() -> VertexAttribute {
-        VertexAttribute {
-            component_type: 0,
-            components: 0,
-            normalize: 0,
-            stride: 0,
-            offset: 0
-        }
-    }
-}
-
-impl PartialEq for VertexAttribute {
-    fn eq(&self, other: &VertexAttribute) -> bool {
-        return self.component_type == other.component_type
-            && self.components == other.components
-            && self.normalize == other.normalize
-            && self.stride == other.stride
-            && self.offset == other.offset
-    }
-}
+const MAX_BOUND_ATTRIBUTE_COUNT: usize = 16;
 
 
 #[derive(Clone, Copy)]
@@ -61,7 +28,7 @@ pub struct VertexBinding {
     force: bool,
     time_stamp: u8,
     bound_id: GLuint,
-    bound_attributes: [BoundVertexAttribute; MAX_ATTRIBUTE_COUNT],
+    bound_attributes: [BoundVertexAttribute; MAX_BOUND_ATTRIBUTE_COUNT],
 }
 
 impl VertexBinding {
@@ -70,7 +37,7 @@ impl VertexBinding {
             force: false,
             time_stamp: 1,
             bound_id: 0,
-            bound_attributes: [BoundVertexAttribute::new(); MAX_ATTRIBUTE_COUNT],
+            bound_attributes: [BoundVertexAttribute::new(); MAX_BOUND_ATTRIBUTE_COUNT],
         }
     }
 

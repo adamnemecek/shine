@@ -2,22 +2,6 @@
 name = "dragorust"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
-build = "build.rs"
-
-[build-dependencies]
-gl_generator = "0.5"
-
 
 [dependencies]
-libc = "*"
-gl = "*"
-lazy_static = "*"
-
-
-[target.'cfg(target_os = "windows")'.dependencies]
-winapi = "0.2"
-shell32-sys = "0.1"
-gdi32-sys = "0.1"
-user32-sys = "~0.1.2"
-kernel32-sys = "0.2"
-dwmapi-sys = "0.1"
+dragorust-engine = {path = "engine"}

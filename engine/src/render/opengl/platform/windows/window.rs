@@ -423,6 +423,13 @@ impl GLWindow {
         window.context.make_current()
     }
 
+    pub fn hello_world(&self, t: f32) {
+        unsafe {
+            gl::ClearColor(t, 0.2, 0.2, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+    }
+
     pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
         let queue = &mut queue.platform;
         queue.clear();

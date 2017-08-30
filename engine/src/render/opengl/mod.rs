@@ -7,6 +7,7 @@ mod window;
 mod lowlevel;
 mod commandqueue;
 mod shaderprogram;
+mod vertexbuffer;
 
 
 pub use self::window::WindowImpl;
@@ -14,4 +15,5 @@ pub use self::engine::EngineImpl;
 pub use self::lowlevel::*;
 pub use self::commandqueue::*;
 pub use self::shaderprogram::*;
+pub use self::vertexbuffer::*;
 

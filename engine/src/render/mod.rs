@@ -20,6 +20,8 @@ mod windowsettings;
 mod window;
 mod commandqueue;
 mod shaderprogram;
+#[macro_use]
+mod vertexbuffer;
 
 mod opengl;
 pub use self::opengl::*;
@@ -31,5 +33,6 @@ pub use self::windowsettings::*;
 pub use self::window::*;
 pub use self::commandqueue::*;
 pub use self::shaderprogram::*;
+pub use self::vertexbuffer::*;
 
 
