@@ -12,16 +12,16 @@ struct VxPos {
 
 /// Structure to store view dependent data
 pub struct ViewData {
-    world: WorldWrapper,
+    //world: WorldWrapper,
     pub render_queue: CommandQueue,
     shader: ShaderProgram,
     vertex_buffer: VertexBuffer,
 }
 
 impl ViewData {
-    fn new(world: WorldWrapper) -> ViewData {
+    fn new(_: WorldWrapper) -> ViewData {
         ViewData {
-            world: world,
+//            world: world,
             render_queue: CommandQueue::new(),
             shader: ShaderProgram::new(),
             vertex_buffer: VertexBuffer::new(),
@@ -56,23 +56,31 @@ impl SurfaceEventHandler for ViewDataWrapper {
         let queue = &mut view_data.render_queue;
 
         let sh_source = [
-            (ShaderType::VertexShader, r#"
- attribute vec4 vPosition;
- void main()
- {
-     gl_Position = vPosition;
- }"#),
-            (ShaderType::FragmentShader, r#"
- void main()
- {
-  gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
- }"#)];
+            (ShaderType::VertexShader,
+             r#"
+attribute vec3 vPosition;
+void main()
+{
+    gl_Position = vec4(vPosition, 1.0);
+}
+"#),
+            (ShaderType::FragmentShader,
+             r#"
+void main()
+{
+    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+}"#)];
 
-        let vertices = [VxPos { position: f32x3!(1f32, 0f32, 0f32) }, VxPos { position: f32x3!(1f32, 1f32, 0f32) }, VxPos { position: f32x3!(0f32, 1f32, 0f32) }].to_vec();
+        let vertices = [
+            VxPos { position: f32x3!(1f32, 0f32, 0f32) },
+            VxPos { position: f32x3!(1f32, 1f32, 0f32) },
+            VxPos { position: f32x3!(0f32, 1f32, 0f32) }
+        ];
 
         view_data.shader.set_sources(queue, sh_source.iter());
-        view_data.vertex_buffer.set_transient(queue, &vertices );
-        //VxPos::get_declaration(vertices.len()).iter(), unsafe { slice::from_raw_parts(vertices.as_ptr() as *const u8, vertices.len() * mem::size_of::<VxPos>()) }
+        view_data.vertex_buffer.set_transient(queue, &vertices);
+        view_data.vertex_buffer.set_transient(queue, &vertices.to_vec());
+        view_data.vertex_buffer.set_transient(queue, &vertices.as_ref() );
 
         window.start_render().unwrap();
         window.process_queue(queue).unwrap();

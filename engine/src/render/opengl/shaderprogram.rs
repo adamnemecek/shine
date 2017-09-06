@@ -192,6 +192,10 @@ impl GLShaderProgramWrapper {
             }
         );
     }
+
+    pub fn draw(&mut self, _: &mut CommandQueue, _: &GLVertexBufferWrapper) {
+        println!("GLShaderProgram - draw");
+    }
 }
 
 pub type ShaderProgramImpl = GLShaderProgramWrapper;

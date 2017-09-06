@@ -14,54 +14,68 @@ use render::*;
 /// Vertex declaration is map from location to VertexAttributes, but as location
 /// mapping is continuous an array is used instead.
 pub trait VertexDeclaration {
-    /// Return an iterator to iterate over the vertex components.
-    //fn iter() -> Iterator<Item=VertexAttribute> where Self : Sized;
-
+    /// Returns the vertex declaration.
+    ///
+    /// Vertex declaration is a mapping from location to attribute descriptor, but
+    /// as the location is a continuous range from 0..N, a simple array is used.
+    /// If N is smaller than MAX_VERTEX_ATTRIBUTE_COUNT, the last items in the array
+    /// is set to en extremal, invalid value.
     fn get_declaration() -> [VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT];
 }
 
 
 /// Trait to define vertex declaration.
 pub trait TransientVertexSource {
-    /// Return the vertex declaration and vertex source
-    fn to_vertex_source<'a>(&self) -> ([VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8]);
+    /// Returns the vertex declaration and the reference to the vertex data.
+    fn to_vertex_source<'a>(&self) -> ([VertexAttributeImpl; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8]);
 }
 
+/// TransientVertexSource implementation for arrays. The trait is implemented for array with size up to 32.
+/// For larger array, the implementation for slice can be used:
+///
+/// let data = [Vertex; 1024];
+/// let desc = data.as_ref().to_vertex_source();
+///
+macro_rules! __impl_array_TransientVertexSource {
+    ($($N:expr)+) => {
+        $(
+            impl<V: VertexDeclaration + Sized> TransientVertexSource for [V;$N] {
+                fn to_vertex_source<'a>(&self) -> ([VertexAttributeImpl; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8])
+                {
+                    (
+                        V::get_declaration(),
+                        unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<V>()) }
+                    )
+                }
+            }
+        )+
+    }
+}
+
+__impl_array_TransientVertexSource! {
+     0  1  2  3  4  5  6  7  8  9
+    10 11 12 13 14 15 16 17 18 19
+    20 21 22 23 24 25 26 27 28 29
+    30 31 32
+}
+
+/// TransientVertexSource implementation for slice.
 impl<'a, V: 'a + VertexDeclaration + Sized> TransientVertexSource for &'a [V] {
-    fn to_vertex_source<'b>(&self) -> ([VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT], &'b [u8])
+    fn to_vertex_source<'b>(&self) -> ([VertexAttributeImpl; MAX_VERTEX_ATTRIBUTE_COUNT], &'b [u8])
     {
-        let mut attributes = [VertexAttribute::new(); MAX_VERTEX_ATTRIBUTE_COUNT];
-
-        /*for (src, dst) in attributes.iter_mut().zip(V::iter()) {
-            *src = *dst;
-        }*/
-
-        for (src, dst) in attributes.iter_mut().zip(V::get_declaration().iter()) {
-            *src = *dst;
-        }
-
         (
-            attributes,
+            V::get_declaration(),
             unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<V>()) }
         )
     }
 }
 
+/// TransientVertexSource implementation for Vec.
 impl<V: VertexDeclaration + Sized> TransientVertexSource for Vec<V> {
-    fn to_vertex_source<'a>(&self) -> ([VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8])
+    fn to_vertex_source<'a>(&self) -> ([VertexAttributeImpl; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8])
     {
-        let mut attributes = [VertexAttribute::new(); MAX_VERTEX_ATTRIBUTE_COUNT];
-
-        /*for (src, dst) in attributes.iter_mut().zip(V::iter()) {
-            *src = *dst;
-        }*/
-
-        for (src, dst) in attributes.iter_mut().zip(V::get_declaration().iter()) {
-            *src = *dst;
-        }
-
         (
-            attributes,
+            V::get_declaration(),
             unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<V>()) }
         )
     }

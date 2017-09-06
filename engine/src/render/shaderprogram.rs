@@ -46,4 +46,10 @@ impl ShaderProgram {
     pub fn release(&mut self, queue: &mut CommandQueue) {
         self.platform.release(queue);
     }
+
+
+    /// Submits a geometry for rendering
+    pub fn draw(&mut self, queue: &mut CommandQueue, vertices: &VertexBuffer) {
+        self.platform.draw(queue, &vertices.platform);
+    }
 }
