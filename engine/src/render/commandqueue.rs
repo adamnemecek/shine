@@ -14,7 +14,7 @@ use render::*;
 /// After process has finished the queue gets cleared and commands can be collected again.
 pub struct CommandQueue {
     /// Stores the platform dependent implementation.
-    pub platform: CommandQueueImpl
+    pub platform: CommandQueueImpl,
 }
 
 impl CommandQueue {

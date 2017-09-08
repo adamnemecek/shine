@@ -425,13 +425,6 @@ impl GLWindow {
         window.context.make_current()
     }
 
-    pub fn hello_world(&self, t: f32) {
-        unsafe {
-            gl::ClearColor(t, 0.2, 0.2, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
-    }
-
     pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
         let queue = &mut queue.platform;
         let ref mut window = self.0.borrow_mut();
@@ -523,7 +516,7 @@ impl GLWindow {
                         result = None;
                     } else {
                         let handler = self.0.borrow().input_handler.clone();
-                        
+
                         if let Some(ref handler) = handler {
                             let (sc, vkey) = vkeycode_to_element(wparam, lparam);
                             handler.borrow_mut().on_key(&mut self.to_window(), sc, vkey, true);

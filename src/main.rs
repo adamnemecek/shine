@@ -11,31 +11,8 @@ mod viewdata;
 pub use dragorust_engine::*;
 use world::*;
 use viewdata::*;
-use render::VertexDeclaration;
-
-
-#[derive(Copy, Clone, Debug)]
-#[derive(VertexDeclaration)]
-struct VxLine {
-    position: render::Float32x4,
-    normal: render::Float32x3,
-}
-
-/*trace_macros!(true);
-vertex_declaration! { VxLine, VxLineLocation,
-    attributes {
-        position: render::Float32x4,
-        normal: render::Float32x3 = f32x3!(0, 0, 1),
-    }
-}
-trace_macros!(false);
-*/
 
 pub fn main() {
-    let vx_decl = VxLine::get_declaration();
-    println!("{:?}", vx_decl);
-    println!("{:?}", vx_decl[VxLineLocation::position]);
-
     let mut engine = render::Engine::new().expect("Could not initialize render engine");
 
     let world = WorldWrapper::new();
@@ -59,36 +36,24 @@ pub fn main() {
     sub_window.set_input_handler(sub_window_data.clone());
 
 
-    let mut t = 0.;
     loop {
         if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {
             break;
         }
-        t = t + 0.01;
-        if t > 1. {
-            engine.quit();
-            t = 0.;
-        }
 
         if !window.is_closed() {
+            window_data.update();
+
             window.start_render().unwrap();
-            window.hello_world(t);
-
-            let ref mut view_data = *window_data.borrow_mut();
-            view_data.update();
-            window.process_queue(&mut view_data.render_queue).unwrap();
-
+            window_data.render(&mut window);
             window.end_render().unwrap();
         }
 
         if !sub_window.is_closed() {
+            sub_window_data.update();
+
             sub_window.start_render().unwrap();
-            window.hello_world(t);
-
-            let ref mut view_data = *sub_window_data.borrow_mut();
-            view_data.update();
-            sub_window.process_queue(&mut view_data.render_queue).unwrap();
-
+            sub_window_data.render(&mut sub_window);
             sub_window.end_render().unwrap();
         }
     }

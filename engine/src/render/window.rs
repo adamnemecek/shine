@@ -46,7 +46,7 @@ pub trait InputEventHandler: 'static {
 /// the abstraction and the concrete implementation.
 pub struct Window {
     /// Stores the platform dependent implementation.
-    pub platform: WindowImpl
+    pub ( crate ) platform: WindowImpl
 }
 
 impl Window {
@@ -107,11 +107,6 @@ impl Window {
         self.platform.start_render()
     }
 
-    /// Some dummy debug function. To be removed
-    pub fn hello_world(&self, t: f32) {
-        self.platform.hello_world(t)
-    }
-
     /// Sends a command queue for rendering.
     pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
         self.platform.process_queue(queue)
@@ -127,11 +122,8 @@ impl Window {
     /// This function is a shortcut for star, process, end cycle.
     pub fn render_single_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
         try!(self.start_render());
-        println!("ab");
         try!(self.process_queue(queue));
-        println!("ac");
         try!(self.end_render());
-        println!("ad");
         Ok(())
     }
 }

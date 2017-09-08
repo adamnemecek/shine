@@ -85,7 +85,7 @@ impl<V: VertexDeclaration + Sized> TransientVertexSource for Vec<V> {
 /// Structure to store a vertex buffer
 pub struct VertexBuffer {
     /// Stores the platform dependent implementation.
-    pub platform: VertexBufferImpl
+    pub ( crate ) platform: VertexBufferImpl
 }
 
 impl VertexBuffer {

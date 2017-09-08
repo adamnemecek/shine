@@ -27,7 +27,7 @@ pub enum DispatchTimeout {
 /// The engine is responsible for the event loop and event dispatching.
 pub struct Engine {
     /// Stores the platform dependent implementation.
-    pub platform: EngineImpl
+    pub  platform: EngineImpl
 }
 
 impl Engine {

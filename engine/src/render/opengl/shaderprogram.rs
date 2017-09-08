@@ -154,7 +154,7 @@ impl GLCommand for ReleaseCommand {
 }
 
 
-///
+
 pub struct GLShaderProgramWrapper {
     wrapped: Rc<RefCell<GLShaderProgram>>
 }

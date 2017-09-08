@@ -13,18 +13,6 @@ pub enum ShaderType {
 }
 
 
-/// Geometry primitive type
-#[derive(Copy, Clone, Debug)]
-pub enum Primitive {
-    /// Point primitive (1 vertex per primitive)
-    Point,
-    /// Line primitive (2 vertex per primitive)
-    Line,
-    /// Triangle primitive (3 vertex per primitive)
-    Triangle,
-}
-
-
 /// Structure to store the shader abstraction.
 pub struct ShaderProgram {
     /// Stores the platform dependent implementation.
@@ -58,11 +46,5 @@ impl ShaderProgram {
     /// The HW data is access only during queue processing.
     pub fn release(&mut self, queue: &mut CommandQueue) {
         self.platform.release(queue);
-    }
-
-
-    /// Submits a geometry for rendering
-    pub fn draw(&mut self, queue: &mut CommandQueue, vertices: &VertexBuffer, primitive: Primitive, start: usize, vertex_count: usize) {
-        self.platform.draw(queue, &vertices.platform, primitive, start, vertex_count);
     }
 }

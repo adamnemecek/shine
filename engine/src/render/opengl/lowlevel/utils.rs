@@ -5,7 +5,19 @@ use std::mem;
 use render::opengl::lowlevel::*;
 
 pub fn gl_check_error() {
+    match unsafe { gl::GetError() } {
+        gl::NO_ERROR => {}
 
+        e @ gl::INVALID_ENUM => { panic!("gl error ({}): An unacceptable value is specified for an enumerated argument.", e); }
+        e @ gl::INVALID_VALUE => { panic!("gl error ({}): A numeric argument is out of range.", e); }
+        e @ gl::INVALID_OPERATION => { panic!("gl error ({}): The specified operation is not allowed in the current state.", e); }
+        e @ gl::INVALID_FRAMEBUFFER_OPERATION => { panic!("gl error ({}): The framebuffer object is not complete.", e); }
+        e @ gl::OUT_OF_MEMORY => { panic!("gl error ({}): There is not enough memory left to execute the command.", e); }
+        e @ gl::STACK_UNDERFLOW => { panic!("gl error ({}): An attempt has been made to perform an operation that would cause an internal stack to underflow.", e); }
+        e @ gl::STACK_OVERFLOW => { panic!("gl error ({}): An attempt has been made to perform an operation that would cause an internal stack to overflow.", e); }
+
+        e => { panic!("gl error: {}", e); }
+    }
 }
 
 
