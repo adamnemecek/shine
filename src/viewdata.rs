@@ -18,8 +18,7 @@ enum Passes {
 /// Structure to store view dependent data
 pub struct ViewData {
     //world: WorldWrapper,
-    pub render_queue: CommandQueue,
-    pass_manager: PassManager<Passes>,
+    render: RenderManager<Passes>,
     shader: ShaderProgram,
     vertex_buffer: VertexBuffer,
 
@@ -30,15 +29,14 @@ impl ViewData {
     fn new(_: WorldWrapper) -> ViewData {
         ViewData {
             //            world: world,
-            pass_manager: PassManager::new(),
-            render_queue: CommandQueue::new(),
+            render: RenderManager::new(),
             shader: ShaderProgram::new(),
             vertex_buffer: VertexBuffer::new(),
             t: 0f32,
         }
     }
 
-    fn init(&mut self) -> &mut CommandQueue {
+    fn init(&mut self, window: &Window) {
         let sh_source = [
             (ShaderType::VertexShader,
              r#"
@@ -61,17 +59,17 @@ void main()
             VxPos { position: f32x3!(0f32, 1f32, 0f32) }
         ];
 
-        self.shader.set_sources(&mut self.render_queue, sh_source.iter());
-        self.vertex_buffer.set_transient(&mut self.render_queue, &vertices);
-        self.vertex_buffer.set_transient(&mut self.render_queue, &vertices.to_vec());
-        self.vertex_buffer.set_transient(&mut self.render_queue, &vertices.as_ref());
-        &mut self.render_queue
+        self.shader.set_sources(&mut self.render, sh_source.iter());
+        self.vertex_buffer.set_transient(&mut self.render, &vertices);
+        self.vertex_buffer.set_transient(&mut self.render, &vertices.to_vec());
+        self.vertex_buffer.set_transient(&mut self.render, &vertices.as_ref());
+        self.render.submit(window);
     }
 
-    fn release(&mut self) -> &mut CommandQueue {
-        self.vertex_buffer.release(&mut self.render_queue);
-        self.shader.release(&mut self.render_queue);
-        &mut self.render_queue
+    fn release(&mut self, window: &Window) {
+        self.vertex_buffer.release(&mut self.render);
+        self.shader.release(&mut self.render);
+        self.render.submit(window);
     }
 
     fn update(&mut self) {
@@ -81,16 +79,22 @@ void main()
         }
     }
 
-    pub fn render(&mut self, window: &Window) -> &mut CommandQueue {
-        {
-            let mut pp = self.pass_manager.get(Passes::Present);
+    pub fn render(&mut self, window: &Window) {
+        /*let mut p0 = self.render.create_pass(Passes::Present)
+            .set_viewport(window.get_size())
+            .clear(self.t)
+        /*.add_target(DEPTH)
+        .add_target(0, COLOR)*/;
 
-            pp.set_viewport(window.get_size());
-            pp.clear(self.t);
-        }
+        let vertices = [
+            VxPos { position: f32x3!(1f32, 0f32, 0f32) },
+            VxPos { position: f32x3!(1f32, 1f32, 0f32) },
+            VxPos { position: f32x3!(0f32, 1f32, 0f32) }
+        ];
 
-        self.pass_manager.sort_passes();
-        &mut self.render_queue
+        self.vertex_buffer.set_transient(p0, &vertices);
+        self.render.find_pass(Passes::Present).unwrap().draw();*/
+        self.render.submit(window);
     }
 }
 
@@ -104,13 +108,11 @@ impl ViewDataWrapper {
     }
 
     fn init(&mut self, window: &mut Window) {
-        let mut view_data = self.0.borrow_mut();
-        window.render_single_queue(view_data.init()).unwrap();
+        self.0.borrow_mut().init(window);
     }
 
     fn release(&mut self, window: &mut Window) {
-        let mut view_data = self.0.borrow_mut();
-        window.render_single_queue(view_data.release()).unwrap();
+        self.0.borrow_mut().release(window);
     }
 
     pub fn update(&self) {
@@ -118,8 +120,7 @@ impl ViewDataWrapper {
     }
 
     pub fn render(&self, window: &mut Window) {
-        let mut view_data = self.0.borrow_mut();
-        window.process_queue(view_data.render(window)).unwrap();
+        self.0.borrow_mut().render(window);
     }
 }
 

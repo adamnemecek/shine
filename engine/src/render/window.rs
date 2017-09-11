@@ -1,6 +1,8 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
+use std::rc::Rc;
+use std::cell::{RefCell, Ref, RefMut};
 use render::*;
 
 
@@ -45,8 +47,7 @@ pub trait InputEventHandler: 'static {
 /// The structure stores the platform dependent implementation and serves as a bridge between
 /// the abstraction and the concrete implementation.
 pub struct Window {
-    /// Stores the platform dependent implementation.
-    pub ( crate ) platform: WindowImpl
+    platform: Rc<RefCell<WindowImpl>>
 }
 
 impl Window {
@@ -61,17 +62,31 @@ impl Window {
         Ok(Window { platform: platform })
     }
 
+    pub ( crate ) fn from_platform(platform: Rc<RefCell<WindowImpl>>) -> Window {
+        Window { platform: platform }
+    }
+
+    /// Returns a reference to the platform specific implementation detail
+    pub fn platform(&self) -> Ref<WindowImpl> {
+        self.platform.borrow()
+    }
+
+    /// Returns a mutable reference to the platform specific implementation detail
+    pub fn platform_mut(&mut self) -> RefMut<WindowImpl> {
+        self.platform.borrow_mut()
+    }
+
     /// Sets the surface event handler.
     ///
     /// Event handler can be altered any time, but it is preferred to set them before
     /// the show call no to miss the on_ready event.
     pub fn set_surface_handler<H: SurfaceEventHandler>(&mut self, handler: H) {
-        self.platform.set_surface_handler(handler);
+        self.platform.borrow_mut().set_surface_handler(handler);
     }
 
     /// Sets the input event handler.
     pub fn set_input_handler<H: InputEventHandler>(&mut self, handler: H) {
-        self.platform.set_input_handler(handler);
+        self.platform.borrow_mut().set_input_handler(handler);
     }
 
     /// Starts the closing process.
@@ -79,60 +94,40 @@ impl Window {
     /// This function asks the OS to close the window. Window is not closed immediately,
     /// event handling shall continue the execution until the OS close events arrive.
     pub fn close(&mut self) {
-        self.platform.close()
+        if self.is_closed() {
+            return;
+        }
+
+        self.platform.borrow_mut().close()
     }
 
     /// Returns true if the window is closed or in closing state.
     pub fn is_closed(&self) -> bool {
-        self.platform.is_closed()
+        self.platform.borrow().is_closed()
     }
 
     /// Gets the position of the window.
     pub fn get_position(&self) -> Position {
-        self.platform.get_position()
+        self.platform.borrow().get_position()
     }
 
     /// Gets the size of the window.
     pub fn get_size(&self) -> Size {
-        self.platform.get_size()
+        self.platform.borrow().get_size()
     }
 
     /// Gets the size of the draw area of the window.
     pub fn get_draw_size(&self) -> Size {
-        self.platform.get_draw_size()
+        self.platform.borrow().get_draw_size()
     }
 
     /// Prepares the window for rendering.
     pub fn start_render(&self) -> Result<(), Error> {
-        self.platform.start_render()
-    }
-
-    /// Sends a command queue for rendering.
-    pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
-        self.platform.process_queue(queue)
+        self.platform.borrow_mut().start_render()
     }
 
     /// Swaps the buffers and perform post render tasks.
     pub fn end_render(&self) -> Result<(), Error> {
-        self.platform.end_render()
-    }
-
-    /// Renders a single que.
-    ///
-    /// This function is a shortcut for star, process, end cycle.
-    pub fn render_single_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
-        try!(self.start_render());
-        try!(self.process_queue(queue));
-        try!(self.end_render());
-        Ok(())
-    }
-}
-
-impl From<WindowImpl> for Window {
-    #[inline(always)]
-    fn from(value: WindowImpl) -> Window {
-        Window {
-            platform: value,
-        }
+        self.platform.borrow_mut().end_render()
     }
 }

@@ -26,8 +26,7 @@ pub enum DispatchTimeout {
 ///
 /// The engine is responsible for the event loop and event dispatching.
 pub struct Engine {
-    /// Stores the platform dependent implementation.
-    pub  platform: EngineImpl
+    platform: EngineImpl
 }
 
 impl Engine {
@@ -35,6 +34,16 @@ impl Engine {
     pub fn new() -> Result<Engine, EngineError> {
         let platform = try!(EngineImpl::new());
         Ok(Engine { platform: platform })
+    }
+
+    /// Returns a reference to the platform specific implementation detail
+    pub fn platform(&self) -> &EngineImpl {
+        &self.platform
+    }
+
+    /// Returns a mutable reference to the platform specific implementation detail
+    pub fn platform_mut(&mut self) -> &mut EngineImpl {
+        &mut self.platform
     }
 
     /// Initiates the shutdown process.

@@ -2,16 +2,13 @@ use std::rc::Rc;
 use std::cell::RefCell;
 
 use render::*;
-
 use render::opengl::lowlevel::*;
-//use render::opengl::commandqueue::*;
-
 
 type VertexAttributes = [VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT];
 
+
 pub struct GLVertexBuffer {
     hw_id: GLuint,
-
     attributes: VertexAttributes,
 }
 
@@ -64,7 +61,7 @@ impl GLVertexBuffer {
 }
 
 
-/// Low level render command to set the vertex data
+/// Low level render command to set the data of a vertex buffer
 struct CreateCommand {
     target: Rc<RefCell<GLVertexBuffer>>,
     attributes: VertexAttributes,
@@ -90,39 +87,32 @@ impl GLCommand for ReleaseCommand {
 }
 
 
-/// Structure to wrap a GLVertexBuffer into a shared resource
-pub struct GLVertexBufferWrapper {
-    wrapped: Rc<RefCell<GLVertexBuffer>>
+/// Structure to wrap a GLVertexBuffer into a shared resource managed through commands
+pub struct GLVertexBufferResource {
+    resource: Rc<RefCell<GLVertexBuffer>>
 }
 
-impl GLVertexBufferWrapper {
-    pub fn new() -> GLVertexBufferWrapper {
-        GLVertexBufferWrapper { wrapped: Rc::new(RefCell::new(GLVertexBuffer::new())) }
+
+impl GLVertexBufferResource {
+    pub fn new() -> GLVertexBufferResource {
+        GLVertexBufferResource { resource: Rc::new(RefCell::new(GLVertexBuffer::new())) }
     }
 
-    pub fn wrap(wrapped: Rc<RefCell<GLVertexBuffer>>) -> GLVertexBufferWrapper {
-        GLVertexBufferWrapper { wrapped: wrapped }
-    }
-
-    pub fn unwrap(&self) -> Rc<RefCell<GLVertexBuffer>> {
-        self.wrapped.clone()
-    }
-
-    pub fn set_transient<'a, VS: TransientVertexSource>(&mut self, queue: &mut CommandQueue, vertex_source: &VS) {
+    pub fn set_transient<'a, VS: TransientVertexSource>(&mut self, queue: &mut GLCommandStore, vertex_source: &VS) {
         println!("GLVertexBuffer - set_copy");
 
         let desc = vertex_source.to_vertex_source();
 
-        queue.platform.add(
+        queue.add(
             CreateCommand {
-                target: self.wrapped.clone(),
+                target: self.resource.clone(),
                 attributes: desc.0,
                 data: desc.1.to_vec(),
             }
         );
     }
 
-    /*pub fn set_copy<'a, VD: Iterator<Item=&'a VertexAttributeImpl>>(&mut self, queue: &mut CommandQueue, vertex_descriptor: VD, vertex_data: &[u8]) {
+    /*pub fn set_copy<'a, VD: Iterator<Item=&'a VertexAttributeImpl>>(&mut self, queue: &mut GLCommandStore, vertex_descriptor: VD, vertex_data: &[u8]) {
         println!("GLVertexBuffer - set_copy");
 
         let mut attributes = [VertexAttribute::new(); MAX_VERTEX_ATTRIBUTE_COUNT];
@@ -130,25 +120,25 @@ impl GLVertexBufferWrapper {
             *src = *dst;
         }
 
-        queue.platform.add(
+        queue.add(
             CreateCommand {
-                target: self.wrapped.clone(),
+                target: self.resource.clone(),
                 attributes: attributes,
                 data: vertex_data.to_vec(),
             }
         );
     }*/
 
-    pub fn release(&mut self, queue: &mut CommandQueue) {
+    pub fn release(&mut self, queue: &mut GLCommandStore) {
         println!("GLVertexBuffer - release");
 
-        queue.platform.add(
+        queue.add(
             ReleaseCommand {
-                target: self.wrapped.clone()
+                target: self.resource.clone()
             }
         );
     }
 }
 
-pub type VertexBufferImpl = GLVertexBufferWrapper;
+pub type VertexBufferImpl = GLVertexBufferResource;
 pub type VertexAttributeImpl = VertexAttribute;

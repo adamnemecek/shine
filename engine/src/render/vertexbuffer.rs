@@ -6,6 +6,7 @@ pub const MAX_VERTEX_ATTRIBUTE_COUNT: usize = 16;
 
 use std::mem;
 use std::slice;
+use std::ops::DerefMut;
 
 use render::*;
 
@@ -84,7 +85,6 @@ impl<V: VertexDeclaration + Sized> TransientVertexSource for Vec<V> {
 
 /// Structure to store a vertex buffer
 pub struct VertexBuffer {
-    /// Stores the platform dependent implementation.
     pub ( crate ) platform: VertexBufferImpl
 }
 
@@ -101,15 +101,15 @@ impl VertexBuffer {
     ///
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
-    pub fn set_transient<'a, VS: TransientVertexSource>(&mut self, queue: &mut CommandQueue, vertex_source: &VS) {
-        self.platform.set_transient(queue, vertex_source);
+    pub fn set_transient<'a, VS: TransientVertexSource, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_source: &VS) {
+        self.platform.set_transient(queue.get_command_store().deref_mut(), vertex_source);
     }
 
     /// Releases the hw resources of the buffer.
     ///
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
-    pub fn release(&mut self, queue: &mut CommandQueue) {
-        self.platform.release(queue);
+    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
+        self.platform.release(queue.get_command_store().deref_mut());
     }
 }

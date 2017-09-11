@@ -267,7 +267,7 @@ fn vkeycode_to_element(wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> (ScanC
     })
 }
 
-pub struct GLWindowWrapper {
+pub struct GLWindow {
     hwnd: winapi::HWND,
     is_closing: bool,
     size: Size,
@@ -278,22 +278,11 @@ pub struct GLWindowWrapper {
     input_handler: Option<Rc<RefCell<InputEventHandler>>>,
 }
 
-impl Drop for GLWindowWrapper {
-    fn drop(&mut self) {
-        println!("GLWindowWrapper dropped");
-        unsafe {
-            user32::DestroyWindow(self.hwnd);
-        }
-    }
-}
-
-
-pub struct GLWindow(Rc<RefCell<GLWindowWrapper>>);
 
 impl GLWindow {
-    pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<GLWindow, Error> {
+    pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<Rc<RefCell<GLWindow>>, Error> {
         // create window
-        let ref mut engine = engine.platform;
+        let engine = engine.platform_mut();
         let app_instance = engine.get_instance();
 
         let (style, exstyle) = (get_window_style(&settings), get_window_exstyle(&settings));
@@ -333,7 +322,7 @@ impl GLWindow {
         //todo: position might be not valid
 
         // create rust window
-        let win = Rc::new(RefCell::new(GLWindowWrapper {
+        let win = Rc::new(RefCell::new(GLWindow {
             hwnd: hwnd,
             is_closing: false,
             size: settings.size,
@@ -361,119 +350,102 @@ impl GLWindow {
             user32::PostMessageW(hwnd, WM_DR_WINDOW_CREATED, 0, 0);
         }
 
-        Ok(GLWindow(win))
-    }
-
-    pub unsafe fn new_from_raw(ptr: winapi::LONG_PTR) -> GLWindow {
-        assert! (ptr != 0);
-        let rc = Rc::from_raw(ptr as *mut RefCell<GLWindowWrapper>);
-
-        // rc created by Rc::from_raw will decrement ref count on drop
-        // but we don't want to lose the window yet, so "leak" memory here.
-        // We will get it back during the close/destroy process.
-        Rc::into_raw(rc.clone());
-
-        GLWindow(rc)
-    }
-
-    fn to_window(&self) -> Window {
-        Window { platform: GLWindow(self.0.clone()) }
+        Ok(win)
     }
 
     pub fn set_surface_handler<H: SurfaceEventHandler>(&mut self, handler: H) {
-        let ref mut window = self.0.borrow_mut();
-        window.surface_handler = Some(Rc::new(RefCell::new(handler)));
+        self.surface_handler = Some(Rc::new(RefCell::new(handler)));
     }
 
     pub fn set_input_handler<H: InputEventHandler>(&mut self, handler: H) {
-        let ref mut window = self.0.borrow_mut();
-        window.input_handler = Some(Rc::new(RefCell::new(handler)));
+        self.input_handler = Some(Rc::new(RefCell::new(handler)));
     }
 
     pub fn close(&mut self) {
-        if self.is_closed() {
-            return;
-        }
-
-        let ref window = self.0.borrow();
         unsafe {
-            user32::PostMessageW(window.hwnd, winapi::WM_CLOSE, 0, 0);
+            user32::PostMessageW(self.hwnd, winapi::WM_CLOSE, 0, 0);
         }
     }
 
     pub fn is_closed(&self) -> bool {
-        let ref window = self.0.borrow();
-        window.is_closing || window.hwnd == ptr::null_mut()
+        self.is_closing || self.hwnd == ptr::null_mut()
     }
 
     pub fn get_position(&self) -> Position {
-        let ref window = self.0.borrow();
-        window.position
+        self.position
     }
 
     pub fn get_size(&self) -> Size {
-        let ref window = self.0.borrow();
-        window.size
+        self.size
     }
 
     pub fn get_draw_size(&self) -> Size {
         Size { width: 0, height: 0 }
     }
 
-    pub fn start_render(&self) -> Result<(), Error> {
-        let ref window = self.0.borrow();
-        window.context.make_current()
+    pub fn start_render(&mut self) -> Result<(), Error> {
+        self.context.make_current()
     }
 
-    pub fn process_queue(&self, queue: &mut CommandQueue) -> Result<(), Error> {
-        let queue = &mut queue.platform;
-        let ref mut window = self.0.borrow_mut();
-
+    pub fn process_queue(&mut self, queue: &mut GLCommandStore) -> Result<(), Error> {
         for ref mut cmd in queue.iter_mut() {
-            cmd.process(&mut window.ll);
+            cmd.process(&mut self.ll);
         }
 
         queue.clear();
         Ok(())
     }
 
-    pub fn end_render(&self) -> Result<(), Error> {
-        let ref window = self.0.borrow();
-        window.context.swap_buffers()
+    pub fn end_render(&mut self) -> Result<(), Error> {
+        self.context.swap_buffers()
     }
 
     pub fn get_hwnd(&self) -> winapi::HWND {
-        let ref window = self.0.borrow();
-        window.hwnd
+        self.hwnd
     }
 
-    pub fn handle_os_message(&mut self, hwnd: winapi::HWND, msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM)
+    /// Static function to handle os messages.
+    ///
+    /// It converts the raw pointer associated to the OS window back into a safe rust structure.
+    /// Due to borrowing and re-borrowing for handlers we cannot make it a function operating on self.
+    /// It'd contradict the borrowing constraint during callback invocation
+    pub fn handle_os_message(win_ptr: winapi::LONG_PTR, hwnd: winapi::HWND, msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM)
                              -> winapi::LRESULT {
-        {
-            let ref window = self.0.borrow();
-            assert! (window.hwnd == hwnd);
-        }
+        let this = unsafe {
+            assert!(win_ptr != 0);
+
+            let rc = Rc::from_raw(win_ptr as *mut RefCell<GLWindow>);
+
+            // rc created by Rc::from_raw will decrement ref count on drop
+            // but we don't want to lose the window yet, so "leak" memory here.
+            // We will get it back during the close/destroy process.
+            Rc::into_raw(rc.clone());
+
+            assert!(rc.borrow().hwnd == hwnd);
+
+            rc
+        };
 
         let mut result: Option<winapi::LRESULT> = None;
         {
             match msg {
-                WM_DR_WINDOW_CREATED if !self.is_closed() => {
-                    let handler = self.0.borrow().surface_handler.clone();
+                WM_DR_WINDOW_CREATED if !this.borrow().is_closed() => {
+                    let handler = this.borrow().surface_handler.clone();
 
                     if let Some(ref handler) = handler {
-                        handler.borrow_mut().on_ready(&mut self.to_window());
+                        handler.borrow_mut().on_ready(&mut Window::from_platform(this));
                     }
                 }
 
                 winapi::WM_CLOSE => {
                     let handler = {
-                        let ref mut window = self.0.borrow_mut();
+                        let ref mut window = this.borrow_mut();
                         window.is_closing = true;
                         window.surface_handler.clone()
                     };
 
                     if let Some(ref handler) = handler {
-                        handler.borrow_mut().on_lost(&mut self.to_window());
+                        handler.borrow_mut().on_lost(&mut Window::from_platform(this));
                     }
                 }
 
@@ -484,16 +456,16 @@ impl GLWindow {
                 }
 
                 winapi::WM_SIZE => {
-                    let handler = self.0.borrow().surface_handler.clone();
+                    let handler = this.borrow().surface_handler.clone();
                     let w = winapi::LOWORD(lparam as winapi::DWORD) as u32;
                     let h = winapi::HIWORD(lparam as winapi::DWORD) as u32;
 
                     let size = Size { width: w, height: h };
                     println!("size: {:?}", size);
-                    self.0.borrow_mut().size = size;
+                    this.borrow_mut().size = size;
 
                     if let Some(ref handler) = handler {
-                        handler.borrow_mut().on_changed(&mut self.to_window());
+                        handler.borrow_mut().on_changed(&mut Window::from_platform(this));
                     }
 
                     result = Some(0);
@@ -505,7 +477,7 @@ impl GLWindow {
 
                     let pos = Position { x: x, y: y };
                     println!("pos: {:?}", pos);
-                    self.0.borrow_mut().position = Position { x: x, y: y };
+                    this.borrow_mut().position = Position { x: x, y: y };
 
                     result = Some(0);
                 }
@@ -515,11 +487,11 @@ impl GLWindow {
                         // pass close by F4 key to windows
                         result = None;
                     } else {
-                        let handler = self.0.borrow().input_handler.clone();
+                        let handler = this.borrow().input_handler.clone();
 
                         if let Some(ref handler) = handler {
                             let (sc, vkey) = vkeycode_to_element(wparam, lparam);
-                            handler.borrow_mut().on_key(&mut self.to_window(), sc, vkey, true);
+                            handler.borrow_mut().on_key(&mut Window::from_platform(this), sc, vkey, true);
                         }
                         result = Some(0);
                     }
@@ -530,11 +502,11 @@ impl GLWindow {
                         // pass close by F4 key
                         result = None;
                     } else {
-                        let handler = self.0.borrow().input_handler.clone();
+                        let handler = this.borrow().input_handler.clone();
 
                         if let Some(ref handler) = handler {
                             let (sc, vkey) = vkeycode_to_element(wparam, lparam);
-                            handler.borrow_mut().on_key(&mut self.to_window(), sc, vkey, false);
+                            handler.borrow_mut().on_key(&mut Window::from_platform(this), sc, vkey, false);
                         }
                         result = Some(0);
                     }
@@ -548,6 +520,15 @@ impl GLWindow {
             return res;
         }
         unsafe { user32::DefWindowProcW(hwnd, msg, wparam, lparam) }
+    }
+}
+
+impl Drop for GLWindow {
+    fn drop(&mut self) {
+        println!("GLWindow dropped");
+        unsafe {
+            user32::DestroyWindow(self.hwnd);
+        }
     }
 }
 

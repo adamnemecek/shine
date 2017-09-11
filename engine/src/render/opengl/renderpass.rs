@@ -18,13 +18,29 @@ fn gl_get_primitive_enum(primitive: Primitive) -> GLenum {
 pub struct GLRenderPass {}
 
 impl GLRenderPass {
-    fn new() -> GLRenderPass {
+    pub fn new() -> GLRenderPass {
         GLRenderPass {}
     }
 }
 
 impl Drop for GLRenderPass {
     fn drop(&mut self) {}
+}
+
+
+struct ClearCommand {
+    t: f32,
+}
+
+impl GLCommand for ClearCommand {
+    fn process(&mut self, _: &mut LowLevel) {
+        gl_check_error();
+        unsafe {
+            gl::ClearColor(self.t, 0.2, 0.2, 1.0);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+        }
+        gl_check_error();
+    }
 }
 
 
@@ -40,16 +56,11 @@ impl GLRenderPassWrapper {
 
     pub fn set_viewport(&mut self, _: Size) {}
 
-    pub fn clear(&mut self, t: f32) {
-        gl_check_error();
-        unsafe {
-            gl::ClearColor(t, 0.2, 0.2, 1.0);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-        }
-        gl_check_error();
+    pub fn clear(&mut self/*, queue: &mut GLCommandQueue*/, _: f32) {
+        //queue.add(ClearCommand { t: t });
     }
 
-    pub fn draw(&mut self, _: &mut CommandQueue, _: &GLVertexBufferWrapper, _: Primitive, _: usize, _: usize) {
+    pub fn draw(&mut self, _: &mut GLCommandStore, _: &GLVertexBufferResource, _: Primitive, _: usize, _: usize) {
         println!("GLRenderPass - draw");
     }
 }

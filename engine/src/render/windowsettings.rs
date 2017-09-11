@@ -114,20 +114,13 @@ pub struct FBConfig {
 /// constructing most windows.
 #[derive(Clone)]
 pub struct WindowSettings {
-    /// Title of the window
-    pub title: String,
-    /// Size of the window
-    pub size: Size,
-    /// Sub-sampling
-    pub sub_samples: u8,
-    /// Enable fullscreen
-    pub fullscreen: bool,
-    /// Enable resizing of the window
-    pub resizable: bool,
-    /// Enable the OS to decorate of the window
-    pub decorated: bool,
-    /// Rander surface requirements
-    pub fb_config: FBConfig,
+    pub ( crate )title: String,
+    pub ( crate )size: Size,
+    pub ( crate )sub_samples: u8,
+    pub ( crate )fullscreen: bool,
+    pub ( crate )resizable: bool,
+    pub ( crate )decorated: bool,
+    pub ( crate )fb_config: FBConfig,
 }
 
 impl WindowSettings {

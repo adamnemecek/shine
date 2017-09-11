@@ -1,6 +1,7 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
+use std::ops::DerefMut;
 use render::*;
 
 /// Enum defining the type of shader source
@@ -26,7 +27,7 @@ impl ShaderProgram {
     }
 
     /// Creates a shader and attach the given sources.
-    pub fn from_source<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut CommandQueue, sources: I) -> ShaderProgram {
+    pub fn from_source<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) -> ShaderProgram {
         let mut sh = ShaderProgram { platform: ShaderProgramImpl::new() };
         sh.set_sources(queue, sources);
         sh
@@ -36,15 +37,15 @@ impl ShaderProgram {
     ///
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
-    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut CommandQueue, sources: I) {
-        self.platform.set_sources(queue, sources);
+    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
+        self.platform.set_sources(queue.get_command_store().deref_mut(), sources);
     }
 
     /// Releases the hw resources of a shader.
     ///
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
-    pub fn release(&mut self, queue: &mut CommandQueue) {
-        self.platform.release(queue);
+    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
+        self.platform.release(queue.get_command_store().deref_mut());
     }
 }

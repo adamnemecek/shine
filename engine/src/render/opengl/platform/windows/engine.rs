@@ -20,15 +20,7 @@ pub unsafe extern "system" fn wnd_proc(hwnd: winapi::HWND, msg: winapi::UINT,
         return user32::DefWindowProcW(hwnd, msg, wparam, lparam);
     }
 
-    {
-        let mut win = GLWindow::new_from_raw(win_ptr);
-        let win_hwnd = win.get_hwnd();
-        if win_hwnd == hwnd {
-            return win.handle_os_message(hwnd, msg, wparam, lparam)
-        }
-    }
-
-    user32::DefWindowProcW(hwnd, msg, wparam, lparam)
+    return GLWindow::handle_os_message(win_ptr, hwnd, msg, wparam, lparam)
 }
 
 pub struct GLEngine {

@@ -5,17 +5,19 @@ mod engine;
 mod context;
 mod window;
 mod lowlevel;
-mod commandqueue;
+mod commandstore;
 mod shaderprogram;
 mod vertexbuffer;
 mod renderpass;
+mod rendermanager;
 
 
 pub use self::window::WindowImpl;
 pub use self::engine::EngineImpl;
 pub use self::lowlevel::*;
-pub use self::commandqueue::*;
+pub use self::commandstore::*;
 pub use self::shaderprogram::*;
 pub use self::vertexbuffer::*;
 pub use self::renderpass::*;
+pub use self::rendermanager::*;
 

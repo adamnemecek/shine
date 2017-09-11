@@ -6,7 +6,7 @@ use std::vec::Vec;
 use render::*;
 
 use render::opengl::lowlevel::*;
-use render::opengl::commandqueue::*;
+use render::opengl::commandstore::*;
 
 struct ShaderError(String);
 
@@ -154,29 +154,20 @@ impl GLCommand for ReleaseCommand {
 }
 
 
-
-pub struct GLShaderProgramWrapper {
-    wrapped: Rc<RefCell<GLShaderProgram>>
+pub struct GLShaderProgramResource {
+    resource: Rc<RefCell<GLShaderProgram>>
 }
 
-impl GLShaderProgramWrapper {
-    pub fn new() -> GLShaderProgramWrapper {
-        GLShaderProgramWrapper { wrapped: Rc::new(RefCell::new(GLShaderProgram::new())) }
+impl GLShaderProgramResource {
+    pub fn new() -> GLShaderProgramResource {
+        GLShaderProgramResource { resource: Rc::new(RefCell::new(GLShaderProgram::new())) }
     }
 
-    pub fn wrap(wrapped: Rc<RefCell<GLShaderProgram>>) -> GLShaderProgramWrapper {
-        GLShaderProgramWrapper { wrapped: wrapped }
-    }
-
-    pub fn unwrap(&self) -> Rc<RefCell<GLShaderProgram>> {
-        self.wrapped.clone()
-    }
-
-    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut CommandQueue, sources: I) {
+    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut GLCommandStore, sources: I) {
         println!("GLShaderProgram - set_sources");
-        queue.platform.add(
+        queue.add(
             CreateCommand {
-                target: self.wrapped.clone(),
+                target: self.resource.clone(),
                 sources: sources
                     .map(|&(t, s)| ShaderSource(gl_get_shader_enum(t), s.as_bytes().to_vec()))
                     .collect()
@@ -184,26 +175,14 @@ impl GLShaderProgramWrapper {
         );
     }
 
-    pub fn release(&mut self, queue: &mut CommandQueue) {
+    pub fn release(&mut self, queue: &mut GLCommandStore) {
         println!("GLShaderProgram - release");
-        queue.platform.add(
+        queue.add(
             ReleaseCommand {
-                target: self.wrapped.clone()
+                target: self.resource.clone()
             }
         );
     }
-
-    pub fn draw(&mut self, _: &mut CommandQueue, _: &GLVertexBufferWrapper, primitive: Primitive, _: usize, vertex_count: usize) {
-        assert!({
-            match primitive {
-                Primitive::Point => true,
-                Primitive::Line => vertex_count % 2 == 0,
-                Primitive::Triangle => vertex_count % 2 == 0,
-            }
-        }, format!("invalid vertex count ({}) for primitive {:?}", vertex_count, primitive));
-
-        println!("GLShaderProgram - draw");
-    }
 }
 
-pub type ShaderProgramImpl = GLShaderProgramWrapper;
+pub type ShaderProgramImpl = GLShaderProgramResource;

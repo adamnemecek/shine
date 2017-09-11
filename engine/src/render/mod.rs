@@ -14,12 +14,11 @@ mod keycodes;
 mod engine;
 mod windowsettings;
 mod window;
-mod commandqueue;
 mod shaderprogram;
 #[macro_use]
 mod vertexbuffer;
 mod renderpass;
-mod passmanager;
+mod rendermanager;
 
 
 mod opengl;
@@ -30,10 +29,9 @@ pub use self::keycodes::*;
 pub use self::engine::*;
 pub use self::windowsettings::*;
 pub use self::window::*;
-pub use self::commandqueue::*;
 pub use self::shaderprogram::*;
 pub use self::vertexbuffer::*;
 pub use self::renderpass::*;
-pub use self::passmanager::*;
+pub use self::rendermanager::*;
 
 
