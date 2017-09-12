@@ -6,7 +6,6 @@ pub const MAX_VERTEX_ATTRIBUTE_COUNT: usize = 16;
 
 use std::mem;
 use std::slice;
-use std::ops::DerefMut;
 
 use render::*;
 
@@ -102,7 +101,7 @@ impl VertexBuffer {
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
     pub fn set_transient<'a, VS: TransientVertexSource, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_source: &VS) {
-        self.platform.set_transient(queue.get_command_store().deref_mut(), vertex_source);
+        self.platform.set_transient(queue, vertex_source);
     }
 
     /// Releases the hw resources of the buffer.
@@ -110,6 +109,6 @@ impl VertexBuffer {
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
     pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        self.platform.release(queue.get_command_store().deref_mut());
+        self.platform.release(queue);
     }
 }

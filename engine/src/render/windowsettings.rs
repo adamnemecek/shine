@@ -128,11 +128,34 @@ impl WindowSettings {
     ///
     /// - sub_samples: 0
     /// - fullscreen: false
-    /// - vsync: false
-    /// - srgb: true
     /// - resizable: true
     /// - decorated: true
-    /// - controllers: true
+    /// - handle: 0
+    ///
+    /// - red_bits: FBCONFIG_DONT_CARE
+    /// - green_bits: FBCONFIG_DONT_CARE
+    /// - blue_bits: FBCONFIG_DONT_CARE
+    /// - alpha_bits: FBCONFIG_DONT_CARE
+    /// - depth_bits: FBCONFIG_DONT_CARE
+    /// - stencil_bits: FBCONFIG_DONT_CARE
+    /// - accum_red_bits: FBCONFIG_DONT_CARE
+    /// - accum_green_bits: FBCONFIG_DONT_CARE
+    /// - accum_blue_bits: FBCONFIG_DONT_CARE
+    /// - accum_alpha_bits: FBCONFIG_DONT_CARE
+    /// - aux_buffers: FBCONFIG_DONT_CARE
+    /// - samples: FBCONFIG_DONT_CARE
+    ///
+    /// - stereo: false
+    /// - double_buffer: true
+    /// - srgb: false
+    /// - vsync: true
+    /// - debug: false
+    ///
+    /// - gl_version: (0, 0)
+    /// - gl_forward_compatible: false
+    /// - gl_profile: OpenGLProfile::DontCare
+    /// - gl_robustness: OpenGLRobustness::DontCare
+    /// - gl_release: OpenGLRelease::DontCare,
     pub fn new() -> WindowSettings {
         WindowSettings {
             title: "hello".into(),

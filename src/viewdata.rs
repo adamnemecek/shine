@@ -15,6 +15,9 @@ enum Passes {
     Present,
 }
 
+impl PassKey for Passes {}
+
+
 /// Structure to store view dependent data
 pub struct ViewData {
     //world: WorldWrapper,
@@ -80,20 +83,28 @@ void main()
     }
 
     pub fn render(&mut self, window: &Window) {
-        /*let mut p0 = self.render.create_pass(Passes::Present)
-            .set_viewport(window.get_size())
-            .clear(self.t)
-        /*.add_target(DEPTH)
-        .add_target(0, COLOR)*/;
+       /* {
+            let p0 = self.render.create_pass(Passes::Present)
+                //.set_viewport(window.get_size())
+                //.clear(self.t)
+                //.add_target(DEPTH)
+                //.add_target(0, COLOR)
+                .build().unwrap();
 
-        let vertices = [
-            VxPos { position: f32x3!(1f32, 0f32, 0f32) },
-            VxPos { position: f32x3!(1f32, 1f32, 0f32) },
-            VxPos { position: f32x3!(0f32, 1f32, 0f32) }
-        ];
+            let vertices = [
+                VxPos { position: f32x3!(1f32, 0f32, 0f32) },
+                VxPos { position: f32x3!(1f32, 1f32, 0f32) },
+                VxPos { position: f32x3!(0f32, 1f32, 0f32) }
+            ];
 
-        self.vertex_buffer.set_transient(p0, &vertices);
-        self.render.find_pass(Passes::Present).unwrap().draw();*/
+            self.vertex_buffer.set_transient(p0.deref_mut(), &vertices);
+        }*/
+
+        /*{
+            let mut p1 = self.render.find_pass(Passes::Present).unwrap();
+            p1.draw(&self.vertex_buffer, Primitive::Triangle, 0, 3);
+        }*/
+
         self.render.submit(window);
     }
 }

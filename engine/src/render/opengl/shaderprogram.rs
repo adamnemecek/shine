@@ -6,7 +6,7 @@ use std::vec::Vec;
 use render::*;
 
 use render::opengl::lowlevel::*;
-use render::opengl::commandstore::*;
+use render::opengl::commandqueue::*;
 
 struct ShaderError(String);
 
@@ -14,6 +14,8 @@ struct ShaderSource(GLenum, Vec<u8>);
 
 type ShaderSources = Vec<ShaderSource>;
 
+
+/// Converts a ShaderType enum to the corresponding GLenum.
 fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
     match shader_type {
         ShaderType::VertexShader => gl::VERTEX_SHADER,
@@ -22,14 +24,14 @@ fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
 }
 
 
-///
-pub struct GLShaderProgram {
+/// Structure to store hardware data associated to a ShaderProgram.
+struct GLShaderProgramData {
     hw_id: GLuint,
 }
 
-impl GLShaderProgram {
-    fn new() -> GLShaderProgram {
-        GLShaderProgram {
+impl GLShaderProgramData {
+    fn new() -> GLShaderProgramData {
+        GLShaderProgramData {
             hw_id: 0
         }
     }
@@ -65,6 +67,7 @@ impl GLShaderProgram {
     }
 
     fn create_program(&mut self, ll: &mut LowLevel, sources: &Vec<ShaderSource>) {
+        gl_check_error();
         if self.hw_id != 0 {
             self.release(ll);
         }
@@ -114,60 +117,65 @@ impl GLShaderProgram {
             return;
         }
 
+        gl_check_error();
         ll.program_binding.unbind_if_active(self.hw_id);
+        gl_check_error();
         unsafe {
             gl::DeleteProgram(self.hw_id);
         }
+        println!("hwid: {:?}", self.hw_id);
+        gl_check_error();
         self.hw_id = 0;
     }
 }
 
-impl Drop for GLShaderProgram {
+impl Drop for GLShaderProgramData {
     fn drop(&mut self) {
         assert! ( self.hw_id == 0, "release shader through a render queue before dropping it" );
     }
 }
 
 
-/// Low level render command to set the source and compile (link) a shader program
+/// RenderCommand to allocate the OpenGL program, set the shader sources and compile (link) a shader program
 struct CreateCommand {
-    target: Rc<RefCell<GLShaderProgram>>,
+    target: Rc<RefCell<GLShaderProgramData>>,
     sources: ShaderSources,
 }
 
-impl GLCommand for CreateCommand {
+impl Command for CreateCommand {
     fn process(&mut self, ll: &mut LowLevel) {
         self.target.borrow_mut().create_program(ll, &mut self.sources);
     }
 }
 
 
-/// Low level render command to release a shader program
+/// RenderCommand to release the allocated OpenGL program.
 struct ReleaseCommand {
-    target: Rc<RefCell<GLShaderProgram>>,
+    target: Rc<RefCell<GLShaderProgramData>>,
 }
 
-impl GLCommand for ReleaseCommand {
+impl Command for ReleaseCommand {
     fn process(&mut self, ll: &mut LowLevel) {
         self.target.borrow_mut().release(ll);
     }
 }
 
 
-pub struct GLShaderProgramResource {
-    resource: Rc<RefCell<GLShaderProgram>>
-}
+/// ShaderProgram implementation for OpenGL.
+pub struct GLShaderProgram(Rc<RefCell<GLShaderProgramData>>);
 
-impl GLShaderProgramResource {
-    pub fn new() -> GLShaderProgramResource {
-        GLShaderProgramResource { resource: Rc::new(RefCell::new(GLShaderProgram::new())) }
+impl GLShaderProgram {
+    pub fn new() -> GLShaderProgram {
+        GLShaderProgram(
+            Rc::new(RefCell::new(GLShaderProgramData::new()))
+        )
     }
 
-    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>>(&mut self, queue: &mut GLCommandStore, sources: I) {
+    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
         println!("GLShaderProgram - set_sources");
         queue.add(
             CreateCommand {
-                target: self.resource.clone(),
+                target: self.0.clone(),
                 sources: sources
                     .map(|&(t, s)| ShaderSource(gl_get_shader_enum(t), s.as_bytes().to_vec()))
                     .collect()
@@ -175,14 +183,15 @@ impl GLShaderProgramResource {
         );
     }
 
-    pub fn release(&mut self, queue: &mut GLCommandStore) {
+    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
         println!("GLShaderProgram - release");
         queue.add(
             ReleaseCommand {
-                target: self.resource.clone()
+                target: self.0.clone()
             }
         );
     }
 }
 
-pub type ShaderProgramImpl = GLShaderProgramResource;
+
+pub type ShaderProgramImpl = GLShaderProgram;

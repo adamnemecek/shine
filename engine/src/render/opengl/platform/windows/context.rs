@@ -9,8 +9,12 @@ pub enum Context {
     WGLContext(wgl::Context)
 }
 
+/// Context implementation for Windows.
+///
+/// It support the EGL and WGL API interfaces. The implementation can be selected
+/// through WindowSettings.
 impl Context {
-    pub fn new_wgl(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &WindowSettings) -> Result<Context, Error> {
+    pub fn new(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &WindowSettings) -> Result<Context, Error> {
         match settings.fb_config.gl_profile {
             OpenGLProfile::ES2 => {
                 // for opengl es2 we are using egl context

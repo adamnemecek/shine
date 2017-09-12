@@ -6,6 +6,7 @@ use render::*;
 use render::opengl::lowlevel::*;
 //use render::opengl::commandqueue::*;
 
+/// Converts a Primitive enum to the corresponding GLenum.
 fn gl_get_primitive_enum(primitive: Primitive) -> GLenum {
     match primitive {
         Primitive::Point => gl::POINT,
@@ -15,24 +16,26 @@ fn gl_get_primitive_enum(primitive: Primitive) -> GLenum {
 }
 
 
-pub struct GLRenderPass {}
+/// Structure to store hardware data associated to a RenderPass.
+struct GLRenderPassData {}
 
-impl GLRenderPass {
-    pub fn new() -> GLRenderPass {
-        GLRenderPass {}
+impl GLRenderPassData {
+    pub fn new() -> GLRenderPassData {
+        GLRenderPassData {}
     }
 }
 
-impl Drop for GLRenderPass {
+impl Drop for GLRenderPassData {
     fn drop(&mut self) {}
 }
 
-
+/*
+/// RenderCommand to clear the frame buffers
 struct ClearCommand {
     t: f32,
 }
 
-impl GLCommand for ClearCommand {
+impl Command for ClearCommand {
     fn process(&mut self, _: &mut LowLevel) {
         gl_check_error();
         unsafe {
@@ -42,27 +45,22 @@ impl GLCommand for ClearCommand {
         gl_check_error();
     }
 }
+*/
 
+/// RenderPass implementation for OpenGL.
+pub struct GLRenderPass(Rc<RefCell<GLRenderPassData>>);
 
-#[derive(Clone)]
-pub struct GLRenderPassWrapper {
-    wrapped: Rc<RefCell<GLRenderPass>>
-}
-
-impl GLRenderPassWrapper {
-    pub fn new() -> GLRenderPassWrapper {
-        GLRenderPassWrapper { wrapped: Rc::new(RefCell::new(GLRenderPass::new())) }
+impl GLRenderPass {
+    pub fn new() -> GLRenderPass {
+        GLRenderPass(
+            Rc::new(RefCell::new(GLRenderPassData::new()))
+        )
     }
 
-    pub fn set_viewport(&mut self, _: Size) {}
-
-    pub fn clear(&mut self/*, queue: &mut GLCommandQueue*/, _: f32) {
-        //queue.add(ClearCommand { t: t });
-    }
-
-    pub fn draw(&mut self, _: &mut GLCommandStore, _: &GLVertexBufferResource, _: Primitive, _: usize, _: usize) {
+    pub fn draw<Q: CommandQueue>(&mut self, _: &mut Q, _: &GLVertexBuffer, _: Primitive, _: usize, _: usize) {
         println!("GLRenderPass - draw");
     }
 }
 
-pub type RenderPassImpl = GLRenderPassWrapper;
+
+pub type RenderPassImpl = GLRenderPass;

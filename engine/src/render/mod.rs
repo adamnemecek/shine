@@ -19,6 +19,7 @@ mod shaderprogram;
 mod vertexbuffer;
 mod renderpass;
 mod rendermanager;
+mod commandqueue;
 
 
 mod opengl;
@@ -33,5 +34,6 @@ pub use self::shaderprogram::*;
 pub use self::vertexbuffer::*;
 pub use self::renderpass::*;
 pub use self::rendermanager::*;
+pub use self::commandqueue::*;
 
 

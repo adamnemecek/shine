@@ -7,14 +7,15 @@ use render::opengl::lowlevel::*;
 type VertexAttributes = [VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT];
 
 
-pub struct GLVertexBuffer {
+/// Structure to store hardware data associated to a VertexBuffer.
+struct GLVertexBufferData {
     hw_id: GLuint,
     attributes: VertexAttributes,
 }
 
-impl GLVertexBuffer {
-    fn new() -> GLVertexBuffer {
-        GLVertexBuffer {
+impl GLVertexBufferData {
+    fn new() -> GLVertexBufferData {
+        GLVertexBufferData {
             hw_id: 0,
             attributes: [VertexAttribute::new(); MAX_VERTEX_ATTRIBUTE_COUNT],
         }
@@ -61,51 +62,50 @@ impl GLVertexBuffer {
 }
 
 
-/// Low level render command to set the data of a vertex buffer
+/// RenderCommand to create the OpenGL program, set the shader sources and compile (link) a shader program.
 struct CreateCommand {
-    target: Rc<RefCell<GLVertexBuffer>>,
+    target: Rc<RefCell<GLVertexBufferData>>,
     attributes: VertexAttributes,
     data: Vec<u8>,
 }
 
-impl GLCommand for CreateCommand {
+impl Command for CreateCommand {
     fn process(&mut self, ll: &mut LowLevel) {
         self.target.borrow_mut().upload_data(ll, &self.attributes, self.data.as_slice());
     }
 }
 
 
-/// Low level render command to release a vertex buffer
+/// RenderCommand to release the allocated OpenGL buffer.
 struct ReleaseCommand {
-    target: Rc<RefCell<GLVertexBuffer>>,
+    target: Rc<RefCell<GLVertexBufferData>>,
 }
 
-impl GLCommand for ReleaseCommand {
+impl Command for ReleaseCommand {
     fn process(&mut self, ll: &mut LowLevel) {
         self.target.borrow_mut().release(ll);
     }
 }
 
 
-/// Structure to wrap a GLVertexBuffer into a shared resource managed through commands
-pub struct GLVertexBufferResource {
-    resource: Rc<RefCell<GLVertexBuffer>>
-}
+/// VertexBuffer implementation for OpenGL.
+pub struct GLVertexBuffer(Rc<RefCell<GLVertexBufferData>>);
 
-
-impl GLVertexBufferResource {
-    pub fn new() -> GLVertexBufferResource {
-        GLVertexBufferResource { resource: Rc::new(RefCell::new(GLVertexBuffer::new())) }
+impl GLVertexBuffer {
+    pub fn new() -> GLVertexBuffer {
+        GLVertexBuffer(
+            Rc::new(RefCell::new(GLVertexBufferData::new()))
+        )
     }
 
-    pub fn set_transient<'a, VS: TransientVertexSource>(&mut self, queue: &mut GLCommandStore, vertex_source: &VS) {
+    pub fn set_transient<'a, VS: TransientVertexSource, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_source: &VS) {
         println!("GLVertexBuffer - set_copy");
 
         let desc = vertex_source.to_vertex_source();
 
         queue.add(
             CreateCommand {
-                target: self.resource.clone(),
+                target: self.0.clone(),
                 attributes: desc.0,
                 data: desc.1.to_vec(),
             }
@@ -129,16 +129,17 @@ impl GLVertexBufferResource {
         );
     }*/
 
-    pub fn release(&mut self, queue: &mut GLCommandStore) {
+    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
         println!("GLVertexBuffer - release");
 
         queue.add(
             ReleaseCommand {
-                target: self.resource.clone()
+                target: self.0.clone()
             }
         );
     }
 }
 
-pub type VertexBufferImpl = GLVertexBufferResource;
+
+pub type VertexBufferImpl = GLVertexBuffer;
 pub type VertexAttributeImpl = VertexAttribute;

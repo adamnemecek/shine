@@ -7,45 +7,84 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use render::*;
 
-/// Structure to abstract the command queue
-pub trait CommandQueue {
-    /// Returns the command store
-    fn get_command_store(&self) -> RefMut<CommandStoreImpl>;
+/// Trait to index RenderPasses.
+///
+/// It is usally some enum but other trait can be used.
+pub trait PassKey: Eq + Copy + Clone + Hash + 'static {}
+
+
+/// Helper to construct a pass using the factory pattern.
+pub struct RenderPassBuilder<'a, K: PassKey> {
+    manager: &'a mut RenderManager<K>,
+    id: K,
+    config: RenderPassConfig,
+}
+
+impl<'a, K: PassKey> RenderPassBuilder<'a, K> {
+    /// Builds the configured render pass.
+    ///
+    /// # Error
+    ///
+    /// If render pass cannot be created None is returned:
+    ///   - The pass already exists, use find_pass instead
+    ///   - Incompatible configuration
+    pub fn build(&mut self) -> Option<RefMut<RenderPass>> {
+        use std::collections::hash_map::Entry::*;
+
+        match self.manager.passes.entry(self.id) {
+            Occupied(_) => None,
+            e => Some(e.or_insert(RefCell::new(RenderPass::new(self.config.clone(), self.manager.command_store.clone()))).borrow_mut()),
+        }
+    }
 }
 
 
 /// Structure to manage multi-pass rendering.
-///
-/// Usually this struct is used to handle the rendering.
-pub struct RenderManager<P: Eq + Hash> {
+pub struct RenderManager<K: PassKey> {
     platform: RenderManagerImpl,
-    passes: HashMap<P, RefCell<RenderPass>>,
-    command_store: Rc<RefCell<CommandStoreImpl>>,
+    passes: HashMap<K, RefCell<RenderPass>>,
+    command_store: Rc<RefCell<CommandStore>>,
     //order: Vec<RefCell<RenderPass>>,
 }
 
-impl<P: Eq + Hash> RenderManager<P> {
+impl<K: PassKey> RenderManager<K> {
     /// Creates a new renderer.
-    pub fn new() -> RenderManager<P> {
+    pub fn new() -> RenderManager<K> {
         RenderManager {
             platform: RenderManagerImpl::new(),
             passes: HashMap::new(),
-            command_store: CommandStoreImpl::new(),
+            command_store: Rc::new(RefCell::new(CommandStore::new())),
         }
     }
 
-    /// Creates a new pass (leaving only for a single frame)
-    ///pub fn create_pass(id: P) -> PassBuilder{}
+    /// Creates a new pass with the given id.
     ///
+    /// Passes are a short leaving objects and the pass-graph have to be recreated for each frame.
+    pub fn create_pass<'a>(&'a mut self, id: K) -> RenderPassBuilder<'a, K> {
+        RenderPassBuilder {
+            manager: self,
+            id: id,
+            config: RenderPassConfig::new()
+        }
+    }
+
 
     /// Gets an existing render pass.
     ///
     /// If pass was not created in the current frame, None is returned
-    pub fn get(&mut self, id: P) -> Option<RefMut<RenderPass>> {
-        /*self.passes.entry(id)
-            .or_insert(RefCell::new(RenderPass::new(0)))
-            .borrow_mut()*/
-        None
+    pub fn find_pass(&mut self, id: K) -> Option<RefMut<RenderPass>> {
+        self.passes.get(&id).map(|ref e| e.borrow_mut())
+    }
+
+    /// Sends commands for processing.
+    pub fn submit(&mut self, window: &Window) {
+        self.sort_passes();
+
+        let ref mut commands = *self.command_store.borrow_mut();
+        //commands.sort(self.pass_order);
+        window.platform().process_commands(commands.iter_mut());
+
+        commands.clear();
     }
 
 
@@ -57,17 +96,11 @@ impl<P: Eq + Hash> RenderManager<P> {
             i = i + 1;
         }*/
     }
-
-    /// Submit a command queue for rendering.
-    pub fn submit(&mut self, window: &Window) {
-        self.platform.submit(window.platform_mut().deref_mut(), self.command_store.borrow_mut());
-    }
 }
 
 
-impl<P: Eq + Hash> CommandQueue for RenderManager<P> {
-    /// Returns the command queue
-    fn get_command_store(&self) -> RefMut<CommandStoreImpl> {
-        self.command_store.borrow_mut()
+impl<K: PassKey> CommandQueue for RenderManager<K> {
+    fn add<C: Command>(&mut self, cmd: C) {
+        self.command_store.borrow_mut().add(cmd);
     }
 }

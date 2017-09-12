@@ -1,8 +1,7 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
-use std::rc::Rc;
-use std::cell::{RefCell, Ref, RefMut};
+//use std::slice::Iterator;
 use render::*;
 
 
@@ -47,7 +46,7 @@ pub trait InputEventHandler: 'static {
 /// The structure stores the platform dependent implementation and serves as a bridge between
 /// the abstraction and the concrete implementation.
 pub struct Window {
-    platform: Rc<RefCell<WindowImpl>>
+    platform: WindowImpl
 }
 
 impl Window {
@@ -62,18 +61,18 @@ impl Window {
         Ok(Window { platform: platform })
     }
 
-    pub ( crate ) fn from_platform(platform: Rc<RefCell<WindowImpl>>) -> Window {
+    pub ( crate ) fn from_platform(platform: WindowImpl) -> Window {
         Window { platform: platform }
     }
 
     /// Returns a reference to the platform specific implementation detail
-    pub fn platform(&self) -> Ref<WindowImpl> {
-        self.platform.borrow()
+    pub fn platform(&self) -> &WindowImpl {
+        &self.platform
     }
 
     /// Returns a mutable reference to the platform specific implementation detail
-    pub fn platform_mut(&mut self) -> RefMut<WindowImpl> {
-        self.platform.borrow_mut()
+    pub fn platform_mut(&mut self) -> &mut WindowImpl {
+        &mut self.platform
     }
 
     /// Sets the surface event handler.
@@ -81,12 +80,12 @@ impl Window {
     /// Event handler can be altered any time, but it is preferred to set them before
     /// the show call no to miss the on_ready event.
     pub fn set_surface_handler<H: SurfaceEventHandler>(&mut self, handler: H) {
-        self.platform.borrow_mut().set_surface_handler(handler);
+        self.platform.set_surface_handler(handler);
     }
 
     /// Sets the input event handler.
     pub fn set_input_handler<H: InputEventHandler>(&mut self, handler: H) {
-        self.platform.borrow_mut().set_input_handler(handler);
+        self.platform.set_input_handler(handler);
     }
 
     /// Starts the closing process.
@@ -98,36 +97,36 @@ impl Window {
             return;
         }
 
-        self.platform.borrow_mut().close()
+        self.platform.close()
     }
 
     /// Returns true if the window is closed or in closing state.
     pub fn is_closed(&self) -> bool {
-        self.platform.borrow().is_closed()
+        self.platform.is_closed()
     }
 
     /// Gets the position of the window.
     pub fn get_position(&self) -> Position {
-        self.platform.borrow().get_position()
+        self.platform.get_position()
     }
 
     /// Gets the size of the window.
     pub fn get_size(&self) -> Size {
-        self.platform.borrow().get_size()
+        self.platform.get_size()
     }
 
     /// Gets the size of the draw area of the window.
     pub fn get_draw_size(&self) -> Size {
-        self.platform.borrow().get_draw_size()
+        self.platform.get_draw_size()
     }
 
     /// Prepares the window for rendering.
     pub fn start_render(&self) -> Result<(), Error> {
-        self.platform.borrow_mut().start_render()
+        self.platform.start_render()
     }
 
     /// Swaps the buffers and perform post render tasks.
     pub fn end_render(&self) -> Result<(), Error> {
-        self.platform.borrow_mut().end_render()
+        self.platform.end_render()
     }
 }

@@ -23,6 +23,8 @@ pub unsafe extern "system" fn wnd_proc(hwnd: winapi::HWND, msg: winapi::UINT,
     return GLWindow::handle_os_message(win_ptr, hwnd, msg, wparam, lparam)
 }
 
+
+/// Engine implementation for Windows.
 pub struct GLEngine {
     hinstance: winapi::HINSTANCE,
     window_class_name: Vec<u16>,

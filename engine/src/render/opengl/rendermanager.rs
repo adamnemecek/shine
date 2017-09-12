@@ -1,15 +1,30 @@
+use std::rc::Rc;
+use std::cell::RefCell;
 
-use render::*;
-use render::opengl::window::window::*;
+//use render::*;
+//use render::opengl::window::window::*;
 
-pub struct GLRenderManager {}
+/// Structure to store hardware data associated to a RenderManager.
+struct GLRenderManagerData {}
+
+impl GLRenderManagerData {
+    pub fn new() -> GLRenderManagerData {
+        GLRenderManagerData {}
+    }
+}
+
+
+/// RenderManager implementation for OpenGL.
+#[derive(Clone)]
+pub struct GLRenderManager(Rc<RefCell<GLRenderManagerData>>);
 
 impl GLRenderManager {
     pub fn new() -> GLRenderManager {
-        GLRenderManager {}
+        GLRenderManager(
+            Rc::new(RefCell::new(GLRenderManagerData::new()))
+        )
     }
-
-    pub fn submit(&mut self, win: &mut GLWindow, queue: &mut GLCommandStore) {}
 }
+
 
 pub type RenderManagerImpl = GLRenderManager;

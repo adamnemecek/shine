@@ -1,7 +1,6 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
-use std::ops::DerefMut;
 use render::*;
 
 /// Enum defining the type of shader source
@@ -16,8 +15,7 @@ pub enum ShaderType {
 
 /// Structure to store the shader abstraction.
 pub struct ShaderProgram {
-    /// Stores the platform dependent implementation.
-    pub platform: ShaderProgramImpl
+    pub ( crate ) platform: ShaderProgramImpl
 }
 
 impl ShaderProgram {
@@ -38,7 +36,7 @@ impl ShaderProgram {
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
     pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
-        self.platform.set_sources(queue.get_command_store().deref_mut(), sources);
+        self.platform.set_sources(queue, sources);
     }
 
     /// Releases the hw resources of a shader.
@@ -46,6 +44,6 @@ impl ShaderProgram {
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
     pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        self.platform.release(queue.get_command_store().deref_mut());
+        self.platform.release(queue);
     }
 }
