@@ -4,19 +4,6 @@
 //use std::slice::Iterator;
 use render::*;
 
-
-/// Enum to store the error occurred during a call to a render function.
-#[derive(Debug, Clone)]
-pub enum Error {
-    /// Error reported during a window creation.
-    CreationError(String),
-    /// Error reported by the OS during rendering
-    ContextError(String),
-    /// Context is lost, ex window has been closed.
-    ContextLost,
-}
-
-
 /// Callbacks for surface related event handling.
 pub trait SurfaceEventHandler: 'static {
     /// Handles the surface lost event.

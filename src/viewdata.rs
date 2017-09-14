@@ -10,9 +10,11 @@ struct VxPos {
     position: Float32x3,
 }
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum Passes {
     Present,
+    Shadow,
+    Debug,
 }
 
 impl PassKey for Passes {}
@@ -40,6 +42,30 @@ impl ViewData {
     }
 
     fn init(&mut self, window: &Window) {
+        //setup pipeline
+        self.render.create_pass(Passes::Present)
+            //.set_viewport(window.get_size())
+            //.clear(self.t)
+            //.add_target(DEPTH)
+            //.add_target(0, COLOR)
+            .build().unwrap();
+
+        self.render.create_pass(Passes::Shadow)
+            //.set_viewport(window.get_size())
+            //.clear(self.t)
+            //.add_target(DEPTH)
+            //.add_target(0, COLOR)
+            .build().unwrap();
+
+        self.render.create_pass(Passes::Debug)
+            //.set_viewport(window.get_size())
+            //.clear(self.t)
+            //.add_target(DEPTH)
+            //.add_target(0, COLOR)
+            .build().unwrap();
+
+
+        // create some shaders
         let sh_source = [
             (ShaderType::VertexShader,
              r#"
@@ -56,16 +82,20 @@ void main()
     gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }"#)];
 
+        // create some geometry
         let vertices = [
             VxPos { position: f32x3!(1f32, 0f32, 0f32) },
             VxPos { position: f32x3!(1f32, 1f32, 0f32) },
             VxPos { position: f32x3!(0f32, 1f32, 0f32) }
         ];
 
+        // upload data
         self.shader.set_sources(&mut self.render, sh_source.iter());
         self.vertex_buffer.set_transient(&mut self.render, &vertices);
         self.vertex_buffer.set_transient(&mut self.render, &vertices.to_vec());
         self.vertex_buffer.set_transient(&mut self.render, &vertices.as_ref());
+
+        // submit commands
         self.render.submit(window);
     }
 
@@ -83,27 +113,13 @@ void main()
     }
 
     pub fn render(&mut self, window: &Window) {
-       /* {
-            let p0 = self.render.create_pass(Passes::Present)
-                //.set_viewport(window.get_size())
-                //.clear(self.t)
-                //.add_target(DEPTH)
-                //.add_target(0, COLOR)
-                .build().unwrap();
-
-            let vertices = [
-                VxPos { position: f32x3!(1f32, 0f32, 0f32) },
-                VxPos { position: f32x3!(1f32, 1f32, 0f32) },
-                VxPos { position: f32x3!(0f32, 1f32, 0f32) }
-            ];
-
-            self.vertex_buffer.set_transient(p0.deref_mut(), &vertices);
-        }*/
-
-        /*{
+        {
+            let mut p0 = self.render.find_pass(Passes::Present).unwrap();
             let mut p1 = self.render.find_pass(Passes::Present).unwrap();
+
+            p0.draw(&self.vertex_buffer, Primitive::Triangle, 0, 3);
             p1.draw(&self.vertex_buffer, Primitive::Triangle, 0, 3);
-        }*/
+        }
 
         self.render.submit(window);
     }

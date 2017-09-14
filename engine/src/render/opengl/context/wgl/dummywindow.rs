@@ -26,7 +26,7 @@ impl DummyWindow {
                 let mut placement: winapi::WINDOWPLACEMENT = mem::zeroed();
                 placement.length = mem::size_of::<winapi::WINDOWPLACEMENT>() as winapi::UINT;
                 if user32::GetWindowPlacement(hwnd, &mut placement) == 0 {
-                    return Err(Error::CreationError(format!("Dummy window creation failed; GetWindowPlacement: {}", io::Error::last_os_error())));
+                    return Err(Error::WindowCreationError(format!("Dummy window creation failed; GetWindowPlacement: {}", io::Error::last_os_error())));
                 }
                 placement.rcNormalPosition
             };
@@ -36,10 +36,10 @@ impl DummyWindow {
                 let mut class: winapi::WNDCLASSEXW = mem::zeroed();
                 let mut class_name = [0u16; 128];
                 if user32::GetClassNameW(hwnd, class_name.as_mut_ptr(), 128) == 0 {
-                    return Err(Error::CreationError(format!("Dummy window creation failed; GetClassNameW: {}", io::Error::last_os_error())));
+                    return Err(Error::WindowCreationError(format!("Dummy window creation failed; GetClassNameW: {}", io::Error::last_os_error())));
                 }
                 if user32::GetClassInfoExW(app_instance, class_name.as_ptr(), &mut class) == 0 {
-                    return Err(Error::CreationError(format!("Dummy window creation failed; GetClassInfoExW: {}", io::Error::last_os_error())));
+                    return Err(Error::WindowCreationError(format!("Dummy window creation failed; GetClassInfoExW: {}", io::Error::last_os_error())));
                 }
 
                 let class_name = OsStr::new("WGLDummy").encode_wide().chain(Some(0).into_iter()).collect::<Vec<_>>();
@@ -62,12 +62,12 @@ impl DummyWindow {
                                               app_instance,
                                               ptr::null_mut());
             if win.is_null() {
-                return Err(Error::CreationError(format!("Dummy window creation failed; CreateWindowEx: {}", io::Error::last_os_error())));
+                return Err(Error::WindowCreationError(format!("Dummy window creation failed; CreateWindowEx: {}", io::Error::last_os_error())));
             }
 
             let hdc = user32::GetDC(win);
             if hdc.is_null() {
-                return Err(Error::CreationError(format!("Dummy window creation failed; GetDC: {}", io::Error::last_os_error())));
+                return Err(Error::WindowCreationError(format!("Dummy window creation failed; GetDC: {}", io::Error::last_os_error())));
             }
 
             Ok(DummyWindow {

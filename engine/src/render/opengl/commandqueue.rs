@@ -1,5 +1,6 @@
 use std::slice::IterMut;
 
+use container::ops::At;
 use render::*;
 
 /// Trait for each render command
@@ -20,12 +21,14 @@ impl CommandStore {
         }
     }
 
-    pub fn iter_mut<'a>(&'a mut self) -> IterMut<'a, Box<Command>> {
-        self.commands.iter_mut()
+    pub ( crate ) fn clear(&mut self) {
+        self.commands.clear();
     }
 
-    pub fn clear(&mut self) {
-        self.commands.clear();
+    pub ( crate ) fn sort<V: At<QuerySortedOrder, Output=usize>>(&mut self, view_order: &V) {}
+
+    pub ( crate ) fn iter_mut<'a>(&'a mut self) -> IterMut<'a, Box<Command>> {
+        self.commands.iter_mut()
     }
 }
 

@@ -41,15 +41,21 @@ impl RenderPassConfig {
 pub struct RenderPass {
     platform: RenderPassImpl,
     command_store: Rc<RefCell<CommandStore>>,
+    order_index: usize,
 }
 
 impl RenderPass {
     /// Creates an empty shader.
-    pub fn new(_: RenderPassConfig, command_store: Rc<RefCell<CommandStore>>) -> RenderPass {
+    pub fn new(order_index: usize, _: RenderPassConfig, command_store: Rc<RefCell<CommandStore>>) -> RenderPass {
         RenderPass {
             platform: RenderPassImpl::new(),
             command_store: command_store,
+            order_index: order_index,
         }
+    }
+
+    pub ( crate ) fn get_order_index(&self) -> usize {
+        self.order_index
     }
 
     /// Submits a geometry for rendering

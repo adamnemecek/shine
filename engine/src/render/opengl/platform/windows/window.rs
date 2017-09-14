@@ -319,7 +319,7 @@ impl GLWindow {
         println!("created hwnd {:?}", hwnd);
 
         if hwnd.is_null() {
-            return Err(Error::CreationError(format!("Window: CreateWindowEx function failed: {}", io::Error::last_os_error())));
+            return Err(Error::WindowCreationError(format!("Window: CreateWindowEx function failed: {}", io::Error::last_os_error())));
         }
 
         //create context
@@ -458,9 +458,10 @@ impl GLWindow {
 
                     if let Some(ref handler) = handler {
                         let mut window = Window::from_platform(this);
-                        window.start_render();
-                        handler.borrow_mut().on_ready(&mut window);
-                        window.end_render();
+                        if window.start_render().is_ok() {
+                            handler.borrow_mut().on_ready(&mut window);
+                            window.end_render().unwrap();
+                        }
                     }
                 }
 
@@ -473,9 +474,10 @@ impl GLWindow {
 
                     if let Some(ref handler) = handler {
                         let mut window = Window::from_platform(this);
-                        window.start_render();
-                        handler.borrow_mut().on_lost(&mut window);
-                        window.end_render();
+                        if window.start_render().is_ok() {
+                            handler.borrow_mut().on_lost(&mut window);
+                            window.end_render().unwrap();
+                        }
                     }
                 }
 
@@ -496,9 +498,10 @@ impl GLWindow {
 
                     if let Some(ref handler) = handler {
                         let mut window = Window::from_platform(this);
-                        window.start_render();
-                        handler.borrow_mut().on_changed(&mut window);
-                        window.end_render();
+                        if window.start_render().is_ok() {
+                            handler.borrow_mut().on_changed(&mut window);
+                            window.end_render().unwrap();
+                        }
                     }
 
                     result = Some(0);

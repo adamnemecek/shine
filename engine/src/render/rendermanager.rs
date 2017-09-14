@@ -5,12 +5,33 @@ use std::rc::Rc;
 use std::cell::{RefCell, RefMut};
 use std::collections::HashMap;
 use std::hash::Hash;
+use std::fmt::Debug;
+
+use container::ops::At;
 use render::*;
+
+
+/// Enum to store the error occurred during rendering
+#[derive(Debug, Clone)]
+pub enum Error {
+    /// Error reported during a pass creation.
+    PassCreationError(String),
+    /// Error reported by the OS during rendering
+    ContextError(String),
+    /// Context is lost, ex window has been closed.
+    ContextLost,
+}
+
 
 /// Trait to index RenderPasses.
 ///
 /// It is usally some enum but other trait can be used.
-pub trait PassKey: Eq + Copy + Clone + Hash + 'static {}
+pub trait PassKey: 'static + Debug + Copy + Clone + Eq + Hash {}
+
+
+/// Trait to query the order of a pass in the pipeline
+#[derive(Copy, Clone, Debug)]
+pub ( crate ) struct QuerySortedOrder(usize);
 
 
 /// Helper to construct a pass using the factory pattern.
@@ -28,12 +49,35 @@ impl<'a, K: PassKey> RenderPassBuilder<'a, K> {
     /// If render pass cannot be created None is returned:
     ///   - The pass already exists, use find_pass instead
     ///   - Incompatible configuration
-    pub fn build(&mut self) -> Option<RefMut<RenderPass>> {
+    pub fn build(self) -> Result<(), Error> {
         use std::collections::hash_map::Entry::*;
 
+        let idx = self.manager.passes.len();
         match self.manager.passes.entry(self.id) {
-            Occupied(_) => None,
-            e => Some(e.or_insert(RefCell::new(RenderPass::new(self.config.clone(), self.manager.command_store.clone()))).borrow_mut()),
+            Occupied(_) => {
+                Err(Error::PassCreationError(format!("Pass {:?} already exists", self.id)))
+            }
+
+            e => {
+                e.or_insert(RefCell::new(RenderPass::new(idx, self.config.clone(), self.manager.command_store.clone()))).borrow_mut();
+                Ok(())
+            }
+        }
+    }
+}
+
+
+/// Sturcture to store meta-info of render passes.
+struct PassMeta {
+    order: usize,
+    last_use: usize,
+}
+
+impl Default for PassMeta {
+    fn default() -> PassMeta {
+        PassMeta {
+            order: usize::max_value(),
+            last_use: 0,
         }
     }
 }
@@ -43,8 +87,9 @@ impl<'a, K: PassKey> RenderPassBuilder<'a, K> {
 pub struct RenderManager<K: PassKey> {
     platform: RenderManagerImpl,
     passes: HashMap<K, RefCell<RenderPass>>,
+    passes_meta: RefCell<Vec<PassMeta>>,
     command_store: Rc<RefCell<CommandStore>>,
-    //order: Vec<RefCell<RenderPass>>,
+    submit_counter: usize,
 }
 
 impl<K: PassKey> RenderManager<K> {
@@ -53,7 +98,9 @@ impl<K: PassKey> RenderManager<K> {
         RenderManager {
             platform: RenderManagerImpl::new(),
             passes: HashMap::new(),
+            passes_meta: RefCell::new(vec!()),
             command_store: Rc::new(RefCell::new(CommandStore::new())),
+            submit_counter: 0,
         }
     }
 
@@ -68,39 +115,57 @@ impl<K: PassKey> RenderManager<K> {
         }
     }
 
-
     /// Gets an existing render pass.
     ///
     /// If pass was not created in the current frame, None is returned
-    pub fn find_pass(&mut self, id: K) -> Option<RefMut<RenderPass>> {
-        self.passes.get(&id).map(|ref e| e.borrow_mut())
+    pub fn find_pass(&self, id: K) -> Option<RefMut<RenderPass>> {
+        self.passes.get(&id).map(|ref pass| {
+            let pass = pass.borrow_mut();
+            let ref mut meta = self.passes_meta.borrow_mut()[pass.get_order_index()];
+            meta.last_use = self.submit_counter;
+            pass
+        })
     }
 
     /// Sends commands for processing.
     pub fn submit(&mut self, window: &Window) {
         self.sort_passes();
 
-        let ref mut commands = *self.command_store.borrow_mut();
-        //commands.sort(self.pass_order);
-        window.platform().process_commands(commands.iter_mut());
+        {
+            let ref mut commands = *self.command_store.borrow_mut();
+            commands.sort(self);
+            window.platform().process_commands(commands.iter_mut());
+            commands.clear();
+        }
 
-        commands.clear();
+        self.submit_counter += 1;
     }
 
 
     /// Order passes by the dependency graph
     fn sort_passes(&mut self) {
-        /*let mut i = 0u8;
-        for ref mut pass in self.passes.values_mut() {
-            //pass.borrow_mut().set_order(i);
-            i = i + 1;
-        }*/
+        let ref mut passes_meta = self.passes_meta.borrow_mut();
+        passes_meta.resize_default(self.passes.len());
+
+        let mut i = 0;
+        for pass in self.passes.iter() {
+            let ref mut meta = passes_meta[pass.1.borrow().get_order_index()];
+            meta.order = i;
+            i += 1;
+        }
     }
 }
-
 
 impl<K: PassKey> CommandQueue for RenderManager<K> {
     fn add<C: Command>(&mut self, cmd: C) {
         self.command_store.borrow_mut().add(cmd);
+    }
+}
+
+impl<K: PassKey> At<QuerySortedOrder> for RenderManager<K> {
+    type Output = usize;
+
+    fn at(&self, idx: QuerySortedOrder) -> usize {
+        self.passes_meta.borrow()[idx.0].order
     }
 }

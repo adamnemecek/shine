@@ -36,7 +36,7 @@ unsafe fn load_gl_library() -> Result<winapi::HMODULE, Error> {
 
     let lib = kernel32::LoadLibraryW(name.as_ptr());
     if lib.is_null() {
-        return Err(Error::CreationError(format!("WGL: LoadLibrary function failed for {}: {}", dll_name, io::Error::last_os_error())));
+        return Err(Error::WindowCreationError(format!("WGL: LoadLibrary function failed for {}: {}", dll_name, io::Error::last_os_error())));
     }
 
     Ok(lib)
@@ -55,17 +55,17 @@ unsafe fn load_wgl_extension(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND
 
     let pixel_format = gdi32::ChoosePixelFormat(hdc, &pfd);
     if gdi32::SetPixelFormat(hdc, pixel_format, &pfd) != winapi::TRUE {
-        return Err(Error::CreationError(format!("WGL: Failed to set pixel format for dummy context: {}", io::Error::last_os_error())));
+        return Err(Error::WindowCreationError(format!("WGL: Failed to set pixel format for dummy context: {}", io::Error::last_os_error())));
     }
 
     let rc = wgl::CreateContext(hdc as *const c_void);
     if rc.is_null() {
-        return Err(Error::CreationError(format!("WGL: Failed to create dummy context: {}", io::Error::last_os_error())));
+        return Err(Error::WindowCreationError(format!("WGL: Failed to create dummy context: {}", io::Error::last_os_error())));
     }
 
     if wgl::MakeCurrent(hdc as *const c_void, rc) != winapi::TRUE {
         wgl::DeleteContext(rc);
-        return Err(Error::CreationError(format!("WGL: Failed to make dummy context current: {}", io::Error::last_os_error())));
+        return Err(Error::WindowCreationError(format!("WGL: Failed to make dummy context current: {}", io::Error::last_os_error())));
     }
 
     let wgl_ext = wgl_ext::Wgl::load_with(|addr| {
@@ -131,13 +131,13 @@ impl Context {
             // create dc
             context.hdc = user32::GetDC(hwnd);
             if context.hdc.is_null() {
-                return Err(Error::CreationError(format!("WGL: Failed to get dc: {}", io::Error::last_os_error())));
+                return Err(Error::WindowCreationError(format!("WGL: Failed to get dc: {}", io::Error::last_os_error())));
             }
 
             // find a matching pixel foramt
             let pixel_format = try!(context.choose_pixel_format(&settings.fb_config));
             if pixel_format == 0 {
-                return Err(Error::CreationError("WGL: Failed to find a suitable pixel format".to_string()));
+                return Err(Error::WindowCreationError("WGL: Failed to find a suitable pixel format".to_string()));
             }
 
             let fb_config = context.get_pixel_format_info(pixel_format).unwrap();
@@ -197,7 +197,7 @@ impl Context {
         let mut value: c_int = 0;
         assert!(self.has_wgl_extension("WGL_ARB_pixel_format"));
         if self.wgl_ext.GetPixelFormatAttribivARB(self.hdc as *const _, pixel_format_id as c_int, 0, 1, [attrib as c_int].as_ptr(), &mut value) == 0 {
-            return Err(Error::CreationError(format!("WGL: Failed to retrieve pixel format attribute n:{}, attrib:{}", pixel_format_id, attrib)));
+            return Err(Error::WindowCreationError(format!("WGL: Failed to retrieve pixel format attribute n:{}, attrib:{}", pixel_format_id, attrib)));
         }
 
         Ok(value as u32)
@@ -211,15 +211,15 @@ impl Context {
         // Get pixel format attributes through "modern" extension
         if try!(self.get_pixel_format_attrib(n, wgl_ext::SUPPORT_OPENGL_ARB)) != 1 ||
             try!(self.get_pixel_format_attrib(n, wgl_ext::DRAW_TO_WINDOW_ARB)) != 1 {
-            return Err(Error::CreationError(format!("WGL: query pixel format for {}: Not OpenGL compatible", n)));
+            return Err(Error::WindowCreationError(format!("WGL: query pixel format for {}: Not OpenGL compatible", n)));
         }
 
         if try!(self.get_pixel_format_attrib(n, wgl_ext::PIXEL_TYPE_ARB)) != wgl_ext::TYPE_RGBA_ARB {
-            return Err(Error::CreationError(format!("WGL: query pixel format for {}: Not RGBA", n)));
+            return Err(Error::WindowCreationError(format!("WGL: query pixel format for {}: Not RGBA", n)));
         }
 
         if try!(self.get_pixel_format_attrib(n, wgl_ext::ACCELERATION_ARB)) == wgl_ext::NO_ACCELERATION_ARB {
-            return Err(Error::CreationError(format!("WGL: query pixel format for {}: No hardware acceleration", n)));
+            return Err(Error::WindowCreationError(format!("WGL: query pixel format for {}: No hardware acceleration", n)));
         }
 
         Ok(FBConfig {
@@ -265,19 +265,19 @@ impl Context {
         let mut pfd: winapi::PIXELFORMATDESCRIPTOR = mem::zeroed();
 
         if gdi32::DescribePixelFormat(self.hdc, n as c_int, mem::size_of::<winapi::PIXELFORMATDESCRIPTOR>() as u32, &mut pfd) == 0 {
-            return Err(Error::CreationError(format!("WGL: query pixel format for {}: DescribePixelFormat failed", n)));
+            return Err(Error::WindowCreationError(format!("WGL: query pixel format for {}: DescribePixelFormat failed", n)));
         }
 
         if (pfd.dwFlags & winapi::PFD_DRAW_TO_WINDOW) == 0 || (pfd.dwFlags & winapi::PFD_SUPPORT_OPENGL) == 0 {
-            return Err(Error::CreationError(format!("WGL: query pixel format for {}: Not OpenGL compatible", n)));
+            return Err(Error::WindowCreationError(format!("WGL: query pixel format for {}: Not OpenGL compatible", n)));
         }
 
         if (pfd.dwFlags & winapi::PFD_GENERIC_ACCELERATED) == 0 && (pfd.dwFlags & winapi::PFD_GENERIC_FORMAT) != 0 {
-            return Err(Error::CreationError(format!("WGL: query pixel format for {}: No hardware acceleration", n)));
+            return Err(Error::WindowCreationError(format!("WGL: query pixel format for {}: No hardware acceleration", n)));
         }
 
         if pfd.iPixelType != winapi::PFD_TYPE_RGBA {
-            return Err(Error::CreationError(format!("WGL: query pixel format for {}: Not RGBA", n)));
+            return Err(Error::WindowCreationError(format!("WGL: query pixel format for {}: Not RGBA", n)));
         }
 
         Ok(FBConfig {
@@ -370,7 +370,7 @@ impl Context {
         let configs = try!(self.get_pixel_formats());
 
         if configs.is_empty() {
-            return Err(Error::CreationError("WGL: The driver does not appear to support OpenGL".to_string()));
+            return Err(Error::WindowCreationError("WGL: The driver does not appear to support OpenGL".to_string()));
         }
 
         let mut least_missing = i32::MAX;
@@ -496,19 +496,19 @@ impl Context {
         let mut pfd: winapi::PIXELFORMATDESCRIPTOR = mem::zeroed();
 
         if gdi32::DescribePixelFormat(self.hdc, pixel_format as c_int, mem::size_of::<winapi::PIXELFORMATDESCRIPTOR>() as u32, &mut pfd) == 0 {
-            return Err(Error::CreationError(format!("WGL: Failed to retrieve PFD for selected pixel format ({}): {}", pixel_format, io::Error::last_os_error())));
+            return Err(Error::WindowCreationError(format!("WGL: Failed to retrieve PFD for selected pixel format ({}): {}", pixel_format, io::Error::last_os_error())));
         }
 
         if gdi32::SetPixelFormat(self.hdc, pixel_format as c_int, &pfd) == 0 {
-            return Err(Error::CreationError(format!("WGL: Failed to set selected pixel format ({}): {}", pixel_format, io::Error::last_os_error())));
+            return Err(Error::WindowCreationError(format!("WGL: Failed to set selected pixel format ({}): {}", pixel_format, io::Error::last_os_error())));
         }
 
         if config.gl_forward_compatible && !self.has_wgl_extension("WGL_ARB_create_context") {
-            return Err(Error::CreationError(format!("WGL: A forward compatible OpenGL context requested but WGL_ARB_create_context is unavailable")));
+            return Err(Error::WindowCreationError(format!("WGL: A forward compatible OpenGL context requested but WGL_ARB_create_context is unavailable")));
         }
 
         if config.gl_profile != OpenGLProfile::DontCare && !self.has_wgl_extension("WGL_ARB_create_context_profile") {
-            return Err(Error::CreationError(format!("WGL: OpenGL profile requested but WGL_ARB_create_context_profile is unavailable")));
+            return Err(Error::WindowCreationError(format!("WGL: OpenGL profile requested but WGL_ARB_create_context_profile is unavailable")));
         }
 
         // collect attributes
@@ -592,19 +592,19 @@ impl Context {
                                                              share as *const c_void,
                                                              attribs.as_ptr() as *const i32);
             if hglrc.is_null() {
-                return Err(Error::CreationError(format!("WGL: Context creation failed: {}", io::Error::last_os_error())));
+                return Err(Error::WindowCreationError(format!("WGL: Context creation failed: {}", io::Error::last_os_error())));
             }
 
             Ok(hglrc as winapi::HGLRC)
         } else {
             let hglrc = wgl::CreateContext(self.hdc as *const c_void);
             if hglrc.is_null() {
-                return Err(Error::CreationError(format!("WGL: Context creation failed: {}", io::Error::last_os_error())));
+                return Err(Error::WindowCreationError(format!("WGL: Context creation failed: {}", io::Error::last_os_error())));
             }
 
             if share.is_null() {
                 if wgl::ShareLists(share as *const c_void, self.hglrc as *const c_void) == 0 {
-                    return Err(Error::CreationError(format!("WGL: Failed to enable sharing with specified OpenGL context")));
+                    return Err(Error::WindowCreationError(format!("WGL: Failed to enable sharing with specified OpenGL context")));
                 }
             }
             Ok(hglrc as winapi::HGLRC)

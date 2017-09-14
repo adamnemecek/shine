@@ -3,14 +3,6 @@
 use std::time::Duration;
 use render::*;
 
-/// Enum to store the error occurred during a window creation.
-#[derive(Debug, Clone)]
-pub enum EngineError {
-    /// Engine could not be initialized error.
-    /// The exact (OS) error message is also provided in the argument
-    InitializeError(String),
-}
-
 /// Enum to define the timeout policy for dispatch event
 #[derive(Debug, Copy, Clone)]
 pub enum DispatchTimeout {
@@ -31,7 +23,7 @@ pub struct Engine {
 
 impl Engine {
     /// Creates a new engine.
-    pub fn new() -> Result<Engine, EngineError> {
+    pub fn new() -> Result<Engine, Error> {
         let platform = try!(EngineImpl::new());
         Ok(Engine { platform: platform })
     }

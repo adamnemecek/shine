@@ -12,7 +12,7 @@ impl Context {
     /// # Error
     /// If context connat be created an error is returned describing the reason.
     pub fn new(_: winapi::HINSTANCE, _: winapi::HWND, _: &WindowSettings) -> Result<Context, Error> {
-        Err(Error::CreationError(format!("EGL context is not supported yet")))
+        Err(Error::WindowCreationError(format!("EGL context is not supported yet")))
     }
 
     /// Makes this context active.

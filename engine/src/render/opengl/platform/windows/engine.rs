@@ -35,7 +35,7 @@ pub struct GLEngine {
 }
 
 impl GLEngine {
-    pub fn new() -> Result<GLEngine, EngineError> {
+    pub fn new() -> Result<GLEngine, Error> {
         let window_class_name = OsStr::new("Dragorust")
             .encode_wide()
             .chain(Some(0).into_iter())
@@ -60,7 +60,7 @@ impl GLEngine {
 
         let res = unsafe { user32::RegisterClassExW(&class) };
         if res == 0 {
-            return Err(EngineError::InitializeError("".to_string()));
+            return Err(Error::InitializeError(format!("")));
         }
 
         Ok(GLEngine {

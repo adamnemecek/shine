@@ -10,6 +10,7 @@ extern crate user32;
 
 #[macro_use]
 mod types;
+mod errors;
 mod keycodes;
 mod engine;
 mod windowsettings;
@@ -26,6 +27,7 @@ mod opengl;
 pub use self::opengl::*;
 
 pub use self::types::*;
+pub use self::errors::*;
 pub use self::keycodes::*;
 pub use self::engine::*;
 pub use self::windowsettings::*;
