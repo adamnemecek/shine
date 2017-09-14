@@ -57,6 +57,10 @@ impl GLRenderPass {
         )
     }
 
+    pub fn prepare<Q:CommandQueue>(&mut self) {
+
+    }
+
     pub fn draw<Q: CommandQueue>(&mut self, _: &mut Q, _: &GLVertexBuffer, _: Primitive, _: usize, _: usize) {
         println!("GLRenderPass - draw");
     }

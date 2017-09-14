@@ -34,39 +34,6 @@ pub trait PassKey: 'static + Debug + Copy + Clone + Eq + Hash {}
 pub ( crate ) struct QuerySortedOrder(usize);
 
 
-/// Helper to construct a pass using the factory pattern.
-pub struct RenderPassBuilder<'a, K: PassKey> {
-    manager: &'a mut RenderManager<K>,
-    id: K,
-    config: RenderPassConfig,
-}
-
-impl<'a, K: PassKey> RenderPassBuilder<'a, K> {
-    /// Builds the configured render pass.
-    ///
-    /// # Error
-    ///
-    /// If render pass cannot be created None is returned:
-    ///   - The pass already exists, use find_pass instead
-    ///   - Incompatible configuration
-    pub fn build(self) -> Result<(), Error> {
-        use std::collections::hash_map::Entry::*;
-
-        let idx = self.manager.passes.len();
-        match self.manager.passes.entry(self.id) {
-            Occupied(_) => {
-                Err(Error::PassCreationError(format!("Pass {:?} already exists", self.id)))
-            }
-
-            e => {
-                e.or_insert(RefCell::new(RenderPass::new(idx, self.config.clone(), self.manager.command_store.clone()))).borrow_mut();
-                Ok(())
-            }
-        }
-    }
-}
-
-
 /// Sturcture to store meta-info of render passes.
 struct PassMeta {
     order: usize,
@@ -107,11 +74,13 @@ impl<K: PassKey> RenderManager<K> {
     /// Creates a new pass with the given id.
     ///
     /// Passes are a short leaving objects and the pass-graph have to be recreated for each frame.
-    pub fn create_pass<'a>(&'a mut self, id: K) -> RenderPassBuilder<'a, K> {
-        RenderPassBuilder {
-            manager: self,
-            id: id,
-            config: RenderPassConfig::new()
+    pub fn create_pass<'a>(&'a mut self, id: K) -> Result<RefMut<RenderPass>, Error> {
+        use std::collections::hash_map::Entry::*;
+
+        let idx = self.passes.len();
+        match self.passes.entry(id) {
+            Occupied(_) => Err(Error::PassCreationError(format!("Pass {:?} already exists", id))),
+            e => Ok(e.or_insert(RefCell::new(RenderPass::new(idx, self.command_store.clone())))),
         }
     }
 
@@ -122,7 +91,10 @@ impl<K: PassKey> RenderManager<K> {
         self.passes.get(&id).map(|ref pass| {
             let pass = pass.borrow_mut();
             let ref mut meta = self.passes_meta.borrow_mut()[pass.get_order_index()];
-            meta.last_use = self.submit_counter;
+            if meta.last_use != self.submit_counter {
+                meta.last_use = self.submit_counter;
+                pass.prepare();
+            }
             pass
         })
     }
