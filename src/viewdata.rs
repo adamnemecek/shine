@@ -14,7 +14,7 @@ struct VxPos {
 enum Passes {
     Present,
     Shadow,
-    Debug,
+    //Debug,
 }
 
 impl PassKey for Passes {}
@@ -42,29 +42,6 @@ impl ViewData {
     }
 
     fn init(&mut self, window: &Window) {
-        //setup pipeline
-        self.render.create_pass(Passes::Present)
-            //.set_viewport(window.get_size())
-            //.clear(self.t)
-            //.add_target(DEPTH)
-            //.add_target(0, COLOR)
-            .build().unwrap();
-
-        self.render.create_pass(Passes::Shadow)
-            //.set_viewport(window.get_size())
-            //.clear(self.t)
-            //.add_target(DEPTH)
-            //.add_target(0, COLOR)
-            .build().unwrap();
-
-        self.render.create_pass(Passes::Debug)
-            //.set_viewport(window.get_size())
-            //.clear(self.t)
-            //.add_target(DEPTH)
-            //.add_target(0, COLOR)
-            .build().unwrap();
-
-
         // create some shaders
         let sh_source = [
             (ShaderType::VertexShader,
@@ -106,7 +83,7 @@ void main()
     }
 
     fn update(&mut self) {
-        self.t += 0.1f32;
+        self.t += 0.001f32;
         if self.t > 1f32 {
             self.t = 0f32;
         }
@@ -114,10 +91,15 @@ void main()
 
     pub fn render(&mut self, window: &Window) {
         {
-            let mut p0 = self.render.find_pass(Passes::Present).unwrap();
-            let mut p1 = self.render.find_pass(Passes::Present).unwrap();
+            let mut p0 = self.render.get_pass(Passes::Present);
+            p0.config_mut().set_clear_color(f32x3!(self.t, 0, 0));
+            p0.config_mut().set_fullscreen();
 
             p0.draw(&self.vertex_buffer, Primitive::Triangle, 0, 3);
+        }
+
+        {
+            let mut p1 = self.render.get_pass(Passes::Shadow);
             p1.draw(&self.vertex_buffer, Primitive::Triangle, 0, 3);
         }
 

@@ -19,6 +19,7 @@ mod shaderprogram;
 #[macro_use]
 mod vertexbuffer;
 mod renderpass;
+mod renderpassconfig;
 mod rendermanager;
 mod commandqueue;
 
@@ -35,6 +36,7 @@ pub use self::window::*;
 pub use self::shaderprogram::*;
 pub use self::vertexbuffer::*;
 pub use self::renderpass::*;
+pub use self::renderpassconfig::*;
 pub use self::rendermanager::*;
 pub use self::commandqueue::*;
 

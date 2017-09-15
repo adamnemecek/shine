@@ -13,6 +13,7 @@ use self::vertexbinding::VertexBinding;
 use self::indexbinding::IndexBinding;
 use self::programbinding::ProgramBinding;
 
+use render::*;
 
 /// Structure to manage the GL state machine at a low level.
 ///
@@ -20,8 +21,7 @@ use self::programbinding::ProgramBinding;
 /// by caching the bound attributes. Also it tries to move the API into a stateless
 /// direction where one draw call does not effects the next calls.
 pub struct LowLevel {
-    pub width: u32,
-    pub height: u32,
+    screen_size: Size,
     pub vertex_binding: VertexBinding,
     pub index_binding: IndexBinding,
     pub program_binding: ProgramBinding,
@@ -30,8 +30,7 @@ pub struct LowLevel {
 impl LowLevel {
     pub fn new() -> LowLevel {
         LowLevel {
-            width: 0,
-            height: 0,
+            screen_size: Size::from((0, 0)),
             vertex_binding: VertexBinding::new(),
             index_binding: IndexBinding::new(),
             program_binding: ProgramBinding::new(),
@@ -42,16 +41,17 @@ impl LowLevel {
         println!("release LowLevel");
     }
 
-    pub fn set_size(&mut self, width: u32, height: u32) {
-        self.width = width;
-        self.height = height;
+    pub fn get_screen_size(&self) -> Size {
+        self.screen_size
     }
 
-    pub fn start_render(&mut self) {
+    pub fn set_screen_size(&mut self, size: Size) {
+        self.screen_size = size;
     }
 
-    pub fn end_render(&mut self) {
-    }
+    pub fn start_render(&mut self) {}
+
+    pub fn end_render(&mut self) {}
 
     /// Draws a geometry using the current states.
     pub fn draw(&mut self, primitive: GLenum, first: GLuint, vertex_count: GLsizei) {

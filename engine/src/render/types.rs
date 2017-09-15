@@ -2,18 +2,18 @@
 #![deny(missing_copy_implementations)]
 
 
-/// Structure to store the window size.
+/// Structure to store a window size.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Size {
     /// The width.
-    pub width: u32,
+    pub width: i32,
     /// The height.
-    pub height: u32,
+    pub height: i32,
 }
 
-impl From<[u32; 2]> for Size {
+impl From<[i32; 2]> for Size {
     #[inline(always)]
-    fn from(value: [u32; 2]) -> Size {
+    fn from(value: [i32; 2]) -> Size {
         Size {
             width: value[0],
             height: value[1],
@@ -21,9 +21,9 @@ impl From<[u32; 2]> for Size {
     }
 }
 
-impl From<(u32, u32)> for Size {
+impl From<(i32, i32)> for Size {
     #[inline(always)]
-    fn from(value: (u32, u32)) -> Size {
+    fn from(value: (i32, i32)) -> Size {
         Size {
             width: value.0,
             height: value.1,
@@ -31,16 +31,16 @@ impl From<(u32, u32)> for Size {
     }
 }
 
-impl From<Size> for [u32; 2] {
+impl From<Size> for [i32; 2] {
     #[inline(always)]
-    fn from(value: Size) -> [u32; 2] {
+    fn from(value: Size) -> [i32; 2] {
         [value.width, value.height]
     }
 }
 
-impl From<Size> for (u32, u32) {
+impl From<Size> for (i32, i32) {
     #[inline(always)]
-    fn from(value: Size) -> (u32, u32) {
+    fn from(value: Size) -> (i32, i32) {
         (value.width, value.height)
     }
 }
@@ -86,6 +86,57 @@ impl From<Position> for (i32, i32) {
     #[inline(always)]
     fn from(value: Position) -> (i32, i32) {
         (value.x, value.y)
+    }
+}
+
+
+/// Structure to store the window rectangle.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub struct Rectangle {
+    /// The position of the top left corner.
+    pub position: Position,
+    /// The size of the rectangle
+    pub size: Size,
+}
+
+impl From<[i32; 4]> for Rectangle {
+    #[inline(always)]
+    fn from(value: [i32; 4]) -> Rectangle {
+        Rectangle {
+            position: Position {
+                x: value[0],
+                y: value[1],
+            },
+
+            size: Size {
+                width: value[2],
+                height: value[3]
+            }
+        }
+    }
+}
+
+impl From<(Position, Size)> for Rectangle {
+    #[inline(always)]
+    fn from(value: (Position, Size)) -> Rectangle {
+        Rectangle {
+            position: value.0,
+            size: value.1,
+        }
+    }
+}
+
+impl From<Rectangle> for [i32; 4] {
+    #[inline(always)]
+    fn from(value: Rectangle) -> [i32; 4] {
+        [value.position.x, value.position.y, value.size.width, value.size.height]
+    }
+}
+
+impl From<Rectangle> for (Position, Size) {
+    #[inline(always)]
+    fn from(value: Rectangle) -> (Position, Size) {
+        (value.position, value.size)
     }
 }
 

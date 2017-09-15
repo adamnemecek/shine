@@ -19,7 +19,7 @@ pub fn main() {
 
     let mut window = render::WindowSettings::new()
         .title("main")
-        .size((1024u32, 1024u32))
+        .size((1024, 1024))
         .build(&mut engine).expect("Could not initialize main window");
     let window_data: ViewDataWrapper = ViewDataWrapper::new(world.clone());
     window.set_surface_handler(window_data.clone());
@@ -28,7 +28,7 @@ pub fn main() {
 
     let mut sub_window = render::WindowSettings::new()
         .title("sub")
-        .size((100u32, 100u32))
+        .size((100, 100))
         //.gl_profile(render::OpenGLProfile::ES2)
         .build(&mut engine).expect("Could not initialize main window");
     let sub_window_data = ViewDataWrapper::new(world.clone());

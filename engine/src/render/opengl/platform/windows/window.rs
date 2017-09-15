@@ -1,7 +1,7 @@
 use std::ptr;
+use std::mem;
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::slice::IterMut;
 use std::io;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
@@ -73,8 +73,8 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
     unsafe { AdjustWindowRectEx(&mut rect, style, winapi::FALSE, exstyle); }
 
     Size {
-        width: (rect.right - rect.left) as u32,
-        height: (rect.bottom - rect.top) as u32
+        width: rect.right - rect.left,
+        height: rect.bottom - rect.top
     }
 }
 
@@ -401,7 +401,8 @@ impl GLWindow {
     }
 
     pub fn get_draw_size(&self) -> Size {
-        Size { width: 0, height: 0 }
+        let ref win = *self.0.borrow_mut();
+        win.ll.get_screen_size()
     }
 
     pub fn start_render(&self) -> Result<(), Error> {
@@ -419,13 +420,9 @@ impl GLWindow {
         win.hwnd
     }
 
-    pub fn process_commands<'a>(&self, commands: IterMut<'a, Box<Command>>) {
-        let ref mut win = *self.0.borrow_mut();
-        let ll = &mut win.ll;
-
-        for ref mut cmd in commands {
-            cmd.process(ll);
-        }
+    pub fn process<F: FnMut(&mut LowLevel)>(&self, mut function: F) {
+        let mut win = self.0.borrow_mut();
+        function(&mut win.ll);
     }
 
     /// Static function to handle os messages.
@@ -489,12 +486,24 @@ impl GLWindow {
 
                 winapi::WM_SIZE => {
                     let handler = this.0.borrow().surface_handler.clone();
-                    let w = winapi::LOWORD(lparam as winapi::DWORD) as u32;
-                    let h = winapi::HIWORD(lparam as winapi::DWORD) as u32;
+                    let w = winapi::LOWORD(lparam as winapi::DWORD) as i32;
+                    let h = winapi::HIWORD(lparam as winapi::DWORD) as i32;
 
                     let size = Size { width: w, height: h };
-                    println!("size: {:?}", size);
-                    this.0.borrow_mut().size = size;
+
+                    unsafe {
+                        let mut rect = mem::zeroed();
+                        user32::GetWindowRect(hwnd, &mut rect);
+
+                        this.0.borrow_mut().size = Size {
+                            width: rect.right - rect.left,
+                            height: rect.bottom - rect.top
+                        };
+                    }
+                    this.0.borrow_mut().ll.set_screen_size(size);
+
+                    println!("get_size: {:?}", this.get_size());
+                    println!("get_draw_size: {:?}", this.get_draw_size());
 
                     if let Some(ref handler) = handler {
                         let mut window = Window::from_platform(this);

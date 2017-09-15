@@ -18,46 +18,23 @@ pub enum Primitive {
 }
 
 
-/// Settings structure for RenderPass behavior.
-///
-/// This structure stores everything that can be customized when
-/// constructing a render pass.
-#[derive(Copy, Clone)]
-pub struct RenderPassConfig {
-    screen: bool,
-}
-
-impl RenderPassConfig {
-    /// Creates render pass  settings with defaults.
-    pub fn new() -> RenderPassConfig {
-        RenderPassConfig {
-            screen: true,
-        }
-    }
-}
-
-
 /// Structure to store the render pass abstraction.
 pub struct RenderPass {
     platform: RenderPassImpl,
     config: RenderPassConfig,
     command_store: Rc<RefCell<CommandStore>>,
-    order_index: usize,
+    pub ( crate ) meta_index: PassMetaIndex,
 }
 
 impl RenderPass {
     /// Creates an empty shader.
-    pub fn new(order_index: usize, command_store: Rc<RefCell<CommandStore>>) -> RenderPass {
+    pub fn new(command_store: Rc<RefCell<CommandStore>>) -> RenderPass {
         RenderPass {
             platform: RenderPassImpl::new(),
             config: RenderPassConfig::new(),
             command_store: command_store,
-            order_index: order_index,
+            meta_index: PassMetaIndex::new(),
         }
-    }
-
-    pub ( crate ) fn get_order_index(&self) -> usize {
-        self.order_index
     }
 
     /// Returns the current config for mutation.
@@ -73,7 +50,7 @@ impl RenderPass {
     /// This function is responsible to set up the pass for rendering. It generates commands to
     /// clear buffers, set viewports, bind render targets, etc.
     pub fn prepare(&mut self) {
-        self.platform.prepare(self.command_store.borrow_mut().deref_mut(), config);
+        self.platform.prepare(self.command_store.borrow_mut().deref_mut(), &self.config);
     }
 
     /// Sends a geometry for rendering

@@ -25,7 +25,7 @@ impl CommandStore {
         self.commands.clear();
     }
 
-    pub ( crate ) fn sort<V: At<QuerySortedOrder, Output=usize>>(&mut self, view_order: &V) {}
+    pub ( crate ) fn sort<V: At<PassMetaIndex, Output=usize>>(&mut self, view_order: &V) {}
 
     pub ( crate ) fn iter_mut<'a>(&'a mut self) -> IterMut<'a, Box<Command>> {
         self.commands.iter_mut()

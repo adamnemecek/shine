@@ -10,51 +10,49 @@ use std::fmt::Debug;
 use container::ops::At;
 use render::*;
 
-
-/// Enum to store the error occurred during rendering
-#[derive(Debug, Clone)]
-pub enum Error {
-    /// Error reported during a pass creation.
-    PassCreationError(String),
-    /// Error reported by the OS during rendering
-    ContextError(String),
-    /// Context is lost, ex window has been closed.
-    ContextLost,
-}
-
-
 /// Trait to index RenderPasses.
 ///
 /// It is usally some enum but other trait can be used.
 pub trait PassKey: 'static + Debug + Copy + Clone + Eq + Hash {}
 
 
-/// Trait to query the order of a pass in the pipeline
-#[derive(Copy, Clone, Debug)]
-pub ( crate ) struct QuerySortedOrder(usize);
+/// Trait to index the active passes
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub ( crate ) struct PassMetaIndex(usize);
 
+impl PassMetaIndex {
+    pub fn new() -> PassMetaIndex {
+        PassMetaIndex(usize::max_value())
+    }
 
-/// Sturcture to store meta-info of render passes.
-struct PassMeta {
-    order: usize,
-    last_use: usize,
+    pub fn as_index(&self) -> usize {
+        self.0
+    }
 }
 
-impl Default for PassMeta {
-    fn default() -> PassMeta {
-        PassMeta {
-            order: usize::max_value(),
-            last_use: 0,
-        }
+/// Trait to index the passes
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub ( crate ) struct PassIndex(usize);
+
+impl PassIndex {
+    pub fn as_index(&self) -> usize {
+        self.0
     }
 }
 
 
+/// Sturcture to store meta-info of render passes.
+struct PassMeta {
+    index: PassIndex,
+    order: usize,
+}
+
 /// Structure to manage multi-pass rendering.
 pub struct RenderManager<K: PassKey> {
-    platform: RenderManagerImpl,
-    passes: HashMap<K, RefCell<RenderPass>>,
-    passes_meta: RefCell<Vec<PassMeta>>,
+    passes: Vec<RefCell<RenderPass>>,
+    passes_lookup: HashMap<K, (PassIndex, PassMetaIndex)>,
+    active_passes: Vec<PassMeta>,
+
     command_store: Rc<RefCell<CommandStore>>,
     submit_counter: usize,
 }
@@ -63,40 +61,46 @@ impl<K: PassKey> RenderManager<K> {
     /// Creates a new renderer.
     pub fn new() -> RenderManager<K> {
         RenderManager {
-            platform: RenderManagerImpl::new(),
-            passes: HashMap::new(),
-            passes_meta: RefCell::new(vec!()),
+            passes: vec!(),
+            passes_lookup: HashMap::new(),
+            active_passes: vec!(),
             command_store: Rc::new(RefCell::new(CommandStore::new())),
             submit_counter: 0,
         }
     }
 
-    /// Creates a new pass with the given id.
+    /// Gets or creates a pass with the given id.
     ///
-    /// Passes are a short leaving objects and the pass-graph have to be recreated for each frame.
-    pub fn create_pass<'a>(&'a mut self, id: K) -> Result<RefMut<RenderPass>, Error> {
-        use std::collections::hash_map::Entry::*;
+    /// By default passes are activated only for a single frame and whenever  when a pass is queried, it is reactivated
+    /// automatically for the current frame.
+    pub fn get_pass(&mut self, id: K) -> RefMut<RenderPass> {
+        // get or create entry for id
+        let entry = {
+            let passes = &mut self.passes;
+            let command_store = self.command_store.clone();
 
-        let idx = self.passes.len();
-        match self.passes.entry(id) {
-            Occupied(_) => Err(Error::PassCreationError(format!("Pass {:?} already exists", id))),
-            e => Ok(e.or_insert(RefCell::new(RenderPass::new(idx, self.command_store.clone())))),
+            let entry = self.passes_lookup.entry(id);
+            entry.or_insert_with(|| {
+                passes.push(RefCell::new(RenderPass::new(command_store)));
+                (PassIndex(passes.len() - 1), PassMetaIndex::new())
+            })
+        };
+
+        // find the index of the pass
+        let mut pass = self.passes[entry.0.as_index()].borrow_mut();
+
+        if entry.1 == PassMetaIndex::new() {
+            // pass have to be activated, firs access in this frame
+            let meta_index = PassMetaIndex(self.active_passes.len());
+            pass.meta_index = meta_index;
+            entry.1 = meta_index;
+            self.active_passes.push(PassMeta {
+                index: entry.0,
+                order: 0,
+            });
         }
-    }
 
-    /// Gets an existing render pass.
-    ///
-    /// If pass was not created in the current frame, None is returned
-    pub fn find_pass(&self, id: K) -> Option<RefMut<RenderPass>> {
-        self.passes.get(&id).map(|ref pass| {
-            let pass = pass.borrow_mut();
-            let ref mut meta = self.passes_meta.borrow_mut()[pass.get_order_index()];
-            if meta.last_use != self.submit_counter {
-                meta.last_use = self.submit_counter;
-                pass.prepare();
-            }
-            pass
-        })
+        pass
     }
 
     /// Sends commands for processing.
@@ -106,8 +110,18 @@ impl<K: PassKey> RenderManager<K> {
         {
             let ref mut commands = *self.command_store.borrow_mut();
             commands.sort(self);
-            window.platform().process_commands(commands.iter_mut());
+            window.platform().process(|ll| {
+                for ref mut cmd in commands.iter_mut() {
+                    cmd.process(ll);
+                }
+            });
             commands.clear();
+        }
+
+        // deactive passes
+        self.active_passes.clear();
+        for lookup in self.passes_lookup.iter_mut() {
+            (lookup.1).1 = PassMetaIndex::new();
         }
 
         self.submit_counter += 1;
@@ -116,12 +130,15 @@ impl<K: PassKey> RenderManager<K> {
 
     /// Order passes by the dependency graph
     fn sort_passes(&mut self) {
-        let ref mut passes_meta = self.passes_meta.borrow_mut();
-        passes_meta.resize_default(self.passes.len());
+        // call prepare for the active passes
+        for meta in self.active_passes.iter() {
+            let mut pass = self.passes[meta.index.as_index()].borrow_mut();
+            pass.prepare();
+        }
 
+        // todo: topology sort passes
         let mut i = 0;
-        for pass in self.passes.iter() {
-            let ref mut meta = passes_meta[pass.1.borrow().get_order_index()];
+        for ref mut meta in self.active_passes.iter_mut() {
             meta.order = i;
             i += 1;
         }
@@ -134,10 +151,10 @@ impl<K: PassKey> CommandQueue for RenderManager<K> {
     }
 }
 
-impl<K: PassKey> At<QuerySortedOrder> for RenderManager<K> {
+impl<K: PassKey> At<PassMetaIndex> for RenderManager<K> {
     type Output = usize;
 
-    fn at(&self, idx: QuerySortedOrder) -> usize {
-        self.passes_meta.borrow()[idx.0].order
+    fn at(&self, idx: PassMetaIndex) -> usize {
+        self.active_passes[idx.as_index()].order
     }
 }
