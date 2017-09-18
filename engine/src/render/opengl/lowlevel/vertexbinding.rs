@@ -1,7 +1,5 @@
 use render::opengl::lowlevel::*;
 
-const MAX_BOUND_ATTRIBUTE_COUNT: usize = 16;
-
 
 #[derive(Clone, Copy)]
 struct BoundVertexAttribute

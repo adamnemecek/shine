@@ -1,6 +1,7 @@
 use render::*;
 use render::opengl::lowlevel::*;
 
+pub const MAX_BOUND_ATTRIBUTE_COUNT: usize = 16;
 
 /// Structure to store vertex attribute info for the open GL.
 #[derive(Clone, Copy, Debug)]
@@ -58,45 +59,21 @@ pub trait VertexAttributeInfo {
 
 
 impl VertexAttributeInfo for Float32x4 {
-    fn get_component_count() -> GLint {
-        4
-    }
-
-    fn get_gl_type_id() -> GLenum {
-        gl::FLOAT
-    }
-
-    fn is_fixed_point() -> GLboolean {
-        gl::FALSE
-    }
+    fn get_component_count() -> GLint { 4 }
+    fn get_gl_type_id() -> GLenum { gl::FLOAT }
+    fn is_fixed_point() -> GLboolean { gl::FALSE }
 }
 
 
 impl VertexAttributeInfo for Float32x3 {
-    fn get_component_count() -> GLint {
-        3
-    }
-
-    fn get_gl_type_id() -> GLenum {
-        gl::FLOAT
-    }
-
-    fn is_fixed_point() -> GLboolean {
-        gl::FALSE
-    }
+    fn get_component_count() -> GLint { 3 }
+    fn get_gl_type_id() -> GLenum { gl::FLOAT }
+    fn is_fixed_point() -> GLboolean { gl::FALSE }
 }
 
 
 impl VertexAttributeInfo for Float32x2 {
-    fn get_component_count() -> GLint {
-        2
-    }
-
-    fn get_gl_type_id() -> GLenum {
-        gl::FLOAT
-    }
-
-    fn is_fixed_point() -> GLboolean {
-        gl::FALSE
-    }
+    fn get_component_count() -> GLint { 2 }
+    fn get_gl_type_id() -> GLenum { gl::FLOAT }
+    fn is_fixed_point() -> GLboolean { gl::FALSE }
 }

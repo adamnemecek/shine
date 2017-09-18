@@ -1,14 +1,70 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::ops::Deref;
+use std::mem::transmute;
 
 use world::*;
 use dragorust_engine::render::*;
 
-#[derive(Copy, Clone, Debug, VertexDeclaration)]
+#[derive(Copy, Clone, Debug)]
+#[derive(VertexDeclaration)]
 struct VxPos {
     position: Float32x3,
 }
+
+#[derive(Copy, Clone, Debug)]
+#[derive(VertexDeclaration)]
+struct VxColorTex {
+    color: Float32x3,
+    tex: Float32x2,
+}
+
+
+/*shader_enum!( SimpleShaderAttribute {
+    Position,
+    Color,
+    TexCoord,
+
+    Count,
+})*/
+
+#[derive(Copy, Clone, Debug)]
+#[repr(usize)]
+enum SimpleShaderAttribute {
+    Position,
+    Color,
+    TexCoord,
+
+    Count,
+}
+
+impl ShaderAttributeEnum for SimpleShaderAttribute {
+    fn from_index(index: usize) -> Option<SimpleShaderAttribute> {
+        if index < Self::count() {
+            Some(unsafe { transmute(index) })
+        } else {
+            None
+        }
+    }
+
+    fn from_name(name: &str) -> Option<SimpleShaderAttribute> {
+        match name {
+            "position" => Some(SimpleShaderAttribute::Position),
+            "color" => Some(SimpleShaderAttribute::Color),
+            "texCoord" => Some(SimpleShaderAttribute::TexCoord),
+            _ => None
+        }
+    }
+
+    fn to_index(&self) -> usize {
+        unsafe { transmute(*self) }
+    }
+
+    fn count() -> usize {
+        SimpleShaderAttribute::Count.to_index()
+    }
+}
+
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum Passes {
@@ -22,10 +78,12 @@ impl PassKey for Passes {}
 
 /// Structure to store view dependent data
 pub struct ViewData {
-    //world: WorldWrapper,
     render: RenderManager<Passes>,
-    shader: ShaderProgram,
-    vertex_buffer: VertexBuffer,
+
+    shader: ShaderProgram<SimpleShaderAttribute>,
+
+    vertex_buffer1: VertexBuffer,
+    vertex_buffer2: VertexBuffer,
 
     t: f32,
 }
@@ -36,7 +94,8 @@ impl ViewData {
             //            world: world,
             render: RenderManager::new(),
             shader: ShaderProgram::new(),
-            vertex_buffer: VertexBuffer::new(),
+            vertex_buffer1: VertexBuffer::new(),
+            vertex_buffer2: VertexBuffer::new(),
             t: 0f32,
         }
     }
@@ -66,18 +125,25 @@ void main()
             VxPos { position: f32x3!(0f32, 1f32, 0f32) }
         ];
 
+        // create some geometry
+        let colorTex = [
+            VxColorTex { color: f32x3!(1f32, 0f32, 0f32), tex: f32x2!(1, 0) },
+            VxColorTex { color: f32x3!(1f32, 1f32, 0f32), tex: f32x2!(1, 1) },
+            VxColorTex { color: f32x3!(0f32, 1f32, 0f32), tex: f32x2!(0, 0) }
+        ];
+
         // upload data
         self.shader.set_sources(&mut self.render, sh_source.iter());
-        self.vertex_buffer.set_transient(&mut self.render, &vertices);
-        self.vertex_buffer.set_transient(&mut self.render, &vertices.to_vec());
-        self.vertex_buffer.set_transient(&mut self.render, &vertices.as_ref());
+        self.vertex_buffer1.set_transient(&mut self.render, &vertices);
+        self.vertex_buffer2.set_transient(&mut self.render, &colorTex.to_vec());
 
         // submit commands
         self.render.submit(window);
     }
 
     fn release(&mut self, window: &Window) {
-        self.vertex_buffer.release(&mut self.render);
+        self.vertex_buffer1.release(&mut self.render);
+        self.vertex_buffer2.release(&mut self.render);
         self.shader.release(&mut self.render);
         self.render.submit(window);
     }
@@ -95,12 +161,22 @@ void main()
             p0.config_mut().set_clear_color(f32x3!(self.t, 0, 0));
             p0.config_mut().set_fullscreen();
 
-            p0.draw(&self.vertex_buffer, Primitive::Triangle, 0, 3);
+            //self.shader.draw::<SimpleShaderAttribute, RenderPass>(&mut *p0);
+
+            /*shaderprogram.draw(
+                p0,
+                |id| {
+                    match id {
+                        Position => self.vertex_buffer1.attribute(VxPosLocation::Position),
+                        Color => self.vertex_buffer2.attribute(VxColorTexLocation::Color),
+                        Color => self.vertex_buffer2.attribute(VxColorTexLocation::Texture),
+                    }
+                },
+                Primitive::Triangle, 0, 3);*/
         }
 
         {
             let mut p1 = self.render.get_pass(Passes::Shadow);
-            p1.draw(&self.vertex_buffer, Primitive::Triangle, 0, 3);
         }
 
         self.render.submit(window);

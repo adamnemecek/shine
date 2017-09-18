@@ -2,6 +2,7 @@ use std::rc::Rc;
 use std::cell::{RefCell};
 use std::str::from_utf8;
 use std::vec::Vec;
+use std::marker::PhantomData;
 
 use render::*;
 
@@ -23,16 +24,31 @@ fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
     }
 }
 
+#[derive(Copy, Clone)]
+struct VertexAttributeLocation {
+    loc: GLint,
+}
+
+impl VertexAttributeLocation {
+    fn new() -> VertexAttributeLocation {
+        VertexAttributeLocation {
+            loc: -1,
+        }
+    }
+}
+
 
 /// Structure to store hardware data associated to a ShaderProgram.
 struct GLShaderProgramData {
     hw_id: GLuint,
+    attributes: [VertexAttributeLocation; MAX_BOUND_ATTRIBUTE_COUNT],
 }
 
 impl GLShaderProgramData {
     fn new() -> GLShaderProgramData {
         GLShaderProgramData {
-            hw_id: 0
+            hw_id: 0,
+            attributes: [VertexAttributeLocation::new(); MAX_BOUND_ATTRIBUTE_COUNT],
         }
     }
 
@@ -112,6 +128,13 @@ impl GLShaderProgramData {
         gl_check_error();
     }
 
+    fn parse_attributes<SA: ShaderAttributeEnum>(&mut self, ll: &mut LowLevel) {
+        assert!(SA::count() <= MAX_BOUND_ATTRIBUTE_COUNT, "too many vertex attributes");
+        for attr_idx in 0..SA::count() {
+            println!("atribute map: {} = {:?}", attr_idx, SA::from_index(attr_idx));
+        }
+    }
+
     fn release(&mut self, ll: &mut LowLevel) {
         if self.hw_id == 0 {
             return;
@@ -137,14 +160,17 @@ impl Drop for GLShaderProgramData {
 
 
 /// RenderCommand to allocate the OpenGL program, set the shader sources and compile (link) a shader program
-struct CreateCommand {
+struct CreateCommand<SA: ShaderAttributeEnum> {
     target: Rc<RefCell<GLShaderProgramData>>,
     sources: ShaderSources,
+    phantom_sa: PhantomData<SA>,
 }
 
-impl Command for CreateCommand {
+impl<SA: ShaderAttributeEnum> Command for CreateCommand<SA> {
     fn process(&mut self, ll: &mut LowLevel) {
-        self.target.borrow_mut().create_program(ll, &mut self.sources);
+        let ref mut shader = *self.target.borrow_mut();
+        shader.create_program(ll, &mut self.sources);
+        shader.parse_attributes::<SA>(ll);
     }
 }
 
@@ -171,14 +197,15 @@ impl GLShaderProgram {
         )
     }
 
-    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
+    pub fn set_sources<'a, SA: ShaderAttributeEnum, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
         println!("GLShaderProgram - set_sources");
         queue.add(
-            CreateCommand {
+            CreateCommand::<SA> {
                 target: self.0.clone(),
                 sources: sources
                     .map(|&(t, s)| ShaderSource(gl_get_shader_enum(t), s.as_bytes().to_vec()))
-                    .collect()
+                    .collect(),
+                phantom_sa: PhantomData,
             }
         );
     }
