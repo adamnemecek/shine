@@ -22,24 +22,32 @@ struct VxColorTex {
 
 #[derive(Copy, Clone, Debug)]
 //#[derive(ShaderDeclaration)]
-#[repr(usize)]
-enum SimpleShaderAttribute {
-    Position,
-    Color,
-    TexCoord,
+struct ShSimple {}
+
+impl ShaderDeclaration for ShSimple {
+    type Attribute = ShSimpleAttribute;
 }
 
-impl PrimitiveEnum for SimpleShaderAttribute {
-    fn from_index_unsafe(index: usize) -> SimpleShaderAttribute {
+#[derive(Copy, Clone, Debug)]
+#[repr(usize)]
+#[allow(non_camel_case_types)]
+enum ShSimpleAttribute {
+    vPosition,
+    vColor,
+    vTexCoord,
+}
+
+impl PrimitiveEnum for ShSimpleAttribute {
+    fn from_index_unsafe(index: usize) -> ShSimpleAttribute {
         assert!(index < Self::count(), "invalid index {}, must be in the range 0..{}", index, Self::count());
         unsafe { transmute(index) }
     }
 
-    fn from_name(name: &str) -> Option<SimpleShaderAttribute> {
+    fn from_name(name: &str) -> Option<ShSimpleAttribute> {
         match name {
-            "vPosition" => Some(SimpleShaderAttribute::Position),
-            "vColor" => Some(SimpleShaderAttribute::Color),
-            "vTexCoord" => Some(SimpleShaderAttribute::TexCoord),
+            "vPosition" => Some(ShSimpleAttribute::vPosition),
+            "vColor" => Some(ShSimpleAttribute::vColor),
+            "vTexCoord" => Some(ShSimpleAttribute::vTexCoord),
             _ => None
         }
     }
@@ -68,7 +76,7 @@ impl PassKey for Passes {}
 pub struct ViewData {
     render: RenderManager<Passes>,
 
-    shader: ShaderProgram<SimpleShaderAttribute>,
+    shader: ShaderProgram<ShSimple>,
 
     vertex_buffer1: VertexBuffer<VxPos>,
     vertex_buffer2: VertexBuffer<VxColorTex>,
@@ -149,15 +157,17 @@ void main()
             p0.config_mut().set_clear_color(f32x3!(self.t, 0., 0.));
             p0.config_mut().set_fullscreen();
 
-            /* self.shader.draw(&mut *p0,
-                              |id| {
-                                  match id {
-                                      Position => self.vertex_buffer1.get_attribute(VxPosEnum::Position),
-                                      Color => self.vertex_buffer2.get_attribute(VxColorTexEnum::Color),
-                                      Texture => self.vertex_buffer2.get_attribute(VxColorTexEnum::TexCoord),
-                                  }
-                              },
-                              Primitive::Triangle, 0, 3);*/
+            let v1 = &self.vertex_buffer1;
+            let v2 = &self.vertex_buffer2;
+
+            self.shader.draw(&mut *p0,
+                             |id| match id {
+                                 ShSimpleAttribute::vPosition => v1.get_attribute(VxPosAttribute::Position),
+                                 ShSimpleAttribute::vColor => v2.get_attribute(VxColorTexAttribute::Color),
+                                 ShSimpleAttribute::vTexCoord => v2.get_attribute(VxColorTexAttribute::TexCoord),
+                             },
+                             Primitive::Triangle, 0, 3
+            );
         }
 
         {

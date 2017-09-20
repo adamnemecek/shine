@@ -26,7 +26,7 @@ fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
 
 #[derive(Copy, Clone, Debug)]
 struct ShaderAttribute {
-    location: GLint,
+    location: GLuint,
     size: GLint,
     type_id: GLenum,
 }
@@ -40,7 +40,7 @@ impl ShaderAttribute {
         }
     }
 
-    fn isValid(&self) -> bool {
+    fn is_valid(&self) -> bool {
         self.type_id != 0
     }
 }
@@ -136,9 +136,8 @@ impl GLShaderProgramData {
         gl_check_error();
     }
 
-    fn parse_attributes<SA: PrimitiveEnum>(&mut self, _ll: &mut LowLevel) {
-        assert!(SA::count() <= MAX_BOUND_ATTRIBUTE_COUNT, "too many vertex attributes");
-
+    fn parse_attributes<SD: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
+        assert!(SD::Attribute::count() <= MAX_BOUND_ATTRIBUTE_COUNT, "too many vertex attributes");
 
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
@@ -151,26 +150,31 @@ impl GLShaderProgramData {
             gl::GetProgramiv(self.hw_id, gl::ACTIVE_ATTRIBUTES, &mut count);
         }
         gl_check_error();
+
+        let count = count as GLuint;
         assert!((count as usize) < MAX_BOUND_ATTRIBUTE_COUNT, "too many attributes, maximum supported attribute count: {}", MAX_BOUND_ATTRIBUTE_COUNT);
 
         for location in 0..count {
             gl_check_error();
             unsafe {
                 gl::GetActiveAttrib(self.hw_id,
-                                    location as u32,
-                                    name_buffer.len() as i32,
+                                    location,
+                                    name_buffer.len() as GLint,
                                     &mut name_length,
                                     &mut attribute_size,
                                     &mut attribute_type,
                                     name_buffer.as_ptr() as *mut GLchar);
             }
-            let name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let attr_enum = SA::from_name(&name).expect(&format!("attribute id could not be resolved for {}", name));
-            let attr_index = attr_enum.to_index();
-            self.attributes[attr_index].location = location;
-            self.attributes[attr_index].size = attribute_size;
-            self.attributes[attr_index].type_id = attribute_type;
-            println!("{:?}: {:?}", attr_enum, self.attributes[attr_index]);
+
+            let attribute = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
+            let attribute = SD::Attribute::from_name(&attribute).expect(&format!("attribute id could not be resolved for {}", attribute));
+            println!("attribute= {:?}", attribute);
+            let attribute = attribute.to_index();
+            let attribute = &mut self.attributes[attribute];
+            attribute.location = location;
+            attribute.size = attribute_size;
+            attribute.type_id = attribute_type;
+            println!("attribute= {:?}", attribute);
             gl_check_error();
         }
     }
@@ -190,6 +194,15 @@ impl GLShaderProgramData {
         gl_check_error();
         self.hw_id = 0;
     }
+
+    fn draw(&mut self, ll: &mut LowLevel, binding: &[GLVertexAttribute]) {
+        ll.program_binding.bind(self.hw_id);
+        for (ref vertex_attrib, ref shader_attrib) in binding.iter().zip(self.attributes.iter()) {
+            if shader_attrib.is_valid() {
+                vertex_attrib.bind(ll, shader_attrib.location);
+            }
+        }
+    }
 }
 
 impl Drop for GLShaderProgramData {
@@ -200,17 +213,17 @@ impl Drop for GLShaderProgramData {
 
 
 /// RenderCommand to allocate the OpenGL program, set the shader sources and compile (link) a shader program
-struct CreateCommand<SA: PrimitiveEnum> {
+struct CreateCommand<SD: ShaderDeclaration> {
     target: Rc<RefCell<GLShaderProgramData>>,
     sources: ShaderSources,
-    phantom_sa: PhantomData<SA>,
+    phantom_sd: PhantomData<SD>,
 }
 
-impl<SA: PrimitiveEnum> Command for CreateCommand<SA> {
+impl<SD: ShaderDeclaration> Command for CreateCommand<SD> {
     fn process(&mut self, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
         shader.create_program(ll, &mut self.sources);
-        shader.parse_attributes::<SA>(ll);
+        shader.parse_attributes::<SD>(ll);
     }
 }
 
@@ -227,6 +240,19 @@ impl Command for ReleaseCommand {
 }
 
 
+/// RenderCommand to submit a geometry for rendering
+struct DrawCommand {
+    target: Rc<RefCell<GLShaderProgramData>>,
+    binding: [GLVertexAttribute; MAX_BOUND_ATTRIBUTE_COUNT],
+}
+
+impl Command for DrawCommand {
+    fn process(&mut self, ll: &mut LowLevel) {
+        let ref mut shader = *self.target.borrow_mut();
+        shader.draw(ll, &self.binding);
+    }
+}
+
 /// ShaderProgram implementation for OpenGL.
 pub struct GLShaderProgram(Rc<RefCell<GLShaderProgramData>>);
 
@@ -237,24 +263,35 @@ impl GLShaderProgram {
         )
     }
 
-    pub fn set_sources<'a, SA: PrimitiveEnum, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
-        println!("GLShaderProgram - set_sources");
-        queue.add(
-            CreateCommand::<SA> {
-                target: self.0.clone(),
-                sources: sources
-                    .map(|&(t, s)| ShaderSource(gl_get_shader_enum(t), s.as_bytes().to_vec()))
-                    .collect(),
-                phantom_sa: PhantomData,
-            }
-        );
-    }
-
     pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
         println!("GLShaderProgram - release");
         queue.add(
             ReleaseCommand {
                 target: self.0.clone()
+            }
+        );
+    }
+
+    pub fn set_sources<'a, SD: ShaderDeclaration, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
+        println!("GLShaderProgram - set_sources");
+        queue.add(
+            CreateCommand::<SD> {
+                target: self.0.clone(),
+                sources: sources
+                    .map(|&(t, s)| ShaderSource(gl_get_shader_enum(t), s.as_bytes().to_vec()))
+                    .collect(),
+                phantom_sd: PhantomData,
+            }
+        );
+    }
+
+    pub fn draw<'a, Q: CommandQueue>(&mut self, queue: &mut Q, binding: [GLVertexAttribute; MAX_BOUND_ATTRIBUTE_COUNT],
+                                     primitive: Primitive, vertex_start: usize, vertex_count: usize) {
+        println!("GLShaderProgram - draw");
+        queue.add(
+            DrawCommand {
+                target: self.0.clone(),
+                binding: binding,
             }
         );
     }

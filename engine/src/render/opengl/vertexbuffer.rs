@@ -6,8 +6,24 @@ use render::opengl::lowlevel::*;
 
 /// Structure to store reference to a single attribute os a buffer
 pub struct GLVertexAttribute {
-    target: Rc<RefCell<GLVertexBufferData>>,
+    target: Option<Rc<RefCell<GLVertexBufferData>>>,
     attribute_index: usize
+}
+
+impl GLVertexAttribute {
+    pub fn new() -> GLVertexAttribute {
+        GLVertexAttribute {
+            target: None,
+            attribute_index: usize::max_value(),
+        }
+    }
+
+    pub fn bind(&self, ll: &mut LowLevel, location: GLuint) {
+        if let Some(ref vb) = self.target {
+            let vb = vb.borrow();
+            vb.bind(ll, location, self.attribute_index);
+        }
+    }
 }
 
 
@@ -48,10 +64,8 @@ impl GLVertexBufferData {
         gl_check_error();
     }
 
-    fn bind<I: IntoIterator<Item=(u8, GLuint)>>(&mut self, ll: &mut LowLevel, loc_iter: I) {
-        for location in loc_iter {
-            ll.vertex_binding.delayed_bind_attribute(location.1, self.hw_id, &self.attributes[location.0 as usize]);
-        }
+    fn bind(&self, ll: &mut LowLevel, location: GLuint, attribute: usize) {
+        ll.vertex_binding.delayed_bind_attribute(location, self.hw_id, &self.attributes[attribute as usize]);
     }
 
     fn release(&mut self, ll: &mut LowLevel) {
@@ -104,6 +118,16 @@ impl GLVertexBuffer {
         )
     }
 
+    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
+        println!("GLVertexBuffer - release");
+
+        queue.add(
+            ReleaseCommand {
+                target: self.0.clone()
+            }
+        );
+    }
+
     pub fn set_transient<Q: CommandQueue>(&mut self,
                                           queue: &mut Q,
                                           attributes: [GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT],
@@ -119,19 +143,10 @@ impl GLVertexBuffer {
         );
     }
 
-    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        println!("GLVertexBuffer - release");
-
-        queue.add(
-            ReleaseCommand {
-                target: self.0.clone()
-            }
-        );
-    }
-
-    pub fn get_attribute(&self, attribute_index: usize) -> VertexAttributeImpl {
+    pub fn get_attribute(&self, attribute_index: usize) -> GLVertexAttribute {
+        assert!(attribute_index < MAX_VERTEX_ATTRIBUTE_COUNT);
         GLVertexAttribute {
-            target: self.0.clone(),
+            target: Some(self.0.clone()),
             attribute_index: attribute_index,
         }
     }

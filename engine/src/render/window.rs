@@ -9,23 +9,23 @@ pub trait SurfaceEventHandler: 'static {
     /// Handles the surface lost event.
     ///
     /// Window still has the OS resources, but will be released soon after this call.
-    fn on_lost(&mut self, &mut Window);
+    fn on_lost(&mut self, window: &mut Window);
 
     /// Handles the surface ready event.
     ///
     /// Window has create all the OS resources.
-    fn on_ready(&mut self, &mut Window);
+    fn on_ready(&mut self, window: &mut Window);
 
     /// Handles the surface size or other config change.
     ///
     /// Window has create all the OS resources.
-    fn on_changed(&mut self, &mut Window);
+    fn on_changed(&mut self, window: &mut Window);
 }
 
 /// Callbacks for input related event handling.
 pub trait InputEventHandler: 'static {
     /// Handles key down and up events.
-    fn on_key(&mut self, &mut Window, sc: ScanCode, vk: Option<VirtualKeyCode>, is_down: bool);
+    fn on_key(&mut self, window: &mut Window, scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool);
 }
 
 /// Structure to store the window abstraction.

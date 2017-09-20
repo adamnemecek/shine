@@ -88,10 +88,6 @@ impl GLRenderPass {
             }
         );
     }
-
-    pub fn draw<Q: CommandQueue>(&mut self, _queue: &mut Q, _vertex_buffer: &GLVertexBuffer, _primitive: Primitive, _start_vertex: usize, _vertex_count: usize) {
-        //println!("GLRenderPass - draw");
-    }
 }
 
 

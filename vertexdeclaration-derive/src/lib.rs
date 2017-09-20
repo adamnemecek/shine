@@ -88,7 +88,7 @@ fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 
 
 fn impl_get_declaration_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::Tokens {
-    let enum_name = Ident::new(format!("{}Enum", name));
+    let enum_type_name = Ident::new(format!("{}Attribute", name));
 
     let mut gen: Vec<quote::Tokens> = vec!();
     for (idx, field) in fields.iter().enumerate() {
@@ -105,12 +105,12 @@ fn impl_get_declaration_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::
 
     gen.push(
         quote! {
-         _ => panic!("invalid attribute index: {}, must be in the range 0..{}", idx, #enum_name::count()),
+         _ => panic!("invalid attribute index: {}, must be in the range 0..{}", idx, #enum_type_name::count()),
         }
     );
 
     quote! {
-        type Enum = #enum_name;
+        type Attribute = #enum_type_name;
 
         #[allow(dead_code)]
         fn get_attribute_descriptor(idx: usize) -> VertexAttributeDescriptorImpl {
@@ -123,7 +123,7 @@ fn impl_get_declaration_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::
 }
 
 fn impl_location_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::Tokens {
-    let enum_type_name = Ident::new(format!("{}Enum", name));
+    let enum_type_name = Ident::new(format!("{}Attribute", name));
 
     let mut enum_names: Vec<quote::Tokens> = vec!();
     let mut match_name_cases: Vec<quote::Tokens> = vec!();
