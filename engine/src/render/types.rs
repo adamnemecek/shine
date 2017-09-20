@@ -1,6 +1,7 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
+use std::fmt;
 
 /// Structure to store a window size.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -138,6 +139,37 @@ impl From<Rectangle> for (Position, Size) {
     fn from(value: Rectangle) -> (Position, Size) {
         (value.position, value.size)
     }
+}
+
+
+/// Enum like trait that can iterate the values and can be convert to and from primitive type.
+///
+pub trait PrimitiveEnum: 'static + Copy + Clone + fmt::Debug {
+    /// Creates a plain enum for its index
+    ///
+    /// If index is not in the range, None is returned
+    fn from_index(index: usize) -> Option<Self> where Self: Sized {
+        if index < Self::count() {
+            Some(Self::from_index_unsafe(index))
+        } else {
+            None
+        }
+    }
+
+    /// Creates a plain enum for its index
+    ///
+    /// It is unsafe in the sence that, no check is mde on the ranges.
+    /// It is assumed a valid index is provided. If unsure, use the safe version.
+    fn from_index_unsafe(index: usize) -> Self where Self: Sized;
+
+    /// Creates enum value from its name
+    fn from_name(name: &str) -> Option<Self> where Self: Sized;
+
+    /// Converts an enum into a plain index
+    fn to_index(&self) -> usize;
+
+    /// Returns the number of attributes.
+    fn count() -> usize;
 }
 
 

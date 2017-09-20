@@ -7,7 +7,7 @@ struct BoundVertexAttribute
     time_stamp: u8,
     dirty: bool,
     hw_id: GLuint,
-    attribute: VertexAttribute,
+    attribute: GLVertexAttributeDescriptor,
 }
 
 impl BoundVertexAttribute {
@@ -16,7 +16,7 @@ impl BoundVertexAttribute {
             time_stamp: 0,
             dirty: false,
             hw_id: 0,
-            attribute: VertexAttribute::new(),
+            attribute: GLVertexAttributeDescriptor::new(),
         }
     }
 }
@@ -61,7 +61,7 @@ impl VertexBinding {
 
     /// Binds a vertex attribute to the given location.
     /// The actual gl calls are delayed until the call of the commit.
-    pub fn delayed_bind_attribute(&mut self, location: GLuint, hw_id: GLuint, attribute: &VertexAttribute) {
+    pub fn delayed_bind_attribute(&mut self, location: GLuint, hw_id: GLuint, attribute: &GLVertexAttributeDescriptor) {
         assert!( hw_id != 0 );
 
         let attr = &mut self.bound_attributes[location as usize];
@@ -87,7 +87,7 @@ impl VertexBinding {
         for (attr_id, attr) in self.bound_attributes.iter_mut().enumerate() {
             if attr.time_stamp != self.time_stamp && attr.hw_id != 0 {
                 // untouched attributes are unbound automatically
-                attr.attribute = VertexAttribute::new();
+                attr.attribute = GLVertexAttributeDescriptor::new();
                 attr.hw_id = 0;
                 attr.dirty = true;
             }

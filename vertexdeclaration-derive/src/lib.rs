@@ -14,6 +14,34 @@ pub fn vertex_declaration(input: TokenStream) -> TokenStream {
     gen.parse().unwrap()
 }
 
+
+fn convert_snake_to_camel_case(intput: &str) -> String {
+    let mut is_snake = true;
+    let mut result = String::new();
+    result.reserve(intput.len());
+
+    for c in intput.chars() {
+        match c {
+            '_' if !is_snake => {
+                is_snake = true;
+            }
+
+            c => {
+                if is_snake {
+                    for u in c.to_uppercase() {
+                        result.push(u);
+                    }
+                } else {
+                    result.push(c);
+                }
+                is_snake = false;
+            }
+        }
+    }
+    result
+}
+
+
 fn impl_offset_of(container: &Ident, field: &Ident) -> quote::Tokens {
     quote! { unsafe {
         use std::mem;
@@ -43,11 +71,11 @@ fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         impl_get_declaration = impl_get_declaration_for_struct(name, fields);
         impl_location = impl_location_for_struct(name, fields);
     } else {
-        panic!("VertexDeclaration is not implemented for {:?}", ast.body)
+        panic!("Derive proc-macro VertexDeclaration: no implemented for {:?}", ast.body)
     }
 
-    //println!("{}", impl_get_declaration.as_str());
-    //println!("{}", impl_location.as_str());
+    //println!("impl_get_declaration = \n{}", impl_get_declaration.as_str());
+    //println!("impl_location = \n{}", impl_location.as_str());
 
     quote! {
         impl ::dragorust_engine::render::VertexDeclaration for #name {
@@ -60,46 +88,86 @@ fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 
 
 fn impl_get_declaration_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::Tokens {
-    //let field_count = fields.len();
+    let enum_name = Ident::new(format!("{}Enum", name));
 
-    let mut gen: Vec<quote::Tokens> = fields.iter().map(|ref field| {
+    let mut gen: Vec<quote::Tokens> = vec!();
+    for (idx, field) in fields.iter().enumerate() {
         let ident = field.ident.as_ref().unwrap();
         let ty = &field.ty;
 
         let offset_of = impl_offset_of(name, &ident);
-        quote! {
-            ::dragorust_engine::render::VertexAttributeImpl::new_from_element::< #ty > ( #offset_of, mem::size_of::< #name > () )
-        }
-    }).collect();
+        gen.push(
+            quote! {
+               #idx => ::dragorust_engine::render::VertexAttributeDescriptorImpl::new_from_element::< #ty > ( #offset_of, mem::size_of::< #name > () ),
+            }
+        )
+    }
 
-    gen.resize(16, quote! {::dragorust_engine::render::VertexAttributeImpl::new()});
+    gen.push(
+        quote! {
+         _ => panic!("invalid attribute index: {}, must be in the range 0..{}", idx, #enum_name::count()),
+        }
+    );
 
     quote! {
+        type Enum = #enum_name;
+
         #[allow(dead_code)]
-        fn get_declaration() -> [::dragorust_engine::render::VertexAttributeImpl; ::dragorust_engine::render::MAX_VERTEX_ATTRIBUTE_COUNT /*#field_count*/] {
+        fn get_attribute_descriptor(idx: usize) -> VertexAttributeDescriptorImpl {
             use std::mem;
-            #gen
+            match idx {
+                #(#gen)*
+            }
         }
     }
 }
 
 fn impl_location_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::Tokens {
-    let mod_name = Ident::new(format!("{}Location", name));
+    let enum_type_name = Ident::new(format!("{}Enum", name));
 
-    let gen: Vec<quote::Tokens> = fields.iter().enumerate().map(|(idx, ref field)| {
-        let ident = &field.ident;
+    let mut enum_names: Vec<quote::Tokens> = vec!();
+    let mut match_name_cases: Vec<quote::Tokens> = vec!();
 
-        quote! {
-            #[allow(non_upper_case_globals)]
-            #[allow(dead_code)]
-            pub const #ident : usize = #idx;
-        }
-    }).collect();
+
+    for ref field in fields.iter() {
+        let field_name = format!("{}", field.ident.clone().unwrap());
+        let enum_name = Ident::new(convert_snake_to_camel_case(&field_name));
+        let match_name = format!("v{}", enum_name);
+
+        enum_names.push(quote! {#enum_name});
+        match_name_cases.push(quote! {#match_name => Some(#enum_type_name::#enum_name)});
+    }
+
+    let count = enum_names.len();
 
     quote! {
-        #[allow(non_snake_case)]
-        mod #mod_name {
-            #(#gen)*
+        #[derive(Copy, Clone, Debug)]
+        #[repr(usize)]
+        #[allow(unused_variables)]
+        enum #enum_type_name {
+            #(#enum_names,)*
+        }
+
+        impl ::dragorust_engine::render::PrimitiveEnum for #enum_type_name {
+            fn from_index_unsafe(index: usize) -> #enum_type_name {
+                assert!(index < Self::count(), "invalid index {}, must be in the range 0..{}", index, Self::count());
+                unsafe { transmute(index) }
+            }
+
+            fn from_name(name: &str) -> Option<#enum_type_name> {
+                match name {
+                    #(#match_name_cases,)*
+                    _ => None,
+                }
+            }
+
+            fn to_index(&self) -> usize {
+                unsafe { transmute(*self) }
+            }
+
+            fn count() -> usize {
+                #count
+            }
         }
     }
 }

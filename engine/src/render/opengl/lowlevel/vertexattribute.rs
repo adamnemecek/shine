@@ -5,7 +5,7 @@ pub const MAX_BOUND_ATTRIBUTE_COUNT: usize = 16;
 
 /// Structure to store vertex attribute info for the open GL.
 #[derive(Clone, Copy, Debug)]
-pub struct VertexAttribute {
+pub struct GLVertexAttributeDescriptor {
     pub component_type: GLenum,
     pub components: GLint,
     pub normalize: GLboolean,
@@ -13,9 +13,9 @@ pub struct VertexAttribute {
     pub offset: GLintptr
 }
 
-impl VertexAttribute {
-    pub fn new() -> VertexAttribute {
-        VertexAttribute {
+impl GLVertexAttributeDescriptor {
+    pub fn new() -> GLVertexAttributeDescriptor {
+        GLVertexAttributeDescriptor {
             component_type: 0,
             components: 0,
             normalize: 0,
@@ -24,8 +24,8 @@ impl VertexAttribute {
         }
     }
 
-    pub fn new_from_element<T: VertexAttributeInfo>(offset: usize, stride: usize) -> VertexAttribute {
-        VertexAttribute {
+    pub fn new_from_element<T: GLVertexAttributeInfo>(offset: usize, stride: usize) -> GLVertexAttributeDescriptor {
+        GLVertexAttributeDescriptor {
             component_type: T::get_gl_type_id(),
             components: T::get_component_count(),
             normalize: T::is_fixed_point(),
@@ -39,8 +39,8 @@ impl VertexAttribute {
     }
 }
 
-impl PartialEq for VertexAttribute {
-    fn eq(&self, other: &VertexAttribute) -> bool {
+impl PartialEq for GLVertexAttributeDescriptor {
+    fn eq(&self, other: &GLVertexAttributeDescriptor) -> bool {
         return self.component_type == other.component_type
             && self.components == other.components
             && self.normalize == other.normalize
@@ -50,29 +50,26 @@ impl PartialEq for VertexAttribute {
 }
 
 
-/// Trait to help converting an abstract vertex element into VertexAttribute
-pub trait VertexAttributeInfo {
+/// Trait to help converting an abstract vertex element into GLVertexAttributeDescriptor
+pub trait GLVertexAttributeInfo {
     fn get_component_count() -> GLint;
     fn get_gl_type_id() -> GLenum;
     fn is_fixed_point() -> GLboolean;
 }
 
-
-impl VertexAttributeInfo for Float32x4 {
+impl GLVertexAttributeInfo for Float32x4 {
     fn get_component_count() -> GLint { 4 }
     fn get_gl_type_id() -> GLenum { gl::FLOAT }
     fn is_fixed_point() -> GLboolean { gl::FALSE }
 }
 
-
-impl VertexAttributeInfo for Float32x3 {
+impl GLVertexAttributeInfo for Float32x3 {
     fn get_component_count() -> GLint { 3 }
     fn get_gl_type_id() -> GLenum { gl::FLOAT }
     fn is_fixed_point() -> GLboolean { gl::FALSE }
 }
 
-
-impl VertexAttributeInfo for Float32x2 {
+impl GLVertexAttributeInfo for Float32x2 {
     fn get_component_count() -> GLint { 2 }
     fn get_gl_type_id() -> GLenum { gl::FLOAT }
     fn is_fixed_point() -> GLboolean { gl::FALSE }

@@ -6,46 +6,40 @@ pub const MAX_VERTEX_ATTRIBUTE_COUNT: usize = 16;
 
 use std::mem;
 use std::slice;
+use std::marker::PhantomData;
 
 use render::*;
 
-/// Trait to get the vertex declaration.
-///
-/// Vertex declaration is map from location to VertexAttributes, but as location
-/// mapping is continuous an array is used instead.
+
+/// Trait to define vertex declaration.
 pub trait VertexDeclaration {
-    /// Returns the vertex declaration.
-    ///
-    /// Vertex declaration is a mapping from location to attribute descriptor, but
-    /// as the location is a continuous range from 0..N, a simple array is used.
-    /// If N is smaller than MAX_VERTEX_ATTRIBUTE_COUNT, the last items in the array
-    /// is set to en extremal, invalid value.
-    fn get_declaration() -> [VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT];
+    /// Enum like type for location
+    type Enum: PrimitiveEnum;
+
+    /// Returns the platform dependent vertex attribute description
+    fn get_attribute_descriptor(index: usize) -> VertexAttributeDescriptorImpl;
 }
 
 
 /// Trait to define vertex declaration.
-pub trait TransientVertexSource {
+pub trait TransientVertexSource<VD: VertexDeclaration> {
     /// Returns the vertex declaration and the reference to the vertex data.
-    fn to_vertex_source<'a>(&self) -> ([VertexAttributeImpl; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8]);
+    fn to_vertex_data<'a>(&self) -> &'a [u8];
 }
 
 /// TransientVertexSource implementation for arrays. The trait is implemented for array with size up to 32.
-/// For larger array, the implementation for slice can be used:
+/// For larger array, slice can be used:
 ///
 /// let data = [Vertex; 1024];
-/// let desc = data.as_ref().to_vertex_source();
+/// let desc = data.as_ref().to_vertex_data();
 ///
 macro_rules! __impl_array_TransientVertexSource {
     ($($N:expr)+) => {
         $(
-            impl<V: VertexDeclaration + Sized> TransientVertexSource for [V;$N] {
-                fn to_vertex_source<'a>(&self) -> ([VertexAttributeImpl; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8])
+            impl<VD: VertexDeclaration + Sized> TransientVertexSource<VD> for [VD;$N] {
+                fn to_vertex_data<'a>(&self) -> &'a [u8]
                 {
-                    (
-                        V::get_declaration(),
-                        unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<V>()) }
-                    )
+                    unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<VD>()) }
                 }
             }
         )+
@@ -60,37 +54,43 @@ __impl_array_TransientVertexSource! {
 }
 
 /// TransientVertexSource implementation for slice.
-impl<'a, V: 'a + VertexDeclaration + Sized> TransientVertexSource for &'a [V] {
-    fn to_vertex_source<'b>(&self) -> ([VertexAttributeImpl; MAX_VERTEX_ATTRIBUTE_COUNT], &'b [u8])
+impl<'a, VD: 'a + VertexDeclaration + Sized> TransientVertexSource<VD> for &'a [VD] {
+    fn to_vertex_data<'b>(&self) -> &'b [u8]
     {
-        (
-            V::get_declaration(),
-            unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<V>()) }
-        )
+        unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<VD>()) }
     }
 }
 
 /// TransientVertexSource implementation for Vec.
-impl<V: VertexDeclaration + Sized> TransientVertexSource for Vec<V> {
-    fn to_vertex_source<'a>(&self) -> ([VertexAttributeImpl; MAX_VERTEX_ATTRIBUTE_COUNT], &'a [u8])
+impl<VD: VertexDeclaration + Sized> TransientVertexSource<VD> for Vec<VD> {
+    fn to_vertex_data<'a>(&self) -> &'a [u8]
     {
-        (
-            V::get_declaration(),
-            unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<V>()) }
-        )
+        unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<VD>()) }
     }
 }
 
 
 /// Structure to store a vertex buffer
-pub struct VertexBuffer {
-    pub ( crate ) platform: VertexBufferImpl
+pub struct VertexBuffer<VD: VertexDeclaration> {
+    pub ( crate ) platform: VertexBufferImpl,
+    phantom_va: PhantomData<VD>,
 }
 
-impl VertexBuffer {
+impl<VD: VertexDeclaration> VertexBuffer<VD> {
     /// Creates an empty shader.
-    pub fn new() -> VertexBuffer {
-        VertexBuffer { platform: VertexBufferImpl::new() }
+    pub fn new() -> VertexBuffer<VD> {
+        VertexBuffer {
+            platform: VertexBufferImpl::new(),
+            phantom_va: PhantomData,
+        }
+    }
+
+    /// Releases the hw resources of the buffer.
+    ///
+    /// No render operation is processed, only a command in the queue is stored.
+    /// The HW data is access only during queue processing.
+    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
+        self.platform.release(queue);
     }
 
     /// Sets the content of the buffer from a transient source.
@@ -100,15 +100,17 @@ impl VertexBuffer {
     ///
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
-    pub fn set_transient<'a, VS: TransientVertexSource, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_source: &VS) {
-        self.platform.set_transient(queue, vertex_source);
+    pub fn set_transient<'a, VS: TransientVertexSource<VD>, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_source: &VS) {
+        assert!(VD::Enum::count() <= MAX_VERTEX_ATTRIBUTE_COUNT, "vertex attribute count exceeds engine limits ({})", MAX_VERTEX_ATTRIBUTE_COUNT);
+        let mut attribs = [VertexAttributeDescriptorImpl::new(); MAX_VERTEX_ATTRIBUTE_COUNT];
+        for idx in 0..VD::Enum::count() {
+            attribs[idx] = VD::get_attribute_descriptor(idx);
+        }
+        self.platform.set_transient(queue, attribs, vertex_source.to_vertex_data());
     }
 
-    /// Releases the hw resources of the buffer.
-    ///
-    /// No render operation is processed, only a command in the queue is stored.
-    /// The HW data is access only during queue processing.
-    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        self.platform.release(queue);
+    /// Returns reference to an attribute
+    pub fn get_attribute(&self, attr: VD::Enum) -> VertexAttributeImpl {
+        self.platform.get_attribute(attr.to_index())
     }
 }

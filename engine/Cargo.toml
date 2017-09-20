@@ -9,6 +9,7 @@ gl_generator = "0.5"
 
 [dependencies]
 dragorust-vertexdeclaration-derive = {path = "../vertexdeclaration-derive"}
+dragorust-shaderdeclaration-derive = {path = "../shaderdeclaration-derive"}
 libc = "*"
 gl = "*"
 

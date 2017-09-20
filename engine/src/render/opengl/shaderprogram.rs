@@ -24,16 +24,24 @@ fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
     }
 }
 
-#[derive(Copy, Clone)]
-struct VertexAttributeLocation {
-    loc: GLint,
+#[derive(Copy, Clone, Debug)]
+struct ShaderAttribute {
+    location: GLint,
+    size: GLint,
+    type_id: GLenum,
 }
 
-impl VertexAttributeLocation {
-    fn new() -> VertexAttributeLocation {
-        VertexAttributeLocation {
-            loc: -1,
+impl ShaderAttribute {
+    fn new() -> ShaderAttribute {
+        ShaderAttribute {
+            location: 0,
+            size: 0,
+            type_id: 0,
         }
+    }
+
+    fn isValid(&self) -> bool {
+        self.type_id != 0
     }
 }
 
@@ -41,14 +49,14 @@ impl VertexAttributeLocation {
 /// Structure to store hardware data associated to a ShaderProgram.
 struct GLShaderProgramData {
     hw_id: GLuint,
-    attributes: [VertexAttributeLocation; MAX_BOUND_ATTRIBUTE_COUNT],
+    attributes: [ShaderAttribute; MAX_BOUND_ATTRIBUTE_COUNT],
 }
 
 impl GLShaderProgramData {
     fn new() -> GLShaderProgramData {
         GLShaderProgramData {
             hw_id: 0,
-            attributes: [VertexAttributeLocation::new(); MAX_BOUND_ATTRIBUTE_COUNT],
+            attributes: [ShaderAttribute::new(); MAX_BOUND_ATTRIBUTE_COUNT],
         }
     }
 
@@ -128,10 +136,42 @@ impl GLShaderProgramData {
         gl_check_error();
     }
 
-    fn parse_attributes<SA: ShaderAttributeEnum>(&mut self, ll: &mut LowLevel) {
+    fn parse_attributes<SA: PrimitiveEnum>(&mut self, _ll: &mut LowLevel) {
         assert!(SA::count() <= MAX_BOUND_ATTRIBUTE_COUNT, "too many vertex attributes");
-        for attr_idx in 0..SA::count() {
-            println!("atribute map: {} = {:?}", attr_idx, SA::from_index(attr_idx));
+
+
+        let mut count: GLint = 0;
+        let name_buffer: [u8; 16] = [0; 16];
+        let mut name_length: GLsizei = 0;
+        let mut attribute_size: GLint = 0;
+        let mut attribute_type: GLenum = 0;
+
+        gl_check_error();
+        unsafe {
+            gl::GetProgramiv(self.hw_id, gl::ACTIVE_ATTRIBUTES, &mut count);
+        }
+        gl_check_error();
+        assert!((count as usize) < MAX_BOUND_ATTRIBUTE_COUNT, "too many attributes, maximum supported attribute count: {}", MAX_BOUND_ATTRIBUTE_COUNT);
+
+        for location in 0..count {
+            gl_check_error();
+            unsafe {
+                gl::GetActiveAttrib(self.hw_id,
+                                    location as u32,
+                                    name_buffer.len() as i32,
+                                    &mut name_length,
+                                    &mut attribute_size,
+                                    &mut attribute_type,
+                                    name_buffer.as_ptr() as *mut GLchar);
+            }
+            let name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
+            let attr_enum = SA::from_name(&name).expect(&format!("attribute id could not be resolved for {}", name));
+            let attr_index = attr_enum.to_index();
+            self.attributes[attr_index].location = location;
+            self.attributes[attr_index].size = attribute_size;
+            self.attributes[attr_index].type_id = attribute_type;
+            println!("{:?}: {:?}", attr_enum, self.attributes[attr_index]);
+            gl_check_error();
         }
     }
 
@@ -160,13 +200,13 @@ impl Drop for GLShaderProgramData {
 
 
 /// RenderCommand to allocate the OpenGL program, set the shader sources and compile (link) a shader program
-struct CreateCommand<SA: ShaderAttributeEnum> {
+struct CreateCommand<SA: PrimitiveEnum> {
     target: Rc<RefCell<GLShaderProgramData>>,
     sources: ShaderSources,
     phantom_sa: PhantomData<SA>,
 }
 
-impl<SA: ShaderAttributeEnum> Command for CreateCommand<SA> {
+impl<SA: PrimitiveEnum> Command for CreateCommand<SA> {
     fn process(&mut self, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
         shader.create_program(ll, &mut self.sources);
@@ -197,7 +237,7 @@ impl GLShaderProgram {
         )
     }
 
-    pub fn set_sources<'a, SA: ShaderAttributeEnum, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
+    pub fn set_sources<'a, SA: PrimitiveEnum, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
         println!("GLShaderProgram - set_sources");
         queue.add(
             CreateCommand::<SA> {

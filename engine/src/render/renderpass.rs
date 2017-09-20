@@ -52,11 +52,6 @@ impl RenderPass {
     pub fn prepare(&mut self) {
         self.platform.prepare(self.command_store.borrow_mut().deref_mut(), &self.config);
     }
-
-    /// Sends a geometry for rendering
-    pub fn draw(&mut self, vertices: &VertexBuffer, primitive: Primitive, start: usize, vertex_count: usize) {
-        self.platform.draw(self.command_store.borrow_mut().deref_mut(), &vertices.platform, primitive, start, vertex_count);
-    }
 }
 
 impl CommandQueue for RenderPass {

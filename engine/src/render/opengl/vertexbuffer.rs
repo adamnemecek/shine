@@ -4,24 +4,30 @@ use std::cell::RefCell;
 use render::*;
 use render::opengl::lowlevel::*;
 
-type VertexAttributes = [VertexAttribute; MAX_VERTEX_ATTRIBUTE_COUNT];
+/// Structure to store reference to a single attribute os a buffer
+pub struct GLVertexAttribute {
+    target: Rc<RefCell<GLVertexBufferData>>,
+    attribute_index: usize
+}
 
 
 /// Structure to store hardware data associated to a VertexBuffer.
 struct GLVertexBufferData {
     hw_id: GLuint,
-    attributes: VertexAttributes,
+    attributes: [GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT],
 }
 
 impl GLVertexBufferData {
     fn new() -> GLVertexBufferData {
         GLVertexBufferData {
             hw_id: 0,
-            attributes: [VertexAttribute::new(); MAX_VERTEX_ATTRIBUTE_COUNT],
+            attributes: [GLVertexAttributeDescriptor::new(); MAX_VERTEX_ATTRIBUTE_COUNT],
         }
     }
 
-    fn upload_data(&mut self, ll: &mut LowLevel, attributes: &VertexAttributes, data: &[u8]) {
+    fn upload_data(&mut self, ll: &mut LowLevel,
+                   attributes: &[GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT],
+                   data: &[u8]) {
         println!("data: {:?}", data);
         gl_check_error();
         self.attributes = *attributes;
@@ -65,7 +71,7 @@ impl GLVertexBufferData {
 /// RenderCommand to create the OpenGL program, set the shader sources and compile (link) a shader program.
 struct CreateCommand {
     target: Rc<RefCell<GLVertexBufferData>>,
-    attributes: VertexAttributes,
+    attributes: [GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT],
     data: Vec<u8>,
 }
 
@@ -98,36 +104,20 @@ impl GLVertexBuffer {
         )
     }
 
-    pub fn set_transient<'a, VS: TransientVertexSource, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_source: &VS) {
+    pub fn set_transient<Q: CommandQueue>(&mut self,
+                                          queue: &mut Q,
+                                          attributes: [GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT],
+                                          vertex_data: &[u8]) {
         println!("GLVertexBuffer - set_copy");
-
-        let desc = vertex_source.to_vertex_source();
 
         queue.add(
             CreateCommand {
                 target: self.0.clone(),
-                attributes: desc.0,
-                data: desc.1.to_vec(),
-            }
-        );
-    }
-
-    /*pub fn set_copy<'a, VD: Iterator<Item=&'a VertexAttributeImpl>>(&mut self, queue: &mut GLCommandStore, vertex_descriptor: VD, vertex_data: &[u8]) {
-        println!("GLVertexBuffer - set_copy");
-
-        let mut attributes = [VertexAttribute::new(); MAX_VERTEX_ATTRIBUTE_COUNT];
-        for (src, dst) in attributes.iter_mut().zip(vertex_descriptor) {
-            *src = *dst;
-        }
-
-        queue.add(
-            CreateCommand {
-                target: self.resource.clone(),
                 attributes: attributes,
                 data: vertex_data.to_vec(),
             }
         );
-    }*/
+    }
 
     pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
         println!("GLVertexBuffer - release");
@@ -138,8 +128,16 @@ impl GLVertexBuffer {
             }
         );
     }
+
+    pub fn get_attribute(&self, attribute_index: usize) -> VertexAttributeImpl {
+        GLVertexAttribute {
+            target: self.0.clone(),
+            attribute_index: attribute_index,
+        }
+    }
 }
 
 
 pub type VertexBufferImpl = GLVertexBuffer;
-pub type VertexAttributeImpl = VertexAttribute;
+pub type VertexAttributeDescriptorImpl = GLVertexAttributeDescriptor;
+pub type VertexAttributeImpl = GLVertexAttribute;
