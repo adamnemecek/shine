@@ -8,23 +8,14 @@ use render::opengl::lowlevel::*;
 
 /// Structure to store reference to a single attribute os a buffer
 pub struct GLVertexAttribute {
-    target: Option<Rc<RefCell<GLVertexBufferData>>>,
+    target: Rc<RefCell<GLVertexBufferData>>,
     attribute_index: usize
 }
 
 impl GLVertexAttribute {
-    pub fn new() -> GLVertexAttribute {
-        GLVertexAttribute {
-            target: None,
-            attribute_index: usize::max_value(),
-        }
-    }
-
     pub fn bind(&self, ll: &mut LowLevel, location: GLuint) {
-        if let Some(ref vb) = self.target {
-            let vb = vb.borrow();
-            vb.bind(ll, location, self.attribute_index);
-        }
+        let vb = self.target.borrow();
+        vb.bind(ll, location, self.attribute_index);
     }
 }
 
@@ -149,7 +140,7 @@ impl GLVertexBuffer {
     pub fn get_attribute(&self, attribute_index: usize) -> GLVertexAttribute {
         assert!(attribute_index < MAX_VERTEX_ATTRIBUTE_COUNT);
         GLVertexAttribute {
-            target: Some(self.0.clone()),
+            target: self.0.clone(),
             attribute_index: attribute_index,
         }
     }

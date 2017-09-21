@@ -2,7 +2,6 @@
 #![deny(missing_copy_implementations)]
 
 use std::marker::PhantomData;
-use std::mem;
 
 use render::*;
 
