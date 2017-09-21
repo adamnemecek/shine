@@ -1,6 +1,8 @@
 use std::rc::Rc;
 use std::cell::RefCell;
 
+use arrayvec::ArrayVec;
+
 use render::*;
 use render::opengl::lowlevel::*;
 
@@ -26,27 +28,28 @@ impl GLVertexAttribute {
     }
 }
 
+pub type GLVertexAttributeVec = ArrayVec<[GLVertexAttribute; MAX_BOUND_ATTRIBUTE_COUNT]>;
+pub type GLVertexAttributeDescriptorVec = ArrayVec<[GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT]>;
+
 
 /// Structure to store hardware data associated to a VertexBuffer.
 struct GLVertexBufferData {
     hw_id: GLuint,
-    attributes: [GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT],
+    attributes: GLVertexAttributeDescriptorVec,
 }
 
 impl GLVertexBufferData {
     fn new() -> GLVertexBufferData {
         GLVertexBufferData {
             hw_id: 0,
-            attributes: [GLVertexAttributeDescriptor::new(); MAX_VERTEX_ATTRIBUTE_COUNT],
+            attributes: GLVertexAttributeDescriptorVec::new(),
         }
     }
 
-    fn upload_data(&mut self, ll: &mut LowLevel,
-                   attributes: &[GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT],
-                   data: &[u8]) {
-        println!("data: {:?}", data);
+    fn upload_data(&mut self, ll: &mut LowLevel, attributes: &GLVertexAttributeDescriptorVec, data: &[u8]) {
+        self.attributes = attributes.clone();
+
         gl_check_error();
-        self.attributes = *attributes;
         if self.hw_id == 0 {
             unsafe {
                 gl::GenBuffers(1, &mut self.hw_id);
@@ -85,7 +88,7 @@ impl GLVertexBufferData {
 /// RenderCommand to create the OpenGL program, set the shader sources and compile (link) a shader program.
 struct CreateCommand {
     target: Rc<RefCell<GLVertexBufferData>>,
-    attributes: [GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT],
+    attributes: GLVertexAttributeDescriptorVec,
     data: Vec<u8>,
 }
 
@@ -130,7 +133,7 @@ impl GLVertexBuffer {
 
     pub fn set_transient<Q: CommandQueue>(&mut self,
                                           queue: &mut Q,
-                                          attributes: [GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT],
+                                          attributes: GLVertexAttributeDescriptorVec,
                                           vertex_data: &[u8]) {
         println!("GLVertexBuffer - set_copy");
 
@@ -155,4 +158,6 @@ impl GLVertexBuffer {
 
 pub type VertexBufferImpl = GLVertexBuffer;
 pub type VertexAttributeDescriptorImpl = GLVertexAttributeDescriptor;
+pub type VertexAttributeDescriptorImplVec = GLVertexAttributeDescriptorVec;
 pub type VertexAttributeImpl = GLVertexAttribute;
+pub type VertexAttributeImplVec = GLVertexAttributeVec;

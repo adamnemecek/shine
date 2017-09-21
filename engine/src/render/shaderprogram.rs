@@ -68,20 +68,16 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
     pub fn draw<'a, Q: CommandQueue, ASF: Fn(SD::Attribute) -> VertexAttributeImpl>(&mut self, queue: &mut Q, attribute_source: ASF,
                                                                                     primitive: Primitive, vertex_start: usize, vertex_count: usize) {
         unsafe {
-            let mut binding: [VertexAttributeImpl; MAX_BOUND_ATTRIBUTE_COUNT] = mem::uninitialized();
+            let mut binding = VertexAttributeImplVec::new();
 
             // init the used part
             for attribute in 0..SD::Attribute::count() {
-                binding[attribute] = attribute_source(SD::Attribute::from_index_unsafe(attribute));
-            }
-
-            // init the remaining
-            for attribute in SD::Attribute::count()..MAX_BOUND_ATTRIBUTE_COUNT {
-                binding[attribute] = VertexAttributeImpl::new();
+                binding.push(attribute_source(SD::Attribute::from_index_unsafe(attribute)));
             }
             self.platform.draw(queue, binding, primitive, vertex_start, vertex_count);
         }
     }
 }
+
 
 

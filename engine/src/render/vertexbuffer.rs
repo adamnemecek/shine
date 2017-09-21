@@ -106,9 +106,9 @@ impl<VD: VertexDeclaration> VertexBuffer<VD> {
     /// The HW data is access only during queue processing.
     pub fn set_transient<'a, VS: TransientVertexSource<VD>, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_source: &VS) {
         assert!(VD::Attribute::count() <= MAX_VERTEX_ATTRIBUTE_COUNT, "vertex attribute count exceeds engine limits ({})", MAX_VERTEX_ATTRIBUTE_COUNT);
-        let mut attributes = [VertexAttributeDescriptorImpl::new(); MAX_VERTEX_ATTRIBUTE_COUNT];
+        let mut attributes = VertexAttributeDescriptorImplVec::new();
         for idx in 0..VD::Attribute::count() {
-            attributes[idx] = VD::get_attribute_descriptor(idx);
+            attributes.push(VD::get_attribute_descriptor(idx));
         }
         self.platform.set_transient(queue, attributes, vertex_source.to_vertex_data());
     }

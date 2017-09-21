@@ -243,7 +243,7 @@ impl Command for ReleaseCommand {
 /// RenderCommand to submit a geometry for rendering
 struct DrawCommand {
     target: Rc<RefCell<GLShaderProgramData>>,
-    binding: [GLVertexAttribute; MAX_BOUND_ATTRIBUTE_COUNT],
+    binding: GLVertexAttributeVec,
 }
 
 impl Command for DrawCommand {
@@ -285,7 +285,7 @@ impl GLShaderProgram {
         );
     }
 
-    pub fn draw<'a, Q: CommandQueue>(&mut self, queue: &mut Q, binding: [GLVertexAttribute; MAX_BOUND_ATTRIBUTE_COUNT],
+    pub fn draw<'a, Q: CommandQueue>(&mut self, queue: &mut Q, binding: GLVertexAttributeVec,
                                      primitive: Primitive, vertex_start: usize, vertex_count: usize) {
         println!("GLShaderProgram - draw");
         queue.add(
