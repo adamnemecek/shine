@@ -2,19 +2,7 @@ use std::rc::Rc;
 use std::cell::{RefCell};
 
 use render::*;
-
 use render::opengl::lowlevel::*;
-//use render::opengl::commandqueue::*;
-
-/// Converts a Primitive enum to the corresponding GLenum.
-fn gl_get_primitive_enum(primitive: Primitive) -> GLenum {
-    match primitive {
-        Primitive::Point => gl::POINT,
-        Primitive::Line => gl::LINE,
-        Primitive::Triangle => gl::TRIANGLES,
-    }
-}
-
 
 /// Structure to store hardware data associated to a RenderPass.
 struct GLRenderPassData {}
@@ -37,6 +25,10 @@ struct ClearCommand {
 }
 
 impl Command for ClearCommand {
+    fn get_sort_key(&self) -> usize {
+        0
+    }
+
     fn process(&mut self, ll: &mut LowLevel) {
         gl_check_error();
 
@@ -70,9 +62,7 @@ impl GLRenderPass {
         )
     }
 
-    pub fn prepare<Q: CommandQueue>(&mut self, queue: &mut Q, config: &RenderPassConfig) {
-        //println!("GLRenderPass - prepare");
-
+    pub ( crate ) fn prepare(&mut self, queue: &mut CommandStore, meta_index: PassMetaIndex, config: &RenderPassConfig) {
         // todo: if this branching optional matching takes too much time, it can be split up
         // into multiple commands
 
@@ -81,12 +71,12 @@ impl GLRenderPass {
             pass::Clear::None => None,
         };
 
-        queue.add(
-            ClearCommand {
-                clear_color: clear_color,
-                view_port: config.view_port,
-            }
-        );
+        let cmd = ClearCommand {
+            clear_color: clear_color,
+            view_port: config.view_port,
+        };
+
+        queue.add((meta_index, cmd.get_sort_key()), cmd);
     }
 }
 

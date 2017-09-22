@@ -66,15 +66,13 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
     /// Sends a geometry for rendering using the given parameters
     pub fn draw<'a, Q: CommandQueue, ASF: Fn(SD::Attribute) -> VertexAttributeImpl>(&mut self, queue: &mut Q, attribute_source: ASF,
                                                                                     primitive: Primitive, vertex_start: usize, vertex_count: usize) {
-        unsafe {
-            let mut binding = VertexAttributeImplVec::new();
+        let mut binding = VertexAttributeImplVec::new();
 
-            // init the used part
-            for attribute in 0..SD::Attribute::count() {
-                binding.push(attribute_source(SD::Attribute::from_index_unsafe(attribute)));
-            }
-            self.platform.draw(queue, binding, primitive, vertex_start, vertex_count);
+        // init the used part
+        for attribute in 0..SD::Attribute::count() {
+            binding.push(attribute_source(SD::Attribute::from_index_unsafe(attribute)));
         }
+        self.platform.draw(queue, binding, primitive, vertex_start, vertex_count);
     }
 }
 

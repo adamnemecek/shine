@@ -40,7 +40,7 @@ impl IndexBinding {
 
     /// Enables/Disables the forced state changed. When enabled, the cached state is ignored
     /// and gl commands are always generated.
-    pub fn set_force(&mut self, force: bool) {
+    pub fn set_forced(&mut self, force: bool) {
         self.force = force;
     }
 
@@ -49,8 +49,8 @@ impl IndexBinding {
         self.bound_index.hw_id != 0
     }
 
-    /// Returns the type of the bound index
-    pub fn get_index_type(&self) -> GLuint {
+    /// Returns the type id of the bound index
+    pub fn get_index_type(&self) -> GLenum {
         assert!( self.is_indexed() && self.bound_index.index_type != 0 );
         self.bound_index.index_type
     }
@@ -61,7 +61,7 @@ impl IndexBinding {
         gl_get_type_size(self.bound_index.index_type) * (first as usize)
     }
 
-    /// Binds an index buffer.
+    /// Binds an index buffer for modification
     pub fn bind_buffer(&mut self, hw_id: GLuint) {
         if !self.force && self.bound_id == hw_id {
             return;
@@ -117,6 +117,7 @@ impl IndexBinding {
 
         let hw_id = self.bound_index.hw_id;
         self.bind_buffer(hw_id);
-        self.time_stamp += 1;
+
+        self.time_stamp.wrapping_add(1);
     }
 }

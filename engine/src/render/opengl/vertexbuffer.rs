@@ -84,6 +84,10 @@ struct CreateCommand {
 }
 
 impl Command for CreateCommand {
+    fn get_sort_key(&self) -> usize {
+        0
+    }
+
     fn process(&mut self, ll: &mut LowLevel) {
         self.target.borrow_mut().upload_data(ll, &self.attributes, self.data.as_slice());
     }
@@ -96,6 +100,10 @@ struct ReleaseCommand {
 }
 
 impl Command for ReleaseCommand {
+    fn get_sort_key(&self) -> usize {
+        0
+    }
+
     fn process(&mut self, ll: &mut LowLevel) {
         self.target.borrow_mut().release(ll);
     }

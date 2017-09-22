@@ -110,11 +110,7 @@ impl<K: PassKey> RenderManager<K> {
         {
             let ref mut commands = *self.command_store.borrow_mut();
             commands.sort(self);
-            window.platform().process(|ll| {
-                for ref mut cmd in commands.iter_mut() {
-                    cmd.process(ll);
-                }
-            });
+            commands.process(window.platform());
             commands.clear();
         }
 
@@ -147,7 +143,8 @@ impl<K: PassKey> RenderManager<K> {
 
 impl<K: PassKey> CommandQueue for RenderManager<K> {
     fn add<C: Command>(&mut self, cmd: C) {
-        self.command_store.borrow_mut().add(cmd);
+        let cmd_key = cmd.get_sort_key();
+        self.command_store.borrow_mut().add((PassMetaIndex::new(), cmd_key), cmd);
     }
 }
 
@@ -155,6 +152,10 @@ impl<K: PassKey> At<PassMetaIndex> for RenderManager<K> {
     type Output = usize;
 
     fn at(&self, idx: PassMetaIndex) -> usize {
-        self.active_passes[idx.as_index()].order
+        if idx == PassMetaIndex::new() {
+            0
+        } else {
+            self.active_passes[idx.as_index()].order + 1
+        }
     }
 }

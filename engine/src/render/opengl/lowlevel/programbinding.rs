@@ -17,19 +17,19 @@ impl ProgramBinding {
 
     /// Enables/Disables the forced state changed. When enabled, the cached state is ignored
     /// and gl commands are always generated.
-    pub fn set_force(&mut self, force: bool) {
+    pub fn set_forced(&mut self, force: bool) {
         self.force = force;
     }
 
+    /// Returns the id of the current program.
     pub fn get_bound_id(&self) -> GLuint {
         self.bound_id
     }
 
-    /// Sets the current program and returns if it was just activated.
-    pub fn bind(&mut self, program_id: GLuint) -> bool {
-        println!("binding program: {} (current:{})", program_id, self.bound_id);
+    /// Binds program.
+    pub fn bind(&mut self, program_id: GLuint) {
         if !self.force && self.bound_id == program_id {
-            return false;
+            return;
         }
 
         gl_check_error();
@@ -38,7 +38,6 @@ impl ProgramBinding {
         }
         gl_check_error();
         self.bound_id = program_id;
-        true
     }
 
     /// Unbinds the program if it is active. This function is usualy used during release.
@@ -47,8 +46,4 @@ impl ProgramBinding {
             self.bind(0);
         }
     }
-
-    /// Finalizes the program binding and commits all related GL calls.
-    /// For now it has nothing to do. Its a function for convenience.
-    pub fn commit(&mut self) {}
 }

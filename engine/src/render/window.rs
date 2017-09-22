@@ -92,6 +92,11 @@ impl Window {
         self.platform.is_closed()
     }
 
+    /// Returns if the context of the window is ready for rendering
+    pub fn is_read_to_render(&self) -> bool {
+        self.platform.is_read_to_render()
+    }
+
     /// Gets the position of the window.
     pub fn get_position(&self) -> Position {
         self.platform.get_position()

@@ -26,14 +26,14 @@ pub fn main() {
     window.set_input_handler(window_data.clone());
 
 
-    let mut sub_window = render::WindowSettings::new()
+   /* let mut sub_window = render::WindowSettings::new()
         .title("sub")
         .size((100, 100))
         //.gl_profile(render::OpenGLProfile::ES2)
         .build(&mut engine).expect("Could not initialize main window");
     let sub_window_data = ViewDataWrapper::new(world.clone());
     sub_window.set_surface_handler(sub_window_data.clone());
-    sub_window.set_input_handler(sub_window_data.clone());
+    sub_window.set_input_handler(sub_window_data.clone());*/
 
 
     loop {
@@ -41,7 +41,7 @@ pub fn main() {
             break;
         }
 
-        if !window.is_closed() {
+        if window.is_read_to_render() {
             window_data.update();
 
             window.start_render().unwrap();
@@ -49,12 +49,12 @@ pub fn main() {
             window.end_render().unwrap();
         }
 
-        if !sub_window.is_closed() {
+       /* if sub_window.is_read_to_render() {
             sub_window_data.update();
 
             sub_window.start_render().unwrap();
             sub_window_data.render(&mut sub_window);
             sub_window.end_render().unwrap();
-        }
+        }*/
     }
 }

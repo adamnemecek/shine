@@ -36,6 +36,7 @@ pub fn gl_get_type_size(gl_type: GLenum) -> usize {
     }
 }
 
+
 /// Returns a human readable name for gl type identified by the type-enum.
 pub fn gl_get_type_name(gl_type: GLenum) -> &'static str {
     match gl_type {
@@ -50,6 +51,17 @@ pub fn gl_get_type_name(gl_type: GLenum) -> &'static str {
         _ => panic!("unknown gl type enum{}", gl_type),
     }
 }
+
+
+/// Converts a Primitive enum to the corresponding GLenum.
+pub fn gl_get_primitive_enum(primitive: Primitive) -> GLenum {
+    match primitive {
+        Primitive::Point => gl::POINT,
+        Primitive::Line => gl::LINE,
+        Primitive::Triangle => gl::TRIANGLES,
+    }
+}
+
 
 /// Returns a human readable name for the gl primitive type identified by the type-enum.
 pub fn gl_get_primitive_name(primitive: GLenum) -> &'static str {

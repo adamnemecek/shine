@@ -168,13 +168,13 @@ impl GLShaderProgramData {
 
             let attribute = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
             let attribute = SD::Attribute::from_name(&attribute).expect(&format!("attribute id could not be resolved for {}", attribute));
-            println!("attribute= {:?}", attribute);
+            //println!("attribute= {:?}", attribute);
             let attribute = attribute.to_index();
             let attribute = &mut self.attributes[attribute];
             attribute.location = location;
             attribute.size = attribute_size;
             attribute.type_id = attribute_type;
-            println!("attribute= {:?}", attribute);
+            //println!("attribute= {:?}", attribute);
             gl_check_error();
         }
     }
@@ -190,18 +190,19 @@ impl GLShaderProgramData {
         unsafe {
             gl::DeleteProgram(self.hw_id);
         }
-        println!("hwid: {:?}", self.hw_id);
         gl_check_error();
         self.hw_id = 0;
     }
 
-    fn draw(&mut self, ll: &mut LowLevel, binding: &[GLVertexAttribute]) {
+    fn draw(&mut self, ll: &mut LowLevel, binding: &GLVertexAttributeVec, primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
         ll.program_binding.bind(self.hw_id);
         for (ref vertex_attrib, ref shader_attrib) in binding.iter().zip(self.attributes.iter()) {
             if shader_attrib.is_valid() {
                 vertex_attrib.bind(ll, shader_attrib.location);
             }
         }
+
+        ll.draw(primitive, vertex_start, vertex_count);
     }
 }
 
@@ -220,6 +221,10 @@ struct CreateCommand<SD: ShaderDeclaration> {
 }
 
 impl<SD: ShaderDeclaration> Command for CreateCommand<SD> {
+    fn get_sort_key(&self) -> usize {
+        1
+    }
+
     fn process(&mut self, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
         shader.create_program(ll, &mut self.sources);
@@ -234,6 +239,10 @@ struct ReleaseCommand {
 }
 
 impl Command for ReleaseCommand {
+    fn get_sort_key(&self) -> usize {
+        1
+    }
+
     fn process(&mut self, ll: &mut LowLevel) {
         self.target.borrow_mut().release(ll);
     }
@@ -244,14 +253,22 @@ impl Command for ReleaseCommand {
 struct DrawCommand {
     target: Rc<RefCell<GLShaderProgramData>>,
     binding: GLVertexAttributeVec,
+    primitive: GLenum,
+    vertex_start: GLuint,
+    vertex_count: GLuint,
 }
 
 impl Command for DrawCommand {
+    fn get_sort_key(&self) -> usize {
+        1
+    }
+
     fn process(&mut self, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
-        shader.draw(ll, &self.binding);
+        shader.draw(ll, &self.binding, self.primitive, self.vertex_start, self.vertex_count);
     }
 }
+
 
 /// ShaderProgram implementation for OpenGL.
 pub struct GLShaderProgram(Rc<RefCell<GLShaderProgramData>>);
@@ -264,7 +281,6 @@ impl GLShaderProgram {
     }
 
     pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        println!("GLShaderProgram - release");
         queue.add(
             ReleaseCommand {
                 target: self.0.clone()
@@ -273,7 +289,6 @@ impl GLShaderProgram {
     }
 
     pub fn set_sources<'a, SD: ShaderDeclaration, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
-        println!("GLShaderProgram - set_sources");
         queue.add(
             CreateCommand::<SD> {
                 target: self.0.clone(),
@@ -287,11 +302,13 @@ impl GLShaderProgram {
 
     pub fn draw<'a, Q: CommandQueue>(&mut self, queue: &mut Q, binding: GLVertexAttributeVec,
                                      primitive: Primitive, vertex_start: usize, vertex_count: usize) {
-        println!("GLShaderProgram - draw");
         queue.add(
             DrawCommand {
                 target: self.0.clone(),
                 binding: binding,
+                primitive: gl_get_primitive_enum(primitive),
+                vertex_start: vertex_start as GLuint,
+                vertex_count: vertex_count as GLuint,
             }
         );
     }

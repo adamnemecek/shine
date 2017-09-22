@@ -2,7 +2,6 @@
 
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::ops::DerefMut;
 
 use render::*;
 
@@ -50,12 +49,13 @@ impl RenderPass {
     /// This function is responsible to set up the pass for rendering. It generates commands to
     /// clear buffers, set viewports, bind render targets, etc.
     pub fn prepare(&mut self) {
-        self.platform.prepare(self.command_store.borrow_mut().deref_mut(), &self.config);
+        self.platform.prepare(&mut self.command_store.borrow_mut(), self.meta_index, &self.config);
     }
 }
 
 impl CommandQueue for RenderPass {
     fn add<C: Command + 'static>(&mut self, cmd: C) {
-        self.command_store.borrow_mut().add(cmd);
+        let sort_key = cmd.get_sort_key() + 1;
+        self.command_store.borrow_mut().add((self.meta_index, sort_key), cmd);
     }
 }

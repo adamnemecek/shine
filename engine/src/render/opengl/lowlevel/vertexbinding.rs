@@ -2,8 +2,7 @@ use render::opengl::lowlevel::*;
 
 
 #[derive(Clone, Copy)]
-struct BoundVertexAttribute
-{
+struct BoundVertexAttribute {
     time_stamp: u8,
     dirty: bool,
     hw_id: GLuint,
@@ -41,11 +40,11 @@ impl VertexBinding {
 
     /// Enables/Disables the forced state changed. When enabled, the cached state is ignored
     /// and gl commands are always generated.
-    pub fn set_force(&mut self, force: bool) {
+    pub fn set_forced(&mut self, force: bool) {
         self.force = force;
     }
 
-    /// Binds a vertex buffer
+    /// Binds a vertex buffer for modification.
     pub fn bind_buffer(&mut self, hw_id: GLuint) {
         if !self.force && self.bound_id == hw_id {
             return;
@@ -115,6 +114,6 @@ impl VertexBinding {
             }
         }
 
-        self.time_stamp += 1;
+        self.time_stamp.wrapping_add(1);
     }
 }
