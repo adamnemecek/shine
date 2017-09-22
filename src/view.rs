@@ -1,6 +1,5 @@
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::ops::Deref;
 use std::mem::transmute;
 
 use world::*;
@@ -65,15 +64,16 @@ impl PrimitiveEnum for ShSimpleAttribute {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum Passes {
     Present,
-    Shadow,
+    //Shadow,
     //Debug,
 }
 
 impl PassKey for Passes {}
 
 
-/// Structure to store view dependent data
+/// Structure to handle view dependent data
 pub struct ViewData {
+    world: World,
     render: RenderManager<Passes>,
 
     shader: ShaderProgram<ShSimple>,
@@ -85,9 +85,9 @@ pub struct ViewData {
 }
 
 impl ViewData {
-    fn new(_: WorldWrapper) -> ViewData {
+    fn new(world: World) -> ViewData {
         ViewData {
-            //            world: world,
+            world: world,
             render: RenderManager::new(),
             shader: ShaderProgram::new(),
             vertex_buffer1: VertexBuffer::new(),
@@ -145,7 +145,7 @@ void main()
     }
 
     fn update(&mut self) {
-        self.t += 0.001f32;
+        self.t += 0.005f32;
         if self.t > 1f32 {
             self.t = 0f32;
         }
@@ -154,7 +154,7 @@ void main()
     pub fn render(&mut self, window: &Window) {
         {
             let mut p0 = self.render.get_pass(Passes::Present);
-            p0.config_mut().set_clear_color(f32x3!(self.t, 0., 0.));
+            p0.config_mut().set_clear_color(f32x3!(self.t, self.world.get_t(), 0.));
             p0.config_mut().set_fullscreen();
 
             let v1 = &self.vertex_buffer1;
@@ -179,57 +179,50 @@ void main()
 }
 
 
-#[derive(Clone)]
-pub struct ViewDataWrapper(Rc<RefCell<ViewData>>);
+/// Structure to wrap ViewData for surface event handling.
+pub struct ViewSurfaceHandler(Rc<RefCell<ViewData>>);
 
-impl ViewDataWrapper {
-    pub fn new(world: WorldWrapper) -> ViewDataWrapper {
-        ViewDataWrapper(Rc::new(RefCell::new(ViewData::new(world))))
-    }
-
-    fn init(&mut self, window: &mut Window) {
+impl SurfaceEventHandler for ViewSurfaceHandler {
+    fn on_ready(&mut self, window: &Window) {
         self.0.borrow_mut().init(window);
     }
 
-    fn release(&mut self, window: &mut Window) {
+    fn on_lost(&mut self, window: &Window) {
         self.0.borrow_mut().release(window);
     }
 
-    pub fn update(&self) {
-        self.0.borrow_mut().update();
+    fn on_changed(&mut self, _window: &Window) {
+        //todo: println!("on_changed: {:?}", window.get_size());
     }
 
-    pub fn render(&self, window: &mut Window) {
+    fn on_render(&mut self, window: &Window) {
         self.0.borrow_mut().render(window);
     }
 }
 
-impl Deref for ViewDataWrapper {
-    type Target = RefCell<ViewData>;
 
-    fn deref(&self) -> &RefCell<ViewData> {
-        self.0.deref()
-    }
-}
+/// Structure to wrap ViewData for input event handling.
+pub struct ViewInputHandler(Rc<RefCell<ViewData>>);
 
-impl SurfaceEventHandler for ViewDataWrapper {
-    fn on_ready(&mut self, window: &mut Window) {
-        println!("on_ready");
-        self.init(window);
-    }
-
-    fn on_lost(&mut self, window: &mut Window) {
-        println!("on_lost");
-        self.release(window);
-    }
-
-    fn on_changed(&mut self, window: &mut Window) {
-        println!("on_changed: {:?}", window.get_size());
-    }
-}
-
-impl InputEventHandler for ViewDataWrapper {
+impl InputEventHandler for ViewInputHandler {
     fn on_key(&mut self, _: &mut Window, sc: ScanCode, vk: Option<VirtualKeyCode>, is_down: bool) {
         println!("key: {}, {:?}, {}", sc, vk, is_down);
+    }
+}
+
+
+/// Structure to wrap ViewData for public use.
+pub struct View(Rc<RefCell<ViewData>>);
+
+impl View {
+    pub fn new(world: World, window: &mut Window) -> View {
+        let view = View(Rc::new(RefCell::new(ViewData::new(world))));
+        window.set_surface_handler(ViewSurfaceHandler(view.0.clone()));
+        window.set_input_handler(ViewInputHandler(view.0.clone()));
+        view
+    }
+
+    pub fn update(&self) {
+        self.0.borrow_mut().update();
     }
 }

@@ -421,17 +421,48 @@ impl GLWindow {
         win.ll.get_screen_size()
     }
 
-    pub fn start_render(&self) -> Result<(), Error> {
+    fn start_render(&self) -> Result<(), Error> {
+        // start render
         let ref mut win = *self.0.borrow_mut();
         try!(win.context.make_current());
         win.ll.start_render();
         Ok(())
     }
 
-    pub fn end_render(&self) -> Result<(), Error> {
+    fn end_render(&self) -> Result<(), Error> {
+        // end render
         let ref mut win = *self.0.borrow_mut();
         win.ll.end_render();
-        win.context.swap_buffers()
+        try!(win.context.swap_buffers());
+        Ok(())
+    }
+
+    pub fn render(&self) -> Result<(), Error> {
+        if !self.is_read_to_render() {
+            return Ok(());
+        }
+
+        let handler;
+        {
+            // create a clone of the handler reference, to release all borrow for the render call
+            let ref mut win = *self.0.borrow_mut();
+            handler = win.surface_handler.clone();
+            if handler.is_none() {
+                // ha handler to perform rendering
+                return Ok(());
+            }
+        }
+
+        try!(self.start_render());
+        {
+            let window = Window::from_platform(GLWindow(self.0.clone()));
+            if let Some(handler) = handler {
+                handler.borrow_mut().on_render(&window);
+            }
+        }
+        try!(self.end_render());
+
+        Ok(())
     }
 
     pub fn get_hwnd(&self) -> winapi::HWND {
@@ -477,10 +508,10 @@ impl GLWindow {
                     };
 
                     if let Some(ref handler) = handler {
-                        let mut window = Window::from_platform(this);
-                        if window.start_render().is_ok() {
-                            handler.borrow_mut().on_ready(&mut window);
-                            window.end_render().unwrap();
+                        if this.start_render().is_ok() {
+                            let window = Window::from_platform(GLWindow(this.0.clone()));
+                            handler.borrow_mut().on_ready(&window);
+                            this.end_render().unwrap();
                         }
                     }
                 }
@@ -493,10 +524,10 @@ impl GLWindow {
                     };
 
                     if let Some(ref handler) = handler {
-                        let mut window = Window::from_platform(this);
-                        if window.start_render().is_ok() {
-                            handler.borrow_mut().on_lost(&mut window);
-                            window.end_render().unwrap();
+                        if this.start_render().is_ok() {
+                            let window = Window::from_platform(GLWindow(this.0.clone()));
+                            handler.borrow_mut().on_lost(&window);
+                            this.end_render().unwrap();
                         }
                     }
                 }
@@ -533,10 +564,10 @@ impl GLWindow {
                     println!("get_draw_size: {:?}", this.get_draw_size());
 
                     if let Some(ref handler) = handler {
-                        let mut window = Window::from_platform(this);
-                        if window.start_render().is_ok() {
-                            handler.borrow_mut().on_changed(&mut window);
-                            window.end_render().unwrap();
+                        if this.start_render().is_ok() {
+                            let window = Window::from_platform(GLWindow(this.0.clone()));
+                            handler.borrow_mut().on_changed(&window);
+                            this.end_render().unwrap();
                         }
                     }
 

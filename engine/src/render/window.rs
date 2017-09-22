@@ -9,17 +9,23 @@ pub trait SurfaceEventHandler: 'static {
     /// Handles the surface lost event.
     ///
     /// Window still has the OS resources, but will be released soon after this call.
-    fn on_lost(&mut self, window: &mut Window);
+    fn on_lost(&mut self, window: &Window);
 
     /// Handles the surface ready event.
     ///
     /// Window has create all the OS resources.
-    fn on_ready(&mut self, window: &mut Window);
+    fn on_ready(&mut self, window: &Window);
 
     /// Handles the surface size or other config change.
     ///
     /// Window has create all the OS resources.
-    fn on_changed(&mut self, window: &mut Window);
+    fn on_changed(&mut self, window: &Window);
+
+    /// Handles render requests.
+    ///
+    /// Rendering can be triggered manually by calling the render function of window or
+    /// by the system if paint event handing is enabled.
+    fn on_render(&mut self, window: &Window);
 }
 
 /// Callbacks for input related event handling.
@@ -112,13 +118,9 @@ impl Window {
         self.platform.get_draw_size()
     }
 
-    /// Prepares the window for rendering.
-    pub fn start_render(&self) -> Result<(), Error> {
-        self.platform.start_render()
-    }
-
-    /// Swaps the buffers and perform post render tasks.
-    pub fn end_render(&self) -> Result<(), Error> {
-        self.platform.end_render()
+    /// Triggers a rendering immediately.
+    pub fn render(&self) -> Result<(), Error> {
+        try!(self.platform.render());
+        Ok(())
     }
 }
