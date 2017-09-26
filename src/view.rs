@@ -1,6 +1,6 @@
+use std::mem::transmute;
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::mem::transmute;
 
 use world::*;
 use dragorust_engine::render::*;
@@ -72,8 +72,8 @@ impl PassKey for Passes {}
 
 
 /// Structure to handle view dependent data
-pub struct ViewData {
-    world: World,
+pub struct SimpleView {
+    world: Rc<RefCell<World>>,
     render: RenderManager<Passes>,
 
     shader: ShaderProgram<ShSimple>,
@@ -84,9 +84,9 @@ pub struct ViewData {
     t: f32,
 }
 
-impl ViewData {
-    fn new(world: World) -> ViewData {
-        ViewData {
+impl SimpleView {
+    pub fn new(world: Rc<RefCell<World>>) -> SimpleView {
+        SimpleView {
             world: world,
             render: RenderManager::new(),
             shader: ShaderProgram::new(),
@@ -95,8 +95,10 @@ impl ViewData {
             t: 0f32,
         }
     }
+}
 
-    fn init(&mut self, window: &Window) {
+impl View for SimpleView {
+    fn on_surface_ready(&mut self, window: &mut Window) {
         // create some shaders
         let sh_source = [
             (ShaderType::VertexShader,
@@ -137,24 +139,28 @@ void main()
         self.render.submit(window);
     }
 
-    fn release(&mut self, window: &Window) {
+    fn on_surface_lost(&mut self, window: &mut Window) {
         self.vertex_buffer1.release(&mut self.render);
         self.vertex_buffer2.release(&mut self.render);
         self.shader.release(&mut self.render);
         self.render.submit(window);
     }
 
-    fn update(&mut self) {
+    fn on_surface_changed(&mut self, _window: &mut Window) {
+        // nop
+    }
+
+    fn on_update(&mut self) {
         self.t += 0.005f32;
         if self.t > 1f32 {
             self.t = 0f32;
         }
     }
 
-    pub fn render(&mut self, window: &Window) {
+    fn on_render(&mut self, window: &mut Window) {
         {
             let mut p0 = self.render.get_pass(Passes::Present);
-            p0.config_mut().set_clear_color(f32x3!(self.t, self.world.get_t(), 0.));
+            p0.config_mut().set_clear_color(f32x3!(self.t, self.world.borrow().get_t(), 0.));
             p0.config_mut().set_fullscreen();
 
             let v1 = &self.vertex_buffer1;
@@ -176,53 +182,7 @@ void main()
 
         self.render.submit(window);
     }
-}
 
-
-/// Structure to wrap ViewData for surface event handling.
-pub struct ViewSurfaceHandler(Rc<RefCell<ViewData>>);
-
-impl SurfaceEventHandler for ViewSurfaceHandler {
-    fn on_ready(&mut self, window: &Window) {
-        self.0.borrow_mut().init(window);
-    }
-
-    fn on_lost(&mut self, window: &Window) {
-        self.0.borrow_mut().release(window);
-    }
-
-    fn on_changed(&mut self, _window: &Window) {
-        //todo: println!("on_changed: {:?}", window.get_size());
-    }
-
-    fn on_render(&mut self, window: &Window) {
-        self.0.borrow_mut().render(window);
-    }
-}
-
-
-/// Structure to wrap ViewData for input event handling.
-pub struct ViewInputHandler(Rc<RefCell<ViewData>>);
-
-impl InputEventHandler for ViewInputHandler {
-    fn on_key(&mut self, _: &mut Window, sc: ScanCode, vk: Option<VirtualKeyCode>, is_down: bool) {
-        println!("key: {}, {:?}, {}", sc, vk, is_down);
-    }
-}
-
-
-/// Structure to wrap ViewData for public use.
-pub struct View(Rc<RefCell<ViewData>>);
-
-impl View {
-    pub fn new(world: World, window: &mut Window) -> View {
-        let view = View(Rc::new(RefCell::new(ViewData::new(world))));
-        window.set_surface_handler(ViewSurfaceHandler(view.0.clone()));
-        window.set_input_handler(ViewInputHandler(view.0.clone()));
-        view
-    }
-
-    pub fn update(&self) {
-        self.0.borrow_mut().update();
-    }
+    fn on_key(&mut self, _window: &mut Window,
+              _scan_code: ScanCode, _virtual_key: Option<VirtualKeyCode>, _is_down: bool) {}
 }

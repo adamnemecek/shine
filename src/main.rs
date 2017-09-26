@@ -8,36 +8,36 @@ use std::time::Duration;
 mod world;
 mod view;
 
+use std::rc::Rc;
+use std::cell::RefCell;
 pub use dragorust_engine::*;
 use world::*;
 use view::*;
 
 pub fn main() {
-    let mut engine = render::Engine::new().expect("Could not initialize render engine");
-    let mut world = World::new();
+    let engine = render::Engine::new().expect("Could not initialize render engine");
+    let world = Rc::new(RefCell::new(World::new()));
 
     let mut window = render::WindowSettings::new()
         .title("main")
         .size((1024, 1024))
-        .build(&mut engine).expect("Could not initialize main window");
-    let view: View = world.create_view(&mut window);
+        .build(&engine, SimpleView::new(world.clone())).expect("Could not initialize main window");
 
     let mut sub_window = render::WindowSettings::new()
         .title("sub")
         .size((100, 100))
         //.gl_profile(render::OpenGLProfile::ES2)
-        .build(&mut engine).expect("Could not initialize sub window");
-    let sub_view = world.create_view(&mut sub_window);
+        .build(&engine, SimpleView::new(world.clone())).expect("Could not initialize sub window");
 
     loop {
         if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {
             break;
         }
 
-        world.update();
+        world.borrow_mut().update();
 
-        view.update();
-        sub_view.update();
+        window.update_view();
+        sub_window.update_view();
 
         window.render().unwrap();
         sub_window.render().unwrap();

@@ -199,8 +199,8 @@ impl WindowSettings {
     /// # Errors
     ///
     /// This function will return an error if thc current backend returns an error.
-    pub fn build(self, engine: &mut Engine) -> Result<Window, Error> {
-        Window::new(self, engine)
+    pub fn build<V: View>(self, engine: &Engine, view: V) -> Result<ViewWindow<V>, Error> {
+        ViewWindow::new(self, engine, view)
     }
 
     /// Gets the title of built windows.

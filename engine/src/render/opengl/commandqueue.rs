@@ -47,10 +47,11 @@ impl CommandStore {
             });
     }
 
-    pub ( crate ) fn process(&mut self, window: &GLWindow) {
+    pub ( crate ) fn process(&mut self, window: &mut GLWindow) {
+        let ll = window.get_ll();
         for sorted_item in self.sort.iter() {
             let ref mut cmd = self.commands[sorted_item.1];
-            window.process(|ll| cmd.process(ll));
+            cmd.process(ll);
         }
     }
 }

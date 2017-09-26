@@ -104,13 +104,13 @@ impl<K: PassKey> RenderManager<K> {
     }
 
     /// Sends commands for processing.
-    pub fn submit(&mut self, window: &Window) {
+    pub fn submit(&mut self, window: &mut Window) {
         self.sort_passes();
 
         {
             let ref mut commands = *self.command_store.borrow_mut();
             commands.sort(self);
-            commands.process(window.platform());
+            commands.process(window.platform_mut());
             commands.clear();
         }
 
@@ -122,7 +122,6 @@ impl<K: PassKey> RenderManager<K> {
 
         self.submit_counter += 1;
     }
-
 
     /// Order passes by the dependency graph
     fn sort_passes(&mut self) {

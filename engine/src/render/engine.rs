@@ -33,11 +33,6 @@ impl Engine {
         &self.platform
     }
 
-    /// Returns a mutable reference to the platform specific implementation detail
-    pub fn platform_mut(&mut self) -> &mut EngineImpl {
-        &mut self.platform
-    }
-
     /// Initiates the shutdown process.
     ///
     /// Engine is not shut down immediately, as some OS messages requires multiple cycle
@@ -54,7 +49,7 @@ impl Engine {
     /// are discarded.
     /// # Return
     ///  Returns true if application is terminating, false otherwise
-    pub fn dispatch_event(&mut self, timeout: DispatchTimeout) -> bool {
+    pub fn dispatch_event(&self, timeout: DispatchTimeout) -> bool {
         self.platform.dispatch_event(timeout)
     }
 }

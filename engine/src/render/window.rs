@@ -1,126 +1,141 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
-//use std::slice::Iterator;
+use std::rc::Rc;
+use std::cell::*;
+use std::marker::PhantomData;
 use render::*;
 
-/// Callbacks for surface related event handling.
-pub trait SurfaceEventHandler: 'static {
+/// Implements the view dependent aspect of an application.
+pub trait View: 'static {
     /// Handles the surface lost event.
     ///
     /// Window still has the OS resources, but will be released soon after this call.
-    fn on_lost(&mut self, window: &Window);
+    fn on_surface_lost(&mut self, window: &mut Window);
 
     /// Handles the surface ready event.
     ///
     /// Window has create all the OS resources.
-    fn on_ready(&mut self, window: &Window);
+    fn on_surface_ready(&mut self, window: &mut Window);
 
     /// Handles the surface size or other config change.
     ///
     /// Window has create all the OS resources.
-    fn on_changed(&mut self, window: &Window);
+    fn on_surface_changed(&mut self, window: &mut Window);
+
+    /// Handles update requests.
+    fn on_update(&mut self);
 
     /// Handles render requests.
     ///
     /// Rendering can be triggered manually by calling the render function of window or
     /// by the system if paint event handing is enabled.
-    fn on_render(&mut self, window: &Window);
-}
+    fn on_render(&mut self, window: &mut Window);
 
-/// Callbacks for input related event handling.
-pub trait InputEventHandler: 'static {
     /// Handles key down and up events.
     fn on_key(&mut self, window: &mut Window, scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool);
 }
 
-/// Structure to store the window abstraction.
-///
-/// The structure stores the platform dependent implementation and serves as a bridge between
-/// the abstraction and the concrete implementation.
-pub struct Window {
-    platform: WindowImpl
-}
 
-impl Window {
-    // Creates a new window with the given settings.
-    ///
-    /// # Error
-    ///
-    /// This function will return an error if the current backend cannot create the
-    /// window.
-    pub fn new(settings: WindowSettings, engine: &mut Engine) -> Result<Window, Error> {
-        let platform = try!(WindowImpl::new(settings, engine));
-        Ok(Window { platform: platform })
-    }
-
-    pub ( crate ) fn from_platform(platform: WindowImpl) -> Window {
-        Window { platform: platform }
-    }
-
+/// Trait for window abstraction.
+pub trait Window<'engine> {
     /// Returns a reference to the platform specific implementation detail
-    pub fn platform(&self) -> &WindowImpl {
-        &self.platform
-    }
+    fn platform(&self) -> &WindowImpl;
 
     /// Returns a mutable reference to the platform specific implementation detail
-    pub fn platform_mut(&mut self) -> &mut WindowImpl {
-        &mut self.platform
-    }
+    fn platform_mut(&mut self) -> &mut WindowImpl;
 
-    /// Sets the surface event handler.
-    ///
-    /// Event handler can be altered any time, but it is preferred to set them before
-    /// the show call no to miss the on_ready event.
-    pub fn set_surface_handler<H: SurfaceEventHandler>(&mut self, handler: H) {
-        self.platform.set_surface_handler(handler);
-    }
-
-    /// Sets the input event handler.
-    pub fn set_input_handler<H: InputEventHandler>(&mut self, handler: H) {
-        self.platform.set_input_handler(handler);
-    }
-
-    /// Starts the closing process.
+    /// Requests to close the window.
     ///
     /// This function asks the OS to close the window. Window is not closed immediately,
     /// event handling shall continue the execution until the OS close events arrive.
-    pub fn close(&mut self) {
-        if self.is_closed() {
-            return;
+    fn close(&mut self) {
+        if !self.is_closed() {
+            self.platform_mut().close()
         }
-
-        self.platform.close()
     }
 
     /// Returns true if the window is closed or in closing state.
-    pub fn is_closed(&self) -> bool {
-        self.platform.is_closed()
+    fn is_closed(&self) -> bool {
+        self.platform().is_closed()
     }
 
     /// Returns if the context of the window is ready for rendering
-    pub fn is_read_to_render(&self) -> bool {
-        self.platform.is_read_to_render()
+    fn is_read_to_render(&self) -> bool {
+        self.platform().is_read_to_render()
     }
 
     /// Gets the position of the window.
-    pub fn get_position(&self) -> Position {
-        self.platform.get_position()
+    fn get_position(&self) -> Position {
+        self.platform().get_position()
     }
 
     /// Gets the size of the window.
-    pub fn get_size(&self) -> Size {
-        self.platform.get_size()
+    fn get_size(&self) -> Size {
+        self.platform().get_size()
     }
 
     /// Gets the size of the draw area of the window.
-    pub fn get_draw_size(&self) -> Size {
-        self.platform.get_draw_size()
+    fn get_draw_size(&self) -> Size {
+        self.platform().get_draw_size()
+    }
+}
+
+pub ( crate ) struct WindowData {
+    pub ( crate ) view: Rc<RefCell<View>>,
+    pub ( crate ) platform: WindowImpl,
+}
+
+/// Raw window for View type erasure
+pub ( crate ) struct RawWindow<'tmp>(
+    pub ( crate ) &'tmp mut WindowData,
+);
+
+impl<'engine> Window<'engine> for RawWindow<'engine> {
+    fn platform(&self) -> &WindowImpl {
+        &self.0.platform
     }
 
-    /// Triggers a rendering immediately.
-    pub fn render(&self) -> Result<(), Error> {
-        try!(self.platform.render());
+    fn platform_mut(&mut self) -> &mut WindowImpl {
+        &mut self.0.platform
+    }
+}
+
+/// Window with concrete view type
+pub struct ViewWindow<'engine, V: View>(
+    pub ( crate ) Box<WindowData>,
+    pub ( crate ) PhantomData<(&'engine (), V)>
+);
+
+impl<'engine, V: View> Window<'engine> for ViewWindow<'engine, V> {
+    fn platform(&self) -> &WindowImpl {
+        &self.0.as_ref().platform
+    }
+
+    fn platform_mut(&mut self) -> &mut WindowImpl {
+        &mut self.0.as_mut().platform
+    }
+}
+
+impl<'engine, V: View> ViewWindow<'engine, V> {
+    /// Create a new window with the given view
+    pub fn new<'e>(settings: WindowSettings, engine: &'e Engine, view: V) -> Result<ViewWindow<'e, V>, Error> {
+        WindowImpl::new(settings, engine, view)
+    }
+
+    /// Triggers an immediate update.
+    pub fn update_view(&mut self) {
+        self.0.view.borrow_mut().on_update();
+    }
+
+    /// Triggers an immediate render.
+    pub fn render(&mut self) -> Result<(), Error> {
+        if self.is_read_to_render() {
+            try!(self.platform_mut().start_render());
+            let view = self.0.view.clone();
+            view.borrow_mut().on_render(self);
+            try!(self.platform_mut().end_render());
+        }
         Ok(())
     }
 }

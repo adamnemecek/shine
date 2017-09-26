@@ -1,6 +1,7 @@
 use std::mem;
 use std::ptr;
-use std::i32;
+use std::cell::Cell;
+//use std::i32;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 
@@ -30,7 +31,7 @@ pub struct GLEngine {
     window_class_name: Vec<u16>,
 
     // Number of active/non-closed windows
-    window_count: i32,
+    window_count: Cell<i32>,
 
 }
 
@@ -69,7 +70,7 @@ impl GLEngine {
 
             // While no window is created it is set an extremal value, not to terminate dispatch event before
             // the window creation has terminated.
-            window_count: i32::MAX,
+            window_count: Cell::new(i32::max_value()),
         })
     }
 
@@ -77,7 +78,9 @@ impl GLEngine {
         unsafe { user32::PostQuitMessage(0); }
     }
 
-    pub fn dispatch_event(&mut self, timeout: DispatchTimeout) -> bool {
+    pub fn dispatch_event(&self, timeout: DispatchTimeout) -> bool {
+        let mut new_window_count = self.window_count.get();
+
         unsafe {
             let mut msg: winapi::MSG = mem::zeroed();
 
@@ -117,21 +120,23 @@ impl GLEngine {
 
             if msg.message == WM_DR_WINDOW_CREATED {
                 println!("WM_DR_WINDOW_CREATED");
-                if self.window_count == i32::MAX {
-                    self.window_count = 1;
+                if new_window_count == i32::max_value() {
+                    new_window_count = 1;
                 } else {
-                    self.window_count += 1;
+                    new_window_count += 1;
                 }
             } else if msg.message == WM_DR_WINDOW_DESTROYED {
                 println!("WM_DR_WINDOW_DESTROYED");
-                self.window_count -= 1;
+                new_window_count -= 1;
             }
 
             // messages are delegated to the window in the window proc
             user32::TranslateMessage(&msg);
             user32::DispatchMessageW(&msg);
         }
-        self.window_count > 0
+
+        self.window_count.set(new_window_count);
+        new_window_count > 0
     }
 
 
