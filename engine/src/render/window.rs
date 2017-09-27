@@ -81,58 +81,54 @@ pub trait Window<'engine> {
     }
 }
 
-pub ( crate ) struct WindowData {
-    pub ( crate ) view: Rc<RefCell<View>>,
-    pub ( crate ) platform: WindowImpl,
+
+/// Window implementation
+///
+/// "platform" and "view" are moved to the heep to garantee fixed memory location. Most implementation require this to handle OS messages.
+/// 'engine lifetime gurantees that no window may outlive the engine
+pub struct PlatformWindow<'engine, V: View> {
+    view: Rc<RefCell<View>>,
+    platform: Box<WindowImpl>,
+    phantom: PhantomData<(&'engine (), V)>
 }
 
-/// Raw window for View type erasure
-pub ( crate ) struct RawWindow<'tmp>(
-    pub ( crate ) &'tmp mut WindowData,
-);
-
-impl<'engine> Window<'engine> for RawWindow<'engine> {
+impl<'engine, V: View> Window<'engine> for PlatformWindow<'engine, V> {
     fn platform(&self) -> &WindowImpl {
-        &self.0.platform
+        self.platform.as_ref()
     }
 
     fn platform_mut(&mut self) -> &mut WindowImpl {
-        &mut self.0.platform
+        self.platform.as_mut()
     }
 }
 
-/// Window with concrete view type
-pub struct ViewWindow<'engine, V: View>(
-    pub ( crate ) Box<WindowData>,
-    pub ( crate ) PhantomData<(&'engine (), V)>
-);
-
-impl<'engine, V: View> Window<'engine> for ViewWindow<'engine, V> {
-    fn platform(&self) -> &WindowImpl {
-        &self.0.as_ref().platform
-    }
-
-    fn platform_mut(&mut self) -> &mut WindowImpl {
-        &mut self.0.as_mut().platform
-    }
-}
-
-impl<'engine, V: View> ViewWindow<'engine, V> {
+impl<'engine, V: View> PlatformWindow<'engine, V> {
     /// Create a new window with the given view
-    pub fn new<'e>(settings: WindowSettings, engine: &'e Engine, view: V) -> Result<ViewWindow<'e, V>, Error> {
-        WindowImpl::new(settings, engine, view)
+    pub fn new<'e>(settings: WindowSettings, engine: &'e Engine, view: V) -> Result<PlatformWindow<'e, V>, Error> {
+        let view = Rc::new(RefCell::new(view));
+        let platform = try!(WindowImpl::new(settings, engine, view.clone()));
+        Ok(PlatformWindow {
+            view: view,
+            platform: platform,
+            phantom: PhantomData,
+        })
+    }
+
+    /// Returns the view associated to the window.
+    pub fn get_view(&self) -> Rc<RefCell<View>> {
+        self.view.clone()
     }
 
     /// Triggers an immediate update.
     pub fn update_view(&mut self) {
-        self.0.view.borrow_mut().on_update();
+        self.view.borrow_mut().on_update();
     }
 
     /// Triggers an immediate render.
     pub fn render(&mut self) -> Result<(), Error> {
         if self.is_read_to_render() {
             try!(self.platform_mut().start_render());
-            let view = self.0.view.clone();
+            let view = self.view.clone();
             view.borrow_mut().on_render(self);
             try!(self.platform_mut().end_render());
         }

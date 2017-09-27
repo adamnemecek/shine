@@ -36,7 +36,7 @@ pub struct GLEngine {
 }
 
 impl GLEngine {
-    pub fn new() -> Result<GLEngine, Error> {
+    pub fn new() -> Result<Box<GLEngine>, Error> {
         let window_class_name = OsStr::new("Dragorust")
             .encode_wide()
             .chain(Some(0).into_iter())
@@ -64,17 +64,17 @@ impl GLEngine {
             return Err(Error::InitializeError(format!("")));
         }
 
-        Ok(GLEngine {
+        Ok(Box::new(GLEngine {
             hinstance: hinstance,
             window_class_name: window_class_name,
 
             // While no window is created it is set an extremal value, not to terminate dispatch event before
             // the window creation has terminated.
             window_count: Cell::new(i32::max_value()),
-        })
+        }))
     }
 
-    pub fn quit(&mut self) {
+    pub fn quit(&self) {
         unsafe { user32::PostQuitMessage(0); }
     }
 

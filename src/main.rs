@@ -11,11 +11,12 @@ mod view;
 use std::rc::Rc;
 use std::cell::RefCell;
 pub use dragorust_engine::*;
+use render::*;
 use world::*;
 use view::*;
 
 pub fn main() {
-    let engine = render::Engine::new().expect("Could not initialize render engine");
+    let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
     let world = Rc::new(RefCell::new(World::new()));
 
     let mut window = render::WindowSettings::new()
@@ -36,6 +37,7 @@ pub fn main() {
 
         world.borrow_mut().update();
 
+        println!("{:?}", window.get_size());
         window.update_view();
         sub_window.update_view();
 

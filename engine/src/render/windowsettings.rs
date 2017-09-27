@@ -84,6 +84,13 @@ pub struct FBConfig {
     /// Enable debugging at driver level, if supported
     pub debug: bool,
 
+    //todo: make gl_ settings part of an enum
+    // enum DisplayDrive {
+    //  OpenGL(version:(u8,u8),...),
+    //  DirectX(version:(u8,u8),...),
+    // };
+
+
     /// The selected a context version.
     ///
     /// This setting is valid only for OpenGL, other implementations ignore it.
@@ -199,8 +206,8 @@ impl WindowSettings {
     /// # Errors
     ///
     /// This function will return an error if thc current backend returns an error.
-    pub fn build<V: View>(self, engine: &Engine, view: V) -> Result<ViewWindow<V>, Error> {
-        ViewWindow::new(self, engine, view)
+    pub fn build<V: View>(self, engine: &Engine, view: V) -> Result<PlatformWindow<V>, Error> {
+        PlatformWindow::new(self, engine, view)
     }
 
     /// Gets the title of built windows.
