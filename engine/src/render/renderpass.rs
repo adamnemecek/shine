@@ -22,7 +22,7 @@ pub struct RenderPass {
     platform: RenderPassImpl,
     config: RenderPassConfig,
     command_store: Rc<RefCell<CommandStore>>,
-    pub ( crate ) meta_index: PassMetaIndex,
+    pub ( crate ) activation_index: ActivePassIndex,
 }
 
 impl RenderPass {
@@ -32,7 +32,7 @@ impl RenderPass {
             platform: RenderPassImpl::new(),
             config: RenderPassConfig::new(),
             command_store: command_store,
-            meta_index: PassMetaIndex::new(),
+            activation_index: ActivePassIndex::new(),
         }
     }
 
@@ -49,13 +49,13 @@ impl RenderPass {
     /// This function is responsible to set up the pass for rendering. It generates commands to
     /// clear buffers, set viewports, bind render targets, etc.
     pub fn prepare(&mut self) {
-        self.platform.prepare(&mut self.command_store.borrow_mut(), self.meta_index, &self.config);
+        self.platform.prepare(&mut self.command_store.borrow_mut(), self.activation_index, &self.config);
     }
 }
 
 impl CommandQueue for RenderPass {
     fn add<C: Command + 'static>(&mut self, cmd: C) {
         let sort_key = cmd.get_sort_key() + 1;
-        self.command_store.borrow_mut().add((self.meta_index, sort_key), cmd);
+        self.command_store.borrow_mut().add((self.activation_index, sort_key), cmd);
     }
 }

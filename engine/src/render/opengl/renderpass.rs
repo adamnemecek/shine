@@ -62,7 +62,7 @@ impl GLRenderPass {
         )
     }
 
-    pub ( crate ) fn prepare(&mut self, queue: &mut CommandStore, meta_index: PassMetaIndex, config: &RenderPassConfig) {
+    pub ( crate ) fn prepare(&mut self, queue: &mut CommandStore, meta_index: ActivePassIndex, config: &RenderPassConfig) {
         // todo: if this branching optional matching takes too much time, it can be split up
         // into multiple commands
 

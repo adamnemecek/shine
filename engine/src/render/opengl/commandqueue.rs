@@ -3,7 +3,7 @@ use container::ops::At;
 use render::*;
 use render::opengl::window::window::*;
 
-struct CommandSortKey(PassMetaIndex, usize);
+struct CommandSortKey(ActivePassIndex, usize);
 
 /// Trait for each render command
 pub trait Command: 'static {
@@ -26,7 +26,7 @@ impl CommandStore {
         }
     }
 
-    pub ( crate ) fn add<C: Command>(&mut self, sort_key: (PassMetaIndex, usize), cmd: C) {
+    pub ( crate ) fn add<C: Command>(&mut self, sort_key: (ActivePassIndex, usize), cmd: C) {
         self.sort.push((CommandSortKey(sort_key.0, sort_key.1), self.commands.len()));
         self.commands.push(Box::new(cmd));
     }
@@ -36,7 +36,7 @@ impl CommandStore {
         self.commands.clear();
     }
 
-    pub ( crate ) fn sort<V: At<PassMetaIndex, Output=usize>>(&mut self, view_order: &V) {
+    pub ( crate ) fn sort<V: At<ActivePassIndex, Output=usize>>(&mut self, view_order: &V) {
         self.sort.sort_by(
             |ref a, ref b| {
                 let ref a = a.0;
