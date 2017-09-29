@@ -20,44 +20,37 @@ struct VxColorTex {
 
 
 #[derive(Copy, Clone, Debug)]
+#[derive(PrimitiveEnum)]
+#[repr(usize)]
+enum ShSimpleAttribute {
+    #[name = "vPosition"]
+    Position,
+
+    #[name = "vColor"]
+    Color,
+
+    #[name = "vTexCoord"]
+    TexCoord,
+}
+
+#[derive(Copy, Clone, Debug)]
+#[derive(PrimitiveEnum)]
+#[repr(usize)]
+enum ShSimpleUniform {
+    #[name = "uProjModel"]
+    ProjModel,
+
+    #[name = "uColor"]
+    Color,
+}
+
+#[derive(Copy, Clone, Debug)]
 //#[derive(ShaderDeclaration)]
 struct ShSimple {}
 
 impl ShaderDeclaration for ShSimple {
     type Attribute = ShSimpleAttribute;
-}
-
-#[derive(Copy, Clone, Debug)]
-#[repr(usize)]
-#[allow(non_camel_case_types)]
-enum ShSimpleAttribute {
-    vPosition,
-    vColor,
-    vTexCoord,
-}
-
-impl PrimitiveEnum for ShSimpleAttribute {
-    fn from_index_unsafe(index: usize) -> ShSimpleAttribute {
-        assert!(index < Self::count(), "invalid index {}, must be in the range 0..{}", index, Self::count());
-        unsafe { transmute(index) }
-    }
-
-    fn from_name(name: &str) -> Option<ShSimpleAttribute> {
-        match name {
-            "vPosition" => Some(ShSimpleAttribute::vPosition),
-            "vColor" => Some(ShSimpleAttribute::vColor),
-            "vTexCoord" => Some(ShSimpleAttribute::vTexCoord),
-            _ => None
-        }
-    }
-
-    fn to_index(&self) -> usize {
-        unsafe { transmute(*self) }
-    }
-
-    fn count() -> usize {
-        3
-    }
+    type Uniform = ShSimpleUniform;
 }
 
 
@@ -168,9 +161,9 @@ void main()
 
             self.shader.draw(&mut *p0,
                              |id| match id {
-                                 ShSimpleAttribute::vPosition => v1.get_attribute(VxPosAttribute::Position),
-                                 ShSimpleAttribute::vColor => v2.get_attribute(VxColorTexAttribute::Color),
-                                 ShSimpleAttribute::vTexCoord => v2.get_attribute(VxColorTexAttribute::TexCoord),
+                                 ShSimpleAttribute::Position => v1.get_attribute(VxPosAttribute::Position),
+                                 ShSimpleAttribute::Color => v2.get_attribute(VxColorTexAttribute::Color),
+                                 ShSimpleAttribute::TexCoord => v2.get_attribute(VxColorTexAttribute::TexCoord),
                              },
                              Primitive::Triangle, 0, 3
             );

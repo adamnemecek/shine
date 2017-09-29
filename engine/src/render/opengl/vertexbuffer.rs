@@ -19,7 +19,7 @@ impl GLVertexAttribute {
     }
 }
 
-pub type GLVertexAttributeVec = ArrayVec<[GLVertexAttribute; MAX_BOUND_ATTRIBUTE_COUNT]>;
+pub type GLVertexAttributeVec = ArrayVec<[GLVertexAttribute; MAX_USED_ATTRIBUTE_COUNT]>;
 pub type GLVertexAttributeDescriptorVec = ArrayVec<[GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT]>;
 
 

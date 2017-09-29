@@ -10,6 +10,10 @@ mod shaderprogram;
 mod vertexbuffer;
 mod renderpass;
 
+/// Maximum number of attributes that can be bound at once
+pub const MAX_USED_ATTRIBUTE_COUNT: usize = 16;
+/// Maximum number of uniforms that can be bound used once
+pub const MAX_USED_UNIFORM_COUNT: usize = 16;
 
 pub use self::window::WindowImpl;
 pub use self::engine::EngineImpl;

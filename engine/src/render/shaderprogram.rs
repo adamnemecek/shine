@@ -19,6 +19,8 @@ pub enum ShaderType {
 pub trait ShaderDeclaration: 'static {
     /// The enums used for the input attribute indexing.
     type Attribute: PrimitiveEnum;
+    /// The enums used for the input uniform indexing.
+    type Uniform: PrimitiveEnum;
 }
 
 

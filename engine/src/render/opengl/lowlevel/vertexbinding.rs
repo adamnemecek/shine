@@ -25,7 +25,7 @@ pub struct VertexBinding {
     force: bool,
     time_stamp: u8,
     bound_id: GLuint,
-    bound_attributes: [BoundVertexAttribute; MAX_BOUND_ATTRIBUTE_COUNT],
+    bound_attributes: [BoundVertexAttribute; MAX_USED_ATTRIBUTE_COUNT],
 }
 
 impl VertexBinding {
@@ -34,7 +34,7 @@ impl VertexBinding {
             force: false,
             time_stamp: 1,
             bound_id: 0,
-            bound_attributes: [BoundVertexAttribute::new(); MAX_BOUND_ATTRIBUTE_COUNT],
+            bound_attributes: [BoundVertexAttribute::new(); MAX_USED_ATTRIBUTE_COUNT],
         }
     }
 

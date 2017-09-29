@@ -4,7 +4,7 @@ extern crate syn;
 extern crate quote;
 
 use proc_macro::TokenStream;
-use syn::{Ident, Body, Field, VariantData};
+use syn::{Ident, Field};
 
 #[proc_macro_derive(ShaderDeclaration)]
 pub fn shader_declaration(input: TokenStream) -> TokenStream {
@@ -70,7 +70,7 @@ fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
     /*if let Body::Enum(VariantData::Enum(ref fields)) = ast.body {
         impl_location = impl_get_declaration_for_enum(name, fields);
     } else*/ {
-       // panic!("Derive proc-macro ShaderDeclaration: no implemented for {:?}", ast.body)
+        // panic!("Derive proc-macro ShaderDeclaration: no implemented for {:?}", ast.body)
     }
 
     //println!("impl_location = \n{}", impl_location.as_str());

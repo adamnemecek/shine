@@ -199,6 +199,7 @@ impl From<(f32, f32, f32, f32)> for Float32x4 {
     }
 }
 
+
 /// Constructs Float32x4 from multiple expressions
 /// # Example
 /// assert!( f32x4!(1, 2, 3, 4) == Float32x4(1., 2., 3., 4.) );
@@ -236,6 +237,7 @@ impl From<(f32, f32, f32)> for Float32x3 {
         Float32x3(value.0, value.1, value.2)
     }
 }
+
 
 /// Constructs Float32x3 from multiple expressions
 ///
@@ -275,6 +277,7 @@ impl From<(f32, f32)> for Float32x2 {
         Float32x2(value.0, value.1)
     }
 }
+
 
 /// Constructs Float32x3 from multiple expressions
 ///

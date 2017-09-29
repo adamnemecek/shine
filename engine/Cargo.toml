@@ -8,6 +8,7 @@ build = "build.rs"
 gl_generator = "0.5"
 
 [dependencies]
+dragorust-primitiveenum-derive = {path = "../primitiveenum-derive"}
 dragorust-vertexdeclaration-derive = {path = "../vertexdeclaration-derive"}
 dragorust-shaderdeclaration-derive = {path = "../shaderdeclaration-derive"}
 

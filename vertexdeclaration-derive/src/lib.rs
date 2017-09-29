@@ -129,45 +129,32 @@ fn impl_location_for_struct(name: &Ident, fields: &Vec<Field>) -> quote::Tokens 
     let mut match_name_cases: Vec<quote::Tokens> = vec!();
 
 
-    for ref field in fields.iter() {
-        let field_name = format!("{}", field.ident.clone().unwrap());
+    for field in fields.iter() {
+        let field_name = field.ident.as_ref().unwrap().to_string();
         let enum_name = Ident::new(convert_snake_to_camel_case(&field_name));
         let match_name = format!("v{}", enum_name);
 
-        enum_names.push(quote! {#enum_name});
-        match_name_cases.push(quote! {#match_name => Some(#enum_type_name::#enum_name)});
-    }
+        enum_names.push(
+            quote! {
+                #[name = #match_name]
+                #enum_name
+            }
+        );
 
-    let count = enum_names.len();
+        match_name_cases.push(
+            quote! {
+                #match_name => Some(#enum_type_name::#enum_name)
+            }
+        );
+    }
 
     quote! {
         #[derive(Copy, Clone, Debug)]
+        #[derive(PrimitiveEnum)]
         #[repr(usize)]
         #[allow(unused_variables)]
         enum #enum_type_name {
             #(#enum_names,)*
-        }
-
-        impl ::dragorust_engine::render::PrimitiveEnum for #enum_type_name {
-            fn from_index_unsafe(index: usize) -> #enum_type_name {
-                assert!(index < Self::count(), "invalid index {}, must be in the range 0..{}", index, Self::count());
-                unsafe { transmute(index) }
-            }
-
-            fn from_name(name: &str) -> Option<#enum_type_name> {
-                match name {
-                    #(#match_name_cases,)*
-                    _ => None,
-                }
-            }
-
-            fn to_index(&self) -> usize {
-                unsafe { transmute(*self) }
-            }
-
-            fn count() -> usize {
-                #count
-            }
         }
     }
 }

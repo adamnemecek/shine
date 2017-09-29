@@ -1,9 +1,6 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
-/// Maximum number of vertex attributes stored in a buffer.
-pub const MAX_VERTEX_ATTRIBUTE_COUNT: usize = 16;
-
 use std::mem;
 use std::slice;
 use std::marker::PhantomData;

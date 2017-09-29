@@ -23,6 +23,9 @@ mod renderpassconfig;
 mod rendermanager;
 mod commandqueue;
 
+/// Maximum number of vertex attributes stored in a buffer.
+pub const MAX_VERTEX_ATTRIBUTE_COUNT: usize = 16;
+
 
 mod opengl;
 pub use self::opengl::*;

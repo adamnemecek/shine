@@ -1,8 +1,6 @@
 use render::*;
 use render::opengl::lowlevel::*;
 
-pub const MAX_BOUND_ATTRIBUTE_COUNT: usize = 16;
-
 /// Structure to store vertex attribute info for the open GL.
 #[derive(Clone, Copy, Debug)]
 pub struct GLVertexAttributeDescriptor {

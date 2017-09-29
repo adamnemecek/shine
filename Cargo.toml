@@ -5,5 +5,6 @@ authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
 dragorust-engine = {path = "engine"}
+dragorust-primitiveenum-derive = {path = "primitiveenum-derive"}
 dragorust-vertexdeclaration-derive = {path = "vertexdeclaration-derive"}
 dragorust-shaderdeclaration-derive = {path = "shaderdeclaration-derive"}
