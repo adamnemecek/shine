@@ -6,6 +6,7 @@ use std::fs;
 use std::io::prelude::*;
 
 use syn;
+use quote;
 
 static GLSL_VALIDATOR_EXECUTABLE: &'static str = "glslangValidator";
 static GLSL_VALIDATOR_ARGS_INFO: [&'static str; 3] = ["-l", "-d", "-q"];
@@ -35,14 +36,53 @@ impl ShaderType {
 
 #[derive(Debug)]
 pub struct Uniform {
-    name: String,
-    type_id: u32,
-    size: u32,
+    pub name: String,
+    pub type_id: u32,
+    pub size: u32,
 }
+
+impl Uniform {
+    pub fn get_type_token(&self) -> Result<quote::Tokens, String> {
+        let type_id =
+            match self.type_id {
+                5126 => quote!(f32), // GLenum(GL_FLOAT)
+                35664 => quote!(::dragorust_engine::render::Float32x2), // GLenum(GL_FLOAT_VEC2)
+                35665 => quote!(::dragorust_engine::render::Float32x3),// GLenum(GL_FLOAT_VEC3)
+                35666 => quote!(::dragorust_engine::render::Float32x4),// GLenum(GL_FLOAT_VEC4)
+
+                5124 => quote!(i32),// GLenum(GL_INT)
+                35667 => quote!(::dragorust_engine::render::Int32x2),// GLenum(GL_INT_VEC2)
+                35668 => quote!(::dragorust_engine::render::Int32x3),// GLenum(GL_INT_VEC3)
+                35669 => quote!(::dragorust_engine::render::Int32x4),// GLenum(GL_INT_VEC4)
+
+                35670 => quote!(bool),// GLenum(GL_BOOL)
+                35671 => quote!(::dragorust_engine::render::Boolx2),// GLenum(GL_BOOL_VEC2)
+                35672 => quote!(::dragorust_engine::render::Boolx3),// GLenum(GL_BOOL_VEC3)
+                35673 => quote!(::dragorust_engine::render::Boolx4),// GLenum(GL_BOOL_VEC4)
+
+                35674 => quote!(::dragorust_engine::render::Float32x4),// GLenum(GL_FLOAT_MAT2)
+                35675 => quote!(::dragorust_engine::render::Float32x9),// GLenum(GL_FLOAT_MAT3)
+                35676 => quote!(::dragorust_engine::render::Float32x16),// GLenum(GL_FLOAT_MAT4)
+
+                35678 => quote!(i32),// GLenum(GL_SAMPLER_2D)
+                35680 => quote!(i32),// GLenum(GL_SAMPLER_CUBE)
+
+                _ => return Err(format!("Could not find built-in type for uniform {}, type id:{}", self.name, self.type_id))
+            };
+
+        let size = self.size;
+        if size > 1 {
+            Ok(quote!([#type_id; #size]))
+        } else {
+            Ok(type_id)
+        }
+    }
+}
+
 
 #[derive(Debug)]
 pub struct Attribute {
-    name: String,
+    pub name: String,
 }
 
 fn parse_uniform(line: &str) -> Uniform {
@@ -70,6 +110,7 @@ fn parse_attribute(line: &str) -> Attribute {
     }
 }
 
+#[allow(non_snake_case)]
 fn get_glslangValidator_executable() -> String {
     let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
     let root = Path::new(&root).join("tools").join(GLSL_VALIDATOR_EXECUTABLE);
@@ -156,7 +197,6 @@ fn prepocess_shader(shaders: &[String]) -> Vec<(ShaderType, String)> {
 pub fn prepocess_sources<'a, I: Iterator<Item=&'a (ShaderType, String)>>(name: String, shaders: I) -> (Vec<Attribute>, Vec<Uniform>, Vec<(ShaderType, String)>) {
     // create temp files froom the shader
 
-    let sources: Vec<String> = vec!();
     let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
     let root = Path::new(&root).join("target").join("shaders").join(name.to_string());
 
@@ -173,7 +213,7 @@ pub fn prepocess_sources<'a, I: Iterator<Item=&'a (ShaderType, String)>>(name: S
     let (attributes, uniforms) = extract_shader_info(&source_files);
     let sources = prepocess_shader(&source_files);
 
-    println!("{:?},{:?}", attributes, uniforms);
+    //println!("{:?},{:?}", attributes, uniforms);
 
     (attributes, uniforms, sources)
 }

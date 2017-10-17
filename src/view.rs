@@ -1,4 +1,3 @@
-use std::mem::transmute;
 use std::rc::Rc;
 use std::cell::RefCell;
 
@@ -18,51 +17,26 @@ struct VxColorTex {
     tex_coord: Float32x2,
 }
 
-
 #[derive(ShaderDeclaration)]
-//#[vert_path = "common.glsl"]
 #[vert_src = "
+    uniform mat4 uTrsf;
     attribute vec3 vPosition;
+    attribute vec3 vColor;
+    varying vec3 color;
     void main()
     {
-        gl_Position = vec4(vPosition, 1.0);
+        color = vColor;
+        gl_Position = uTrsf * vec4(vPosition, 1.0);
     }
 "]
-#[frag_path = "src/common.glsl"]
 #[frag_src = "
+    varying vec3 color;
     void main()
     {
-        gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+        gl_FragColor = vec4(color, 1.0);
     }
 "]
 struct ShSimple {}
-
-
-#[derive(Copy, Clone, Debug)]
-#[derive(PrimitiveEnum)]
-#[repr(usize)]
-enum ShSimpleAttribute {
-    #[name = "vPosition"]
-    Position,
-
-    #[name = "vColor"]
-    Color,
-
-    #[name = "vTexCoord"]
-    TexCoord,
-}
-
-#[derive(Copy, Clone, Debug)]
-#[derive(PrimitiveEnum)]
-#[repr(usize)]
-enum ShSimpleUniform {
-    #[name = "uProjModel"]
-    ProjModel,
-
-    #[name = "uColor"]
-    Color,
-}
-
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum Passes {
@@ -157,10 +131,16 @@ impl View for SimpleView {
             let v2 = &self.vertex_buffer2;
 
             self.shader.draw(&mut *p0,
-                             |id| match id {
+                             |attr| match attr {
                                  ShSimpleAttribute::Position => v1.get_attribute(VxPosAttribute::Position),
                                  ShSimpleAttribute::Color => v2.get_attribute(VxColorTexAttribute::Color),
-                                 ShSimpleAttribute::TexCoord => v2.get_attribute(VxColorTexAttribute::TexCoord),
+                                 //ShSimpleAttribute::TexCoord => v2.get_attribute(VxColorTexAttribute::TexCoord),
+                             },
+                             |param| match param {
+                                 //ShSimpleAttribute::Trsf(ref mut mx) => m,
+                                 //ShSimpleAttribute::Color => v2.get_attribute(VxColorTexAttribute::Color),
+                                 //ShSimpleAttribute::TexCoord => v2.get_attribute(VxColorTexAttribute::TexCoord),
+                                 _ => {}
                              },
                              Primitive::Triangle, 0, 3
             );

@@ -207,9 +207,7 @@ impl GLShaderProgramData {
             gl_check_error();
 
             let attribute = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let attribute = SD::Attribute::from_name(&attribute).expect(&format!("attribute id could not be resolved for {}", attribute));
-            //println!("attribute= {:?}", attribute);
-            let attribute = attribute.to_index();
+            let attribute = SD::Attribute::index_from_name(&attribute).expect(&format!("Attribute id could not be resolved for {}", attribute));
             let attribute = &mut self.attributes[attribute];
             attribute.location = location;
             attribute.size = attribute_size;
@@ -219,7 +217,7 @@ impl GLShaderProgramData {
     }
 
     fn parse_uniforms<SD: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
-        assert!(SD::Uniform::count() <= MAX_USED_UNIFORM_COUNT, "too many uniform: {}/{}", SD::Uniform::count(), MAX_USED_UNIFORM_COUNT);
+        assert!(SD::Uniform::count() <= MAX_USED_UNIFORM_COUNT, "Too many uniform: {}/{}", SD::Uniform::count(), MAX_USED_UNIFORM_COUNT);
 
         (0..SD::Uniform::count()).for_each(|_| self.uniforms.push(ShaderUniform::new()));
 
@@ -253,7 +251,7 @@ impl GLShaderProgramData {
             gl_check_error();
 
             let uniform = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let uniform = SD::Uniform::from_name(&uniform).expect(&format!("uniform id could not be resolved for {}", uniform));
+            let uniform = SD::Uniform::from_name(&uniform).expect(&format!("Uniform id could not be resolved for {}", uniform));
             println!("uniform= {:?}", uniform);
             let uniform = uniform.to_index();
             let uniform = &mut self.uniforms[uniform];

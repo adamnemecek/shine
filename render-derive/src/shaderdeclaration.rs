@@ -14,7 +14,7 @@ enum SourceKind {
 }
 
 pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
-    let name = &ast.ident;
+    let declaration_type_name = &ast.ident;
 
     let sources = ast.attrs.iter()
         .filter_map(|attr| {
@@ -53,14 +53,14 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
                             .expect(&format!("Error reading source from {:?}", path));
                         Some((sh_type, buf))
                     } else {
-                        panic!("Derive proc-macro ShaderDeclaration: file {:?} was not found. Path must be relative to your Cargo.toml", path);
+                        panic!("File {:?} was not found. Path must be relative to your Cargo.toml", path);
                     }
                 }
             }
         }).collect::<Vec<_>>();
 
 
-    let (attributes, uniforms, sources) = prepocess_sources(name.to_string(), sources.iter());
+    let (attributes, uniforms, sources) = prepocess_sources(declaration_type_name.to_string(), sources.iter());
 
     let sources = sources.iter().map(|shader| {
         let sh_type = shader.0.to_ident();
@@ -68,10 +68,63 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         Some(quote! { (::dragorust_engine::render::ShaderType::#sh_type, #source) })
     }).collect::<Vec<_>>();
 
+    let attribute_type_name = syn::Ident::new(format!("{}Attribute", declaration_type_name));
+    let uniform_type_name = syn::Ident::new(format!("{}Uniform", declaration_type_name));
+
+    let mut attribute_enums = vec!();
+    for attr in attributes.iter() {
+        let attr_name = attr.name.clone();
+        let id = {
+            let mut chars = attr_name.chars();
+            if chars.next().unwrap() != 'v' || !chars.next().unwrap().is_uppercase() {
+                panic!("Invalid attribute naming: {}. v[CamelCase] is required", attr_name);
+            };
+            syn::Ident::new(attr_name.trim_left_matches("v"))
+        };
+
+        attribute_enums.push(quote! {
+            #[name = #attr_name]
+            #id
+        });
+    }
+
+    let mut uniform_enums = vec!();
+    for uniform in uniforms.iter() {
+        let uniform_name = uniform.name.clone();
+        let id = {
+            let mut chars = uniform_name.chars();
+            if chars.next().unwrap() != 'u' || !chars.next().unwrap().is_uppercase() {
+                panic!("Invalid uniform naming: {}. u[CamelCase] is required", uniform_name);
+            };
+            syn::Ident::new(uniform_name.trim_left_matches("u"))
+        };
+
+        let type_token = uniform.get_type_token().unwrap();
+
+        uniform_enums.push(quote! {
+            #[name = #uniform_name]
+            #id(#type_token)
+        });
+    }
+
     let gen = quote! {
-        impl ShaderDeclaration for #name {
-            type Attribute = ShSimpleAttribute;
-            type Uniform = ShSimpleUniform;
+        #[derive(Copy, Clone, Debug)]
+        #[derive(IterableEnum)]
+        #[repr(usize)]
+        enum #attribute_type_name {
+            #(#attribute_enums,)*
+        }
+
+        #[derive(Copy, Clone, Debug)]
+        #[derive(IterableEnum)]
+        #[repr(usize)]
+        enum #uniform_type_name {
+            #(#uniform_enums,)*
+        }
+
+        impl ShaderDeclaration for #declaration_type_name {
+            type Attribute = #attribute_type_name;
+            type Uniform = #uniform_type_name;
 
             fn map_sources<F: FnMut((ShaderType, &str)) -> bool>(mut f: F) -> bool {
                 let sh_source = #sources;
@@ -86,7 +139,7 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         }
     };
 
-    println!("!!!!: {:?}", gen.to_string());
+    //println!("{:?}", gen.to_string());
 
     gen
 }

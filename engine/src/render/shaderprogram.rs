@@ -18,9 +18,9 @@ pub enum ShaderType {
 /// Trait to define shader attribute and uniform names
 pub trait ShaderDeclaration: 'static {
     /// The enums used for the input attribute indexing.
-    type Attribute: PrimitiveEnum;
+    type Attribute: IterableEnum;
     /// The enums used for the input uniform indexing.
-    type Uniform: PrimitiveEnum;
+    type Uniform: IterableEnum;
 
     /// Iterate over the shader sources
     fn map_sources<F: FnMut((ShaderType, &str)) -> bool>(f: F) -> bool;
@@ -55,13 +55,23 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
     }
 
     /// Sends a geometry for rendering using the given parameters
-    pub fn draw<'a, Q: CommandQueue, ASF: Fn(SD::Attribute) -> VertexAttributeImpl>(&mut self, queue: &mut Q, attribute_source: ASF,
-                                                                                    primitive: Primitive, vertex_start: usize, vertex_count: usize) {
+    pub fn draw<'a, Q, ASF, USF>(&mut self, queue: &mut Q, attribute_source: ASF, uniform_source: USF, primitive: Primitive, vertex_start: usize, vertex_count: usize)
+        where Q: CommandQueue, ASF: Fn(SD::Attribute) -> VertexAttributeImpl, USF: Fn(&mut SD::Uniform)
+    {
         let mut binding = VertexAttributeImplVec::new();
+        //let mut uniform_buffer: Vec<u8> = vec!();
 
         // init the used part
-        for attribute in 0..SD::Attribute::count() {
-            binding.push(attribute_source(SD::Attribute::from_index_unsafe(attribute)));
+        for attribute_id in 0..SD::Attribute::count() {
+            let attribute = SD::Attribute::from_index_unsafe(attribute_id);
+            binding.push(attribute_source(attribute));
+        }
+
+        for uniform_id in 0..SD::Uniform::count() {
+            let mut uniform = SD::Uniform::from_index_unsafe(uniform_id);
+            uniform_source(&mut uniform);
+            println!("{:?}", uniform);
+            //uniform_buffer.push();
         }
         self.platform.draw(queue, binding, primitive, vertex_start, vertex_count);
     }

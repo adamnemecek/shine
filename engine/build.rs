@@ -17,6 +17,7 @@ fn main() {
     let dest = PathBuf::from(&env::var("OUT_DIR").unwrap());
 
     println!("cargo:rerun-if-changed=build.rs");
+    //println!("cargo:rerun-if-changed=*.glsl");
 
     if target.contains("windows") {
         let mut file = File::create(&dest.join("wgl_bindings.rs")).unwrap();

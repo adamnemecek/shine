@@ -144,7 +144,7 @@ impl From<Rectangle> for (Position, Size) {
 
 /// Enum like trait that can iterate the values and can be convert to and from primitive type.
 ///
-pub trait PrimitiveEnum: 'static + Copy + Clone + fmt::Debug {
+pub trait IterableEnum: 'static + Copy + Clone + fmt::Debug {
     /// Creates a plain enum for its index
     ///
     /// If index is not in the range, None is returned
@@ -156,6 +156,11 @@ pub trait PrimitiveEnum: 'static + Copy + Clone + fmt::Debug {
         }
     }
 
+    /// Creates enum value from its name
+    fn from_name(name: &str) -> Option<Self> where Self: Sized {
+        Self::index_from_name(name).and_then(|i| { Self::from_index(i) })
+    }
+
     /// Creates a plain enum for its index
     ///
     /// It is unsafe in the sence that, no check is mde on the ranges.
@@ -163,13 +168,58 @@ pub trait PrimitiveEnum: 'static + Copy + Clone + fmt::Debug {
     fn from_index_unsafe(index: usize) -> Self where Self: Sized;
 
     /// Creates enum value from its name
-    fn from_name(name: &str) -> Option<Self> where Self: Sized;
+    fn index_from_name(name: &str) -> Option<usize>;
 
     /// Converts an enum into a plain index
     fn to_index(&self) -> usize;
 
     /// Returns the number of attributes.
     fn count() -> usize;
+}
+
+
+/// Float array with 16 components
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(C)]
+pub struct Float32x16(pub f32, pub f32, pub f32, pub f32,
+                      pub f32, pub f32, pub f32, pub f32,
+                      pub f32, pub f32, pub f32, pub f32,
+                      pub f32, pub f32, pub f32, pub f32);
+
+impl Default for Float32x16 {
+    #[inline(always)]
+    fn default() -> Float32x16 {
+        Float32x16(0., 0., 0., 0.,
+                   0., 0., 0., 0.,
+                   0., 0., 0., 0.,
+                   0., 0., 0., 0.)
+    }
+}
+
+impl From<[f32; 16]> for Float32x16 {
+    #[inline(always)]
+    fn from(value: [f32; 16]) -> Float32x16 {
+        Float32x16(value[0], value[1], value[2], value[3],
+                   value[4], value[5], value[6], value[7],
+                   value[8], value[9], value[10], value[11],
+                   value[12], value[13], value[14], value[15])
+    }
+}
+
+impl From<(f32, f32, f32, f32,
+           f32, f32, f32, f32,
+           f32, f32, f32, f32,
+           f32, f32, f32, f32)> for Float32x16 {
+    #[inline(always)]
+    fn from(value: (f32, f32, f32, f32,
+                    f32, f32, f32, f32,
+                    f32, f32, f32, f32,
+                    f32, f32, f32, f32)) -> Float32x16 {
+        Float32x16(value.0, value.1, value.2, value.3,
+                  value.4, value.5, value.6, value.7,
+                  value.8, value.9, value.10, value.11,
+                  value.12, value.13, value.14, value.15)
+    }
 }
 
 
@@ -199,12 +249,6 @@ impl From<(f32, f32, f32, f32)> for Float32x4 {
     }
 }
 
-
-/// Constructs Float32x4 from multiple expressions
-/// # Example
-/// assert!( f32x4!(1, 2, 3, 4) == Float32x4(1., 2., 3., 4.) );
-/// assert!( f32x4!(1) == Float32x4(1., 1., 1, 1.) );
-/// assert!( f32x4!() == Float32x4(0., 0., 0., 0.) );
 #[macro_export]
 macro_rules! f32x4 {
     ($_x:expr, $_y:expr, $_z:expr, $_w:expr) => { $crate::render::Float32x4($_x as f32, $_y as f32, $_z as f32, $_w as f32) };
@@ -239,12 +283,6 @@ impl From<(f32, f32, f32)> for Float32x3 {
 }
 
 
-/// Constructs Float32x3 from multiple expressions
-///
-/// # Example
-/// assert!( f32x3!(1, 2, 3) == Float32x3(1., 2., 3.) );
-/// assert!( f32x3!(1) == Float32x3(1., 1., 1) );
-/// assert!( f32x3!() == Float32x3(0., 0., 0.) );
 #[macro_export]
 macro_rules! f32x3 {
     ($_x:expr, $_y:expr, $_z:expr) => { $crate::render::Float32x3($_x as f32, $_y as f32, $_z as f32) };
@@ -254,8 +292,8 @@ macro_rules! f32x3 {
 
 
 /// Float array with 2 components
-#[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(C)]
 pub struct Float32x2(pub f32, pub f32);
 
 impl Default for Float32x2 {
@@ -278,13 +316,6 @@ impl From<(f32, f32)> for Float32x2 {
     }
 }
 
-
-/// Constructs Float32x3 from multiple expressions
-///
-/// # Example
-/// assert!( f32x2!(1, 2) == Float32x2(1., 2.) );
-/// assert!( f32x2!(1) == Float32x2(1., 1.) );
-/// assert!( f32x2!() == Float32x2(0., 0.) );
 #[macro_export]
 macro_rules! f32x2 {
     ($_x:expr, $_y:expr) => { $crate::render::Float32x2($_x as f32, $_y as f32) };

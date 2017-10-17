@@ -11,7 +11,7 @@ use render::*;
 /// Trait to define vertex declaration.
 pub trait VertexDeclaration: 'static {
     /// The enums used for the attribute indexing.
-    type Attribute: PrimitiveEnum;
+    type Attribute: IterableEnum;
 
     /// Returns the platform dependent vertex attribute description.
     fn get_attribute_descriptor(index: usize) -> VertexAttributeDescriptorImpl;

@@ -8,11 +8,14 @@ pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 
     let impl_get_declaration;
     let impl_location;
-    if let syn::Body::Struct(syn::VariantData::Struct(ref fields)) = ast.body {
-        impl_get_declaration = impl_get_declaration_for_struct(name, fields);
-        impl_location = impl_location_for_struct(name, fields);
-    } else {
-        panic!("Derive proc-macro VertexDeclaration: no implemented for {:?}", ast.body)
+
+    match ast.body {
+        syn::Body::Struct(syn::VariantData::Struct(ref fields)) => {
+            impl_get_declaration = impl_get_declaration_for_struct(name, fields);
+            impl_location = impl_location_for_struct(name, fields);
+        }
+
+        _ => panic!("No implementation for {:?}", format!("{:?}", ast.body).split('(').nth(0).unwrap())
     }
 
     //println!("impl_get_declaration = \n{}", impl_get_declaration.as_str());
@@ -46,7 +49,7 @@ fn impl_get_declaration_for_struct(name: &syn::Ident, fields: &Vec<syn::Field>) 
 
     gen.push(
         quote! {
-         _ => panic!("Derive proc-macro VertexDeclaration: invalid attribute index: {}, must be in the range 0..{}", idx, #enum_type_name::count()),
+         _ => panic!("Invalid attribute index: {}, must be in the range 0..{}", idx, #enum_type_name::count()),
         }
     );
 
@@ -72,12 +75,15 @@ fn impl_location_for_struct(name: &syn::Ident, fields: &Vec<syn::Field>) -> quot
 
     for field in fields.iter() {
         let field_name = field.ident.as_ref().unwrap().to_string();
-        let enum_name = syn::Ident::new(convert_snake_to_camel_case(&field_name));
+        let enum_name_str = convert_snake_to_camel_case(&field_name);
+        let enum_name = syn::Ident::new(enum_name_str.clone());
         let match_name = format!("v{}", enum_name);
 
         enum_names.push(
             quote! {
                 #[name = #match_name]
+                //#[name = #enum_name_str]
+                //#[name = #field_name]
                 #enum_name
             }
         );
@@ -91,7 +97,7 @@ fn impl_location_for_struct(name: &syn::Ident, fields: &Vec<syn::Field>) -> quot
 
     quote! {
         #[derive(Copy, Clone, Debug)]
-        #[derive(PrimitiveEnum)]
+        #[derive(IterableEnum)]
         #[repr(usize)]
         #[allow(unused_variables)]
         enum #enum_type_name {
