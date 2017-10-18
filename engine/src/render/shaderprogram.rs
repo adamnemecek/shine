@@ -2,6 +2,8 @@
 #![deny(missing_copy_implementations)]
 
 use std::marker::PhantomData;
+use std::str::FromStr;
+use std::slice;
 
 use render::*;
 
@@ -14,17 +16,18 @@ pub enum ShaderType {
     FragmentShader,
 }
 
-
 /// Trait to define shader attribute and uniform names
 pub trait ShaderDeclaration: 'static {
     /// The enums used for the input attribute indexing.
-    type Attribute: IterableEnum;
-    /// The enums used for the input uniform indexing.
-    type Uniform: IterableEnum;
+    type Attribute: 'static + Copy + From<usize> + Into<usize> + FromStr;
 
-    /// Iterate over the shader sources
-    fn map_sources<F: FnMut((ShaderType, &str)) -> bool>(f: F) -> bool;
+    /// Returns an iterator over the shader sources
+    fn get_sources() -> slice::Iter<'static, (ShaderType, &'static str)>;
+
+    /// Returns an iterator over the possible attribute values
+    fn get_attributes() -> slice::Iter<'static, Self::Attribute>;
 }
+
 
 /// Structure to store the shader abstraction.
 pub struct ShaderProgram<SD: ShaderDeclaration> {
@@ -56,23 +59,18 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
 
     /// Sends a geometry for rendering using the given parameters
     pub fn draw<'a, Q, ASF, USF>(&mut self, queue: &mut Q, attribute_source: ASF, uniform_source: USF, primitive: Primitive, vertex_start: usize, vertex_count: usize)
-        where Q: CommandQueue, ASF: Fn(SD::Attribute) -> VertexAttributeImpl, USF: Fn(&mut SD::Uniform)
+        where Q: CommandQueue, ASF: Fn(SD::Attribute) -> VertexAttributeImpl, USF: Fn(usize/*SD::Uniform*/)
     {
         let mut binding = VertexAttributeImplVec::new();
-        //let mut uniform_buffer: Vec<u8> = vec!();
-
-        // init the used part
-        for attribute_id in 0..SD::Attribute::count() {
-            let attribute = SD::Attribute::from_index_unsafe(attribute_id);
-            binding.push(attribute_source(attribute));
+        for idx in SD::get_attributes() {
+            binding.push(attribute_source(*idx));
         }
 
-        for uniform_id in 0..SD::Uniform::count() {
-            let mut uniform = SD::Uniform::from_index_unsafe(uniform_id);
-            uniform_source(&mut uniform);
-            println!("{:?}", uniform);
-            //uniform_buffer.push();
-        }
+        //let mut buffer = [08; 10];
+        //for idx in SD::get_uniforms() {
+         //   uniform_source(*idx);
+            //println!("{}", ud);
+       // }
         self.platform.draw(queue, binding, primitive, vertex_start, vertex_count);
     }
 }

@@ -1,5 +1,7 @@
-use std::rc::Rc;
-use std::cell::RefCell;
+use std::rc::*;
+use std::cell::*;
+use std::slice;
+use std::str;
 
 use world::*;
 use dragorust_engine::render::*;
@@ -19,14 +21,14 @@ struct VxColorTex {
 
 #[derive(ShaderDeclaration)]
 #[vert_src = "
-    uniform mat4 uTrsf;
+    //uniform mat4 uTrsf;
     attribute vec3 vPosition;
     attribute vec3 vColor;
     varying vec3 color;
     void main()
     {
         color = vColor;
-        gl_Position = uTrsf * vec4(vPosition, 1.0);
+        gl_Position = /*uTrsf */ vec4(vPosition, 1.0);
     }
 "]
 #[frag_src = "

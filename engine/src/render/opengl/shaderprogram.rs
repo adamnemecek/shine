@@ -1,6 +1,6 @@
 use std::rc::Rc;
 use std::cell::{RefCell};
-use std::str::from_utf8;
+use std::str::{FromStr, from_utf8};
 use std::vec::Vec;
 use std::marker::PhantomData;
 
@@ -10,6 +10,7 @@ use render::*;
 use render::opengl::lowlevel::*;
 use render::opengl::commandqueue::*;
 
+#[derive(Clone, Debug)]
 struct ShaderError(String);
 
 /// Converts a ShaderType enum to the corresponding GLenum.
@@ -137,7 +138,7 @@ impl GLShaderProgramData {
 
         // create and attach shaders
         gl_check_error();
-        let compile_result = SD::map_sources(|(shader_type, source)| {
+        /*let compile_result = SD::map_sources(|(shader_type, source)| {
             let shader_res = self.attach_shader(gl_get_shader_enum(shader_type), source.as_bytes());
             if let Some(ShaderError(msg)) = shader_res.err() {
                 println!("shader compilation failed.\nsource:\n{}\nerror:\n{}", source, msg);
@@ -146,9 +147,13 @@ impl GLShaderProgramData {
             } else {
                 true
             }
-        });
+        });*/
 
-        assert!(compile_result, "Shader compilation failed");
+        for source in SD::get_sources() {
+            if let Err(ShaderError(err)) = self.attach_shader(gl_get_shader_enum(source.0), source.1.as_bytes()) {
+                panic!("Shader compilation fialed.\n{}\nError:{}", source.1, err);
+            }
+        }
 
         gl_check_error();
         unsafe {
@@ -174,9 +179,8 @@ impl GLShaderProgramData {
     }
 
     fn parse_attributes<SD: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
-        assert!(SD::Attribute::count() <= MAX_USED_ATTRIBUTE_COUNT, "too many vertex attributes in shader declaration: {}/{}", SD::Attribute::count(), MAX_USED_ATTRIBUTE_COUNT);
-
-        (0..SD::Attribute::count()).for_each(|_| self.attributes.push(ShaderAttribute::new()));
+        (SD::get_attributes()).for_each(|_| self.attributes.push(ShaderAttribute::new()));
+        assert!(self.attributes.len() <= MAX_USED_ATTRIBUTE_COUNT, "Too many vertex attributes in shader declaration, allowed count: {}", MAX_USED_ATTRIBUTE_COUNT);
 
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
@@ -191,7 +195,7 @@ impl GLShaderProgramData {
         gl_check_error();
 
         let count = count as GLuint;
-        assert!((count as usize) < MAX_USED_ATTRIBUTE_COUNT, "too many attributes in the shader: {}/{}", count, MAX_USED_ATTRIBUTE_COUNT);
+        assert!((count as usize) < MAX_USED_ATTRIBUTE_COUNT, "Too many attributes in the shader. Allowed count {} but {} was found.", MAX_USED_ATTRIBUTE_COUNT, count);
 
         for location in 0..count {
             gl_check_error();
@@ -207,7 +211,8 @@ impl GLShaderProgramData {
             gl_check_error();
 
             let attribute = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let attribute = SD::Attribute::index_from_name(&attribute).expect(&format!("Attribute id could not be resolved for {}", attribute));
+            let attribute = SD::Attribute::from_str(&attribute).map_err(|_| format!("Attribute name {} could not be resolved", attribute)).unwrap();
+            let attribute: usize = attribute.into();
             let attribute = &mut self.attributes[attribute];
             attribute.location = location;
             attribute.size = attribute_size;
@@ -217,54 +222,54 @@ impl GLShaderProgramData {
     }
 
     fn parse_uniforms<SD: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
-        assert!(SD::Uniform::count() <= MAX_USED_UNIFORM_COUNT, "Too many uniform: {}/{}", SD::Uniform::count(), MAX_USED_UNIFORM_COUNT);
+        //assert!(SD::Uniform::count() <= MAX_USED_UNIFORM_COUNT, "Too many uniform: {}/{}", SD::Uniform::count(), MAX_USED_UNIFORM_COUNT);
 
-        (0..SD::Uniform::count()).for_each(|_| self.uniforms.push(ShaderUniform::new()));
+        /* (0..SD::Uniform::count()).for_each(|_| self.uniforms.push(ShaderUniform::new()));
 
-        let mut count: GLint = 0;
-        let name_buffer: [u8; 16] = [0; 16];
-        let mut name_length: GLsizei = 0;
-        let mut uniform_size: GLint = 0;
-        let mut uniform_type: GLenum = 0;
+         let mut count: GLint = 0;
+         let name_buffer: [u8; 16] = [0; 16];
+         let mut name_length: GLsizei = 0;
+         let mut uniform_size: GLint = 0;
+         let mut uniform_type: GLenum = 0;
 
-        gl_check_error();
-        unsafe {
-            gl::GetProgramiv(self.hw_id, gl::ACTIVE_UNIFORMS, &mut count);
-        }
-        gl_check_error();
+         gl_check_error();
+         unsafe {
+             gl::GetProgramiv(self.hw_id, gl::ACTIVE_UNIFORMS, &mut count);
+         }
+         gl_check_error();
 
-        let count = count as GLuint;
-        assert!((count as usize) < MAX_USED_UNIFORM_COUNT, "too many uniforms in the shader: {}/{}", count, MAX_USED_UNIFORM_COUNT);
+         let count = count as GLuint;
+         assert!((count as usize) < MAX_USED_UNIFORM_COUNT, "too many uniforms in the shader: {}/{}", count, MAX_USED_UNIFORM_COUNT);
 
-        let mut buffer_size = 0;
-        for location in 0..count {
-            gl_check_error();
-            unsafe {
-                gl::GetActiveUniform(self.hw_id,
-                                     location,
-                                     name_buffer.len() as GLint,
-                                     &mut name_length,
-                                     &mut uniform_size,
-                                     &mut uniform_type,
-                                     name_buffer.as_ptr() as *mut GLchar);
-            }
-            gl_check_error();
+         let mut buffer_size = 0;
+         for location in 0..count {
+             gl_check_error();
+             unsafe {
+                 gl::GetActiveUniform(self.hw_id,
+                                      location,
+                                      name_buffer.len() as GLint,
+                                      &mut name_length,
+                                      &mut uniform_size,
+                                      &mut uniform_type,
+                                      name_buffer.as_ptr() as *mut GLchar);
+             }
+             gl_check_error();
 
-            let uniform = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let uniform = SD::Uniform::from_name(&uniform).expect(&format!("Uniform id could not be resolved for {}", uniform));
-            println!("uniform= {:?}", uniform);
-            let uniform = uniform.to_index();
-            let uniform = &mut self.uniforms[uniform];
-            uniform.location = location;
-            uniform.size = uniform_size;
-            uniform.type_id = uniform_type;
-            uniform.data_offset = buffer_size;
-            println!("uniform= {:?}", uniform);
+             let uniform = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
+             let uniform = SD::Uniform::from_name(&uniform).expect(&format!("Uniform id could not be resolved for {}", uniform));
+             println!("uniform= {:?}", uniform);
+             let uniform = uniform.to_index();
+             let uniform = &mut self.uniforms[uniform];
+             uniform.location = location;
+             uniform.size = uniform_size;
+             uniform.type_id = uniform_type;
+             uniform.data_offset = buffer_size;
+             println!("uniform= {:?}", uniform);
 
-            buffer_size += uniform.data_size;
-        }
+             buffer_size += uniform.data_size;
+         }
 
-        self.uniform_data.resize(buffer_size, 0);
+         self.uniform_data.resize(buffer_size, 0);*/
     }
 
     fn release(&mut self, ll: &mut LowLevel) {

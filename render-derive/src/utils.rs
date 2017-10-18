@@ -34,6 +34,7 @@ pub fn impl_offset_of(container: &syn::Ident, field: &syn::Ident) -> quote::Toke
         // Make sure the field actually exists. This line ensures that a
         // compile-time error is generated if $field is accessed through a
         // Deref impl.
+        #[allow(unused_variables)]
         let #container { #field: _, .. };
 
         // Create an instance of the container and calculate the offset to its
