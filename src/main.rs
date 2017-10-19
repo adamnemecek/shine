@@ -19,7 +19,7 @@ pub fn main() {
 
     let mut window = render::WindowSettings::new()
         .title("main")
-        .size((1024, 1024))
+        .size((102, 102))
         .build(&engine, SimpleView::new(world.clone())).expect("Could not initialize main window");
 
     let mut sub_window = render::WindowSettings::new()

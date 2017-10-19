@@ -27,6 +27,25 @@ pub fn convert_snake_to_camel_case(intput: &str) -> String {
     result
 }
 
+pub fn convert_camel_to_snake_case(intput: &str) -> String {
+    let mut result = String::new();
+    result.reserve(intput.len());
+
+    for c in intput.chars() {
+        if c.is_uppercase() {
+            if !result.is_empty() {
+                result.push('_');
+            }
+            for u in c.to_lowercase() {
+                result.push(u);
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
 
 pub fn impl_offset_of(container: &syn::Ident, field: &syn::Ident) -> quote::Tokens {
     quote! { unsafe {

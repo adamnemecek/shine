@@ -8,20 +8,10 @@ use proc_macro::TokenStream;
 mod utils;
 mod glslang;
 mod vertexdeclaration;
-mod iterableenum;
 mod shaderdeclaration;
 
-use iterableenum::*;
 use vertexdeclaration::*;
 use shaderdeclaration::*;
-
-#[proc_macro_derive(IterableEnum, attributes(name))]
-pub fn primitive_enum(input: TokenStream) -> TokenStream {
-    let s = input.to_string();
-    let ast = syn::parse_derive_input(&s).unwrap();
-    let gen = impl_primitive_enum(&ast);
-    gen.parse().unwrap()
-}
 
 #[proc_macro_derive(VertexDeclaration)]
 pub fn vertex_declaration(input: TokenStream) -> TokenStream {

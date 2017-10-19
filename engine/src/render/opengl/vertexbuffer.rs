@@ -7,6 +7,7 @@ use render::*;
 use render::opengl::lowlevel::*;
 
 /// Structure to store reference to a single attribute os a buffer
+#[derive(Clone)]
 pub struct GLVertexAttribute {
     target: Rc<RefCell<GLVertexBufferData>>,
     attribute_index: usize
@@ -19,7 +20,7 @@ impl GLVertexAttribute {
     }
 }
 
-pub type GLVertexAttributeVec = ArrayVec<[GLVertexAttribute; MAX_USED_ATTRIBUTE_COUNT]>;
+//pub type GLVertexAttributeVec = ArrayVec<[GLVertexAttribute; MAX_USED_ATTRIBUTE_COUNT]>;
 pub type GLVertexAttributeDescriptorVec = ArrayVec<[GLVertexAttributeDescriptor; MAX_VERTEX_ATTRIBUTE_COUNT]>;
 
 
@@ -159,4 +160,4 @@ pub type VertexBufferImpl = GLVertexBuffer;
 pub type VertexAttributeDescriptorImpl = GLVertexAttributeDescriptor;
 pub type VertexAttributeDescriptorImplVec = GLVertexAttributeDescriptorVec;
 pub type VertexAttributeImpl = GLVertexAttribute;
-pub type VertexAttributeImplVec = GLVertexAttributeVec;
+//pub type VertexAttributeImplVec = GLVertexAttributeVec;
