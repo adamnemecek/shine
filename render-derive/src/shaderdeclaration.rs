@@ -183,6 +183,7 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
         };
 
         let type_token = uniform.get_type_token().unwrap();
+        let type_function_ident = syn::Ident::new(format!("process_{}", uniform.get_type_function_name().unwrap()));
 
         uniform_fields.push(quote! {
             #uniform_field_ident : #type_token
@@ -196,7 +197,7 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
 
         match_index_cases.push(
             quote! {
-                #index => mem::transmute(&self.#uniform_field_ident)
+                #index => visitor.#type_function_ident(&self.#uniform_field_ident)
             }
         );
     }
@@ -220,8 +221,7 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
                 }
             }
 
-            unsafe fn get_raw_index(&self, index: usize) -> *const u8 {
-                use std::mem;
+            fn process_by_index<V: DataVisitor>(&self, index: usize, visitor: &V) {
                 match index {
                     #(#match_index_cases,)*
                     _ => panic!("Uniform index ({}) is out of range (0..{})", index, #count)

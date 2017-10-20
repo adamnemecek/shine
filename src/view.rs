@@ -22,12 +22,13 @@ struct VxColorTex {
 #[derive(ShaderDeclaration)]
 #[vert_src = "
     uniform mat4 uTrsf;
+    uniform vec3 uColor;
     attribute vec3 vPosition;
     attribute vec3 vColor;
     varying vec3 color;
     void main()
     {
-        color = vColor;
+        color = vColor + uColor;
         gl_Position = uTrsf * vec4(vPosition, 1.0);
     }
 "]
@@ -142,7 +143,8 @@ impl View for SimpleView {
                                  trsf: Float32x16(1f32, 0f32, 0f32, 0f32,
                                                   0f32, 1f32, 0f32, 0f32,
                                                   0f32, 0f32, 1f32, 0f32,
-                                                  0f32, 0f32, 0f32, 1f32)
+                                                  0f32, 0f32, 0f32, 1f32),
+                                 color: Float32x3(1.2f32, 0.2f32, 0.2f32),
                              },
                              Primitive::Triangle, 0, 3
             );

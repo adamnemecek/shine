@@ -284,3 +284,13 @@ macro_rules! f32x2 {
     () => { {let f : $crate::render::Float32x2 = Default::default(); f} };
 }
 
+
+/// Trait for the visitor pattern to process render types
+#[allow(missing_docs)]
+pub trait DataVisitor {
+    fn process_f32x16(&self, data: &Float32x16);
+    fn process_f32x4(&self, data: &Float32x4);
+    fn process_f32x3(&self, data: &Float32x3);
+    fn process_f32x2(&self, data: &Float32x2);
+    fn process_f32(&self, data: f32);
+}

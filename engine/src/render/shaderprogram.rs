@@ -35,8 +35,8 @@ pub trait ShaderUniform {
     /// Returns the index by uniform name
     fn get_index_by_name(name: &str) -> Option<usize>;
 
-    /// Returns the raw data pointer by index
-    unsafe fn get_raw_index(&self, index: usize) -> *const u8;
+    /// Visit data by index
+    fn process_by_index<V: DataVisitor>(&self, index: usize, visitor: &V);
 }
 
 /// Trait to define shader attribute and uniform names

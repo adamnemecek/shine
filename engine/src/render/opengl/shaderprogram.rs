@@ -1,8 +1,8 @@
 use std::rc::Rc;
 use std::cell::{RefCell};
 use std::str::from_utf8;
-use std::vec::Vec;
 use std::marker::PhantomData;
+use std::mem;
 
 use arrayvec::ArrayVec;
 
@@ -75,6 +75,50 @@ impl UniformLocation {
     }
 }
 
+impl DataVisitor for UniformLocation {
+    fn process_f32x16(&self, data: &Float32x16) {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT_MAT4 && self.size == 1 );
+        unsafe {
+            gl::UniformMatrix4fv(self.location as i32, self.size, gl::FALSE, mem::transmute(data));
+        }
+    }
+
+    fn process_f32x4(&self, data: &Float32x4) {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT_VEC4 && self.size == 1 );
+        unsafe {
+            gl::Uniform4fv(self.location as i32, self.size, mem::transmute(data));
+        }
+    }
+
+    fn process_f32x3(&self, data: &Float32x3) {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT_VEC3 && self.size == 1 );
+        unsafe {
+            gl::Uniform3fv(self.location as i32, self.size, mem::transmute(data));
+        }
+    }
+
+    fn process_f32x2(&self, data: &Float32x2)
+    {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT_VEC2 && self.size == 1 );
+        unsafe {
+            gl::Uniform2fv(self.location as i32, self.size, mem::transmute(data));
+        }
+    }
+
+    fn process_f32(&self, data: f32) {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT && self.size == 1 );
+        unsafe {
+            gl::Uniform1fv(self.location as i32, self.size, mem::transmute(&data));
+        }
+    }
+}
+
+
 /// Uniforms in the order defined by the descriptor
 type UniformLocations = ArrayVec<[UniformLocation; MAX_USED_UNIFORM_COUNT]>;
 
@@ -84,7 +128,6 @@ struct GLShaderProgramData {
     hw_id: GLuint,
     attributes: AttributeLocations,
     uniforms: UniformLocations,
-    uniform_data: Vec<u8>,
 }
 
 impl GLShaderProgramData {
@@ -93,7 +136,6 @@ impl GLShaderProgramData {
             hw_id: 0,
             attributes: AttributeLocations::new(),
             uniforms: UniformLocations::new(),
-            uniform_data: vec!()
         }
     }
 
@@ -266,8 +308,6 @@ impl GLShaderProgramData {
 
             buffer_size += uniform.data_size;
         }
-
-        self.uniform_data.resize(buffer_size, 0);
     }
 
     fn release(&mut self, ll: &mut LowLevel) {
@@ -286,7 +326,6 @@ impl GLShaderProgramData {
         self.hw_id = 0;
         self.attributes.clear();
         self.uniforms.clear();
-        self.uniform_data.clear();
     }
 
     fn draw<A: ShaderAttribute, U: ShaderUniform>(&mut self, ll: &mut LowLevel, attributes: &A, uniforms: &U, primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
@@ -300,13 +339,8 @@ impl GLShaderProgramData {
         }
 
         // bind uniforms
-        for (index, ref location) in (0..A::get_count()).zip(self.uniforms.iter()) {
-            if location.is_valid() {
-                unsafe {
-                    let data = uniforms.get_raw_index(index);
-                    gl::UniformMatrix4fv(location.location as i32, location.size, gl::FALSE, data as *const f32);
-                }
-            }
+        for (index, location) in (0..A::get_count()).zip(self.uniforms.iter()) {
+            uniforms.process_by_index(index, location);
         }
 
         ll.draw(primitive, vertex_start, vertex_count);
