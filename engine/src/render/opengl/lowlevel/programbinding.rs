@@ -46,4 +46,6 @@ impl ProgramBinding {
             self.bind(0);
         }
     }
+
+    pub fn commit(&mut self) {}
 }

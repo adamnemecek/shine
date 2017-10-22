@@ -59,7 +59,7 @@ impl GLVertexBufferData {
     }
 
     fn bind(&self, ll: &mut LowLevel, location: GLuint, attribute: usize) {
-        ll.vertex_binding.delayed_bind_attribute(location, self.hw_id, &self.attributes[attribute as usize]);
+        ll.vertex_binding.bind_attribute(location, self.hw_id, &self.attributes[attribute as usize]);
     }
 
     fn release(&mut self, ll: &mut LowLevel) {

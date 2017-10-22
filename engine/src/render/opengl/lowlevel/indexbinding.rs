@@ -75,29 +75,19 @@ impl IndexBinding {
         self.bound_id = hw_id;
     }
 
-    /// Prepares for rendering without index buffer.
-    pub fn delayed_bind_no_index(&mut self) {
-        self.bound_index.time_stamp = self.time_stamp;
-        if self.bound_index.hw_id == 0 {
-            return;
-        }
-
-        self.bound_index.hw_id = 0;
+    /// Sets up states for rendering without index buffer.
+    pub fn bind_no_index(&mut self) {
+        self.bind_buffer(0);
         self.bound_index.index_type = 0;
+        self.bound_index.time_stamp = self.time_stamp;
     }
 
-    /// Prepares for rendering with index buffer.
-    pub fn delayed_bind_index(&mut self, hw_id: GLuint, index_type: GLenum) {
+    /// Sets up states for rendering with index buffer.
+    pub fn bind_index(&mut self, hw_id: GLuint, index_type: GLenum) {
         assert!(hw_id != 0);
         assert!(index_type != 0);
-
-        self.bound_index.time_stamp = self.time_stamp;
-        if self.bound_index.hw_id == hw_id && self.bound_index.index_type == index_type {
-            return;
-        }
-
-        self.bound_index.hw_id = hw_id;
         self.bound_index.index_type = index_type;
+        self.bound_index.time_stamp = self.time_stamp;
     }
 
     /// Unbinds an index buffer if it is active. This function is mainly used during release.
@@ -107,17 +97,12 @@ impl IndexBinding {
         }
     }
 
-    /// Finalizes the index binding and commits all index related GL calls.
-    /// If indexed rendering is not enabled since the last render call,
-    /// (ex. bind_index was not called) non-index rendering is assumed.
+    /// Finalizes the index binding. If no index binding was bound since the last
+    /// commit, non-index rendering is assumed.
     pub fn commit(&mut self) {
         if self.bound_index.time_stamp != self.time_stamp {
-            self.delayed_bind_no_index();
+            self.bind_no_index();
         }
-
-        let hw_id = self.bound_index.hw_id;
-        self.bind_buffer(hw_id);
-
         self.time_stamp.wrapping_add(1);
     }
 }

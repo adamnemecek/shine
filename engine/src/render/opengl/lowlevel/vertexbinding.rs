@@ -3,19 +3,17 @@ use render::opengl::lowlevel::*;
 
 #[derive(Clone, Copy)]
 struct BoundVertexAttribute {
-    time_stamp: u8,
-    dirty: bool,
     hw_id: GLuint,
     attribute: GLVertexAttributeDescriptor,
+    time_stamp: u8,
 }
 
 impl BoundVertexAttribute {
     fn new() -> BoundVertexAttribute {
         BoundVertexAttribute {
-            time_stamp: 0,
-            dirty: false,
             hw_id: 0,
             attribute: GLVertexAttributeDescriptor::new(),
+            time_stamp: 0,
         }
     }
 }
@@ -23,18 +21,18 @@ impl BoundVertexAttribute {
 
 pub struct VertexBinding {
     force: bool,
-    time_stamp: u8,
     bound_id: GLuint,
     bound_attributes: [BoundVertexAttribute; MAX_USED_ATTRIBUTE_COUNT],
+    time_stamp: u8,
 }
 
 impl VertexBinding {
     pub fn new() -> VertexBinding {
         VertexBinding {
             force: false,
-            time_stamp: 1,
             bound_id: 0,
             bound_attributes: [BoundVertexAttribute::new(); MAX_USED_ATTRIBUTE_COUNT],
+            time_stamp: 1,
         }
     }
 
@@ -59,18 +57,28 @@ impl VertexBinding {
     }
 
     /// Binds a vertex attribute to the given location.
-    /// The actual gl calls are delayed until the call of the commit.
-    pub fn delayed_bind_attribute(&mut self, location: GLuint, hw_id: GLuint, attribute: &GLVertexAttributeDescriptor) {
+    pub fn bind_attribute(&mut self, location: GLuint, hw_id: GLuint, attribute: &GLVertexAttributeDescriptor) {
         assert!( hw_id != 0 );
 
         let attr = &mut self.bound_attributes[location as usize];
-        attr.time_stamp = self.time_stamp; // make it dirty
-        if attr.attribute == *attribute && attr.hw_id == hw_id {
-            return;
+        gl_check_error();
+        if self.force || attr.hw_id != hw_id || attr.attribute != *attribute {
+            //bind buffer
+            unsafe {
+                if self.force || self.bound_id == hw_id {
+                    gl::BindBuffer(gl::ARRAY_BUFFER, hw_id);
+                    gl::VertexAttribPointer(location,
+                                            attribute.components, attribute.component_type, attribute.normalize,
+                                            attribute.stride, attribute.offset as *const GLvoid);
+                    gl::EnableVertexAttribArray(location);
+                }
+            }
+            self.bound_id = hw_id;
+            attr.hw_id = hw_id;
+            attr.attribute = *attribute;
+            attr.time_stamp = self.time_stamp;
+            gl_check_error();
         }
-        attr.attribute = *attribute;
-        attr.hw_id = hw_id;
-        attr.dirty = true;
     }
 
     /// Unbinds a vertex buffer if it is active. This function is mainly used during release.
@@ -80,35 +88,16 @@ impl VertexBinding {
         }
     }
 
-    /// Finalizes the vertex attributes and commits all vertex related pending GL calls.
-    /// Attributes not bound since the last render call are automatically disabled.
+    /// Finalizes the vertex attribute binding. If an attribute was not bound for the
+    /// cuurent render darw, it is disabled automatically.
     pub fn commit(&mut self) {
-        for (attr_id, attr) in self.bound_attributes.iter_mut().enumerate() {
+        for (location, attr) in self.bound_attributes.iter_mut().enumerate() {
             if attr.time_stamp != self.time_stamp && attr.hw_id != 0 {
                 // untouched attributes are unbound automatically
                 attr.attribute = GLVertexAttributeDescriptor::new();
                 attr.hw_id = 0;
-                attr.dirty = true;
-            }
-            attr.time_stamp == self.time_stamp;
-
-            if attr.dirty || self.force {
-                attr.dirty = false;
-                gl_check_error();
                 unsafe {
-                    let location = attr_id as GLuint;
-                    if attr.hw_id == 0 {
-                        gl::DisableVertexAttribArray(location);
-                    } else {
-                        if self.force || self.bound_id != attr.hw_id {
-                            gl::BindBuffer(gl::ARRAY_BUFFER, attr.hw_id);
-                            self.bound_id = attr.hw_id;
-                        }
-                        gl::VertexAttribPointer(location,
-                                                attr.attribute.components, attr.attribute.component_type, attr.attribute.normalize,
-                                                attr.attribute.stride, attr.attribute.offset as *const GLvoid);
-                        gl::EnableVertexAttribArray(location);
-                    }
+                    gl::DisableVertexAttribArray(location as GLuint);
                 }
                 gl_check_error();
             }

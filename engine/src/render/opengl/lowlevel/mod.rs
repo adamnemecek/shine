@@ -74,7 +74,7 @@ impl LowLevel {
         vertex_count, gl_get_primitive_name(primitive) );
 
 
-        //self.program_binding.commit();
+        self.program_binding.commit();
         self.vertex_binding.commit();
         self.index_binding.commit();
         self.texture_binding.commit();
