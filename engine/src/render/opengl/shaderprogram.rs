@@ -1,8 +1,8 @@
 use std::rc::Rc;
 use std::cell::{RefCell};
 use std::str::from_utf8;
-use std::vec::Vec;
 use std::marker::PhantomData;
+use std::mem;
 
 use arrayvec::ArrayVec;
 
@@ -10,6 +10,7 @@ use render::*;
 use render::opengl::lowlevel::*;
 use render::opengl::commandqueue::*;
 
+#[derive(Clone, Debug)]
 struct ShaderError(String);
 
 /// Converts a ShaderType enum to the corresponding GLenum.
@@ -22,15 +23,15 @@ fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
 
 /// Attribute info
 #[derive(Copy, Clone, Debug)]
-struct ShaderAttribute {
+struct AttributeLocation {
     location: GLuint,
     size: GLint,
     type_id: GLenum,
 }
 
-impl ShaderAttribute {
-    fn new() -> ShaderAttribute {
-        ShaderAttribute {
+impl AttributeLocation {
+    fn new() -> AttributeLocation {
+        AttributeLocation {
             location: 0,
             size: 0,
             type_id: 0,
@@ -42,12 +43,13 @@ impl ShaderAttribute {
     }
 }
 
-type ShaderAttributes = ArrayVec<[ShaderAttribute; MAX_USED_ATTRIBUTE_COUNT]>;
+/// Attributes in the order defined by the descriptor
+type AttributeLocations = ArrayVec<[AttributeLocation; MAX_USED_ATTRIBUTE_COUNT]>;
 
 
 /// Uniform info
 #[derive(Copy, Clone, Debug)]
-struct ShaderUniform {
+struct UniformLocation {
     location: GLuint,
     size: GLint,
     type_id: GLenum,
@@ -57,9 +59,9 @@ struct ShaderUniform {
     data_size: usize,
 }
 
-impl ShaderUniform {
-    fn new() -> ShaderUniform {
-        ShaderUniform {
+impl UniformLocation {
+    fn new() -> UniformLocation {
+        UniformLocation {
             location: 0,
             size: 0,
             type_id: 0,
@@ -73,24 +75,67 @@ impl ShaderUniform {
     }
 }
 
-type ShaderUniforms = ArrayVec<[ShaderUniform; MAX_USED_UNIFORM_COUNT]>;
+impl DataVisitor for UniformLocation {
+    fn process_f32x16(&self, data: &Float32x16) {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT_MAT4 && self.size == 1 );
+        unsafe {
+            gl::UniformMatrix4fv(self.location as i32, self.size, gl::FALSE, mem::transmute(data));
+        }
+    }
+
+    fn process_f32x4(&self, data: &Float32x4) {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT_VEC4 && self.size == 1 );
+        unsafe {
+            gl::Uniform4fv(self.location as i32, self.size, mem::transmute(data));
+        }
+    }
+
+    fn process_f32x3(&self, data: &Float32x3) {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT_VEC3 && self.size == 1 );
+        unsafe {
+            gl::Uniform3fv(self.location as i32, self.size, mem::transmute(data));
+        }
+    }
+
+    fn process_f32x2(&self, data: &Float32x2)
+    {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT_VEC2 && self.size == 1 );
+        unsafe {
+            gl::Uniform2fv(self.location as i32, self.size, mem::transmute(data));
+        }
+    }
+
+    fn process_f32(&self, data: f32) {
+        if !self.is_valid() { return; }
+        assert!(self.type_id == gl::FLOAT && self.size == 1 );
+        unsafe {
+            gl::Uniform1fv(self.location as i32, self.size, mem::transmute(&data));
+        }
+    }
+}
+
+
+/// Uniforms in the order defined by the descriptor
+type UniformLocations = ArrayVec<[UniformLocation; MAX_USED_UNIFORM_COUNT]>;
 
 
 /// Structure to store hardware data associated to a ShaderProgram.
 struct GLShaderProgramData {
     hw_id: GLuint,
-    attributes: ShaderAttributes,
-    uniforms: ShaderUniforms,
-    uniform_data: Vec<u8>,
+    attributes: AttributeLocations,
+    uniforms: UniformLocations,
 }
 
 impl GLShaderProgramData {
     fn new() -> GLShaderProgramData {
         GLShaderProgramData {
             hw_id: 0,
-            attributes: ShaderAttributes::new(),
-            uniforms: ShaderUniforms::new(),
-            uniform_data: vec!()
+            attributes: AttributeLocations::new(),
+            uniforms: UniformLocations::new(),
         }
     }
 
@@ -137,7 +182,7 @@ impl GLShaderProgramData {
 
         // create and attach shaders
         gl_check_error();
-        let compile_result = SD::map_sources(|(shader_type, source)| {
+        /*let compile_result = SD::map_sources(|(shader_type, source)| {
             let shader_res = self.attach_shader(gl_get_shader_enum(shader_type), source.as_bytes());
             if let Some(ShaderError(msg)) = shader_res.err() {
                 println!("shader compilation failed.\nsource:\n{}\nerror:\n{}", source, msg);
@@ -146,9 +191,13 @@ impl GLShaderProgramData {
             } else {
                 true
             }
-        });
+        });*/
 
-        assert!(compile_result, "Shader compilation failed");
+        for source in SD::get_sources() {
+            if let Err(ShaderError(err)) = self.attach_shader(gl_get_shader_enum(source.0), source.1.as_bytes()) {
+                panic!("Shader compilation fialed.\n{}\nError:{}", source.1, err);
+            }
+        }
 
         gl_check_error();
         unsafe {
@@ -174,9 +223,8 @@ impl GLShaderProgramData {
     }
 
     fn parse_attributes<SD: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
-        assert!(SD::Attribute::count() <= MAX_USED_ATTRIBUTE_COUNT, "too many vertex attributes in shader declaration: {}/{}", SD::Attribute::count(), MAX_USED_ATTRIBUTE_COUNT);
-
-        (0..SD::Attribute::count()).for_each(|_| self.attributes.push(ShaderAttribute::new()));
+        (0..SD::Attributes::get_count()).for_each(|_| self.attributes.push(AttributeLocation::new()));
+        assert!(self.attributes.len() <= MAX_USED_ATTRIBUTE_COUNT, "Too many vertex attributes in shader declaration, allowed count: {}", MAX_USED_ATTRIBUTE_COUNT);
 
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
@@ -191,7 +239,7 @@ impl GLShaderProgramData {
         gl_check_error();
 
         let count = count as GLuint;
-        assert!((count as usize) < MAX_USED_ATTRIBUTE_COUNT, "too many attributes in the shader: {}/{}", count, MAX_USED_ATTRIBUTE_COUNT);
+        assert!((count as usize) < MAX_USED_ATTRIBUTE_COUNT, "Too many vertex attributes in the shader. Allowed count {} but {} was found.", MAX_USED_ATTRIBUTE_COUNT, count);
 
         for location in 0..count {
             gl_check_error();
@@ -206,20 +254,19 @@ impl GLShaderProgramData {
             }
             gl_check_error();
 
-            let attribute = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let attribute = SD::Attribute::index_from_name(&attribute).expect(&format!("Attribute id could not be resolved for {}", attribute));
-            let attribute = &mut self.attributes[attribute];
+            let attribute_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
+            let attribute_idx = SD::Attributes::get_index_by_name(&attribute_name).expect(&format!("Vertex attribute name {} could not be resolved", attribute_name));
+            let attribute = &mut self.attributes[attribute_idx];
             attribute.location = location;
             attribute.size = attribute_size;
             attribute.type_id = attribute_type;
-            //println!("attribute= {:?}", attribute);
+            println!("attribute {}({})= {:?}", attribute_name, attribute_idx, attribute);
         }
     }
 
     fn parse_uniforms<SD: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
-        assert!(SD::Uniform::count() <= MAX_USED_UNIFORM_COUNT, "Too many uniform: {}/{}", SD::Uniform::count(), MAX_USED_UNIFORM_COUNT);
-
-        (0..SD::Uniform::count()).for_each(|_| self.uniforms.push(ShaderUniform::new()));
+        (0..SD::Uniforms::get_count()).for_each(|_| self.uniforms.push(UniformLocation::new()));
+        assert!(self.uniforms.len() <= MAX_USED_ATTRIBUTE_COUNT, "Too many uniforms in shader declaration, allowed count: {}", MAX_USED_UNIFORM_COUNT);
 
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
@@ -234,7 +281,7 @@ impl GLShaderProgramData {
         gl_check_error();
 
         let count = count as GLuint;
-        assert!((count as usize) < MAX_USED_UNIFORM_COUNT, "too many uniforms in the shader: {}/{}", count, MAX_USED_UNIFORM_COUNT);
+        assert!((count as usize) < MAX_USED_UNIFORM_COUNT, "Too many uniforms in the shader: {}/{}", count, MAX_USED_UNIFORM_COUNT);
 
         let mut buffer_size = 0;
         for location in 0..count {
@@ -250,21 +297,17 @@ impl GLShaderProgramData {
             }
             gl_check_error();
 
-            let uniform = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let uniform = SD::Uniform::from_name(&uniform).expect(&format!("Uniform id could not be resolved for {}", uniform));
-            println!("uniform= {:?}", uniform);
-            let uniform = uniform.to_index();
-            let uniform = &mut self.uniforms[uniform];
+            let uniform_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
+            let uniform_idx = SD::Uniforms::get_index_by_name(&uniform_name).expect(&format!("Uniform name {} could not be resolved", uniform_name));
+            let uniform = &mut self.uniforms[uniform_idx];
             uniform.location = location;
             uniform.size = uniform_size;
             uniform.type_id = uniform_type;
             uniform.data_offset = buffer_size;
-            println!("uniform= {:?}", uniform);
+            println!("uniform {}({})= {:?}", uniform_name, uniform_idx, uniform);
 
             buffer_size += uniform.data_size;
         }
-
-        self.uniform_data.resize(buffer_size, 0);
     }
 
     fn release(&mut self, ll: &mut LowLevel) {
@@ -283,15 +326,21 @@ impl GLShaderProgramData {
         self.hw_id = 0;
         self.attributes.clear();
         self.uniforms.clear();
-        self.uniform_data.clear();
     }
 
-    fn draw(&mut self, ll: &mut LowLevel, binding: &GLVertexAttributeVec, primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
+    fn draw<A: ShaderAttribute, U: ShaderUniform>(&mut self, ll: &mut LowLevel, attributes: &A, uniforms: &U, primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
         ll.program_binding.bind(self.hw_id);
-        for (ref vertex_attrib, ref shader_attrib) in binding.iter().zip(self.attributes.iter()) {
-            if shader_attrib.is_valid() {
-                vertex_attrib.bind(ll, shader_attrib.location);
+
+        // bind attributes
+        for (index, ref location) in (0..A::get_count()).zip(self.attributes.iter()) {
+            if location.is_valid() {
+                attributes.get_by_index(index).bind(ll, location.location);
             }
+        }
+
+        // bind uniforms
+        for (index, location) in (0..A::get_count()).zip(self.uniforms.iter()) {
+            uniforms.process_by_index(index, location);
         }
 
         ll.draw(primitive, vertex_start, vertex_count);
@@ -342,22 +391,23 @@ impl Command for ReleaseCommand {
 
 
 /// RenderCommand to submit a geometry for rendering
-struct DrawCommand {
+struct DrawCommand<SD: ShaderDeclaration> {
     target: Rc<RefCell<GLShaderProgramData>>,
-    binding: GLVertexAttributeVec,
+    attributes: SD::Attributes,
+    uniforms: SD::Uniforms,
     primitive: GLenum,
     vertex_start: GLuint,
     vertex_count: GLuint,
 }
 
-impl Command for DrawCommand {
+impl<SD: ShaderDeclaration> Command for DrawCommand<SD> {
     fn get_sort_key(&self) -> usize {
         1
     }
 
     fn process(&mut self, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
-        shader.draw(ll, &self.binding, self.primitive, self.vertex_start, self.vertex_count);
+        shader.draw(ll, &self.attributes, &self.uniforms, self.primitive, self.vertex_start, self.vertex_count);
     }
 }
 
@@ -389,12 +439,15 @@ impl GLShaderProgram {
         );
     }
 
-    pub fn draw<'a, Q: CommandQueue>(&mut self, queue: &mut Q, binding: GLVertexAttributeVec,
-                                     primitive: Primitive, vertex_start: usize, vertex_count: usize) {
+    pub fn draw<SD: ShaderDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q,
+                                                        attributes: SD::Attributes,
+                                                        uniforms: SD::Uniforms,
+                                                        primitive: Primitive, vertex_start: usize, vertex_count: usize) {
         queue.add(
-            DrawCommand {
+            DrawCommand::<SD> {
                 target: self.0.clone(),
-                binding: binding,
+                attributes: attributes,
+                uniforms: uniforms,
                 primitive: gl_get_primitive_enum(primitive),
                 vertex_start: vertex_start as GLuint,
                 vertex_count: vertex_count as GLuint,

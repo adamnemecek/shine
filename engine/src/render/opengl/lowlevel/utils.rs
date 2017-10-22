@@ -4,6 +4,8 @@ use std::mem;
 
 use render::opengl::lowlevel::*;
 
+
+/// Checks the last gl error code
 pub fn gl_check_error() {
     match unsafe { gl::GetError() } {
         gl::NO_ERROR => {}
@@ -72,4 +74,3 @@ pub fn gl_get_primitive_name(primitive: GLenum) -> &'static str {
         _ => panic!("unknown gl primitive enum{}", primitive),
     }
 }
-

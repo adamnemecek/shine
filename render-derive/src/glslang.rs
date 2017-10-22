@@ -77,6 +77,42 @@ impl Uniform {
             Ok(type_id)
         }
     }
+
+    pub fn get_type_function_name(&self) -> Result<String, String> {
+        let type_id =
+            match self.type_id {
+                5126 => "f32", // GLenum(GL_FLOAT)
+                35664 => "f32x2", // GLenum(GL_FLOAT_VEC2)
+                35665 => "f32x3",// GLenum(GL_FLOAT_VEC3)
+                35666 => "f32x4",// GLenum(GL_FLOAT_VEC4)
+
+                5124 => "i32",// GLenum(GL_INT)
+                35667 => "i32x2",// GLenum(GL_INT_VEC2)
+                35668 => "i32x3",// GLenum(GL_INT_VEC3)
+                35669 => "i32x4",// GLenum(GL_INT_VEC4)
+
+                35670 => "bool",// GLenum(GL_BOOL)
+                35671 => "boolx2",// GLenum(GL_BOOL_VEC2)
+                35672 => "boolx3",// GLenum(GL_BOOL_VEC3)
+                35673 => "boolx4",// GLenum(GL_BOOL_VEC4)
+
+                35674 => "f32x4",// GLenum(GL_FLOAT_MAT2)
+                35675 => "f32x9",// GLenum(GL_FLOAT_MAT3)
+                35676 => "f32x16",// GLenum(GL_FLOAT_MAT4)
+
+                35678 => "i32",// GLenum(GL_SAMPLER_2D)
+                35680 => "i32",// GLenum(GL_SAMPLER_CUBE)
+
+                _ => return Err(format!("Could not find built-in type for uniform {}, type id:{}", self.name, self.type_id))
+            };
+
+        let size = self.size;
+        if size > 1 {
+            Ok(format!("{}_{}", type_id, size))
+        } else {
+            Ok(type_id.to_string())
+        }
+    }
 }
 
 

@@ -4,6 +4,7 @@
 use std::mem;
 use std::slice;
 use std::marker::PhantomData;
+use std::str::FromStr;
 
 use render::*;
 
@@ -11,10 +12,13 @@ use render::*;
 /// Trait to define vertex declaration.
 pub trait VertexDeclaration: 'static {
     /// The enums used for the attribute indexing.
-    type Attribute: IterableEnum;
+    type Attribute: 'static + Copy + From<usize> + Into<usize> + FromStr;
+
+    /// Returns an iterator over the possible attribute values
+    fn get_attributes() -> slice::Iter<'static, Self::Attribute>;
 
     /// Returns the platform dependent vertex attribute description.
-    fn get_attribute_descriptor(index: usize) -> VertexAttributeDescriptorImpl;
+    fn get_attribute_descriptor(index: Self::Attribute) -> VertexAttributeDescriptorImpl;
 }
 
 
@@ -102,16 +106,16 @@ impl<VD: VertexDeclaration> VertexBuffer<VD> {
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
     pub fn set_transient<'a, VS: TransientVertexSource<VD>, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_source: &VS) {
-        assert!(VD::Attribute::count() <= MAX_VERTEX_ATTRIBUTE_COUNT, "vertex attribute count exceeds engine limits ({})", MAX_VERTEX_ATTRIBUTE_COUNT);
         let mut attributes = VertexAttributeDescriptorImplVec::new();
-        for idx in 0..VD::Attribute::count() {
-            attributes.push(VD::get_attribute_descriptor(idx));
+        for idx in VD::get_attributes() {
+            attributes.push(VD::get_attribute_descriptor(*idx));
+            assert!(attributes.len() <= MAX_VERTEX_ATTRIBUTE_COUNT, "Vertex attribute count exceeds engine limits ({})", MAX_VERTEX_ATTRIBUTE_COUNT);
         }
         self.platform.set_transient(queue, attributes, vertex_source.to_vertex_data());
     }
 
     /// Returns reference to an attribute
     pub fn get_attribute(&self, attr: VD::Attribute) -> VertexAttributeImpl {
-        self.platform.get_attribute(attr.to_index())
+        self.platform.get_attribute(attr.into())
     }
 }

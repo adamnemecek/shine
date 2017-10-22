@@ -1,8 +1,6 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
-use std::fmt;
-
 /// Structure to store a window size.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Size {
@@ -141,43 +139,6 @@ impl From<Rectangle> for (Position, Size) {
     }
 }
 
-
-/// Enum like trait that can iterate the values and can be convert to and from primitive type.
-///
-pub trait IterableEnum: 'static + Copy + Clone + fmt::Debug {
-    /// Creates a plain enum for its index
-    ///
-    /// If index is not in the range, None is returned
-    fn from_index(index: usize) -> Option<Self> where Self: Sized {
-        if index < Self::count() {
-            Some(Self::from_index_unsafe(index))
-        } else {
-            None
-        }
-    }
-
-    /// Creates enum value from its name
-    fn from_name(name: &str) -> Option<Self> where Self: Sized {
-        Self::index_from_name(name).and_then(|i| { Self::from_index(i) })
-    }
-
-    /// Creates a plain enum for its index
-    ///
-    /// It is unsafe in the sence that, no check is mde on the ranges.
-    /// It is assumed a valid index is provided. If unsure, use the safe version.
-    fn from_index_unsafe(index: usize) -> Self where Self: Sized;
-
-    /// Creates enum value from its name
-    fn index_from_name(name: &str) -> Option<usize>;
-
-    /// Converts an enum into a plain index
-    fn to_index(&self) -> usize;
-
-    /// Returns the number of attributes.
-    fn count() -> usize;
-}
-
-
 /// Float array with 16 components
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
@@ -216,9 +177,9 @@ impl From<(f32, f32, f32, f32,
                     f32, f32, f32, f32,
                     f32, f32, f32, f32)) -> Float32x16 {
         Float32x16(value.0, value.1, value.2, value.3,
-                  value.4, value.5, value.6, value.7,
-                  value.8, value.9, value.10, value.11,
-                  value.12, value.13, value.14, value.15)
+                   value.4, value.5, value.6, value.7,
+                   value.8, value.9, value.10, value.11,
+                   value.12, value.13, value.14, value.15)
     }
 }
 
@@ -323,3 +284,13 @@ macro_rules! f32x2 {
     () => { {let f : $crate::render::Float32x2 = Default::default(); f} };
 }
 
+
+/// Trait for the visitor pattern to process render types
+#[allow(missing_docs)]
+pub trait DataVisitor {
+    fn process_f32x16(&self, data: &Float32x16);
+    fn process_f32x4(&self, data: &Float32x4);
+    fn process_f32x3(&self, data: &Float32x3);
+    fn process_f32x2(&self, data: &Float32x2);
+    fn process_f32(&self, data: f32);
+}

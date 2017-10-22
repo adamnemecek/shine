@@ -4,104 +4,141 @@ use quote;
 use utils::*;
 
 pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
-    let name = &ast.ident;
-
-    let impl_get_declaration;
-    let impl_location;
-
     match ast.body {
-        syn::Body::Struct(syn::VariantData::Struct(ref fields)) => {
-            impl_get_declaration = impl_get_declaration_for_struct(name, fields);
-            impl_location = impl_location_for_struct(name, fields);
-        }
-
+        syn::Body::Struct(syn::VariantData::Struct(ref fields)) => impl_location_for_struct(&ast.ident, fields),
         _ => panic!("No implementation for {:?}", format!("{:?}", ast.body).split('(').nth(0).unwrap())
     }
-
-    //println!("impl_get_declaration = \n{}", impl_get_declaration.as_str());
-    //println!("impl_location = \n{}", impl_location.as_str());
-
-    quote! {
-        impl ::dragorust_engine::render::VertexDeclaration for #name {
-            #impl_get_declaration
-        }
-
-        #impl_location
-    }
 }
 
 
-fn impl_get_declaration_for_struct(name: &syn::Ident, fields: &Vec<syn::Field>) -> quote::Tokens {
-    let enum_type_name = syn::Ident::new(format!("{}Attribute", name));
+fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) -> quote::Tokens {
+    let enum_type_name = syn::Ident::new(format!("{}Attribute", struct_name));
 
-    let mut gen: Vec<quote::Tokens> = vec!();
-    for (idx, field) in fields.iter().enumerate() {
-        let ident = field.ident.as_ref().unwrap();
-        let ty = &field.ty;
-
-        let offset_of = impl_offset_of(name, &ident);
-        gen.push(
-            quote! {
-               #idx => ::dragorust_engine::render::VertexAttributeDescriptorImpl::new_from_element::< #ty > ( #offset_of, mem::size_of::< #name > () ),
-            }
-        )
+    let count = fields.len();
+    if count == 0 {
+        panic!("Empty struct cannot be used for VertexDeclaration: {}", struct_name);
     }
 
-    gen.push(
-        quote! {
-         _ => panic!("Invalid attribute index: {}, must be in the range 0..{}", idx, #enum_type_name::count()),
-        }
-    );
-
-    quote! {
-        type Attribute = #enum_type_name;
-
-        #[allow(dead_code)]
-        fn get_attribute_descriptor(idx: usize) -> VertexAttributeDescriptorImpl {
-            use std::mem;
-            match idx {
-                #(#gen)*
-            }
-        }
-    }
-}
-
-fn impl_location_for_struct(name: &syn::Ident, fields: &Vec<syn::Field>) -> quote::Tokens {
-    let enum_type_name = syn::Ident::new(format!("{}Attribute", name));
-
-    let mut enum_names: Vec<quote::Tokens> = vec!();
+    let mut enum_idents: Vec<quote::Tokens> = vec!();
+    let mut qualified_enum_idents: Vec<quote::Tokens> = vec!();
     let mut match_name_cases: Vec<quote::Tokens> = vec!();
+    let mut match_from_usize_cases: Vec<quote::Tokens> = vec!();
+    let mut match_to_usize_cases: Vec<quote::Tokens> = vec!();
+    let mut match_get_desc: Vec<quote::Tokens> = vec!();
 
-
-    for field in fields.iter() {
-        let field_name = field.ident.as_ref().unwrap().to_string();
-        let enum_name_str = convert_snake_to_camel_case(&field_name);
-        let enum_name = syn::Ident::new(enum_name_str.clone());
+    for (index, field) in fields.iter().enumerate() {
+        let field_ident = field.ident.as_ref().unwrap();
+        let field_name = field_ident.to_string();
+        let field_ty = &field.ty;
+        let enum_name = convert_snake_to_camel_case(&field_name);
+        let enum_ident = syn::Ident::new(enum_name.clone());
         let match_name = format!("v{}", enum_name);
 
-        enum_names.push(
+        enum_idents.push(
             quote! {
-                #[name = #match_name]
-                //#[name = #enum_name_str]
-                //#[name = #field_name]
-                #enum_name
+                #enum_ident
+            }
+        );
+
+        qualified_enum_idents.push(
+            quote! {
+                #enum_type_name::#enum_ident
             }
         );
 
         match_name_cases.push(
             quote! {
-                #match_name => Some(#enum_type_name::#enum_name)
+                #field_name => Ok(#enum_type_name::#enum_ident),
+                #enum_name => Ok(#enum_type_name::#enum_ident),
+                #match_name => Ok(#enum_type_name::#enum_ident)
             }
         );
+
+        match_from_usize_cases.push(
+            quote! {
+                #index => #enum_type_name::#enum_ident
+            }
+        );
+
+        match_to_usize_cases.push(
+            quote! {
+                #enum_type_name::#enum_ident => #index
+            }
+        );
+
+        let offset_of = impl_offset_of(struct_name, &field_ident);
+        match_get_desc.push(
+            quote! {
+               #enum_type_name::#enum_ident => ::dragorust_engine::render::VertexAttributeDescriptorImpl::new_from_element::< #field_ty > ( #offset_of, mem::size_of::< #struct_name > () )
+            }
+        )
     }
 
-    quote! {
+    let gen_decl = quote! {
+        impl ::dragorust_engine::render::VertexDeclaration for #struct_name {
+            type Attribute = #enum_type_name;
+
+            #[allow(dead_code)]
+            fn get_attributes() -> slice::Iter<'static, #enum_type_name> {
+                static IDS : [#enum_type_name; #count] = #qualified_enum_idents;
+                IDS.iter()
+            }
+
+            #[allow(dead_code)]
+            fn get_attribute_descriptor(idx: #enum_type_name) -> VertexAttributeDescriptorImpl {
+                use std::mem;
+                match idx {
+                    #(#match_get_desc,)*
+                }
+            }
+        }
+    };
+
+    let gen_enum = quote! {
         #[derive(Copy, Clone, Debug)]
-        #[derive(IterableEnum)]
-        #[repr(usize)]
+        #[repr(u8)]
         #[allow(unused_variables)]
         enum #enum_type_name {
-            #(#enum_names,)*
+            #(#enum_idents,)*
         }
+    };
+
+    let gen_from_usize = quote! {
+        impl From<usize> for #enum_type_name {
+            fn from(index: usize) -> #enum_type_name {
+                match index {
+                    #(#match_from_usize_cases,)*
+                    _ => panic!("Index ({}) out of range (0..{})", index, #count)
+                }
+            }
+        }
+
+        impl Into<usize> for #enum_type_name {
+            fn into(self) -> usize {
+                match self {
+                    #(#match_to_usize_cases,)*
+                }
+            }
+        }
+    };
+
+    let gen_from_str = quote! {
+        impl str::FromStr for #enum_type_name {
+            type Err = String;
+
+            fn from_str(name: &str) -> Result<#enum_type_name,String> {
+                match name {
+                    #(#match_name_cases,)*
+                    _ => Err(format!("Attribute not found by '{}' name", name).to_string())
+                }
+            }
+        }
+    };
+
+    quote! {
+        #gen_decl
+        #gen_enum
+        #gen_from_usize
+        #gen_from_str
     }
 }

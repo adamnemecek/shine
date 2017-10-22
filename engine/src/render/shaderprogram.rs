@@ -2,6 +2,7 @@
 #![deny(missing_copy_implementations)]
 
 use std::marker::PhantomData;
+use std::slice;
 
 use render::*;
 
@@ -14,17 +15,41 @@ pub enum ShaderType {
     FragmentShader,
 }
 
+/// Trait to store vertex attribute parameters.
+pub trait ShaderAttribute {
+    /// Returns the number of attributes
+    fn get_count() -> usize;
+
+    /// Returns the index by attribute name
+    fn get_index_by_name(name: &str) -> Option<usize>;
+
+    /// Returns vertex attribute by index
+    fn get_by_index(&self, index: usize) -> &VertexAttributeImpl;
+}
+
+/// Trait to store shader parameters.
+pub trait ShaderUniform {
+    /// Returns the number of uniforms
+    fn get_count() -> usize;
+
+    /// Returns the index by uniform name
+    fn get_index_by_name(name: &str) -> Option<usize>;
+
+    /// Visit data by index
+    fn process_by_index<V: DataVisitor>(&self, index: usize, visitor: &V);
+}
 
 /// Trait to define shader attribute and uniform names
 pub trait ShaderDeclaration: 'static {
-    /// The enums used for the input attribute indexing.
-    type Attribute: IterableEnum;
-    /// The enums used for the input uniform indexing.
-    type Uniform: IterableEnum;
+    /// The structure storing the vertex attribute parameters.
+    type Attributes: ShaderAttribute;
+    /// The structure storing the shader parameters.
+    type Uniforms: ShaderUniform;
 
-    /// Iterate over the shader sources
-    fn map_sources<F: FnMut((ShaderType, &str)) -> bool>(f: F) -> bool;
+    /// Returns an iterator over the shader sources
+    fn get_sources() -> slice::Iter<'static, (ShaderType, &'static str)>;
 }
+
 
 /// Structure to store the shader abstraction.
 pub struct ShaderProgram<SD: ShaderDeclaration> {
@@ -55,25 +80,11 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
     }
 
     /// Sends a geometry for rendering using the given parameters
-    pub fn draw<'a, Q, ASF, USF>(&mut self, queue: &mut Q, attribute_source: ASF, uniform_source: USF, primitive: Primitive, vertex_start: usize, vertex_count: usize)
-        where Q: CommandQueue, ASF: Fn(SD::Attribute) -> VertexAttributeImpl, USF: Fn(&mut SD::Uniform)
+    pub fn draw<Q: CommandQueue>(&mut self, queue: &mut Q,
+                                 attributes: SD::Attributes, uniforms: SD::Uniforms,
+                                 primitive: Primitive, vertex_start: usize, vertex_count: usize)
     {
-        let mut binding = VertexAttributeImplVec::new();
-        //let mut uniform_buffer: Vec<u8> = vec!();
-
-        // init the used part
-        for attribute_id in 0..SD::Attribute::count() {
-            let attribute = SD::Attribute::from_index_unsafe(attribute_id);
-            binding.push(attribute_source(attribute));
-        }
-
-        for uniform_id in 0..SD::Uniform::count() {
-            let mut uniform = SD::Uniform::from_index_unsafe(uniform_id);
-            uniform_source(&mut uniform);
-            println!("{:?}", uniform);
-            //uniform_buffer.push();
-        }
-        self.platform.draw(queue, binding, primitive, vertex_start, vertex_count);
+        self.platform.draw::<SD, Q>(queue, attributes, uniforms, primitive, vertex_start, vertex_count);
     }
 }
 

@@ -13,7 +13,7 @@ pub trait At<T: ? Sized> {
 /// Trait implementing a similar concept to IndexMut but a non-reference value is returned.
 ///
 /// There is a big difference, as IndexMut allows to mutate the value through the returned
-/// value, it's impossible through AtMut as it returns by value.
+/// value but it's impossible through AtMut as it returns by value.
 /// This is a convenience trait that may modify self during return.
 pub trait AtMut<T: ? Sized> {
     /// The type of the returned value

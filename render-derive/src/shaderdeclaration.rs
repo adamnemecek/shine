@@ -6,6 +6,7 @@ use std::fs::File;
 use std::io::Read;
 
 use glslang::*;
+use utils::*;
 
 #[derive(Debug)]
 enum SourceKind {
@@ -60,86 +61,176 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         }).collect::<Vec<_>>();
 
 
-    let (attributes, uniforms, sources) = prepocess_sources(declaration_type_name.to_string(), sources.iter());
+    let attribute_type_name = format!("{}Attribute", declaration_type_name);
+    let attribute_type_ident = syn::Ident::new(attribute_type_name);
+    let uniform_type_name = format!("{}Uniform", declaration_type_name);
+    let uniform_type_ident = syn::Ident::new(uniform_type_name);
 
+    let (attributes, uniforms, sources) = prepocess_sources(declaration_type_name.to_string(), sources.iter());
     let sources = sources.iter().map(|shader| {
         let sh_type = shader.0.to_ident();
         let ref source = shader.1;
         Some(quote! { (::dragorust_engine::render::ShaderType::#sh_type, #source) })
     }).collect::<Vec<_>>();
+    let source_count = sources.len();
 
-    let attribute_type_name = syn::Ident::new(format!("{}Attribute", declaration_type_name));
-    let uniform_type_name = syn::Ident::new(format!("{}Uniform", declaration_type_name));
 
-    let mut attribute_enums = vec!();
-    for attr in attributes.iter() {
-        let attr_name = attr.name.clone();
-        let id = {
-            let mut chars = attr_name.chars();
-            if chars.next().unwrap() != 'v' || !chars.next().unwrap().is_uppercase() {
-                panic!("Invalid attribute naming: {}. v[CamelCase] is required", attr_name);
-            };
-            syn::Ident::new(attr_name.trim_left_matches("v"))
-        };
+    let gen_attributes = impl_attribute_declaration(&attribute_type_ident, attributes);
+    let gen_uniforms = impl_uniform_declaration(&uniform_type_ident, uniforms);
 
-        attribute_enums.push(quote! {
-            #[name = #attr_name]
-            #id
-        });
-    }
-
-    let mut uniform_enums = vec!();
-    for uniform in uniforms.iter() {
-        let uniform_name = uniform.name.clone();
-        let id = {
-            let mut chars = uniform_name.chars();
-            if chars.next().unwrap() != 'u' || !chars.next().unwrap().is_uppercase() {
-                panic!("Invalid uniform naming: {}. u[CamelCase] is required", uniform_name);
-            };
-            syn::Ident::new(uniform_name.trim_left_matches("u"))
-        };
-
-        let type_token = uniform.get_type_token().unwrap();
-
-        uniform_enums.push(quote! {
-            #[name = #uniform_name]
-            #id(#type_token)
-        });
-    }
-
-    let gen = quote! {
-        #[derive(Copy, Clone, Debug)]
-        #[derive(IterableEnum)]
-        #[repr(usize)]
-        enum #attribute_type_name {
-            #(#attribute_enums,)*
-        }
-
-        #[derive(Copy, Clone, Debug)]
-        #[derive(IterableEnum)]
-        #[repr(usize)]
-        enum #uniform_type_name {
-            #(#uniform_enums,)*
-        }
-
+    let gen_shader_decl = quote! {
         impl ShaderDeclaration for #declaration_type_name {
-            type Attribute = #attribute_type_name;
-            type Uniform = #uniform_type_name;
+            type Attributes = #attribute_type_ident;
+            type Uniforms = #uniform_type_ident;
 
-            fn map_sources<F: FnMut((ShaderType, &str)) -> bool>(mut f: F) -> bool {
-                let sh_source = #sources;
-
-                for src in sh_source.iter() {
-                    if !f(*src) {
-                        return false
-                    }
-                }
-                true
+            #[allow(dead_code)]
+            fn get_sources() -> slice::Iter<'static, (ShaderType, &'static str)> {
+                static SOURCE : [(ShaderType,&str); #source_count] = #sources;
+                SOURCE.iter()
             }
         }
     };
 
-    //println!("{:?}", gen.to_string());
+    //println!("{}", gen_shader_decl);
+
+    quote! {
+        #gen_attributes
+        #gen_uniforms
+        #gen_shader_decl
+    }
+}
+
+
+fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec<Attribute>) -> quote::Tokens {
+    let mut attribute_fields = vec!();
+    let mut match_name_cases: Vec<quote::Tokens> = vec!();
+    let mut match_index_cases: Vec<quote::Tokens> = vec!();
+
+    for (index, attr) in attributes.iter().enumerate() {
+        let attr_name = attr.name.clone();
+        let attr_field_ident = {
+            let mut chars = attr_name.chars();
+            if chars.next().unwrap() != 'v' || !chars.next().unwrap().is_uppercase() {
+                panic!("Invalid attribute name: {}. 'v[CamelCase]' is required", attr_name);
+            };
+            syn::Ident::new(convert_camel_to_snake_case(attr_name.trim_left_matches("v")))
+        };
+
+        attribute_fields.push(quote! {
+            #attr_field_ident : ::dragorust_engine::render::VertexAttributeImpl
+        });
+
+        match_name_cases.push(
+            quote! {
+                #attr_name => Some(#index)
+            }
+        );
+
+        match_index_cases.push(
+            quote! {
+                #index => &self.#attr_field_ident
+            }
+        );
+    }
+
+    let count = attributes.len();
+
+    let gen = quote! {
+        struct #attribute_type_ident {
+            #(#attribute_fields,)*
+        }
+
+        impl ::dragorust_engine::render::ShaderAttribute for #attribute_type_ident {
+            fn get_count() -> usize {
+                #count
+            }
+
+            fn get_index_by_name(name: &str) -> Option<usize> {
+                match name {
+                    #(#match_name_cases,)*
+                    _ => None
+                }
+            }
+
+            fn get_by_index(&self, index: usize) -> &VertexAttributeImpl {
+                match index {
+                    #(#match_index_cases,)*
+                    _ => panic!("Vertex attribute index ({}) is out of range (0..{})", index, #count)
+                }
+            }
+        }
+    };
+
+    //println!("{}", gen);
+
+    gen
+}
+
+
+fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Uniform>) -> quote::Tokens {
+    let mut uniform_fields = vec!();
+    let mut match_name_cases: Vec<quote::Tokens> = vec!();
+    let mut match_index_cases: Vec<quote::Tokens> = vec!();
+
+    for (index, uniform) in uniforms.iter().enumerate() {
+        let uniform_name = uniform.name.clone();
+        let uniform_field_ident = {
+            let mut chars = uniform_name.chars();
+            if chars.next().unwrap() != 'u' || !chars.next().unwrap().is_uppercase() {
+                panic!("Invalid uniform naming: {}. u[CamelCase] is required", uniform_name);
+            };
+            syn::Ident::new(convert_camel_to_snake_case(uniform_name.trim_left_matches("u")))
+        };
+
+        let type_token = uniform.get_type_token().unwrap();
+        let type_function_ident = syn::Ident::new(format!("process_{}", uniform.get_type_function_name().unwrap()));
+
+        uniform_fields.push(quote! {
+            #uniform_field_ident : #type_token
+        });
+
+        match_name_cases.push(
+            quote! {
+                #uniform_name => Some(#index)
+            }
+        );
+
+        match_index_cases.push(
+            quote! {
+                #index => visitor.#type_function_ident(&self.#uniform_field_ident)
+            }
+        );
+    }
+
+    let count = uniforms.len();
+
+    let gen = quote! {
+        struct #uniform_type_ident {
+            #(#uniform_fields,)*
+        }
+
+        impl ::dragorust_engine::render::ShaderUniform for #uniform_type_ident {
+            fn get_count() -> usize {
+                #count
+            }
+
+            fn get_index_by_name(name: &str) -> Option<usize> {
+                match name {
+                    #(#match_name_cases,)*
+                    _ => None
+                }
+            }
+
+            fn process_by_index<V: DataVisitor>(&self, index: usize, visitor: &V) {
+                match index {
+                    #(#match_index_cases,)*
+                    _ => panic!("Uniform index ({}) is out of range (0..{})", index, #count)
+                }
+            }
+        }
+    };
+
+    //println!("{}", gen);
 
     gen
 }

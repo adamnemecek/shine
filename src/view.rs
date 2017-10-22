@@ -1,5 +1,7 @@
-use std::rc::Rc;
-use std::cell::RefCell;
+use std::rc::*;
+use std::cell::*;
+use std::slice;
+use std::str;
 
 use world::*;
 use dragorust_engine::render::*;
@@ -20,15 +22,14 @@ struct VxColorTex {
 #[derive(ShaderDeclaration)]
 #[vert_src = "
     uniform mat4 uTrsf;
+    uniform vec3 uColor;
     attribute vec3 vPosition;
     attribute vec3 vColor;
     varying vec3 color;
     void main()
     {
-        vec3 col = vColor.rgb;
-        col.r = (vec4(vColor,1.) * uTrsf).r;
-        color = col;
-        gl_Position =  vec4(vPosition, 1.0);
+        color = vColor + uColor;
+        gl_Position = uTrsf * vec4(vPosition, 1.0);
     }
 "]
 #[frag_src = "
@@ -133,16 +134,17 @@ impl View for SimpleView {
             let v2 = &self.vertex_buffer2;
 
             self.shader.draw(&mut *p0,
-                             |attr| match attr {
-                                 ShSimpleAttribute::Position => v1.get_attribute(VxPosAttribute::Position),
-                                 ShSimpleAttribute::Color => v2.get_attribute(VxColorTexAttribute::Color),
-                                 //ShSimpleAttribute::TexCoord => v2.get_attribute(VxColorTexAttribute::TexCoord),
+                             ShSimpleAttribute {
+                                 position: v1.get_attribute(VxPosAttribute::Position),
+                                 color: v2.get_attribute(VxColorTexAttribute::Color),
+                                 //tex_coord: v2.get_attribute(VxColorTexAttribute::TexCoord),
                              },
-                             |param| match param {
-                                 //ShSimpleAttribute::Trsf(ref mut mx) => m,
-                                 //ShSimpleAttribute::Color => v2.get_attribute(VxColorTexAttribute::Color),
-                                 //ShSimpleAttribute::TexCoord => v2.get_attribute(VxColorTexAttribute::TexCoord),
-                                 _ => {}
+                             ShSimpleUniform {
+                                 trsf: Float32x16(1f32, 0f32, 0f32, 0f32,
+                                                  0f32, 1f32, 0f32, 0f32,
+                                                  0f32, 0f32, 1f32, 0f32,
+                                                  0f32, 0f32, 0f32, 1f32),
+                                 color: Float32x3(1.2f32, 0.2f32, 0.2f32),
                              },
                              Primitive::Triangle, 0, 3
             );
