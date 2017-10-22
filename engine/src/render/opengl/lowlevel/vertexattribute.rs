@@ -1,7 +1,7 @@
 use render::*;
 use render::opengl::lowlevel::*;
 
-/// Structure to store vertex attribute info for the open GL.
+/// Structure to store vertex attribute info for open GL.
 #[derive(Clone, Copy, Debug)]
 pub struct GLVertexAttributeDescriptor {
     pub component_type: GLenum,

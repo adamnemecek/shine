@@ -2,6 +2,7 @@ mod utils;
 mod vertexattribute;
 mod vertexbinding;
 mod indexbinding;
+mod texturebinding;
 mod programbinding;
 
 pub use render::opengl::gl;
@@ -12,6 +13,7 @@ pub use self::vertexattribute::*;
 use self::vertexbinding::VertexBinding;
 use self::indexbinding::IndexBinding;
 use self::programbinding::ProgramBinding;
+use self::texturebinding::TextureBinding;
 
 use render::*;
 
@@ -24,6 +26,7 @@ pub struct LowLevel {
     screen_size: Size,
     pub vertex_binding: VertexBinding,
     pub index_binding: IndexBinding,
+    pub texture_binding: TextureBinding,
     pub program_binding: ProgramBinding,
 }
 
@@ -33,6 +36,7 @@ impl LowLevel {
             screen_size: Size::from((0, 0)),
             vertex_binding: VertexBinding::new(),
             index_binding: IndexBinding::new(),
+            texture_binding: TextureBinding::new(),
             program_binding: ProgramBinding::new(),
         }
     }
@@ -73,6 +77,7 @@ impl LowLevel {
         //self.program_binding.commit();
         self.vertex_binding.commit();
         self.index_binding.commit();
+        self.texture_binding.commit();
 
         gl_check_error();
         unsafe {

@@ -100,7 +100,7 @@ impl IndexBinding {
         self.bound_index.index_type = index_type;
     }
 
-    /// Unbinds an index buffer if it is active. This function is usualy used during release.
+    /// Unbinds an index buffer if it is active. This function is mainly used during release.
     pub fn unbind_if_active(&mut self, hw_id: GLuint) {
         if self.bound_id == hw_id {
             self.bind_buffer(0);

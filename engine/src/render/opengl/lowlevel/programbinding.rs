@@ -40,7 +40,7 @@ impl ProgramBinding {
         self.bound_id = program_id;
     }
 
-    /// Unbinds the program if it is active. This function is usualy used during release.
+    /// Unbinds the program if it is active. This function is mainly used during release.
     pub fn unbind_if_active(&mut self, program_id: GLuint) {
         if self.bound_id == program_id {
             self.bind(0);

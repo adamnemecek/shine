@@ -25,8 +25,10 @@ struct VxColorTex {
     varying vec3 color;
     void main()
     {
-        color = vColor;
-        gl_Position = uTrsf * vec4(vPosition, 1.0);
+        vec3 col = vColor.rgb;
+        col.r = (vec4(vColor,1.) * uTrsf).r;
+        color = col;
+        gl_Position =  vec4(vPosition, 1.0);
     }
 "]
 #[frag_src = "
