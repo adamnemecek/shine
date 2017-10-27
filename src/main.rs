@@ -35,7 +35,6 @@ pub fn main() {
 
         world.borrow_mut().update();
 
-        println!("{:?}", window.get_size());
         window.update_view();
         sub_window.update_view();
 

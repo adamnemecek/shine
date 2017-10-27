@@ -2,6 +2,7 @@ use std::rc::*;
 use std::cell::*;
 use std::slice;
 use std::str;
+use std::f32;
 
 use world::*;
 use dragorust_engine::render::*;
@@ -60,6 +61,8 @@ pub struct SimpleView {
 
     vertex_buffer1: VertexBuffer<VxPos>,
     vertex_buffer2: VertexBuffer<VxColorTex>,
+    index_buffer1: IndexBuffer<u8>,
+    index_buffer2: IndexBuffer<u16>,
 
     t: f32,
 }
@@ -72,6 +75,8 @@ impl SimpleView {
             shader: ShaderProgram::new(),
             vertex_buffer1: VertexBuffer::new(),
             vertex_buffer2: VertexBuffer::new(),
+            index_buffer1: IndexBuffer::new(),
+            index_buffer2: IndexBuffer::new(),
             t: 0f32,
         }
     }
@@ -84,23 +89,30 @@ impl View for SimpleView {
 
         // create some geometry
         let pos = [
-            VxPos { position: f32x3!(1f32, 0f32, 0f32) },
-            VxPos { position: f32x3!(1f32, 1f32, 0f32) },
-            VxPos { position: f32x3!(0f32, 1f32, 0f32) }
+            VxPos { position: f32x3!(1, 0, 0) },
+            VxPos { position: f32x3!(1, 1, 0) },
+            VxPos { position: f32x3!(0, 1, 0) }
         ];
 
         // create some geometry
         let color_tex = [
-            VxColorTex { color: f32x3!(1f32, 0f32, 0f32), tex_coord: f32x2!(1, 0) },
-            VxColorTex { color: f32x3!(1f32, 1f32, 0f32), tex_coord: f32x2!(1, 1) },
-            VxColorTex { color: f32x3!(0f32, 1f32, 0f32), tex_coord: f32x2!(0, 0) }
+            VxColorTex { color: f32x3!(1, 0, 0), tex_coord: f32x2!(1, 0) },
+            VxColorTex { color: f32x3!(1, 1, 0), tex_coord: f32x2!(1, 1) },
+            VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 0) }
         ];
+
+        let index1 = [0u8, 1, 2];
+        let index2 = [0u16, 1, 2];
 
         // upload data
         //self.shader.set_sources(&mut self.render, sh_source.iter());
         self.shader.compile(&mut self.render);
         self.vertex_buffer1.set_transient(&mut self.render, &pos);
         self.vertex_buffer2.set_transient(&mut self.render, &color_tex.to_vec());
+
+        self.index_buffer1.set_transient(&mut self.render, &index1);
+        // self.index_buffer1.set_transient(&mut self.render, &index2);  // shall not compile
+        self.index_buffer2.set_transient(&mut self.render, &index2.to_vec());
 
         // submit commands
         self.render.submit(window);
@@ -109,6 +121,8 @@ impl View for SimpleView {
     fn on_surface_lost(&mut self, window: &mut Window) {
         self.vertex_buffer1.release(&mut self.render);
         self.vertex_buffer2.release(&mut self.render);
+        self.index_buffer1.release(&mut self.render);
+        self.index_buffer2.release(&mut self.render);
         self.shader.release(&mut self.render);
         self.render.submit(window);
     }
@@ -118,8 +132,8 @@ impl View for SimpleView {
     }
 
     fn on_update(&mut self) {
-        self.t += 0.005f32;
-        if self.t > 1f32 {
+        self.t += 0.05f32;
+        if self.t > 2. * f32::consts::PI {
             self.t = 0f32;
         }
     }
@@ -133,21 +147,36 @@ impl View for SimpleView {
             let v1 = &self.vertex_buffer1;
             let v2 = &self.vertex_buffer2;
 
-            self.shader.draw(&mut *p0,
-                             ShSimpleAttribute {
-                                 position: v1.get_attribute(VxPosAttribute::Position),
-                                 color: v2.get_attribute(VxColorTexAttribute::Color),
-                                 //tex_coord: v2.get_attribute(VxColorTexAttribute::TexCoord),
-                             },
-                             ShSimpleUniform {
-                                 trsf: Float32x16(1f32, 0f32, 0f32, 0f32,
-                                                  0f32, 1f32, 0f32, 0f32,
-                                                  0f32, 0f32, 1f32, 0f32,
-                                                  0f32, 0f32, 0f32, 1f32),
-                                 color: Float32x3(1.2f32, 0.2f32, 0.2f32),
-                             },
-                             Primitive::Triangle, 0, 3
-            );
+            let attributes = ShSimpleAttribute {
+                position: v1.get_attribute_ref(VxPosAttribute::Position),
+                color: v2.get_attribute_ref(VxColorTexAttribute::Color),
+                //tex_coord: v2.get_attribute_ref(VxColorTexAttribute::TexCoord),
+            };
+
+            let st = self.t.sin();
+            let ct = self.t.cos();
+
+            {
+                let uniforms = ShSimpleUniform {
+                    trsf: f32x16!(st, -ct, 0, 0,
+                              ct,  st, 0, 0,
+                               0,   0, 1, 0,
+                               0,   0, 0, 1),
+                    color: f32x3!(1.2f32, 0.2f32, 0.2f32),
+                };
+                self.shader.draw(&mut *p0, attributes.clone(), uniforms.clone(), Primitive::Triangle, 0, 3);
+            }
+
+            {
+                let uniforms = ShSimpleUniform {
+                    trsf: f32x16!(st, -ct, 0, 0.4,
+                              ct,  st, 0, 0,
+                               0,   0, 1, 0,
+                               0,   0, 0, 1),
+                    color: f32x3!(1.2f32, 0.2f32, 0.2f32),
+                };
+                self.shader.draw_indexed(&mut *p0, attributes.clone(), uniforms, Primitive::Triangle, 0, 3);
+            }
         }
 
         {
@@ -157,6 +186,10 @@ impl View for SimpleView {
         self.render.submit(window);
     }
 
-    fn on_key(&mut self, _window: &mut Window,
-              _scan_code: ScanCode, _virtual_key: Option<VirtualKeyCode>, _is_down: bool) {}
+    fn on_key(&mut self, window: &mut Window, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
+        match virtual_key {
+            Some(VirtualKeyCode::Escape) if !is_down => { window.close(); }
+            _ => {}
+        }
+    }
 }

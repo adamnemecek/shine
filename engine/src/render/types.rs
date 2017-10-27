@@ -139,9 +139,10 @@ impl From<Rectangle> for (Position, Size) {
     }
 }
 
+
 /// Float array with 16 components
-#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Float32x16(pub f32, pub f32, pub f32, pub f32,
                       pub f32, pub f32, pub f32, pub f32,
                       pub f32, pub f32, pub f32, pub f32,
@@ -181,6 +182,43 @@ impl From<(f32, f32, f32, f32,
                    value.8, value.9, value.10, value.11,
                    value.12, value.13, value.14, value.15)
     }
+}
+
+impl From<(Float32x4,
+           Float32x4,
+           Float32x4,
+           Float32x4)> for Float32x16 {
+    #[inline(always)]
+    fn from(value: (Float32x4, Float32x4, Float32x4, Float32x4)) -> Float32x16 {
+        Float32x16((value.0).0, (value.0).1, (value.0).2, (value.0).3,
+                   (value.1).0, (value.1).1, (value.1).2, (value.1).3,
+                   (value.2).0, (value.2).1, (value.2).2, (value.2).3,
+                   (value.3).0, (value.3).1, (value.3).2, (value.3).3)
+    }
+}
+
+#[macro_export]
+macro_rules! f32x16 {
+    ($_a0:expr,  $_a1:expr,  $_a2:expr,  $_a3:expr,
+     $_a4:expr,  $_a5:expr,  $_a6:expr,  $_a7:expr,
+     $_a8:expr,  $_a9:expr,  $_a10:expr, $_a11:expr,
+     $_a12:expr, $_a13:expr, $_a14:expr, $_a15:expr) => {
+      $crate::render::Float32x16(
+        $_a0 as f32,$_a1 as f32,$_a2 as f32,$_a3 as f32,
+        $_a4 as f32,$_a5 as f32,$_a6 as f32,$_a7 as f32,
+        $_a8 as f32,$_a9 as f32,$_a10 as f32,$_a11 as f32,
+        $_a12 as f32,$_a13 as f32,$_a14 as f32,$_a15 as f32)
+      };
+
+    ($_x:expr) => {
+      $crate::render::Float32x16(
+        $_x as f32, $_x as f32, $_x as f32, $_x as f32,
+        $_x as f32, $_x as f32, $_x as f32, $_x as f32,
+        $_x as f32, $_x as f32, $_x as f32, $_x as f32,
+        $_x as f32, $_x as f32, $_x as f32, $_x as f32)
+      };
+
+    () => { {let f : $crate::render::Float32x16 = Default::default(); f} };
 }
 
 
@@ -243,7 +281,6 @@ impl From<(f32, f32, f32)> for Float32x3 {
     }
 }
 
-
 #[macro_export]
 macro_rules! f32x3 {
     ($_x:expr, $_y:expr, $_z:expr) => { $crate::render::Float32x3($_x as f32, $_y as f32, $_z as f32) };
@@ -285,7 +322,7 @@ macro_rules! f32x2 {
 }
 
 
-/// Trait for the visitor pattern to process render types
+/// Trait for the visitor to process render types
 #[allow(missing_docs)]
 pub trait DataVisitor {
     fn process_f32x16(&self, data: &Float32x16);
@@ -294,3 +331,34 @@ pub trait DataVisitor {
     fn process_f32x2(&self, data: &Float32x2);
     fn process_f32(&self, data: f32);
 }
+
+/// Trait for the mutable visitor to process render types
+#[allow(missing_docs)]
+pub trait MutDataVisitor {
+    fn process_f32x16(&mut self, data: &Float32x16);
+    fn process_f32x4(&mut self, data: &Float32x4);
+    fn process_f32x3(&mut self, data: &Float32x3);
+    fn process_f32x2(&mut self, data: &Float32x2);
+    fn process_f32(&mut self, data: f32);
+}
+
+/// Trait for the visitor to mutate render types
+#[allow(missing_docs)]
+pub trait DataMutator {
+    fn process_f32x16(&self, data: &mut Float32x16);
+    fn process_f32x4(&self, data: &mut Float32x4);
+    fn process_f32x3(&self, data: &mut Float32x3);
+    fn process_f32x2(&self, data: &mut Float32x2);
+    fn process_f32(&self, data: &mut f32);
+}
+
+/// Trait for the mutable visitor to mutate render types
+#[allow(missing_docs)]
+pub trait MutDataMutator {
+    fn process_f32x16(&mut self, data: &mut Float32x16);
+    fn process_f32x4(&mut self, data: &mut Float32x4);
+    fn process_f32x3(&mut self, data: &mut Float32x3);
+    fn process_f32x2(&mut self, data: &mut Float32x2);
+    fn process_f32(&mut self, data: &mut f32);
+}
+

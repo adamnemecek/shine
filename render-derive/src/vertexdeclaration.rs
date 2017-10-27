@@ -13,6 +13,7 @@ pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 
 fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) -> quote::Tokens {
     let enum_type_name = syn::Ident::new(format!("{}Attribute", struct_name));
+    let crate_qulifier = quote!{::dragorust_engine::render};
 
     let count = fields.len();
     if count == 0 {
@@ -69,7 +70,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         let offset_of = impl_offset_of(struct_name, &field_ident);
         match_get_desc.push(
             quote! {
-               #enum_type_name::#enum_ident => ::dragorust_engine::render::VertexAttributeDescriptorImpl::new_from_element::< #field_ty > ( #offset_of, mem::size_of::< #struct_name > () )
+               #enum_type_name::#enum_ident => #crate_qulifier::VertexBufferLayoutElementImpl::new_from_element::< #field_ty > ( #offset_of, mem::size_of::< #struct_name > () )
             }
         )
     }
@@ -85,7 +86,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
             }
 
             #[allow(dead_code)]
-            fn get_attribute_descriptor(idx: #enum_type_name) -> VertexAttributeDescriptorImpl {
+            fn get_attribute_layout(idx: #enum_type_name) -> #crate_qulifier::VertexBufferLayoutElementImpl {
                 use std::mem;
                 match idx {
                     #(#match_get_desc,)*

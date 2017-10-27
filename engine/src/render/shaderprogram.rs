@@ -16,7 +16,7 @@ pub enum ShaderType {
 }
 
 /// Trait to store vertex attribute parameters.
-pub trait ShaderAttribute {
+pub trait ShaderAttribute: Clone {
     /// Returns the number of attributes
     fn get_count() -> usize;
 
@@ -24,11 +24,11 @@ pub trait ShaderAttribute {
     fn get_index_by_name(name: &str) -> Option<usize>;
 
     /// Returns vertex attribute by index
-    fn get_by_index(&self, index: usize) -> &VertexAttributeImpl;
+    fn get_by_index(&self, index: usize) -> &VertexAttributeRefImpl;
 }
 
 /// Trait to store shader parameters.
-pub trait ShaderUniform {
+pub trait ShaderUniform: Clone {
     /// Returns the number of uniforms
     fn get_count() -> usize;
 
@@ -36,7 +36,7 @@ pub trait ShaderUniform {
     fn get_index_by_name(name: &str) -> Option<usize>;
 
     /// Visit data by index
-    fn process_by_index<V: DataVisitor>(&self, index: usize, visitor: &V);
+    fn process_by_index<V: MutDataVisitor>(&self, index: usize, visitor: &mut V);
 }
 
 /// Trait to define shader attribute and uniform names
@@ -54,7 +54,7 @@ pub trait ShaderDeclaration: 'static {
 /// Structure to store the shader abstraction.
 pub struct ShaderProgram<SD: ShaderDeclaration> {
     pub ( crate ) platform: ShaderProgramImpl,
-    phantom_sd: PhantomData<SD>,
+    phantom: PhantomData<SD>,
 }
 
 impl<SD: ShaderDeclaration> ShaderProgram<SD> {
@@ -62,7 +62,7 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
     pub fn new() -> ShaderProgram<SD> {
         ShaderProgram {
             platform: ShaderProgramImpl::new(),
-            phantom_sd: PhantomData
+            phantom: PhantomData
         }
     }
 
@@ -79,12 +79,20 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
         self.platform.compile::<SD, Q>(queue);
     }
 
-    /// Sends a geometry for rendering using the given parameters
+    /// Sends a geometry for rendering
     pub fn draw<Q: CommandQueue>(&mut self, queue: &mut Q,
                                  attributes: SD::Attributes, uniforms: SD::Uniforms,
                                  primitive: Primitive, vertex_start: usize, vertex_count: usize)
     {
         self.platform.draw::<SD, Q>(queue, attributes, uniforms, primitive, vertex_start, vertex_count);
+    }
+
+    /// Sends a geometry for rendering
+    pub fn draw_indexed<Q: CommandQueue>(&mut self, queue: &mut Q,
+                                         attributes: SD::Attributes, indices: IndexBufferRefImpl, uniforms: SD::Uniforms,
+                                         primitive: Primitive, vertex_start: usize, vertex_count: usize)
+    {
+        self.platform.draw_indexed::<SD, Q>(queue, attributes, indices, uniforms, primitive, vertex_start, vertex_count);
     }
 }
 

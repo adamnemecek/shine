@@ -18,11 +18,11 @@ pub trait VertexDeclaration: 'static {
     fn get_attributes() -> slice::Iter<'static, Self::Attribute>;
 
     /// Returns the platform dependent vertex attribute description.
-    fn get_attribute_descriptor(index: Self::Attribute) -> VertexAttributeDescriptorImpl;
+    fn get_attribute_layout(index: Self::Attribute) -> VertexBufferLayoutElementImpl;
 }
 
 
-/// Trait to define vertex declaration.
+/// Trait to define vertex source.
 pub trait TransientVertexSource<VD: VertexDeclaration> {
     /// Returns the vertex declaration and the reference to the vertex data.
     fn to_vertex_data<'a>(&self) -> &'a [u8];
@@ -98,24 +98,17 @@ impl<VD: VertexDeclaration> VertexBuffer<VD> {
         self.platform.release(queue);
     }
 
-    /// Sets the content of the buffer from a transient source.
-    ///
-    /// Transient means that, the source my be modified, droped after the function call, thus
-    /// a copy is created from the data.
+    /// Sets the content of the buffer from a transient source. Transient means that, a copy is
+    /// created from the source and no borrowing occurs.
     ///
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
     pub fn set_transient<'a, VS: TransientVertexSource<VD>, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_source: &VS) {
-        let mut attributes = VertexAttributeDescriptorImplVec::new();
-        for idx in VD::get_attributes() {
-            attributes.push(VD::get_attribute_descriptor(*idx));
-            assert!(attributes.len() <= MAX_VERTEX_ATTRIBUTE_COUNT, "Vertex attribute count exceeds engine limits ({})", MAX_VERTEX_ATTRIBUTE_COUNT);
-        }
-        self.platform.set_transient(queue, attributes, vertex_source.to_vertex_data());
+        self.platform.set_transient::<VD, Q>(queue, vertex_source.to_vertex_data());
     }
 
     /// Returns reference to an attribute
-    pub fn get_attribute(&self, attr: VD::Attribute) -> VertexAttributeImpl {
-        self.platform.get_attribute(attr.into())
+    pub fn get_attribute_ref(&self, attr: VD::Attribute) -> VertexAttributeRefImpl {
+        self.platform.get_attribute_ref(attr.into())
     }
 }

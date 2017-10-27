@@ -53,10 +53,6 @@ struct UniformLocation {
     location: GLuint,
     size: GLint,
     type_id: GLenum,
-
-    /// Store the offset of the data in the GLShaderProgramData::uniform_data
-    data_offset: usize,
-    data_size: usize,
 }
 
 impl UniformLocation {
@@ -65,8 +61,6 @@ impl UniformLocation {
             location: 0,
             size: 0,
             type_id: 0,
-            data_offset: usize::max_value(),
-            data_size: 0,
         }
     }
 
@@ -75,8 +69,8 @@ impl UniformLocation {
     }
 }
 
-impl DataVisitor for UniformLocation {
-    fn process_f32x16(&self, data: &Float32x16) {
+impl MutDataVisitor for UniformLocation {
+    fn process_f32x16(&mut self, data: &Float32x16) {
         if !self.is_valid() { return; }
         assert!(self.type_id == gl::FLOAT_MAT4 && self.size == 1 );
         unsafe {
@@ -84,7 +78,7 @@ impl DataVisitor for UniformLocation {
         }
     }
 
-    fn process_f32x4(&self, data: &Float32x4) {
+    fn process_f32x4(&mut self, data: &Float32x4) {
         if !self.is_valid() { return; }
         assert!(self.type_id == gl::FLOAT_VEC4 && self.size == 1 );
         unsafe {
@@ -92,7 +86,7 @@ impl DataVisitor for UniformLocation {
         }
     }
 
-    fn process_f32x3(&self, data: &Float32x3) {
+    fn process_f32x3(&mut self, data: &Float32x3) {
         if !self.is_valid() { return; }
         assert!(self.type_id == gl::FLOAT_VEC3 && self.size == 1 );
         unsafe {
@@ -100,7 +94,7 @@ impl DataVisitor for UniformLocation {
         }
     }
 
-    fn process_f32x2(&self, data: &Float32x2)
+    fn process_f32x2(&mut self, data: &Float32x2)
     {
         if !self.is_valid() { return; }
         assert!(self.type_id == gl::FLOAT_VEC2 && self.size == 1 );
@@ -109,7 +103,7 @@ impl DataVisitor for UniformLocation {
         }
     }
 
-    fn process_f32(&self, data: f32) {
+    fn process_f32(&mut self, data: f32) {
         if !self.is_valid() { return; }
         assert!(self.type_id == gl::FLOAT && self.size == 1 );
         unsafe {
@@ -283,7 +277,6 @@ impl GLShaderProgramData {
         let count = count as GLuint;
         assert!((count as usize) < MAX_USED_UNIFORM_COUNT, "Too many uniforms in the shader: {}/{}", count, MAX_USED_UNIFORM_COUNT);
 
-        let mut buffer_size = 0;
         for location in 0..count {
             gl_check_error();
             unsafe {
@@ -303,10 +296,7 @@ impl GLShaderProgramData {
             uniform.location = location;
             uniform.size = uniform_size;
             uniform.type_id = uniform_type;
-            uniform.data_offset = buffer_size;
             println!("uniform {}({})= {:?}", uniform_name, uniform_idx, uniform);
-
-            buffer_size += uniform.data_size;
         }
     }
 
@@ -328,7 +318,9 @@ impl GLShaderProgramData {
         self.uniforms.clear();
     }
 
-    fn draw<A: ShaderAttribute, U: ShaderUniform>(&mut self, ll: &mut LowLevel, attributes: &A, uniforms: &U, primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
+    fn draw<A: ShaderAttribute, U: ShaderUniform>(&mut self, ll: &mut LowLevel,
+                                                  attributes: &A, uniforms: &U,
+                                                  primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
         ll.program_binding.bind(self.hw_id);
 
         // bind attributes
@@ -339,9 +331,32 @@ impl GLShaderProgramData {
         }
 
         // bind uniforms
-        for (index, location) in (0..A::get_count()).zip(self.uniforms.iter()) {
+        for (index, location) in (0..A::get_count()).zip(self.uniforms.iter_mut()) {
             uniforms.process_by_index(index, location);
         }
+
+        ll.draw(primitive, vertex_start, vertex_count);
+    }
+
+    fn draw_indexed<A: ShaderAttribute, U: ShaderUniform>(&mut self, ll: &mut LowLevel,
+                                                          attributes: &A, indices: &GLIndexBufferRef, uniforms: &U,
+                                                          primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
+        ll.program_binding.bind(self.hw_id);
+
+        // bind attributes
+        for (index, ref location) in (0..A::get_count()).zip(self.attributes.iter()) {
+            if location.is_valid() {
+                attributes.get_by_index(index).bind(ll, location.location);
+            }
+        }
+
+        // bind uniforms
+        for (index, location) in (0..A::get_count()).zip(self.uniforms.iter_mut()) {
+            uniforms.process_by_index(index, location);
+        }
+
+        // bind indices
+        indices.bind(ll);
 
         ll.draw(primitive, vertex_start, vertex_count);
     }
@@ -349,7 +364,7 @@ impl GLShaderProgramData {
 
 impl Drop for GLShaderProgramData {
     fn drop(&mut self) {
-        assert! ( self.hw_id == 0, "release shader through a render queue before dropping it" );
+        assert! ( self.hw_id == 0, "Leaking shader program" );
     }
 }
 
@@ -394,6 +409,7 @@ impl Command for ReleaseCommand {
 struct DrawCommand<SD: ShaderDeclaration> {
     target: Rc<RefCell<GLShaderProgramData>>,
     attributes: SD::Attributes,
+    indices: Option<GLIndexBufferRef>,
     uniforms: SD::Uniforms,
     primitive: GLenum,
     vertex_start: GLuint,
@@ -407,7 +423,12 @@ impl<SD: ShaderDeclaration> Command for DrawCommand<SD> {
 
     fn process(&mut self, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
-        shader.draw(ll, &self.attributes, &self.uniforms, self.primitive, self.vertex_start, self.vertex_count);
+        if self.indices.is_some() {
+            let indices = self.indices.as_ref().unwrap();
+            shader.draw_indexed(ll, &self.attributes, indices, &self.uniforms, self.primitive, self.vertex_start, self.vertex_count);
+        } else {
+            shader.draw(ll, &self.attributes, &self.uniforms, self.primitive, self.vertex_start, self.vertex_count);
+        }
     }
 }
 
@@ -447,6 +468,25 @@ impl GLShaderProgram {
             DrawCommand::<SD> {
                 target: self.0.clone(),
                 attributes: attributes,
+                indices: None,
+                uniforms: uniforms,
+                primitive: gl_get_primitive_enum(primitive),
+                vertex_start: vertex_start as GLuint,
+                vertex_count: vertex_count as GLuint,
+            }
+        );
+    }
+
+    pub fn draw_indexed<SD: ShaderDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q,
+                                                                attributes: SD::Attributes,
+                                                                indices: IndexBufferRefImpl,
+                                                                uniforms: SD::Uniforms,
+                                                                primitive: Primitive, vertex_start: usize, vertex_count: usize) {
+        queue.add(
+            DrawCommand::<SD> {
+                target: self.0.clone(),
+                attributes: attributes,
+                indices: Some(indices),
                 uniforms: uniforms,
                 primitive: gl_get_primitive_enum(primitive),
                 vertex_start: vertex_start as GLuint,
@@ -456,5 +496,5 @@ impl GLShaderProgram {
     }
 }
 
-
+/// The shader program implementation
 pub type ShaderProgramImpl = GLShaderProgram;

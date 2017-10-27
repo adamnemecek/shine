@@ -1,15 +1,13 @@
 mod utils;
-mod vertexattribute;
-mod vertexbinding;
-mod indexbinding;
-mod texturebinding;
-mod programbinding;
+pub mod vertexbinding;
+pub mod indexbinding;
+pub mod texturebinding;
+pub mod programbinding;
 
 pub use render::opengl::gl;
 pub use render::opengl::gl::types::*;
 
 pub use self::utils::*;
-pub use self::vertexattribute::*;
 use self::vertexbinding::VertexBinding;
 use self::indexbinding::IndexBinding;
 use self::programbinding::ProgramBinding;

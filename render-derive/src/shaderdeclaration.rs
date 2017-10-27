@@ -117,7 +117,7 @@ fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec
         };
 
         attribute_fields.push(quote! {
-            #attr_field_ident : ::dragorust_engine::render::VertexAttributeImpl
+            #attr_field_ident : ::dragorust_engine::render::VertexAttributeRefImpl
         });
 
         match_name_cases.push(
@@ -136,6 +136,7 @@ fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec
     let count = attributes.len();
 
     let gen = quote! {
+        #[derive(Clone)]
         struct #attribute_type_ident {
             #(#attribute_fields,)*
         }
@@ -152,7 +153,7 @@ fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec
                 }
             }
 
-            fn get_by_index(&self, index: usize) -> &VertexAttributeImpl {
+            fn get_by_index(&self, index: usize) -> &VertexAttributeRefImpl {
                 match index {
                     #(#match_index_cases,)*
                     _ => panic!("Vertex attribute index ({}) is out of range (0..{})", index, #count)
@@ -205,6 +206,7 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
     let count = uniforms.len();
 
     let gen = quote! {
+        #[derive(Clone)]
         struct #uniform_type_ident {
             #(#uniform_fields,)*
         }
@@ -221,7 +223,7 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
                 }
             }
 
-            fn process_by_index<V: DataVisitor>(&self, index: usize, visitor: &V) {
+            fn process_by_index<V: MutDataVisitor>(&self, index: usize, visitor: &mut V) {
                 match index {
                     #(#match_index_cases,)*
                     _ => panic!("Uniform index ({}) is out of range (0..{})", index, #count)
