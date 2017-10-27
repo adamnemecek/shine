@@ -8,6 +8,7 @@ mod lowlevel;
 mod commandqueue;
 mod shaderprogram;
 mod vertexbuffer;
+mod indexbuffer;
 mod renderpass;
 
 /// Maximum number of attributes that can be bound at once
@@ -24,4 +25,5 @@ pub use self::lowlevel::*;
 pub use self::commandqueue::*;
 pub use self::shaderprogram::*;
 pub use self::vertexbuffer::*;
+pub use self::indexbuffer::*;
 pub use self::renderpass::*;

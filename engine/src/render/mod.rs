@@ -18,6 +18,7 @@ mod window;
 mod shaderprogram;
 #[macro_use]
 mod vertexbuffer;
+mod indexbuffer;
 mod renderpass;
 mod renderpassconfig;
 mod rendermanager;
@@ -38,6 +39,7 @@ pub use self::windowsettings::*;
 pub use self::window::*;
 pub use self::shaderprogram::*;
 pub use self::vertexbuffer::*;
+pub use self::indexbuffer::*;
 pub use self::renderpass::*;
 pub use self::renderpassconfig::*;
 pub use self::rendermanager::*;
