@@ -91,18 +91,20 @@ impl View for SimpleView {
         let pos = [
             VxPos { position: f32x3!(1, 0, 0) },
             VxPos { position: f32x3!(1, 1, 0) },
-            VxPos { position: f32x3!(0, 1, 0) }
+            VxPos { position: f32x3!(0, 1, 0) },
+            VxPos { position: f32x3!(0, 0, 0) },
         ];
 
         // create some geometry
         let color_tex = [
             VxColorTex { color: f32x3!(1, 0, 0), tex_coord: f32x2!(1, 0) },
             VxColorTex { color: f32x3!(1, 1, 0), tex_coord: f32x2!(1, 1) },
-            VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 0) }
+            VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 0) },
+            VxColorTex { color: f32x3!(0, 0, 0), tex_coord: f32x2!(0, 0) }
         ];
 
-        let index1 = [0u8, 1, 2];
-        let index2 = [0u16, 1, 2];
+        let index1 = [0u8, 1, 2, 1, 2, 3];
+        let index2 = [0u16, 1, 2, 1, 2, 3];
 
         // upload data
         //self.shader.set_sources(&mut self.render, sh_source.iter());
@@ -175,7 +177,7 @@ impl View for SimpleView {
                                0,   0, 0, 1),
                     color: f32x3!(1.2f32, 0.2f32, 0.2f32),
                 };
-                self.shader.draw_indexed(&mut *p0, attributes.clone(), uniforms, Primitive::Triangle, 0, 3);
+                self.shader.draw_indexed(&mut *p0, attributes.clone(), self.index_buffer1.get_ref(), uniforms, Primitive::Triangle, 0, 6);
             }
         }
 
