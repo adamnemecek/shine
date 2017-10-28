@@ -122,8 +122,7 @@ impl GLIndexBuffer {
     }
 
     pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        println!("GLIndexBuffer - release");
-
+        //println!("GLIndexBuffer - release");
         queue.add(
             ReleaseCommand {
                 target: self.0.clone()
@@ -131,11 +130,8 @@ impl GLIndexBuffer {
         );
     }
 
-    pub fn set_transient<ID: IndexDeclaration, Q: CommandQueue>(&mut self,
-                                                                queue: &mut Q,
-                                                                index_data: &[u8]) {
-        println!("GLIndexBuffer - set_copy");
-
+    pub fn set_transient<ID: IndexDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q, index_data: &[u8]) {
+        //println!("GLIndexBuffer - set_copy");
         queue.add(
             CreateCommand {
                 target: self.0.clone(),

@@ -176,20 +176,11 @@ impl GLShaderProgramData {
 
         // create and attach shaders
         gl_check_error();
-        /*let compile_result = SD::map_sources(|(shader_type, source)| {
-            let shader_res = self.attach_shader(gl_get_shader_enum(shader_type), source.as_bytes());
-            if let Some(ShaderError(msg)) = shader_res.err() {
-                println!("shader compilation failed.\nsource:\n{}\nerror:\n{}", source, msg);
-                self.release(ll);
-                false
-            } else {
-                true
-            }
-        });*/
-
         for source in SD::get_sources() {
             if let Err(ShaderError(err)) = self.attach_shader(gl_get_shader_enum(source.0), source.1.as_bytes()) {
-                panic!("Shader compilation fialed.\n{}\nError:{}", source.1, err);
+                println!("Shader program compilation failed.\n{}\nError:{}", source.1, err);
+                self.release(ll);
+                return;
             }
         }
 
@@ -207,7 +198,7 @@ impl GLShaderProgramData {
                 let info_buf = vec![0u8; info_len as usize];
                 gl::GetProgramInfoLog(self.hw_id, info_len, &mut info_len, info_buf.as_ptr() as *mut GLchar);
                 let result_msg = from_utf8(info_buf.as_slice()).unwrap().to_string();
-                println!("program link failed:\n{}", result_msg);
+                println!("Shader program link failed:\n{}", result_msg);
                 self.release(ll);
                 return;
             }
@@ -254,7 +245,7 @@ impl GLShaderProgramData {
             attribute.location = location;
             attribute.size = attribute_size;
             attribute.type_id = attribute_type;
-            println!("attribute {}({})= {:?}", attribute_name, attribute_idx, attribute);
+            //println!("Shader program attribute {}({})= {:?}", attribute_name, attribute_idx, attribute);
         }
     }
 
@@ -296,7 +287,7 @@ impl GLShaderProgramData {
             uniform.location = location;
             uniform.size = uniform_size;
             uniform.type_id = uniform_type;
-            println!("uniform {}({})= {:?}", uniform_name, uniform_idx, uniform);
+            //println!("Shader program uniform {}({})= {:?}", uniform_name, uniform_idx, uniform);
         }
     }
 
@@ -319,28 +310,13 @@ impl GLShaderProgramData {
     }
 
     fn draw<A: ShaderAttribute, U: ShaderUniform>(&mut self, ll: &mut LowLevel,
-                                                  attributes: &A, uniforms: &U,
+                                                  attributes: &A, indices: Option<&GLIndexBufferRef>, uniforms: &U,
                                                   primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
-        ll.program_binding.bind(self.hw_id);
-
-        // bind attributes
-        for (index, ref location) in (0..A::get_count()).zip(self.attributes.iter()) {
-            if location.is_valid() {
-                attributes.get_by_index(index).bind(ll, location.location);
-            }
+        // bind shader
+        if self.hw_id == 0 {
+            // no drawing when shader is not valid
+            return;
         }
-
-        // bind uniforms
-        for (index, location) in (0..A::get_count()).zip(self.uniforms.iter_mut()) {
-            uniforms.process_by_index(index, location);
-        }
-
-        ll.draw(primitive, vertex_start, vertex_count);
-    }
-
-    fn draw_indexed<A: ShaderAttribute, U: ShaderUniform>(&mut self, ll: &mut LowLevel,
-                                                          attributes: &A, indices: &GLIndexBufferRef, uniforms: &U,
-                                                          primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
         ll.program_binding.bind(self.hw_id);
 
         // bind attributes
@@ -356,7 +332,11 @@ impl GLShaderProgramData {
         }
 
         // bind indices
-        indices.bind(ll);
+        if let Some(ref ib) = indices {
+            ib.bind(ll);
+        } else {
+            ll.index_binding.bind_no_index();
+        }
 
         ll.draw(primitive, vertex_start, vertex_count);
     }
@@ -423,12 +403,7 @@ impl<SD: ShaderDeclaration> Command for DrawCommand<SD> {
 
     fn process(&mut self, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
-        if self.indices.is_some() {
-            let indices = self.indices.as_ref().unwrap();
-            shader.draw_indexed(ll, &self.attributes, indices, &self.uniforms, self.primitive, self.vertex_start, self.vertex_count);
-        } else {
-            shader.draw(ll, &self.attributes, &self.uniforms, self.primitive, self.vertex_start, self.vertex_count);
-        }
+        shader.draw(ll, &self.attributes, self.indices.as_ref(), &self.uniforms, self.primitive, self.vertex_start, self.vertex_count);
     }
 }
 

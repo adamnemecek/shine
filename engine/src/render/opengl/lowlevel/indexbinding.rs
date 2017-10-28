@@ -1,7 +1,7 @@
-#![allow(dead_code)]
-
 use render::opengl::lowlevel::*;
 
+
+/// The current index buffer bound for the GL
 #[derive(Clone, Copy)]
 struct BoundIndex
 {
@@ -21,10 +21,10 @@ impl BoundIndex {
 }
 
 
+/// Handle index binding states
 pub struct IndexBinding {
     force: bool,
     time_stamp: u8,
-    bound_id: GLuint,
     bound_index: BoundIndex,
 }
 
@@ -33,7 +33,6 @@ impl IndexBinding {
         IndexBinding {
             force: false,
             time_stamp: 1,
-            bound_id: 0,
             bound_index: BoundIndex::new(),
         }
     }
@@ -63,7 +62,8 @@ impl IndexBinding {
 
     /// Binds an index buffer for modification
     pub fn bind_buffer(&mut self, hw_id: GLuint) {
-        if !self.force && self.bound_id == hw_id {
+        assert!(self.bound_index.time_stamp != self.time_stamp, "Index already bound for drawing");
+        if !self.force && self.bound_index.hw_id == hw_id {
             return;
         }
 
@@ -72,11 +72,13 @@ impl IndexBinding {
             gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, hw_id);
         }
         gl_check_error();
-        self.bound_id = hw_id;
+        self.bound_index.hw_id = hw_id;
+        self.bound_index.index_type = 0;
     }
 
     /// Sets up states for rendering without index buffer.
     pub fn bind_no_index(&mut self) {
+        assert!(self.bound_index.time_stamp != self.time_stamp, "Index already bound for drawing");
         self.bind_buffer(0);
         self.bound_index.index_type = 0;
         self.bound_index.time_stamp = self.time_stamp;
@@ -86,13 +88,16 @@ impl IndexBinding {
     pub fn bind_index(&mut self, hw_id: GLuint, index_type: GLenum) {
         assert!(hw_id != 0);
         assert!(index_type != 0);
+        assert!(self.bound_index.time_stamp != self.time_stamp, "Index already bound for drawing");
+        self.bind_buffer(hw_id);
         self.bound_index.index_type = index_type;
         self.bound_index.time_stamp = self.time_stamp;
     }
 
     /// Unbinds an index buffer if it is active. This function is mainly used during release.
     pub fn unbind_if_active(&mut self, hw_id: GLuint) {
-        if self.bound_id == hw_id {
+        assert!(self.bound_index.time_stamp != self.time_stamp, "Index already bound for drawing");
+        if self.bound_index.hw_id == hw_id {
             self.bind_buffer(0);
         }
     }
@@ -103,7 +108,7 @@ impl IndexBinding {
         if self.bound_index.time_stamp != self.time_stamp {
             self.bind_no_index();
         }
-        self.time_stamp.wrapping_add(1);
+        self.time_stamp = self.time_stamp.wrapping_add(1);
     }
 }
 

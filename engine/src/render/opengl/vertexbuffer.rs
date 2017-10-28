@@ -132,8 +132,7 @@ impl GLVertexBuffer {
     }
 
     pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        println!("GLVertexBuffer - release");
-
+        //println!("GLVertexBuffer - release");
         queue.add(
             ReleaseCommand {
                 target: self.0.clone()
@@ -141,10 +140,8 @@ impl GLVertexBuffer {
         );
     }
 
-    pub fn set_transient<VD: VertexDeclaration, Q: CommandQueue>(&mut self,
-                                                                 queue: &mut Q,
-                                                                 vertex_data: &[u8]) {
-        println!("GLVertexBuffer - set_copy");
+    pub fn set_transient<VD: VertexDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_data: &[u8]) {
+        //println!("GLVertexBuffer - set_copy");
         queue.add(
             CreateCommand::<VD> {
                 target: self.0.clone(),

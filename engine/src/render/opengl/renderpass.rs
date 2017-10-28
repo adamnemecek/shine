@@ -63,8 +63,7 @@ impl GLRenderPass {
     }
 
     pub ( crate ) fn prepare(&mut self, queue: &mut CommandStore, meta_index: ActivePassIndex, config: &RenderPassConfig) {
-        // todo: if this branching optional matching takes too much time, it can be split up
-        // into multiple commands
+        // todo: if Option branching takes too much time, it can be split up into multiple commands
 
         let clear_color = match config.clear {
             pass::Clear::Frame(color) => Some(color),

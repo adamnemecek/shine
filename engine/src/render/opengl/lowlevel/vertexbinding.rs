@@ -67,7 +67,7 @@ impl BoundVertexAttribute {
 }
 
 
-/// Handle vertex binding state
+/// Handle vertex binding states
 pub struct VertexBinding {
     force: bool,
     bound_id: GLuint,
@@ -110,6 +110,7 @@ impl VertexBinding {
         assert!( hw_id != 0 );
 
         let attr = &mut self.bound_attributes[location as usize];
+        assert!(attr.time_stamp != self.time_stamp, "Vertex attribute ({}) already bound for drawing", location);
         gl_check_error();
         if self.force || attr.hw_id != hw_id || attr.attribute != *attribute {
             //bind buffer
@@ -140,9 +141,10 @@ impl VertexBinding {
     /// Finalizes the vertex attribute binding. If an attribute was not bound for the
     /// cuurent render darw, it is disabled automatically.
     pub fn commit(&mut self) {
+        gl_check_error();
         for (location, attr) in self.bound_attributes.iter_mut().enumerate() {
             if attr.time_stamp != self.time_stamp && attr.hw_id != 0 {
-                // untouched attributes are unbound automatically
+                // active attributes not bound for this call are disabled automatically
                 attr.attribute = GLVertexBufferAttribute::new();
                 attr.hw_id = 0;
                 unsafe {
@@ -152,7 +154,7 @@ impl VertexBinding {
             }
         }
 
-        self.time_stamp.wrapping_add(1);
+        self.time_stamp = self.time_stamp.wrapping_add(1);
     }
 }
 

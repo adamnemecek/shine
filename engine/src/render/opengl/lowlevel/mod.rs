@@ -39,9 +39,7 @@ impl LowLevel {
         }
     }
 
-    pub fn release(&mut self) {
-        println!("release LowLevel");
-    }
+    pub fn release(&mut self) {}
 
     pub fn get_screen_size(&self) -> Size {
         self.screen_size
