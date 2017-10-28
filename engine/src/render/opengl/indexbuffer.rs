@@ -78,7 +78,7 @@ impl Drop for GLIndexBufferData {
 }
 
 
-/// RenderCommand to create the OpenGL program, set the shader sources and compile (link) a shader program.
+/// RenderCommand to create and allocated OpenGL resources.
 struct CreateCommand {
     target: Rc<RefCell<GLIndexBufferData>>,
     type_id: GLenum,
@@ -96,7 +96,7 @@ impl Command for CreateCommand {
 }
 
 
-/// RenderCommand to release the allocated OpenGL buffer.
+/// RenderCommand to release the allocated OpenGL resources.
 struct ReleaseCommand {
     target: Rc<RefCell<GLIndexBufferData>>,
 }
@@ -156,4 +156,5 @@ impl<T> IndexTypeInfoImpl for T where T: GLIndexTypeInfo {}
 /// The index buffer implementation
 pub type IndexBufferImpl = GLIndexBuffer;
 
+/// Reference to an index buffer
 pub type IndexBufferRefImpl = GLIndexBufferRef;

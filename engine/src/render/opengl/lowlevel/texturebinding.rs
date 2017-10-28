@@ -69,7 +69,7 @@ impl TextureBinding {
         self.force = force;
     }
 
-    /// Binds the given texture to a logical slot. Slots indices are logical not to ?? with gl slot ids (GL_TEXTURE0)
+    /// Binds the given texture to a logical slot. Slots indices are logical not to confuse with gl slot ids (GL_TEXTURE0)
     pub fn bind_to_slot(&mut self, slot: usize, target: GLenum, hw_id: GLuint, filter: GLTextureFilter) {
         // make the texture active
         gl_check_error();
@@ -113,7 +113,7 @@ impl TextureBinding {
         }
     }
 
-    /// Binds the given texture to an arbitrary slot and returns its (GL) id.
+    /// Binds the given texture to an arbitrary slot and returns the index of its slot.
     /// Slots are selected by LRU algorithm.
     fn bind(&mut self, target: GLenum, hw_id: GLuint, filter: GLTextureFilter) -> usize {
         // finds some slot to (re)use

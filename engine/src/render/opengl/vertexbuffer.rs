@@ -87,7 +87,7 @@ impl Drop for GLVertexBufferData {
 }
 
 
-/// RenderCommand to create the OpenGL program, set the shader sources and compile (link) a shader program.
+/// RenderCommand to create and allocated OpenGL resources.
 struct CreateCommand<VD: VertexDeclaration> {
     target: Rc<RefCell<GLVertexBufferData>>,
     data: Vec<u8>,

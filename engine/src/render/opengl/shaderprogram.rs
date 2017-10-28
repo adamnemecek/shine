@@ -69,46 +69,59 @@ impl UniformLocation {
     }
 }
 
-impl MutDataVisitor for UniformLocation {
+
+/// Helper to upload uniforms
+struct UniformUploader<'a>(&'a UniformLocation, &'a LowLevel);
+
+impl<'a> ShaderUniformVisitor for UniformUploader<'a> {
     fn process_f32x16(&mut self, data: &Float32x16) {
-        if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT_MAT4 && self.size == 1);
+        if !self.0.is_valid() { return; }
+        assert!(self.0.type_id == gl::FLOAT_MAT4 && self.0.size == 1);
         unsafe {
-            gl::UniformMatrix4fv(self.location as i32, self.size, gl::FALSE, mem::transmute(data));
+            gl::UniformMatrix4fv(self.0.location as i32, self.0.size, gl::FALSE, mem::transmute(data));
         }
     }
 
     fn process_f32x4(&mut self, data: &Float32x4) {
-        if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT_VEC4 && self.size == 1);
+        if !self.0.is_valid() { return; }
+        assert!(self.0.type_id == gl::FLOAT_VEC4 && self.0.size == 1);
         unsafe {
-            gl::Uniform4fv(self.location as i32, self.size, mem::transmute(data));
+            gl::Uniform4fv(self.0.location as i32, self.0.size, mem::transmute(data));
         }
     }
 
     fn process_f32x3(&mut self, data: &Float32x3) {
-        if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT_VEC3 && self.size == 1);
+        if !self.0.is_valid() { return; }
+        assert!(self.0.type_id == gl::FLOAT_VEC3 && self.0.size == 1);
         unsafe {
-            gl::Uniform3fv(self.location as i32, self.size, mem::transmute(data));
+            gl::Uniform3fv(self.0.location as i32, self.0.size, mem::transmute(data));
         }
     }
 
     fn process_f32x2(&mut self, data: &Float32x2)
     {
-        if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT_VEC2 && self.size == 1);
+        if !self.0.is_valid() { return; }
+        assert!(self.0.type_id == gl::FLOAT_VEC2 && self.0.size == 1);
         unsafe {
-            gl::Uniform2fv(self.location as i32, self.size, mem::transmute(data));
+            gl::Uniform2fv(self.0.location as i32, self.0.size, mem::transmute(data));
         }
     }
 
     fn process_f32(&mut self, data: f32) {
-        if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT && self.size == 1);
+        if !self.0.is_valid() { return; }
+        assert!(self.0.type_id == gl::FLOAT && self.0.size == 1);
         unsafe {
-            gl::Uniform1fv(self.location as i32, self.size, mem::transmute(&data));
+            gl::Uniform1fv(self.0.location as i32, self.0.size, mem::transmute(&data));
         }
+    }
+
+    fn process_tex_2d(&mut self, _data: &Texture2DRefImpl) {
+        if !self.0.is_valid() { return; }
+        assert!(self.0.type_id == gl::SAMPLER_2D && self.0.size == 1);
+        /*let slot = self.1.texture_binding.bind(data);
+        unsafe {
+            gl::Uniform1iv(slot as i32, self.0.size, mem::transmute(&data));
+        }*/
     }
 }
 
@@ -328,7 +341,8 @@ impl GLShaderProgramData {
 
         // bind uniforms
         for (index, location) in (0..A::get_count()).zip(self.uniforms.iter_mut()) {
-            uniforms.process_by_index(index, location);
+            let mut uploader = UniformUploader(&location, ll);
+            uniforms.process_by_index(index, &mut uploader);
         }
 
         // bind indices

@@ -183,8 +183,8 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
             syn::Ident::new(convert_camel_to_snake_case(uniform_name.trim_left_matches("u")))
         };
 
-        let type_token = uniform.get_type_token().unwrap();
-        let type_function_ident = syn::Ident::new(format!("process_{}", uniform.get_type_function_name().unwrap()));
+        let type_token = uniform.get_stored_type_token().unwrap();
+        let type_function_ident = syn::Ident::new(format!("process_{}", uniform.get_process_function_name().unwrap()));
 
         uniform_fields.push(quote! {
             #uniform_field_ident : #type_token
@@ -223,7 +223,7 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
                 }
             }
 
-            fn process_by_index<V: MutDataVisitor>(&self, index: usize, visitor: &mut V) {
+            fn process_by_index<V: ShaderUniformVisitor>(&self, index: usize, visitor: &mut V) {
                 match index {
                     #(#match_index_cases,)*
                     _ => panic!("Uniform index ({}) is out of range (0..{})", index, #count)

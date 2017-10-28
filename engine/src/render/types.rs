@@ -322,43 +322,4 @@ macro_rules! f32x2 {
 }
 
 
-/// Trait for the visitor to process render types
-#[allow(missing_docs)]
-pub trait DataVisitor {
-    fn process_f32x16(&self, data: &Float32x16);
-    fn process_f32x4(&self, data: &Float32x4);
-    fn process_f32x3(&self, data: &Float32x3);
-    fn process_f32x2(&self, data: &Float32x2);
-    fn process_f32(&self, data: f32);
-}
-
-/// Trait for the mutable visitor to process render types
-#[allow(missing_docs)]
-pub trait MutDataVisitor {
-    fn process_f32x16(&mut self, data: &Float32x16);
-    fn process_f32x4(&mut self, data: &Float32x4);
-    fn process_f32x3(&mut self, data: &Float32x3);
-    fn process_f32x2(&mut self, data: &Float32x2);
-    fn process_f32(&mut self, data: f32);
-}
-
-/// Trait for the visitor to mutate render types
-#[allow(missing_docs)]
-pub trait DataMutator {
-    fn process_f32x16(&self, data: &mut Float32x16);
-    fn process_f32x4(&self, data: &mut Float32x4);
-    fn process_f32x3(&self, data: &mut Float32x3);
-    fn process_f32x2(&self, data: &mut Float32x2);
-    fn process_f32(&self, data: &mut f32);
-}
-
-/// Trait for the mutable visitor to mutate render types
-#[allow(missing_docs)]
-pub trait MutDataMutator {
-    fn process_f32x16(&mut self, data: &mut Float32x16);
-    fn process_f32x4(&mut self, data: &mut Float32x4);
-    fn process_f32x3(&mut self, data: &mut Float32x3);
-    fn process_f32x2(&mut self, data: &mut Float32x2);
-    fn process_f32(&mut self, data: &mut f32);
-}
 

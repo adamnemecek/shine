@@ -82,7 +82,7 @@ pub struct VertexBuffer<VD: VertexDeclaration> {
 }
 
 impl<VD: VertexDeclaration> VertexBuffer<VD> {
-    /// Creates an empty shader.
+    /// Creates an empty vertex buffer.
     pub fn new() -> VertexBuffer<VD> {
         VertexBuffer {
             platform: VertexBufferImpl::new(),

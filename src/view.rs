@@ -40,7 +40,15 @@ struct VxColorTex {
         gl_FragColor = vec4(color, 1.0);
     }
 "]
+//todo 1:
+//#[state(depth) = on]
+//#[state(clamp) = ccw]
+//todo 2:
+//#[state(point_size) = ?]
+//todo 3:
+//#[unifrom(uTrsf) = engine.trsf]
 struct ShSimple {}
+
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum Passes {
@@ -63,6 +71,8 @@ pub struct SimpleView {
     vertex_buffer2: VertexBuffer<VxColorTex>,
     index_buffer1: IndexBuffer<u8>,
     index_buffer2: IndexBuffer<u16>,
+    texture1: Texture2D,
+    texture2: Texture2D,
 
     t: f32,
 }
@@ -77,6 +87,8 @@ impl SimpleView {
             vertex_buffer2: VertexBuffer::new(),
             index_buffer1: IndexBuffer::new(),
             index_buffer2: IndexBuffer::new(),
+            texture1: Texture2D::new(),
+            texture2: Texture2D::new(),
             t: 0f32,
         }
     }
@@ -125,6 +137,8 @@ impl View for SimpleView {
         self.vertex_buffer2.release(&mut self.render);
         self.index_buffer1.release(&mut self.render);
         self.index_buffer2.release(&mut self.render);
+        self.texture1.release(&mut self.render);
+        self.texture2.release(&mut self.render);
         self.shader.release(&mut self.render);
         self.render.submit(window);
     }
@@ -165,6 +179,7 @@ impl View for SimpleView {
                                     0,   0, 1, 0,
                                     0,   0, 0, 1),
                     color: f32x3!(1.2f32, 0.2f32, 0.2f32),
+                    //tex: texture1.get_ref(),
                 };
                 self.shader.draw(&mut *p0, attributes.clone(), uniforms.clone(), Primitive::Triangle, 0, 3);
             }
@@ -176,6 +191,7 @@ impl View for SimpleView {
                                    0,   0, 1, 0,
                                    0,   0, 0, 1),
                     color: f32x3!(1.2f32, 0.2f32, 0.2f32),
+                    //tex: texture1.get_ref(),
                 };
                 self.shader.draw_indexed(&mut *p0, attributes.clone(), self.index_buffer1.get_ref(), uniforms, Primitive::Triangle, 0, 6);
             }

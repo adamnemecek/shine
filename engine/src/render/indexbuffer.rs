@@ -78,7 +78,7 @@ pub struct IndexBuffer<ID: IndexDeclaration> {
 }
 
 impl<ID: IndexDeclaration> IndexBuffer<ID> {
-    /// Creates an empty shader.
+    /// Creates an empty index buffer.
     pub fn new() -> IndexBuffer<ID> {
         IndexBuffer {
             platform: IndexBufferImpl::new(),

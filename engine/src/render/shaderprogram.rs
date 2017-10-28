@@ -27,6 +27,20 @@ pub trait ShaderAttribute: Clone {
     fn get_by_index(&self, index: usize) -> &VertexAttributeRefImpl;
 }
 
+
+/// Trait for the mutable visitor to process render types
+#[allow(missing_docs)]
+pub trait ShaderUniformVisitor {
+    fn process_f32x16(&mut self, data: &Float32x16);
+    fn process_f32x4(&mut self, data: &Float32x4);
+    fn process_f32x3(&mut self, data: &Float32x3);
+    fn process_f32x2(&mut self, data: &Float32x2);
+    fn process_f32(&mut self, data: f32);
+
+    fn process_tex_2d(&mut self, data: &Texture2DRefImpl);
+}
+
+
 /// Trait to store shader parameters.
 pub trait ShaderUniform: Clone {
     /// Returns the number of uniforms
@@ -36,8 +50,9 @@ pub trait ShaderUniform: Clone {
     fn get_index_by_name(name: &str) -> Option<usize>;
 
     /// Visit data by index
-    fn process_by_index<V: MutDataVisitor>(&self, index: usize, visitor: &mut V);
+    fn process_by_index<V: ShaderUniformVisitor>(&self, index: usize, visitor: &mut V);
 }
+
 
 /// Trait to define shader attribute and uniform names
 pub trait ShaderDeclaration: 'static {
@@ -49,6 +64,7 @@ pub trait ShaderDeclaration: 'static {
     /// Returns an iterator over the shader sources
     fn get_sources() -> slice::Iter<'static, (ShaderType, &'static str)>;
 }
+
 
 
 /// Structure to store the shader abstraction.
