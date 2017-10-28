@@ -1,4 +1,3 @@
-
 #[cfg(target_os = "windows")]
 extern crate winapi;
 #[cfg(target_os = "windows")]
@@ -29,6 +28,7 @@ pub const MAX_VERTEX_ATTRIBUTE_COUNT: usize = 16;
 
 
 mod opengl;
+
 pub use self::opengl::*;
 
 pub use self::types::*;

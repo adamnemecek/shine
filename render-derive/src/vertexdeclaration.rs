@@ -13,7 +13,7 @@ pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 
 fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) -> quote::Tokens {
     let enum_type_name = syn::Ident::new(format!("{}Attribute", struct_name));
-    let crate_qulifier = quote!{::dragorust_engine::render};
+    let crate_qulifier = quote! {::dragorust_engine::render};
 
     let count = fields.len();
     if count == 0 {

@@ -43,7 +43,7 @@ impl PartialEq for GLVertexBufferAttribute {
             && self.components == other.components
             && self.normalize == other.normalize
             && self.stride == other.stride
-            && self.offset == other.offset
+            && self.offset == other.offset;
     }
 }
 
@@ -107,7 +107,7 @@ impl VertexBinding {
 
     /// Binds a vertex attribute to the given location.
     pub fn bind_attribute(&mut self, location: GLuint, hw_id: GLuint, attribute: &GLVertexBufferAttribute) {
-        assert!( hw_id != 0 );
+        assert!(hw_id != 0);
 
         let attr = &mut self.bound_attributes[location as usize];
         assert!(attr.time_stamp != self.time_stamp, "Vertex attribute ({}) already bound for drawing", location);

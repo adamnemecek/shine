@@ -22,11 +22,11 @@ pub fn main() {
         .size((102, 102))
         .build(&engine, SimpleView::new(world.clone())).expect("Could not initialize main window");
 
-    /*let mut sub_window = render::WindowSettings::new()
+    let mut sub_window = render::WindowSettings::new()
         .title("sub")
         .size((100, 100))
         //.gl_profile(render::OpenGLProfile::ES2)
-        .build(&engine, SimpleView::new(world.clone())).expect("Could not initialize sub window");*/
+        .build(&engine, SimpleView::new(world.clone())).expect("Could not initialize sub window");
 
     loop {
         if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {
@@ -36,9 +36,9 @@ pub fn main() {
         world.borrow_mut().update();
 
         window.update_view();
-        //sub_window.update_view();
+        sub_window.update_view();
 
         window.render().unwrap();
-        //sub_window.render().unwrap();
+        sub_window.render().unwrap();
     }
 }

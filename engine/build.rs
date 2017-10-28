@@ -6,7 +6,6 @@ use std::fs::File;
 use std::path::PathBuf;
 
 fn main() {
-
     for (key, value) in env::vars() {
         if key.starts_with("CARGO_CFG_") {
             println!("{}: {:?}", key, value);
@@ -40,7 +39,7 @@ fn main() {
             "WGL_EXT_extensions_string",
             "WGL_EXT_framebuffer_sRGB",
             "WGL_EXT_swap_control",
-           // "WGL_EXT_colorspace",
+            // "WGL_EXT_colorspace",
         ])
             .write_bindings(gl_generator::StructGenerator, &mut file).unwrap();
 

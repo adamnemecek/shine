@@ -1,5 +1,5 @@
 #[cfg(target_os = "windows")]
-#[path="platform/windows/engine.rs"]
+#[path = "platform/windows/engine.rs"]
 pub mod engine;
 
 

@@ -165,7 +165,7 @@ impl<K: PassKey> At<ActivePassIndex> for RenderManager<K> {
         if idx == ActivePassIndex::new() {
             0
         } else {
-            assert!(idx.check_time_stamp(self.current_time), "Pass was not activated in the current frame" );
+            assert!(idx.check_time_stamp(self.current_time), "Pass was not activated in the current frame");
             self.active_passes[idx.as_index()].order + 1
         }
     }

@@ -2,6 +2,8 @@
 
 use render::opengl::lowlevel::*;
 
+
+/// Handle shader binding states
 pub struct ProgramBinding {
     force: bool,
     bound_id: GLuint,

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::cell::{RefCell};
+use std::cell::RefCell;
 use std::str::from_utf8;
 use std::marker::PhantomData;
 use std::mem;
@@ -72,7 +72,7 @@ impl UniformLocation {
 impl MutDataVisitor for UniformLocation {
     fn process_f32x16(&mut self, data: &Float32x16) {
         if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT_MAT4 && self.size == 1 );
+        assert!(self.type_id == gl::FLOAT_MAT4 && self.size == 1);
         unsafe {
             gl::UniformMatrix4fv(self.location as i32, self.size, gl::FALSE, mem::transmute(data));
         }
@@ -80,7 +80,7 @@ impl MutDataVisitor for UniformLocation {
 
     fn process_f32x4(&mut self, data: &Float32x4) {
         if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT_VEC4 && self.size == 1 );
+        assert!(self.type_id == gl::FLOAT_VEC4 && self.size == 1);
         unsafe {
             gl::Uniform4fv(self.location as i32, self.size, mem::transmute(data));
         }
@@ -88,7 +88,7 @@ impl MutDataVisitor for UniformLocation {
 
     fn process_f32x3(&mut self, data: &Float32x3) {
         if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT_VEC3 && self.size == 1 );
+        assert!(self.type_id == gl::FLOAT_VEC3 && self.size == 1);
         unsafe {
             gl::Uniform3fv(self.location as i32, self.size, mem::transmute(data));
         }
@@ -97,7 +97,7 @@ impl MutDataVisitor for UniformLocation {
     fn process_f32x2(&mut self, data: &Float32x2)
     {
         if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT_VEC2 && self.size == 1 );
+        assert!(self.type_id == gl::FLOAT_VEC2 && self.size == 1);
         unsafe {
             gl::Uniform2fv(self.location as i32, self.size, mem::transmute(data));
         }
@@ -105,7 +105,7 @@ impl MutDataVisitor for UniformLocation {
 
     fn process_f32(&mut self, data: f32) {
         if !self.is_valid() { return; }
-        assert!(self.type_id == gl::FLOAT && self.size == 1 );
+        assert!(self.type_id == gl::FLOAT && self.size == 1);
         unsafe {
             gl::Uniform1fv(self.location as i32, self.size, mem::transmute(&data));
         }
@@ -344,7 +344,7 @@ impl GLShaderProgramData {
 
 impl Drop for GLShaderProgramData {
     fn drop(&mut self) {
-        assert! ( self.hw_id == 0, "Leaking shader program" );
+        assert!(self.hw_id == 0, "Leaking shader program");
     }
 }
 

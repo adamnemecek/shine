@@ -2,12 +2,34 @@
 
 use render::opengl::lowlevel::*;
 
+/// Texture sampling parameters
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct GLTextureFilter {
+    mag_filter: GLenum,
+    min_filter: GLenum,
+    wrap_s: GLenum,
+    wrap_t: GLenum,
+}
+
+impl GLTextureFilter {
+    fn new() -> GLTextureFilter {
+        GLTextureFilter {
+            mag_filter: 0,
+            min_filter: 0,
+            wrap_s: 0,
+            wrap_t: 0,
+        }
+    }
+}
+
+
+/// The current texture bound for the GL
 #[derive(Clone, Copy)]
 struct TextureUnit
 {
     hw_id: GLuint,
     target: GLenum,
-    //sampling : TextureSampling,
+    filter: GLTextureFilter,
     last_access_time: usize,
 }
 
@@ -16,13 +38,14 @@ impl TextureUnit {
         TextureUnit {
             hw_id: 0,
             target: 0,
-            //sampling:
+            filter: GLTextureFilter::new(),
             last_access_time: 0,
         }
     }
 }
 
 
+/// Handle texture binding states
 pub struct TextureBinding {
     force: bool,
     time_stamp: usize,
@@ -47,7 +70,7 @@ impl TextureBinding {
     }
 
     /// Binds the given texture to a logical slot. Slots indices are logical not to ?? with gl slot ids (GL_TEXTURE0)
-    pub fn bind_to_slot(&mut self, slot: usize, target: GLenum, hw_id: GLuint/*, TextureSampling sampling*/) {
+    pub fn bind_to_slot(&mut self, slot: usize, target: GLenum, hw_id: GLuint, filter: GLTextureFilter) {
         // make the texture active
         gl_check_error();
         if self.force || self.active_unit != slot {
@@ -77,28 +100,28 @@ impl TextureBinding {
 
         // update texture parameters
         if hw_id != 0 {
-            /*if self.force || unit.sampling != sampling {
+            if self.force || unit.filter != filter {
                 unsafe {
-                    gl::TexParameteri(unit.target, GL_TEXTURE_MAG_FILTER, sampling.magFilter);
-                    gl::TexParameteri(unit.target, GL_TEXTURE_MIN_FILTER, sampling.minFilter);
-                    gl::TexParameteri(unit.target, GL_TEXTURE_WRAP_S, sampling.wrapS);
-                    gl::TexParameteri(unit.target, GL_TEXTURE_WRAP_T, sampling.wrapT);
+                    gl::TexParameteri(unit.target, gl::TEXTURE_MAG_FILTER, filter.mag_filter as i32);
+                    gl::TexParameteri(unit.target, gl::TEXTURE_MIN_FILTER, filter.min_filter as i32);
+                    gl::TexParameteri(unit.target, gl::TEXTURE_WRAP_S, filter.wrap_s as i32);
+                    gl::TexParameteri(unit.target, gl::TEXTURE_WRAP_T, filter.wrap_t as i32);
                 }
-                unit.sampling = sampling;
-            }*/
+                unit.filter = filter;
+            }
             gl_check_error();
         }
     }
 
     /// Binds the given texture to an arbitrary slot and returns its (GL) id.
     /// Slots are selected by LRU algorithm.
-    fn bind(&mut self, target: GLenum, hw_id: GLuint/*, sampling: TextureSampling */) -> usize {
+    fn bind(&mut self, target: GLenum, hw_id: GLuint, filter: GLTextureFilter) -> usize {
         // finds some slot to (re)use
         let mut slot = 0;
         // don't rebind any texture from this draw call (bindings since the last commit call)
         let mut worst_time = self.time_stamp;
         for (i, unit) in self.texture_units.iter().enumerate() {
-            if unit.target == target && unit.hw_id == hw_id /*&& unit.sampling == sampling*/ {
+            if unit.target == target && unit.hw_id == hw_id && unit.filter == filter {
                 // this texture already bound
                 slot = i;
                 break;
@@ -110,7 +133,7 @@ impl TextureBinding {
             }
         }
 
-        self.bind_to_slot(slot, target, hw_id);
+        self.bind_to_slot(slot, target, hw_id, filter);
         return slot;
     }
 
@@ -131,7 +154,7 @@ impl TextureBinding {
         }
 
         if slot != usize::max_value() {
-            self.bind_to_slot(slot, target, 0/*, TextureSampling()*/);
+            self.bind_to_slot(slot, target, 0, GLTextureFilter::new());
         }
     }
 

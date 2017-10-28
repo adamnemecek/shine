@@ -1,4 +1,4 @@
-use std::sync::{Arc};
+use std::sync::Arc;
 
 pub use self::spscstate::{Sender, Receiver};
 pub use self::spscstate::{RefReceiveBuffer, RefSendBuffer};
@@ -19,7 +19,7 @@ mod tests {
     use super::state_channel;
     use std::thread;
 
-    const ITER_COUNT : i32 = 0x2ffff;
+    const ITER_COUNT: i32 = 0x2ffff;
 
     #[test]
     fn st_logic() {

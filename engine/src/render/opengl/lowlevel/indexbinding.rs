@@ -50,13 +50,13 @@ impl IndexBinding {
 
     /// Returns the type id of the bound index
     pub fn get_index_type(&self) -> GLenum {
-        assert!( self.is_indexed() && self.bound_index.index_type != 0 );
+        assert!(self.is_indexed() && self.bound_index.index_type != 0);
         self.bound_index.index_type
     }
 
     /// Calculates the offset (in bytes) for the given start vertex
     pub fn get_offset(&self, first: GLuint) -> usize {
-        assert!( self.is_indexed() && self.bound_index.index_type != 0 );
+        assert!(self.is_indexed() && self.bound_index.index_type != 0);
         gl_get_type_size(self.bound_index.index_type) * (first as usize)
     }
 

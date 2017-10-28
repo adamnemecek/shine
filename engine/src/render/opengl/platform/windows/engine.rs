@@ -21,7 +21,7 @@ pub unsafe extern "system" fn wnd_proc(hwnd: winapi::HWND, msg: winapi::UINT,
         return user32::DefWindowProcW(hwnd, msg, wparam, lparam);
     }
 
-    return GLWindow::handle_os_message(win_ptr, hwnd, msg, wparam, lparam)
+    return GLWindow::handle_os_message(win_ptr, hwnd, msg, wparam, lparam);
 }
 
 

@@ -1,5 +1,5 @@
 use std::rc::Rc;
-use std::cell::{RefCell};
+use std::cell::RefCell;
 
 use render::*;
 use render::opengl::lowlevel::*;
