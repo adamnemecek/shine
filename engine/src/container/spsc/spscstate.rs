@@ -108,6 +108,7 @@ impl<T: Copy> Sender<T> {
     }
 }
 
+
 /// Reference to the buffer held by the producer
 pub struct RefSendBuffer<'a, T: 'a>(&'a TripleBuffer<T>, usize);
 
@@ -161,6 +162,7 @@ impl<T: Copy> Receiver<T> {
         }
     }
 }
+
 
 /// Reference to the buffer held by the consumer
 pub struct RefReceiveBuffer<'a, T: 'a>(&'a TripleBuffer<T>, usize);

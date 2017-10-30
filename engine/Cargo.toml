@@ -13,6 +13,11 @@ dragorust-render-derive = {path = "../render-derive"}
 libc = "*"
 gl = "*"
 arrayvec = "*"
+image = "*"
+
+[dependency.image]
+# don't add ryon now, we might not need it
+default-features = false
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = "0.2"
