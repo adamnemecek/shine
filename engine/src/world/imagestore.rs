@@ -8,6 +8,12 @@ use image;
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct Id(String);
 
+impl Id {
+    pub fn new<S: Into<String>>(file: S) -> Id {
+        Id(file.into())
+    }
+}
+
 impl store::Id for Id {}
 
 
@@ -19,10 +25,6 @@ pub enum Image {
 }
 
 impl store::Data for Image {}
-
-
-/// Resource manager for image handling.
-pub type ImageStore = store::Store<Id, Image>;
 
 
 /// Factory to load images by the resource names
@@ -53,3 +55,8 @@ impl store::Factory<Id, Image> for ImageLoader {
 pub fn create() -> ImageStore {
     ImageStore::new(ImageLoader)
 }
+
+pub type ImageStore = store::Store<Id, Image>;
+pub type ImageRef = store::Ref<Id, Image>;
+pub type ImageId = Id;
+

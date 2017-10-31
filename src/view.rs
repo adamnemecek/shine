@@ -2,8 +2,9 @@ use std::slice;
 use std::str;
 use std::f32;
 
-use game::*;
-use dragorust_engine::render::*;
+use game;
+use world;
+use render::*;
 
 #[derive(Copy, Clone, Debug)]
 #[derive(VertexDeclaration)]
@@ -60,7 +61,7 @@ impl PassKey for Passes {}
 
 /// Structure to handle view dependent data
 pub struct SimpleView {
-    game: GameCell,
+    game: game::GameCell,
     render: RenderManager<Passes>,
 
     shader: ShaderProgram<ShSimple>,
@@ -69,6 +70,7 @@ pub struct SimpleView {
     vertex_buffer2: VertexBuffer<VxColorTex>,
     index_buffer1: IndexBuffer<u8>,
     index_buffer2: IndexBuffer<u16>,
+    img1: world::ImageRef,
     texture1: Texture2D,
     texture2: Texture2D,
 
@@ -76,7 +78,7 @@ pub struct SimpleView {
 }
 
 impl SimpleView {
-    pub fn new(game: GameCell) -> SimpleView {
+    pub fn new(game: game::GameCell) -> SimpleView {
         SimpleView {
             game: game,
             render: RenderManager::new(),
@@ -85,6 +87,7 @@ impl SimpleView {
             vertex_buffer2: VertexBuffer::new(),
             index_buffer1: IndexBuffer::new(),
             index_buffer2: IndexBuffer::new(),
+            img1: world::ImageRef::new_none(),
             texture1: Texture2D::new(),
             texture2: Texture2D::new(),
             t: 0f32,
@@ -153,6 +156,12 @@ impl View for SimpleView {
     }
 
     fn on_render(&mut self, window: &mut Window) {
+        {
+            if self.img1.is_none() {
+                self.img1 = self.game.borrow().image_store.get_or_request(&world::ImageId::new("alma.png"));
+            }
+        }
+        
         {
             let mut p0 = self.render.get_pass(Passes::Present);
             p0.config_mut().set_clear_color(f32x3!(self.t, self.game.borrow().t, 0.));

@@ -8,7 +8,6 @@ mod view;
 
 pub use dragorust_engine::*;
 use render::*;
-use game::*;
 use view::*;
 
 pub fn main() {

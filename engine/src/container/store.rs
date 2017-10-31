@@ -61,7 +61,7 @@ impl<Key: Id, Value: Data> Ref<Key, Value> {
         }
     }
 
-    fn new_none() -> Ref<Key, Value> {
+    pub fn new_none() -> Ref<Key, Value> {
         Ref {
             value: None,
             phantom: PhantomData,
