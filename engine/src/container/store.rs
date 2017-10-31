@@ -112,13 +112,13 @@ impl<Key: Id, Value: Data> Store<Key, Value> {
     }
 
     /// Gets resource by the given id. If resource is not loaded an empty reference is returned
-    /// but no request is made for the loading.
+    /// and no request is made to the loader.
     pub fn get(&self, id: &Key) -> Ref<Key, Value> {
         Ref::from_option(self.resources.get(id))
     }
 
     /// Gets resource by the given id. If resource is not loaded an empty reference is returned
-    /// and a request is made for the load.
+    /// and a request is made to the loader.
     pub fn get_request(&self, id: &Key) -> Ref<Key, Value> {
         let resource = self.get(id);
         if resource.is_some() {
