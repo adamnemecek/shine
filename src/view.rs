@@ -1,10 +1,8 @@
-use std::rc::*;
-use std::cell::*;
 use std::slice;
 use std::str;
 use std::f32;
 
-use world::*;
+use game::*;
 use dragorust_engine::render::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -62,7 +60,7 @@ impl PassKey for Passes {}
 
 /// Structure to handle view dependent data
 pub struct SimpleView {
-    world: Rc<RefCell<World>>,
+    game: GameCell,
     render: RenderManager<Passes>,
 
     shader: ShaderProgram<ShSimple>,
@@ -78,9 +76,9 @@ pub struct SimpleView {
 }
 
 impl SimpleView {
-    pub fn new(world: Rc<RefCell<World>>) -> SimpleView {
+    pub fn new(game: GameCell) -> SimpleView {
         SimpleView {
-            world: world,
+            game: game,
             render: RenderManager::new(),
             shader: ShaderProgram::new(),
             vertex_buffer1: VertexBuffer::new(),
@@ -157,7 +155,7 @@ impl View for SimpleView {
     fn on_render(&mut self, window: &mut Window) {
         {
             let mut p0 = self.render.get_pass(Passes::Present);
-            p0.config_mut().set_clear_color(f32x3!(self.t, self.world.borrow().get_t(), 0.));
+            p0.config_mut().set_clear_color(f32x3!(self.t, self.game.borrow().t, 0.));
             p0.config_mut().set_fullscreen();
 
             let v1 = &self.vertex_buffer1;
