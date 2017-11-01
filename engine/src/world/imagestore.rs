@@ -18,11 +18,7 @@ impl store::Id for Id {}
 
 
 /// The Image resource.
-pub enum Image {
-    Byte(image::DynamicImage),
-    //Compressed(u32,u32,Vec<u8>),
-    Error(image::RgbaImage),
-}
+pub type Image = image::DynamicImage;
 
 impl store::Data for Image {}
 
@@ -32,18 +28,24 @@ struct ImageLoader;
 
 impl ImageLoader {
     fn create_error_image(&self) -> Image {
-        Image::Error(image::RgbaImage::new(4, 4))
+        image::DynamicImage::new_rgba8(4, 4)
+    }
+
+    fn create_pending_image(&self) -> Image {
+        image::DynamicImage::new_rgba8(4, 4)
     }
 }
 
 impl store::Factory<Id, Image> for ImageLoader {
-    fn request(&mut self, _id: &Id) {}
+    fn request(&mut self, _id: &Id) -> Image {
+        self.create_pending_image()
+    }
 
     fn create(&mut self, id: &Id) -> Option<Image> {
         let path = Path::new(&id.0);
         let im = image::open(&path);
         if im.is_ok() {
-            Some(Image::Byte(im.unwrap()))
+            Some(im.unwrap())
         } else {
             Some(self.create_error_image())
         }

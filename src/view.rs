@@ -161,7 +161,7 @@ impl View for SimpleView {
                 self.img1 = self.game.borrow().image_store.get_or_request(&world::ImageId::new("alma.png"));
             }
         }
-        
+
         {
             let mut p0 = self.render.get_pass(Passes::Present);
             p0.config_mut().set_clear_color(f32x3!(self.t, self.game.borrow().t, 0.));

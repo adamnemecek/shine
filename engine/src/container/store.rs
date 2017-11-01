@@ -7,7 +7,6 @@ use std::cell;
 use std::cell::RefCell;
 use std::hash::Hash;
 use std::collections::HashMap;
-use std::marker::PhantomData;
 
 
 /// Trait for resource id
@@ -24,73 +23,114 @@ pub trait Data {
 pub trait Factory<Key: Id, Value: Data> {
     /// Request the creation of an item. The item is not required immediately, but
     /// a create call will be triggered soon.
-    fn request(&mut self, id: &Key);
+    fn request(&mut self, id: &Key) -> Value;
 
     /// Create the item associated with the key
     fn create(&mut self, id: &Key) -> Option<Value>;
 }
 
-impl<Key: Id, Value: Data> Factory<Key, Value> for Fn(&Key) -> Option<Value> {
-    fn request(&mut self, _id: &Key) {}
 
-    fn create(&mut self, id: &Key) -> Option<Value> {
-        self(id)
-    }
+/// An entry in the store.
+#[derive(PartialEq, Eq, Debug)]
+pub enum Entry<Key: Id, Value: Data> {
+    Pending(Key, Value),
+    Ready(Value),
 }
 
-impl<Key: Id, Value: Data> Factory<Key, Value> for FnMut(&Key) -> Option<Value> {
-    fn request(&mut self, _id: &Key) {}
-
-    fn create(&mut self, id: &Key) -> Option<Value> {
-        self(id)
-    }
-}
 
 /// Reference to an entry in the store
 #[derive(PartialEq, Eq, Debug)]
 pub struct Ref<Key: Id, Value: Data> {
-    value: Option<Rc<RefCell<Value>>>,
-    phantom: PhantomData<Key>,
+    value: Option<Rc<RefCell<Entry<Key, Value>>>>,
 }
 
 impl<Key: Id, Value: Data> Ref<Key, Value> {
-    fn from_option(value: Option<&Rc<RefCell<Value>>>) -> Ref<Key, Value> {
+    fn new(value: Rc<RefCell<Entry<Key, Value>>>) -> Ref<Key, Value> {
         Ref {
-            value: value.map(|r| r.clone()),
-            phantom: PhantomData,
+            value: Some(value),
         }
     }
 
-    pub fn new_none() -> Ref<Key, Value> {
+    pub fn none() -> Ref<Key, Value> {
         Ref {
             value: None,
-            phantom: PhantomData,
         }
     }
 
-    /// Checks if the reference is valid.
+    /// Checks if the referenced resource is loaded.
+    pub fn is_ready(&self) -> bool {
+        if let Some(ref value) = self.value {
+            match *value.borrow() {
+                Entry::Ready(..) => true,
+                _ => false
+            }
+        } else {
+            true
+        }
+    }
+
+    /// Checks if the referenced resource is pending.
+    pub fn is_pending(&self) -> bool {
+        if let Some(ref value) = self.value {
+            match *value.borrow() {
+                Entry::Pending(..) => true,
+                _ => false
+            }
+        } else {
+            true
+        }
+    }
+
+    /// Checks if the reference is set
     pub fn is_some(&self) -> bool {
         self.value.is_some()
     }
 
-    /// Checks if the reference is not valid.
+    /// Checks if the reference is not set
     pub fn is_none(&self) -> bool {
         self.value.is_none()
     }
 
     /// Returns non-mutable reference to the data.
-    pub fn get_ref(&self) -> cell::Ref<Value> {
-        assert!(self.is_some());
-        self.value.as_ref().unwrap().borrow()
+    pub fn borrow(&self) -> cell::Ref<Entry<Key, Value>> {
+        if let Some(ref value) = self.value {
+            value.borrow()
+        } else {
+            panic!("Dereferencing an ampty reference")
+        }
+    }
+}
+
+struct Shared<Key: Id, Value: Data> {
+    factory: Box<Factory<Key, Value>>,
+    requests: Vec<Rc<RefCell<Entry<Key, Value>>>>,
+}
+
+impl<Key: Id, Value: Data> Shared<Key, Value> {
+    fn process_requests(&mut self) {
+        let factory = &mut self.factory;
+        self.requests.retain(|request| {
+            let mut request = request.borrow_mut();
+            let value = match *request {
+                Entry::Pending(ref id, _) => { factory.create(id) }
+                _ => { panic!("Non-panding requests") }
+            };
+
+            if let Some(value) = value {
+                *request = Entry::Ready(value);
+                false
+            } else {
+                true
+            }
+        });
     }
 }
 
 
 /// Resource store. Resources are constants and can be created/requested through the store only.
 pub struct Store<Key: Id, Value: Data> {
-    resources: HashMap<Key, Rc<RefCell<Value>>>,
-    factory: RefCell<Box<Factory<Key, Value>>>,
-    requests: RefCell<Vec<Key>>,
+    resources: HashMap<Key, Rc<RefCell<Entry<Key, Value>>>>,
+    shared: RefCell<Shared<Key, Value>>,
 }
 
 impl<Key: Id, Value: Data> Store<Key, Value> {
@@ -98,8 +138,10 @@ impl<Key: Id, Value: Data> Store<Key, Value> {
     pub fn new<F: 'static + Sized + Factory<Key, Value>>(factory: F) -> Store<Key, Value> {
         Store {
             resources: HashMap::new(),
-            factory: RefCell::new(Box::new(factory)),
-            requests: RefCell::new(vec!()),
+            shared: RefCell::new(Shared {
+                factory: Box::new(factory),
+                requests: vec!()
+            }),
         }
     }
 
@@ -115,25 +157,49 @@ impl<Key: Id, Value: Data> Store<Key, Value> {
 
     /// Returns the number of requested (but not created) items.
     pub fn request_len(&self) -> usize {
-        self.requests.borrow().len()
+        self.shared.borrow().requests.len()
     }
 
     /// Returns if there are any requested (but not created) items.
     pub fn has_request(&self) -> bool {
-        !self.requests.borrow().is_empty()
+        !self.shared.borrow().requests.is_empty()
     }
 
     /// Gets resource by the given id. If resource is not loaded an empty reference is returned
     /// and no request is made to the loader.
     pub fn get(&self, id: &Key) -> Ref<Key, Value> {
-        Ref::from_option(self.resources.get(id))
+        let entry = self.resources.get(id);
+        match entry {
+            Some(entry) => Ref::new(entry.clone()),
+            None => Ref::none()
+        }
+    }
+
+    fn request_unchecked(&self, id: &Key) -> Ref<Key, Value> {
+        let mut shared = self.shared.borrow_mut();
+        // find resource in the requests
+        for request in shared.requests.iter() {
+            let found = match *request.borrow() {
+                Entry::Pending(ref rid, ..) => { *rid == *id }
+                _ => { panic!("Non-panding requests") }
+            };
+
+            if found {
+                return Ref::new(request.clone());
+            }
+        }
+
+        let request = shared.factory.request(id);
+        let request = Entry::Pending(id.clone(), request);
+        let request = Rc::new(RefCell::new(request));
+        shared.requests.push(request.clone());
+        Ref::new(request)
     }
 
     /// Requests a resource to be loaded. The resource is not loaded immediatelly
     pub fn request(&self, id: &Key) {
         if !self.resources.contains_key(id) {
-            self.factory.borrow_mut().request(id);
-            self.requests.borrow_mut().push(id.clone());
+            self.request_unchecked(id);
         }
     }
 
@@ -144,42 +210,41 @@ impl<Key: Id, Value: Data> Store<Key, Value> {
         if resource.is_some() {
             resource
         } else {
-            self.factory.borrow_mut().request(id);
-            self.requests.borrow_mut().push(id.clone());
-            Ref::new_none()
+            self.request_unchecked(id)
         }
     }
 
     /// Creates the requested resources and stores them in the map.
     pub fn update(&mut self) {
-        let mut requests = self.requests.borrow_mut();
-        let mut factory = self.factory.borrow_mut();
+        let mut shared = self.shared.borrow_mut();
         let resources = &mut self.resources;
-        requests.retain(|request| {
-            use std::collections::hash_map::Entry;
-            match resources.entry(request.clone()) {
-                Entry::Vacant(entry) => {
-                    // create new item
-                    let new_value = factory.create(entry.key());
-                    if new_value.is_some() {
-                        entry.insert(Rc::new(RefCell::new(new_value.unwrap())));
-                        false
+        let shared = &mut *shared;
+        {
+            let factory = &mut shared.factory;
+            shared.requests.retain(|request| {
+                let store = {
+                    if let Entry::Pending(ref id, _) = *request.borrow_mut() {
+                        factory.create(id).map(|v| (id.clone(), v))
                     } else {
-                        // item creatin is not ready
-                        true
+                        panic!("Non-pending requests")
                     }
-                }
-                Entry::Occupied(..) => {
-                    // item already present, ignore the request
+                };
+
+                if let Some((id, value)) = store {
+                    *request.borrow_mut() = Entry::Ready(value);
+                    resources.insert(id, request.clone());
                     false
+                } else {
+                    true
                 }
-            }
-        });
+            });
+        }
     }
 
     /// Removes unreferenced resources.
     pub fn drain_unused(&mut self) {
-        self.requests.borrow_mut().clear();
+        let mut shared = self.shared.borrow_mut();
+        shared.requests.clear();
         self.resources.retain(|_, v| {
             Rc::strong_count(v) > 1
         });
