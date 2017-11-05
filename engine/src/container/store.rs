@@ -1,8 +1,10 @@
 #![deny(missing_copy_implementations)]
+#![cfg(off)]
 
 
 use std::fmt;
 use std::sync::*;
+use std::sync::atomic::*;
 use std::hash::Hash;
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -29,10 +31,25 @@ pub trait Factory<Key: Id, Value: Data>: Send {
 }
 
 
+#[derive(PartialEq, Eq, Debug)]
+pub struct RefIndex<Key: Id, Value: Data>(usize, PhantomData<(Key, Value)>);
+
+impl<Key: Id, Value: Data> RefIndex<Key, Value> {
+    pub fn null() -> RefIndex<Key, Value> {
+        RefIndex(usize::max_value(), PhantomData)
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.0 == usize::max_value()
+    }
+}
+
+
 /// An entry in the store.
 #[derive(Debug)]
 struct Entry<Value: Data> {
     is_ready: bool,
+    ref_count: AtomicUsize,
     value: Value,
 }
 
@@ -40,11 +57,11 @@ struct Entry<Value: Data> {
 /// Requests for the missing resources.
 struct Requests<Key: Id, Value: Data> {
     factory: Box<Factory<Key, Value>>,
-    requests: HashMap<Key, Arc<Entry<Value>>>,
+    requests: Vec<(Key, Entry<Value>)>,
 }
 
 impl<Key: Id, Value: Data> Requests<Key, Value> {
-    fn process_requests(&mut self, resources: &mut HashMap<Key, Arc<Entry<Value>>>) {
+    fn process_requests(&mut self, resources: &mut Vec<(Key, Entry<Value>)>) {
         let factory = &mut self.factory;
         self.requests.retain(|id, value| {
             if let Some(new_value) = factory.create(id) {

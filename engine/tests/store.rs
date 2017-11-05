@@ -1,3 +1,5 @@
+#![cfg(off)]
+
 extern crate dragorust_engine;
 
 use std::thread;

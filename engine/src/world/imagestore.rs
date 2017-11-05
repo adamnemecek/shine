@@ -1,4 +1,5 @@
 #![deny(missing_copy_implementations)]
+#![cfg(off)]
 
 use std::path::Path;
 use container::store;
