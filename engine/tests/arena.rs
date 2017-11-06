@@ -8,7 +8,7 @@ mod arena {
 
     #[test]
     fn new() {
-        let arena = Arena::<i32>::new();
+        let arena = Arena::<i32>::new(4);
         assert!(arena.is_empty());
         assert!(arena.len() == 0);
         assert!(arena.capacity() == 0);
@@ -16,16 +16,39 @@ mod arena {
 
     #[test]
     fn add() {
-        let mut arena = Arena::new();
+        let mut arena = Arena::new(4);
 
-        for i in 0..10 {
-            let idx = arena.add(i * 10);
-            assert!(arena[idx] == i * 10);
-        }
-        assert!(!arena.is_empty());
-        assert!(arena.len() == 10);
+        let i0 = arena.alloc(0);
+        assert!(*i0 == 0);
+        assert!(arena.len() == 1);
+        assert!(arena.capacity() == 4);
+
+        let i1 = arena.alloc(10);
+        let i2 = arena.alloc(20);
+        let i3 = arena.alloc(30);
+        assert!(*i0 == 0);
+        assert!(*i1 == 10);
+        assert!(*i2 == 20);
+        assert!(*i3 == 30);
+        assert!(arena.len() == 4);
+        assert!(arena.capacity() == 4);
+
+        let i4 = arena.alloc(40);
+        assert!(arena.capacity() == 8);
+        let i5 = arena.alloc(50);
+        let i6 = arena.alloc(60);
+        assert!(*i0 == 0);
+        assert!(*i1 == 10);
+        assert!(*i2 == 20);
+        assert!(*i3 == 30);
+        assert!(*i4 == 40);
+        assert!(*i5 == 50);
+        assert!(*i6 == 60);
+        assert!(arena.len() == 7);
+        assert!(arena.capacity() == 8);
     }
 
+    /*
     fn add_many_(arena: &mut Arena<usize>) {
         let mut i2000 = !0;
         let mut i5764 = !0;
@@ -215,5 +238,5 @@ mod arena {
         arena.remove(b);
         assert!(arena.get(b) == None);
         assert!(arena.get_mut(b) == None);
-    }
+    }*/
 }

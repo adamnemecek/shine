@@ -5,13 +5,11 @@
 use std::fmt;
 use std::sync::*;
 use std::sync::atomic::*;
-use std::hash::Hash;
-use std::collections::HashMap;
 use std::marker::PhantomData;
 
 
 /// Trait for resource id
-pub trait Id: Clone + Hash + Eq + fmt::Debug {}
+pub trait Id: Clone + Eq + fmt::Debug {}
 
 
 /// Trait for resources
@@ -34,30 +32,38 @@ pub trait Factory<Key: Id, Value: Data>: Send {
 #[derive(PartialEq, Eq, Debug)]
 pub struct RefIndex<Key: Id, Value: Data>(usize, PhantomData<(Key, Value)>);
 
+//impl<Key: Id, Value: Data> !Copy for RefIndex<Key, Value> {}
+
 impl<Key: Id, Value: Data> RefIndex<Key, Value> {
     pub fn null() -> RefIndex<Key, Value> {
-        RefIndex(usize::max_value(), PhantomData)
+        RefIndex(!0, PhantomData)
     }
 
     pub fn is_null(&self) -> bool {
-        self.0 == usize::max_value()
+        self.0 == !0
     }
 }
 
 
 /// An entry in the store.
 #[derive(Debug)]
-struct Entry<Value: Data> {
-    is_ready: bool,
+struct Entry<Key: Id, Value: Data> {
+    key: key,
     ref_count: AtomicUsize,
     value: Value,
+}
+
+enum Slot<Key: Id, Value: Data> {
+    Pending(Box<Entry<Key, Value>>),
+    Ready(Box<Entry<Key, Value>>),
+    Empty(usize),
 }
 
 
 /// Requests for the missing resources.
 struct Requests<Key: Id, Value: Data> {
     factory: Box<Factory<Key, Value>>,
-    requests: Vec<(Key, Entry<Value>)>,
+    requests: Vec<Slot<Key, Value>>,
 }
 
 impl<Key: Id, Value: Data> Requests<Key, Value> {
