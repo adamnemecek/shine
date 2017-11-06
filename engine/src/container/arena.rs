@@ -226,10 +226,18 @@ impl<T> Arena<T> {
             return;
         }
 
-        for pi in 0..self.pages.len() {
+        let pcnt = self.pages.len();
+        for pi in 0..pcnt {
             let page = &mut self.pages[pi];
-            for si in 0..page.slots.len() - 1 {
-                page.slots[si] = Slot::Vacant(FreeIndex(pi as u16, si as u16));
+            let scnt = page.slots.len() - 1;
+            for si in 0..scnt {
+                page.slots[si] = Slot::Vacant(FreeIndex(pi as u16, (si + 1) as u16));
+            }
+
+            if pi < pcnt - 1 {
+                page.slots[scnt] = Slot::Vacant(FreeIndex((pi + 1) as u16, 0u16))
+            } else {
+                page.slots[scnt] = Slot::Vacant(FreeIndex::none())
             }
         }
         self.len = 0;

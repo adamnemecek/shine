@@ -4,6 +4,7 @@ use dragorust_engine::*;
 
 mod arena {
     use super::container::arena::*;
+    use std::panic;
 
     #[test]
     fn new() {
@@ -115,7 +116,6 @@ mod arena {
     }
 
     #[test]
-    #[ignore]
     fn invalid_remove() {
         let mut arena = Arena::new();
         let i0 = arena.add(0.to_string());
@@ -128,7 +128,7 @@ mod arena {
         assert!(arena.remove(i0) == Some("0".to_string()));
         assert!(arena.remove(i5) == Some("5".to_string()));
 
-        assert!(arena.remove(!0) == None);
+        assert!(arena.remove(999) == None);
         assert!(arena.remove(10) == None);
         assert!(arena.remove(11) == None);
 
@@ -137,7 +137,6 @@ mod arena {
     }
 
     #[test]
-    #[ignore]
     fn clear() {
         let mut arena = Arena::new();
         arena.add(10);
@@ -173,7 +172,6 @@ mod arena {
     }
 
     #[test]
-    #[should_panic]
     fn indexing_vacant() {
         let mut arena = Arena::new();
 
@@ -182,11 +180,13 @@ mod arena {
         let _ = arena.add(30);
 
         arena.remove(b);
-        arena[b];
+
+        panic::set_hook(Box::new(|_| {}));
+        panic::catch_unwind(|| { arena[b] }).is_err();
+        panic::take_hook();
     }
 
     #[test]
-    #[should_panic]
     fn invalid_indexing() {
         let mut arena = Arena::new();
 
@@ -194,7 +194,9 @@ mod arena {
         arena.add(20);
         arena.add(30);
 
-        arena[100];
+        panic::set_hook(Box::new(|_| {}));
+        panic::catch_unwind(|| { arena[100] }).is_err();
+        panic::take_hook();
     }
 
     #[test]
