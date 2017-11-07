@@ -4,6 +4,12 @@ use dragorust_engine::*;
 
 mod arena {
     use super::container::arena::*;
+    use std::thread;
+    use std::sync::atomic::*;
+    use std::sync::Arc;
+    use std::time;
+
+    const THRAD_COUNT: usize = 4;
 
     #[test]
     fn new() {
@@ -41,150 +47,164 @@ mod arena {
         assert!(arena.len() == 7);
     }
 
-    /*
-    fn remove_(arena: &mut Arena<usize>) {
-        let i0 = arena.add(0);
-        let i1 = arena.add(10);
-        let i2 = arena.add(20);
-        let i3 = arena.add(30);
+    #[test]
+    fn release() {
+        let arena = Arena::new(4);
+
+        let i0 = arena.alloc(0);
+        let i1 = arena.alloc(10);
+        let i2 = arena.alloc(20);
+        let i3 = arena.alloc(30);
         assert!(arena.len() == 4);
 
-        assert!(arena.remove(i1) == Some(10));
-        assert!(arena.remove(i2) == Some(20));
+        arena.release(i1);
+        arena.release(i2);
         assert!(arena.len() == 2);
-        assert!(arena.get(i0) == Some(&0));
-        assert!(arena.get(i3) == Some(&30));
 
-        let i4 = arena.add(40);
-        let i5 = arena.add(50);
-        assert!(arena.get(i0) == Some(&0));
-        assert!(arena.get(i3) == Some(&30));
-        assert!(arena.get(i4) == Some(&40));
-        assert!(arena.get(i5) == Some(&50));
+        let i4 = arena.alloc(40);
+        let i5 = arena.alloc(50);
+        assert!(*i0 == 0);
+        assert!(*i3 == 30);
+        assert!(*i4 == 40);
+        assert!(*i5 == 50);
         assert!(arena.len() == 4);
 
-        assert!(arena.remove(i0) == Some(0));
-        let i6 = arena.add(60);
-        assert!(arena.get(i3) == Some(&30));
-        assert!(arena.get(i4) == Some(&40));
-        assert!(arena.get(i5) == Some(&50));
-        assert!(arena.get(i6) == Some(&60));
+        arena.release(i0);
+        let i6 = arena.alloc(60);
+        assert!(*i3 == 30);
+        assert!(*i4 == 40);
+        assert!(*i5 == 50);
+        assert!(*i6 == 60);
         assert!(arena.len() == 4);
 
-        let i7 = arena.add(70);
-        assert!(arena.get(i3) == Some(&30));
-        assert!(arena.get(i4) == Some(&40));
-        assert!(arena.get(i5) == Some(&50));
-        assert!(arena.get(i6) == Some(&60));
-        assert!(arena.get(i7) == Some(&70));
+        let i7 = arena.alloc(70);
+        assert!(*i3 == 30);
+        assert!(*i4 == 40);
+        assert!(*i5 == 50);
+        assert!(*i6 == 60);
+        assert!(*i7 == 70);
         assert!(arena.len() == 5);
     }
 
     #[test]
-    fn remove() {
-        let mut arena = Arena::new();
-        remove_(&mut arena);
+    fn multithread_simple_count() {
+        let arena = Arena::new(4);
+        let cnt = AtomicUsize::new(0);
+        let shared = Arc::new((arena, cnt));
+
+        let mut th = vec!();
+        {
+            for tid in 0..THRAD_COUNT {
+                let shared = shared.clone();
+                th.push(thread::spawn(move || {
+                    let mut i = 0;
+                    //while !shared.1.load(Ordering::Relaxed) {
+                    while shared.1.fetch_add(1, Ordering::Relaxed) < THRAD_COUNT * 1000 {
+                        let t = shared.0.alloc(format!("task gen {}", i).to_string());
+                        //thread::yield_now();
+                        assert!(*t == format!("task gen {}", i));
+                        //thread::yield_now();
+                        shared.0.release(t);
+                        //thread::yield_now();
+
+                        i += 1;
+                    }
+
+                    println!("tid: {} i: {}", tid, i);
+                }));
+            }
+        }
+
+        for t in th.drain(..) {
+            t.join().unwrap();
+        }
     }
 
     #[test]
-    fn invalid_remove() {
-        let mut arena = Arena::new();
-        let i0 = arena.add(0.to_string());
-        let _ = arena.add(1.to_string());
-        let _ = arena.add(2.to_string());
-        let _ = arena.add(3.to_string());
-        let _ = arena.add(4.to_string());
-        let i5 = arena.add(5.to_string());
+    fn multithread_simple_time() {
+        let arena = Arena::new(4);
+        let terminate = AtomicBool::new(false);
+        let shared = Arc::new((arena, terminate));
 
-        assert!(arena.remove(i0) == Some("0".to_string()));
-        assert!(arena.remove(i5) == Some("5".to_string()));
+        let mut th = vec!();
+        {
+            for tid in 0..THRAD_COUNT {
+                let shared = shared.clone();
+                th.push(thread::spawn(move || {
+                    let mut i = 0;
+                    while !shared.1.load(Ordering::Relaxed) {
+                        let t = shared.0.alloc(format!("task gen {}", i).to_string());
+                        assert!(*t == format!("task gen {}", i));
+                        shared.0.release(t);
 
-        assert!(arena.remove(999) == None);
-        assert!(arena.remove(10) == None);
-        assert!(arena.remove(11) == None);
+                        i += 1;
+                    }
 
-        assert!(arena.remove(i0) == None);
-        assert!(arena.remove(i5) == None);
+                    println!("tid: {} i: {}", tid, i);
+                }));
+            }
+        }
+
+        thread::sleep(time::Duration::from_secs(1));
+        shared.1.store(true, Ordering::Relaxed);
+
+        for t in th.drain(..) {
+            t.join().unwrap();
+        }
     }
 
     #[test]
-    fn clear() {
-        let mut arena = Arena::new();
-        arena.add(10);
-        arena.add(20);
+    #[ignore]
+    fn multithread_2() {
+        let arena = Arena::new(4);
+        let terminate = AtomicBool::new(false);
+        let shared = Arc::new((arena, terminate));
 
-        assert!(!arena.is_empty());
-        assert!(arena.len() == 2);
+        let mut th = vec!();
+        {
+            for tid in 0..THRAD_COUNT {
+                let shared = shared.clone();
+                th.push(thread::spawn(move || {
+                    let mut data = vec!();
+                    let mut add = true;
+                    let mut i = 0;
+                    while !shared.1.load(Ordering::Relaxed) {
+                        //println!("tid: {}, data:{}, arena:{}", tid, data.len(), shared.0.len());
+                        if add {
+                            if data.len() < 5 {
+                                let t = shared.0.alloc(i);
+                                assert!(*t == i);
+                                data.push((i, t));
+                            } else {
+                                add = false;
+                            }
+                        } else {
+                            if data.len() > 0 {
+                                let t =
+                                    if tid % 2 == 0 {
+                                        data.swap_remove(0)
+                                    } else {
+                                        data.remove(0)
+                                    };
+                                assert!(t.0 == *t.1);
+                                shared.0.release(t.1);
+                            } else {
+                                add = true;
+                            }
+                        }
 
-        let cap = arena.capacity();
-        arena.clear();
+                        i = i + 1;
+                    }
 
-        assert!(arena.is_empty());
-        assert!(arena.len() == 0);
-        assert!(arena.capacity() == cap);
+                    println!("i: {}", i);
+                }));
+            }
+        }
+        thread::sleep(time::Duration::from_secs(1));
+        shared.1.store(true, Ordering::Relaxed);
 
-        add_many_(&mut arena);
-        arena.clear();
-        remove_(&mut arena);
+        for t in th.drain(..) {
+            t.join().unwrap();
+        }
     }
-
-    #[test]
-    fn indexing() {
-        let mut arena = Arena::new();
-
-        let a = arena.add(10);
-        let b = arena.add(20);
-        let c = arena.add(30);
-
-        arena[b] += arena[c];
-        assert!(arena[b] == 50);
-        assert!(arena[a] == 10);
-        assert!(arena[c] == 30);
-    }
-
-    #[test]
-    fn indexing_vacant() {
-        let mut arena = Arena::new();
-
-        let _ = arena.add(10);
-        let b = arena.add(20);
-        let _ = arena.add(30);
-
-        arena.remove(b);
-
-        panic::set_hook(Box::new(|_| {}));
-        panic::catch_unwind(|| { arena[b] }).is_err();
-        panic::take_hook();
-    }
-
-    #[test]
-    fn invalid_indexing() {
-        let mut arena = Arena::new();
-
-        arena.add(10);
-        arena.add(20);
-        arena.add(30);
-
-        panic::set_hook(Box::new(|_| {}));
-        panic::catch_unwind(|| { arena[100] }).is_err();
-        panic::take_hook();
-    }
-
-    #[test]
-    fn get() {
-        let mut arena = Arena::new();
-
-        let a = arena.add(10);
-        let b = arena.add(20);
-        let c = arena.add(30);
-
-        *arena.get_mut(b).unwrap() += *arena.get(c).unwrap();
-        assert!(arena.get(a) == Some(&10));
-        assert!(arena.get(b) == Some(&50));
-        assert!(arena.get(c) == Some(&30));
-
-        arena.remove(b);
-        assert!(arena.get(b) == None);
-        assert!(arena.get_mut(b) == None);
-    }*/
 }

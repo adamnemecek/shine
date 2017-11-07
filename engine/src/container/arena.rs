@@ -1,7 +1,6 @@
 use std::mem;
 use std::ptr;
 use std::cmp;
-use std::cell::UnsafeCell;
 use std::sync::atomic::*;
 use std::sync::Mutex;
 use std::marker::PhantomData;
@@ -69,9 +68,7 @@ impl<T> Page<T> {
 /// Arena
 pub struct Arena<T> {
     /// Pages in which objects are stored.
-    pages: UnsafeCell<Vec<Page<T>>>,
-    /// Mutex to perform exclusive page allocation
-    page_lock: Mutex<()>,
+    pages: Mutex<Vec<Page<T>>>,
     /// Head of the free list
     free_head: AtomicPtr<FreeList>,
     /// Number of slots per page
@@ -86,8 +83,7 @@ impl<T> Arena<T> {
     #[inline]
     pub fn new(slots_per_page: usize) -> Self {
         Arena {
-            pages: UnsafeCell::new(vec!()),
-            page_lock: Mutex::new(()),
+            pages: Mutex::new(vec!()),
             free_head: AtomicPtr::new(ptr::null_mut()),
             slots_per_page: slots_per_page,
             len: AtomicUsize::new(0),
@@ -132,12 +128,14 @@ impl<T> Arena<T> {
             }
 
             let mut cur = head;
+            let mut i = self.len() + 2;
             print!("free list {}: {:?}", tx, cur);
-            while !cur.is_null() {
+            while i > 0 && !cur.is_null() {
                 cur = unsafe { (*cur).next() };
+                i = i - 1;
                 print!(", {:?}", cur);
             }
-            println!();
+            println!(".");
 
             self.free_head.store(head, Ordering::Release);
             break;
@@ -146,9 +144,9 @@ impl<T> Arena<T> {
 
     /// Allocate a new page. It is an expensive, blocking operation, the global lock is held.
     fn alloc_page(&self) {
-        self.dump_free_list("before alloc page");
+        //self.dump_free_list("before alloc page");
         loop {
-            let _guard = self.page_lock.lock().unwrap();
+            let mut pages = self.pages.lock().unwrap();
             let head = self.free_head.swap(LIST_PROCESS_TAG, Ordering::Acquire);
             if head == LIST_PROCESS_TAG {
                 // some processing is ongoing, release and retry
@@ -157,23 +155,20 @@ impl<T> Arena<T> {
 
             // we have all the lock, time to prepare pages
             let (page, head) = Page::new(self.slots_per_page, head);
-            unsafe {
-                let pages = &mut *self.pages.get();
-                pages.push(page);
-            }
+            pages.push(page);
 
             // release all the locks
             self.free_head.store(head, Ordering::Release);
             break;
         }
 
-        self.dump_free_list("after alloc page");
+        //self.dump_free_list("after alloc page");
     }
 
     /// Allocate a new slot. The slot is not initialized, but it is ensured that no other thread my
     /// use the same slot.
     fn alloc_slot(&self) -> *mut T {
-        self.dump_free_list("before alloc slot");
+        //self.dump_free_list("before alloc slot");
 
         let slot;
         loop {
@@ -184,7 +179,7 @@ impl<T> Arena<T> {
             }
 
             // the pointed data might've been consumed by another thread, but it must be a valid pointer
-            assert! ( !head.is_null());
+            assert!(!head.is_null());
             let next = unsafe { (*head).next() };
             if head == self.free_head.compare_and_swap(head, next, Ordering::Release) {
                 slot = head as *mut T;
@@ -192,7 +187,7 @@ impl<T> Arena<T> {
             }
         }
 
-        self.dump_free_list("after alloc slot");
+        //self.dump_free_list("after alloc slot");
         slot
     }
 
@@ -203,18 +198,18 @@ impl<T> Arena<T> {
     /// the data contained in a slot.
     #[inline]
     pub fn alloc(&self, object: T) -> &mut T {
+        self.len.fetch_add(1, Ordering::Relaxed);
         let slot = unsafe {
             let slot = self.alloc_slot();
             ptr::write(slot, object);
             &mut *slot
         };
-        self.len.fetch_add(1, Ordering::Relaxed);
         slot
     }
 
     #[inline]
-    pub fn deallocate(&mut self, object: &mut T) {
-        self.dump_free_list("before deallocate slot");
+    pub fn release(&self, object: &mut T) {
+        //self.dump_free_list("before deallocate slot");
         let slot = object as *mut T as *mut FreeList;
         drop(object);
 
@@ -228,29 +223,7 @@ impl<T> Arena<T> {
                 break;
             }
         }
-        self.dump_free_list("after deallocate slot");
-    }
-
-    #[inline]
-    pub fn clear(&mut self) {
-        self.dump_free_list("before alloc page");
-        loop {
-            let _guard = self.page_lock.lock().unwrap();
-            let head = self.free_head.swap(LIST_PROCESS_TAG, Ordering::Acquire);
-            if head == LIST_PROCESS_TAG {
-                // some processing is ongoing, release and retry
-                continue;
-            }
-
-            // we have all the lock, time to prepare pages
-            //todo: drop objects, in each slot a marker is required to distinct occupied and vacant
-            // ex: struct(T,mark), where sizeof(T) >= sizeof(FreeList)
-
-            // release all the locks
-            self.free_head.store(head, Ordering::Release);
-            break;
-        }
-
-        self.dump_free_list("after alloc page");
+        //self.dump_free_list("after deallocate slot");
+        self.len.fetch_sub(1, Ordering::Relaxed);
     }
 }
