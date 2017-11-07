@@ -4,24 +4,20 @@ use dragorust_engine::*;
 
 mod arena {
     use super::container::arena::*;
-    use std::panic;
 
     #[test]
     fn new() {
         let arena = Arena::<i32>::new(4);
-        assert!(arena.is_empty());
         assert!(arena.len() == 0);
-        assert!(arena.capacity() == 0);
     }
 
     #[test]
     fn add() {
-        let mut arena = Arena::new(4);
+        let arena = Arena::new(4);
 
         let i0 = arena.alloc(0);
         assert!(*i0 == 0);
         assert!(arena.len() == 1);
-        assert!(arena.capacity() == 4);
 
         let i1 = arena.alloc(10);
         let i2 = arena.alloc(20);
@@ -31,10 +27,8 @@ mod arena {
         assert!(*i2 == 20);
         assert!(*i3 == 30);
         assert!(arena.len() == 4);
-        assert!(arena.capacity() == 4);
 
         let i4 = arena.alloc(40);
-        assert!(arena.capacity() == 8);
         let i5 = arena.alloc(50);
         let i6 = arena.alloc(60);
         assert!(*i0 == 0);
@@ -45,55 +39,9 @@ mod arena {
         assert!(*i5 == 50);
         assert!(*i6 == 60);
         assert!(arena.len() == 7);
-        assert!(arena.capacity() == 8);
     }
 
     /*
-    fn add_many_(arena: &mut Arena<usize>) {
-        let mut i2000 = !0;
-        let mut i5764 = !0;
-        for i in 0..6_000 {
-            let idx = arena.add(i * 10);
-            if i == 2000 {
-                i2000 = idx;
-            }
-            if i == 5764 {
-                i5764 = idx;
-            }
-            assert!(arena[idx] == i * 10);
-        }
-        assert!(!arena.is_empty());
-        assert!(arena.len() == 6_000);
-
-        assert!(arena.get(i2000) == Some(&20000));
-        assert!(arena.get(i5764) == Some(&57640));
-    }
-
-    #[test]
-    fn add_many() {
-        let mut arena = Arena::new();
-        add_many_(&mut arena);
-    }
-
-    #[test]
-    fn new_with_capacity() {
-        let mut arena = Arena::new_with_capacity(10);
-        assert!(!arena.is_full());
-        assert!(arena.capacity() >= 10);
-        let cap = arena.capacity();
-
-        for i in 0..cap {
-            arena.add(i);
-        }
-        assert!(arena.len() == cap);
-        assert!(arena.is_full());
-        assert!(arena.capacity() == cap);
-
-        arena.add(cap);
-        assert!(arena.len() == cap + 1);
-        assert!(arena.capacity() > cap);
-    }
-
     fn remove_(arena: &mut Arena<usize>) {
         let i0 = arena.add(0);
         let i1 = arena.add(10);

@@ -1,29 +1,49 @@
 use std::mem;
 use std::ptr;
 use std::cmp;
+use std::cell::UnsafeCell;
+use std::sync::atomic::*;
+use std::sync::Mutex;
 use std::marker::PhantomData;
+use std::thread;
 
-#[derive(Clone, Copy, Debug)]
+const CACHE_LINE_SIZE: usize = 64;
+const LIST_PROCESS_TAG: *mut FreeList = 1 as *mut FreeList;
+
+#[derive(Debug)]
 struct FreeList(*mut FreeList);
 
+impl FreeList {
+    fn is_null(&self) -> bool {
+        self.0.is_null()
+    }
+
+    fn next(&self) -> &mut FreeList {
+        unsafe { &mut *self.0 }
+    }
+}
+
+/// Returns the size of a slot.
+/// A Slot cannot be smaller than a cacheline to avoid false sharing for ref counted slots.
 fn slot_size<T>() -> usize {
-    cmp::max(mem::size_of::<T>(), mem::size_of::<FreeList>())
+    cmp::max(mem::size_of::<T>(), CACHE_LINE_SIZE)
 }
 
 /// Page to store multiple slots
 struct Page<T> {
     /// Slots in which objects are stored.
     slots: Vec<u8>,
+    /// PhantomData to make the generic type T used.
     phantom: PhantomData<T>
 }
 
 impl<T> Page<T> {
-    unsafe fn new(slots_count: usize, free_list: FreeList) -> Page<T> {
+    fn new(slots_count: usize, free_head: *mut FreeList) -> (Page<T>, *mut FreeList) {
         let slot_size = slot_size::<T>();
         let size = slot_size * slots_count;
 
         let mut page = Page {
-            slots: {
+            slots: unsafe {
                 let mut vec = Vec::with_capacity(size);
                 vec.set_len(size);
                 vec
@@ -31,173 +51,206 @@ impl<T> Page<T> {
             phantom: PhantomData
         };
 
-        let slot_size = slot_size as isize;
-        let size = size as isize;
-        let mut cur = &mut page.slots[0] as *mut u8;
-        let end = cur.offset(size);
-
-        loop {
-            let next = cur.offset(slot_size);
-            if next >= end {
-                *(cur as *mut FreeList) = free_list;
-                break;
-            } else {
-                *(cur as *mut FreeList) = FreeList(next as *mut FreeList);
+        let head = &mut page.slots[0] as *mut u8 as *mut FreeList;
+        unsafe {
+            let mut cur = head;
+            for i in 1..slots_count {
+                let next = &mut page.slots[i * slot_size] as *mut u8 as *mut FreeList;
+                ptr::write(cur, FreeList(next));
                 cur = next;
             }
+            ptr::write(cur, FreeList(free_head));
         }
 
-        page
+        (page, head)
     }
 }
-
 
 /// Arena
 pub struct Arena<T> {
     /// Pages in which objects are stored.
-    pages: RefCell<Vec<Page<T>>>,
-    /// Number of slots per page
-    slots_per_page: Cell<usize>,
-    /// Number of allocated slots
-    len: Cell<usize>,
+    pages: UnsafeCell<Vec<Page<T>>>,
+    /// Mutex to perform exclusive page allocation
+    page_lock: Mutex<()>,
     /// Head of the free list
-    head: Cell<FreeList>,
-
-    //phantom: PhantomData<&'longer_than_self ()>,
+    free_head: AtomicPtr<FreeList>,
+    /// Number of slots per page
+    slots_per_page: usize,
+    /// Number of occupied slots
+    len: AtomicUsize,
 }
 
-impl<T> Arena<T> {
-    fn dump_free_list(&self, tx: &str) {
-        let mut cur = self.head;
-        print!("free list {}: {:?}", tx, cur);
-        while !cur.0.is_null() {
-            unsafe { cur = *(cur.0) };
-            print!(", {:?}", cur);
-        }
-        println!();
-    }
-}
 
 impl<T> Arena<T> {
+    /// Creates a new arena.
     #[inline]
     pub fn new(slots_per_page: usize) -> Self {
         Arena {
-            pages: vec!(),
+            pages: UnsafeCell::new(vec!()),
+            page_lock: Mutex::new(()),
+            free_head: AtomicPtr::new(ptr::null_mut()),
             slots_per_page: slots_per_page,
-            len: 0,
-            head: FreeList(ptr::null_mut()),
-            //phantom: PhantomData,
+            len: AtomicUsize::new(0),
         }
     }
 
+    /// Creates a new arena with a pre-allocated memory for at least the given number of items
     #[inline]
     pub fn new_with_capacity(slots_per_page: usize, slots_count: usize) -> Self {
-        let mut arena = Self::new(slots_per_page);
-        arena.reserve(slots_count);
+        let arena = Self::new(slots_per_page);
+
+        let page_count = (slots_count + slots_per_page - 1) / slots_per_page;
+        for _ in 0..page_count {
+            arena.alloc_page();
+        }
+
         arena
     }
 
+    /// Returns the number of slots stored in a page
     #[inline]
     pub fn get_slots_per_page(&self) -> usize {
         self.slots_per_page
     }
 
-    #[inline]
-    pub fn capacity(&self) -> usize {
-        self.pages.len() * self.slots_per_page
-    }
-
+    /// Return the number of items in the arean.
+    /// Use with caution and don't use in branching as it is just a temporary snapshoot.
+    /// By the time this function returns, it might be invalid if other threads are
+    /// allocating/releasing slots.
     #[inline]
     pub fn len(&self) -> usize {
-        self.len
+        self.len.load(Ordering::Relaxed)
     }
 
-    #[inline]
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
+    fn dump_free_list(&self, tx: &str) {
+        loop {
+            let head = self.free_head.swap(LIST_PROCESS_TAG, Ordering::Acquire);
+            if head == LIST_PROCESS_TAG {
+                thread::yield_now();
+                // some processing is ongoing, release and retry
+                continue;
+            }
+
+            let mut cur = head;
+            print!("free list {}: {:?}", tx, cur);
+            while !cur.is_null() {
+                cur = unsafe { (*cur).next() };
+                print!(", {:?}", cur);
+            }
+            println!();
+
+            self.free_head.store(head, Ordering::Release);
+            break;
+        }
     }
 
-    #[inline]
-    pub fn is_full(&self) -> bool {
-        self.head.0.is_null()
+    /// Allocate a new page. It is an expensive, blocking operation, the global lock is held.
+    fn alloc_page(&self) {
+        self.dump_free_list("before alloc page");
+        loop {
+            let _guard = self.page_lock.lock().unwrap();
+            let head = self.free_head.swap(LIST_PROCESS_TAG, Ordering::Acquire);
+            if head == LIST_PROCESS_TAG {
+                // some processing is ongoing, release and retry
+                continue;
+            }
+
+            // we have all the lock, time to prepare pages
+            let (page, head) = Page::new(self.slots_per_page, head);
+            unsafe {
+                let pages = &mut *self.pages.get();
+                pages.push(page);
+            }
+
+            // release all the locks
+            self.free_head.store(head, Ordering::Release);
+            break;
+        }
+
+        self.dump_free_list("after alloc page");
     }
 
-    pub fn reserve(&mut self, additional: usize) {
-        let vacant = self.capacity() - self.len;
-        if additional > vacant {
-            let count = (additional - vacant + self.slots_per_page - 1) / self.slots_per_page;
-            self.pages.reserve(count);
-            for _ in 0..count {
-                let page = unsafe { Page::new(self.slots_per_page, self.head) };
-                self.head = FreeList(page.slots[0] as *mut FreeList);
-                self.pages.push(page);
+    /// Allocate a new slot. The slot is not initialized, but it is ensured that no other thread my
+    /// use the same slot.
+    fn alloc_slot(&self) -> *mut T {
+        self.dump_free_list("before alloc slot");
+
+        let slot;
+        loop {
+            let head = self.free_head.load(Ordering::Acquire);
+            if head.is_null() {
+                self.alloc_page();
+                continue;
+            }
+
+            // the pointed data might've been consumed by another thread, but it must be a valid pointer
+            assert! ( !head.is_null());
+            let next = unsafe { (*head).next() };
+            if head == self.free_head.compare_and_swap(head, next, Ordering::Release) {
+                slot = head as *mut T;
+                break;
             }
         }
-    }
 
-    #[inline]
-    pub fn alloc(&self, object: T) -> &mut T {
-        self.dump_free_list("before add");
-        if self.head.0.is_null() {
-            self.reserve(1);
-            self.dump_free_list("after reserve");
-        }
-        assert!(!self.head.0.is_null());
-
-        self.len += 1;
-        let slot = unsafe {
-            let slot = self.head.0 as *mut FreeList;
-            self.head = FreeList((*slot).0);
-            let slot = slot as *mut T;
-            *slot = object;
-            &mut *slot
-        };
-
-        self.dump_free_list("after add");
+        self.dump_free_list("after alloc slot");
         slot
     }
-    /*
-            #[inline]
-            pub fn deallocate(&mut self, object: &mut T) {
-                let slot = object as *mut Slot<T>;
-                drop(object);
-                match slot {
-                    None => None,
-                    Some(&mut Slot::Vacant(_)) => None,
-                    Some(slot @ &mut Slot::Occupied(_)) => {
-                        if let Slot::Occupied(object) = mem::replace(slot, Slot::Vacant(self.head)) {
-                            self.head = slot_id;
-                            self.len -= 1;
-                            Some(object)
-                        } else {
-                            unreachable!();
-                        }
-                    }
-                }
+
+    /// Allocates a new item in the store.
+    /// The returned reference is valid as long as it is not released.
+    /// #Safety
+    /// Arena has no double free protection and it does not provide any protection of
+    /// the data contained in a slot.
+    #[inline]
+    pub fn alloc(&self, object: T) -> &mut T {
+        let slot = unsafe {
+            let slot = self.alloc_slot();
+            ptr::write(slot, object);
+            &mut *slot
+        };
+        self.len.fetch_add(1, Ordering::Relaxed);
+        slot
+    }
+
+    #[inline]
+    pub fn deallocate(&mut self, object: &mut T) {
+        self.dump_free_list("before deallocate slot");
+        let slot = object as *mut T as *mut FreeList;
+        drop(object);
+
+        loop {
+            let head = self.free_head.load(Ordering::Acquire);
+            unsafe {
+                // assume no drop for slot, and simply overwrite the memory on failure
+                ptr::write(slot, FreeList(head));
+            }
+            if head == self.free_head.compare_and_swap(head, slot, Ordering::Release) {
+                break;
+            }
+        }
+        self.dump_free_list("after deallocate slot");
+    }
+
+    #[inline]
+    pub fn clear(&mut self) {
+        self.dump_free_list("before alloc page");
+        loop {
+            let _guard = self.page_lock.lock().unwrap();
+            let head = self.free_head.swap(LIST_PROCESS_TAG, Ordering::Acquire);
+            if head == LIST_PROCESS_TAG {
+                // some processing is ongoing, release and retry
+                continue;
             }
 
-            #[inline]
-            pub fn clear(&mut self) {
-                if self.pages.is_empty() {
-                    return;
-                }
+            // we have all the lock, time to prepare pages
+            //todo: drop objects, in each slot a marker is required to distinct occupied and vacant
+            // ex: struct(T,mark), where sizeof(T) >= sizeof(FreeList)
 
-                /*let pcnt = self.pages.len();
-                for pi in 0..pcnt {
-                    let page = &mut self.pages[pi];
-                    let scnt = page.slots.len() - 1;
-                    for si in 0..scnt {
-                        page.slots[si] = Slot::Vacant(FreeIndex(pi as u16, (si + 1) as u16));
-                    }
+            // release all the locks
+            self.free_head.store(head, Ordering::Release);
+            break;
+        }
 
-                    if pi < pcnt - 1 {
-                        page.slots[scnt] = Slot::Vacant(FreeIndex((pi + 1) as u16, 0u16))
-                    } else {
-                        page.slots[scnt] = Slot::Vacant(FreeIndex::none())
-                    }
-                }
-                self.len = 0;
-                self.head = FreeIndex(0, 0);*/
-            }
-            */
+        self.dump_free_list("after alloc page");
+    }
 }
