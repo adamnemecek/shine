@@ -101,12 +101,8 @@ mod arena {
                     //while !shared.1.load(Ordering::Relaxed) {
                     while shared.1.fetch_add(1, Ordering::Relaxed) < THRAD_COUNT * 1000 {
                         let t = shared.0.alloc(format!("task gen {}", i).to_string());
-                        //thread::yield_now();
                         assert!(*t == format!("task gen {}", i));
-                        //thread::yield_now();
                         shared.0.release(t);
-                        //thread::yield_now();
-
                         i += 1;
                     }
 
@@ -122,7 +118,7 @@ mod arena {
 
     #[test]
     fn multithread_simple_time() {
-        let arena = Arena::new(4);
+        let arena = Arena::new(8);
         let terminate = AtomicBool::new(false);
         let shared = Arc::new((arena, terminate));
 
@@ -136,11 +132,10 @@ mod arena {
                         let t = shared.0.alloc(format!("task gen {}", i).to_string());
                         assert!(*t == format!("task gen {}", i));
                         shared.0.release(t);
-
                         i += 1;
                     }
 
-                    println!("tid: {} i: {}", tid, i);
+                    println!("tid: {} count: {}", tid, i);
                 }));
             }
         }
