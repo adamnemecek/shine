@@ -1,20 +1,12 @@
-mod device;
+//#![cfg(target_os = "null")]
+
+mod engine;
+mod window;
 mod lowlevel;
-mod commandqueue;
-mod program;
-mod vertexbuffer;
 
+pub use self::window::WindowImpl;
+pub use self::engine::EngineImpl;
 pub use self::lowlevel::*;
-pub use self::commandqueue::*;
-pub use self::program::*;
-pub use self::vertexbuffer::*;
-
-pub mod render {
-    pub use super::device::{Window, Engine, create_engine};
-    pub use super::commandqueue::CommandQueue;
-    pub use super::program::ShaderProgram;
-    pub use super::vertexbuffer::VertexBuffer;
 
 
-}
 
