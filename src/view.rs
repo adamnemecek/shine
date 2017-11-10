@@ -18,13 +18,55 @@ struct VxColorTex {
     tex_coord: Float32x2,
 }
 
-#[derive(Copy, Clone, Debug)]
+
 #[derive(ShaderDeclaration)]
+#[vert_path = "common.glsl"]
+#[vert_src = "
+    attribute vec3 vPosition;
+    void main()
+    {
+        gl_Position = vec4(vPosition, 1.0);
+    }
+"]
+#[frag_path = "common.glsl"]
+#[frag_src = "
+    void main()
+    {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+    }
+"]
 struct ShSimple {}
+
 
 impl ShaderDeclaration for ShSimple {
     type Attribute = ShSimpleAttribute;
     type Uniform = ShSimpleUniform;
+
+    fn map_sources<F: FnMut((ShaderType, &str)) -> bool>(mut f: F) -> bool {
+        let sh_source = [
+            (ShaderType::VertexShader,
+             r#"
+attribute vec3 vPosition;
+void main()
+{
+    gl_Position = vec4(vPosition, 1.0);
+}
+"#),
+            (ShaderType::FragmentShader,
+             r#"
+void main()
+{
+    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+}"#)];
+
+        for src in sh_source.iter() {
+            if !f(*src) {
+                return false
+            }
+        }
+
+        true
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -51,8 +93,6 @@ enum ShSimpleUniform {
     #[name = "uColor"]
     Color,
 }
-
-
 
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -94,21 +134,7 @@ impl SimpleView {
 impl View for SimpleView {
     fn on_surface_ready(&mut self, window: &mut Window) {
         // create some shaders
-        let sh_source = [
-            (ShaderType::VertexShader,
-             r#"
-attribute vec3 vPosition;
-void main()
-{
-    gl_Position = vec4(vPosition, 1.0);
-}
-"#),
-            (ShaderType::FragmentShader,
-             r#"
-void main()
-{
-    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-}"#)];
+
 
         // create some geometry
         let pos = [
@@ -125,7 +151,8 @@ void main()
         ];
 
         // upload data
-        self.shader.set_sources(&mut self.render, sh_source.iter());
+        //self.shader.set_sources(&mut self.render, sh_source.iter());
+        self.shader.compile(&mut self.render);
         self.vertex_buffer1.set_transient(&mut self.render, &pos);
         self.vertex_buffer2.set_transient(&mut self.render, &color_tex.to_vec());
 

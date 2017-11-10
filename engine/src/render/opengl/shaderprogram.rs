@@ -12,11 +12,6 @@ use render::opengl::commandqueue::*;
 
 struct ShaderError(String);
 
-struct ShaderSource(GLenum, Vec<u8>);
-
-type ShaderSources = Vec<ShaderSource>;
-
-
 /// Converts a ShaderType enum to the corresponding GLenum.
 fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
     match shader_type {
@@ -129,7 +124,7 @@ impl GLShaderProgramData {
         }
     }
 
-    fn create_program(&mut self, ll: &mut LowLevel, sources: &Vec<ShaderSource>) {
+    fn create_program<SD: ShaderDeclaration>(&mut self, ll: &mut LowLevel) {
         gl_check_error();
         if self.hw_id != 0 {
             self.release(ll);
@@ -142,14 +137,21 @@ impl GLShaderProgramData {
 
         // create and attach shaders
         gl_check_error();
-        for &ShaderSource(shader, ref source) in sources.iter() {
+        let compile_result = SD::map_sources(|(shader_type, source)| {
             //println!("compiling shader:\n{}", from_utf8(source.as_slice()).unwrap());
-            let shader_res = self.attach_shader(shader, &source);
+            let source = source.as_bytes().to_vec();
+            let shader_res = self.attach_shader(gl_get_shader_enum(shader_type), &source);
             if let Some(ShaderError(msg)) = shader_res.err() {
                 println!("shader compilation failed.\nsource:\n{}\nerror:\n{}", from_utf8(source.as_slice()).unwrap(), msg);
                 self.release(ll);
-                return
+                false
+            } else {
+                true
             }
+        });
+
+        if !compile_result {
+            return;
         }
 
         gl_check_error();
@@ -312,7 +314,6 @@ impl Drop for GLShaderProgramData {
 /// RenderCommand to allocate the OpenGL program, set the shader sources and compile (link) a shader program
 struct CreateCommand<SD: ShaderDeclaration> {
     target: Rc<RefCell<GLShaderProgramData>>,
-    sources: ShaderSources,
     phantom_sd: PhantomData<SD>,
 }
 
@@ -323,7 +324,7 @@ impl<SD: ShaderDeclaration> Command for CreateCommand<SD> {
 
     fn process(&mut self, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
-        shader.create_program(ll, &mut self.sources);
+        shader.create_program::<SD>(ll);
         shader.parse_attributes::<SD>(ll);
         shader.parse_uniforms::<SD>(ll);
     }
@@ -385,13 +386,10 @@ impl GLShaderProgram {
         );
     }
 
-    pub fn set_sources<'a, SD: ShaderDeclaration, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
+    pub fn compile<SD: ShaderDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q) {
         queue.add(
             CreateCommand::<SD> {
                 target: self.0.clone(),
-                sources: sources
-                    .map(|&(t, s)| ShaderSource(gl_get_shader_enum(t), s.as_bytes().to_vec()))
-                    .collect(),
                 phantom_sd: PhantomData,
             }
         );

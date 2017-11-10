@@ -20,7 +20,7 @@ pub fn vertex_declaration(input: TokenStream) -> TokenStream {
     gen.parse().unwrap()
 }
 
-#[proc_macro_derive(ShaderDeclaration)]
+#[proc_macro_derive(ShaderDeclaration, attributes(vert_path, vert_src, frag_path, frag_src))]
 pub fn shader_declaration(input: TokenStream) -> TokenStream
 {
     let s = input.to_string();

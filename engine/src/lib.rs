@@ -1,5 +1,6 @@
 #![feature(macro_reexport)]
 #![feature(iterator_for_each)]
+#![feature(conservative_impl_trait)]
 
 #[macro_reexport(PrimitiveEnum)]
 extern crate dragorust_primitiveenum_derive;

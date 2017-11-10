@@ -21,8 +21,10 @@ pub trait ShaderDeclaration: 'static {
     type Attribute: PrimitiveEnum;
     /// The enums used for the input uniform indexing.
     type Uniform: PrimitiveEnum;
-}
 
+    /// Iterate over the shader sources
+    fn map_sources<F: FnMut((ShaderType, &str)) -> bool>(f: F) -> bool;
+}
 
 /// Structure to store the shader abstraction.
 pub struct ShaderProgram<SD: ShaderDeclaration> {
@@ -39,16 +41,6 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
         }
     }
 
-    /// Creates a shader and attach the given sources.
-    pub fn from_source<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(queue: &mut Q, sources: I) -> ShaderProgram<SD> {
-        let mut sh = ShaderProgram {
-            platform: ShaderProgramImpl::new(),
-            phantom_sd: PhantomData
-        };
-        sh.set_sources::<I, Q>(queue, sources);
-        sh
-    }
-
     /// Releases the hw resources of a shader.
     ///
     /// No render operation is processed, only a command in the queue is stored.
@@ -57,12 +49,9 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
         self.platform.release(queue);
     }
 
-    /// Attaches the sources to a shader.
-    ///
-    /// No render operation is processed, only a command in the queue is stored.
-    /// The HW data is access only during queue processing.
-    pub fn set_sources<'a, I: Iterator<Item=&'a (ShaderType, &'a str)>, Q: CommandQueue>(&mut self, queue: &mut Q, sources: I) {
-        self.platform.set_sources::<SD, I, Q>(queue, sources);
+    /// Compiles the shader.
+    pub fn compile<Q: CommandQueue>(&mut self, queue: &mut Q) {
+        self.platform.compile::<SD, Q>(queue);
     }
 
     /// Sends a geometry for rendering using the given parameters
