@@ -94,7 +94,7 @@ impl GLShaderProgramData {
         }
     }
 
-    fn attach_shader(&mut self, shader_type: GLenum, shader_source: &Vec<u8>) -> Result<(), ShaderError> {
+    fn attach_shader(&mut self, shader_type: GLenum, shader_source: &[u8]) -> Result<(), ShaderError> {
         gl_check_error();
         unsafe {
             let shader_id = gl::CreateShader(shader_type);
@@ -138,11 +138,9 @@ impl GLShaderProgramData {
         // create and attach shaders
         gl_check_error();
         let compile_result = SD::map_sources(|(shader_type, source)| {
-            //println!("compiling shader:\n{}", from_utf8(source.as_slice()).unwrap());
-            let source = source.as_bytes().to_vec();
-            let shader_res = self.attach_shader(gl_get_shader_enum(shader_type), &source);
+            let shader_res = self.attach_shader(gl_get_shader_enum(shader_type), source.as_bytes());
             if let Some(ShaderError(msg)) = shader_res.err() {
-                println!("shader compilation failed.\nsource:\n{}\nerror:\n{}", from_utf8(source.as_slice()).unwrap(), msg);
+                println!("shader compilation failed.\nsource:\n{}\nerror:\n{}", source, msg);
                 self.release(ll);
                 false
             } else {
@@ -150,9 +148,7 @@ impl GLShaderProgramData {
             }
         });
 
-        if !compile_result {
-            return;
-        }
+        assert!(compile_result, "Shader compilation failed");
 
         gl_check_error();
         unsafe {
