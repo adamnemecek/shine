@@ -20,7 +20,7 @@ struct VxColorTex {
 
 
 #[derive(ShaderDeclaration)]
-#[vert_path = "common.glsl"]
+//#[vert_path = "common.glsl"]
 #[vert_src = "
     attribute vec3 vPosition;
     void main()
@@ -28,46 +28,15 @@ struct VxColorTex {
         gl_Position = vec4(vPosition, 1.0);
     }
 "]
-#[frag_path = "common.glsl"]
+#[frag_path = "src/common.glsl"]
 #[frag_src = "
     void main()
     {
-        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
     }
 "]
 struct ShSimple {}
 
-
-impl ShaderDeclaration for ShSimple {
-    type Attribute = ShSimpleAttribute;
-    type Uniform = ShSimpleUniform;
-
-    fn map_sources<F: FnMut((ShaderType, &str)) -> bool>(mut f: F) -> bool {
-        let sh_source = [
-            (ShaderType::VertexShader,
-             r#"
-attribute vec3 vPosition;
-void main()
-{
-    gl_Position = vec4(vPosition, 1.0);
-}
-"#),
-            (ShaderType::FragmentShader,
-             r#"
-void main()
-{
-    gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
-}"#)];
-
-        for src in sh_source.iter() {
-            if !f(*src) {
-                return false
-            }
-        }
-
-        true
-    }
-}
 
 #[derive(Copy, Clone, Debug)]
 #[derive(PrimitiveEnum)]
