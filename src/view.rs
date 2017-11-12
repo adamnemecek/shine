@@ -71,7 +71,7 @@ pub struct SimpleView {
     game: game::GameCell,
     render: RenderManager<Passes>,
 
-    shader: ShaderProgram<ShSimple>,
+    shader: ShaderProgramHandle<ShSimple>,
 
     vertex_buffer1: VertexBufferHandle<VxPos>,
     vertex_buffer2: VertexBufferHandle<VxColorTex>,
@@ -92,7 +92,7 @@ impl SimpleView {
             game: game,
             render: RenderManager::new(),
 
-            shader: ShaderProgram::new(),
+            shader: ShaderProgramHandle::null(),
             vertex_buffer1: VertexBufferHandle::null(),
             vertex_buffer2: VertexBufferHandle::null(),
             index_buffer1: IndexBufferHandle::null(),
@@ -104,6 +104,7 @@ impl SimpleView {
             t: 0f32,
         };
 
+        view.shader = ShaderProgramHandle::create(&mut view.render);
         view.vertex_buffer1 = VertexBufferHandle::create(&mut view.render);
         view.vertex_buffer2 = VertexBufferHandle::create(&mut view.render);
         view.index_buffer1 = IndexBufferHandle::create(&mut view.render);
@@ -139,7 +140,6 @@ impl View for SimpleView {
         let index2 = [0u16, 1, 2, 0, 2, 3];
 
         // upload data
-        //self.shader.set_sources(&mut self.render, sh_source.iter());
         self.shader.compile(&mut self.render);
         self.vertex_buffer1.set(&mut self.render, &pos);
         self.vertex_buffer2.set(&mut self.render, &color_tex.to_vec());
@@ -159,7 +159,7 @@ impl View for SimpleView {
         self.index_buffer2.reset();
         self.texture1.reset();
         self.texture2.reset();
-        //self.shader.reset();
+        self.shader.reset();
         self.render.submit(window);
     }
 

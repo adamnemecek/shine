@@ -77,8 +77,8 @@ use store::handlestore::*;
 
 crate type Texture2DStore = Store<Texture2DImpl>;
 crate type GuardedTexture2DStore<'a> = UpdateGuardStore<'a, Texture2DImpl>;
-crate type Texture2DIndex = Index<Texture2DImpl>;
-pub type UnsafeTextureIndex = UnsafeIndex<Texture2DImpl>;
+type Texture2DIndex = Index<Texture2DImpl>;
+pub type UnsafeTexture2DIndex = UnsafeIndex<Texture2DImpl>;
 
 
 /// Handle to a texture 2d resource
@@ -91,7 +91,7 @@ impl Texture2DHandle {
     }
 
     pub fn create<K: PassKey>(res: &mut RenderManager<K>) -> Texture2DHandle {
-        Texture2DHandle(res.resources.textures.add(Texture2DImpl::new()))
+        Texture2DHandle(res.resources.textures_2d.add(Texture2DImpl::new()))
     }
 
     pub fn is_null(&self) -> bool {

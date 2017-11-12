@@ -1,12 +1,5 @@
-#![deny(missing_docs)]
-#![deny(missing_copy_implementations)]
-
-
-//todo: merge ShaderAtribute and ShaderUniforms into a single ShaderParameters
-
-use std::marker::PhantomData;
 use std::slice;
-
+use std::marker::PhantomData;
 use backend::*;
 
 
@@ -29,7 +22,7 @@ pub trait ShaderParameterVisitor {
     fn process_f32x2(&mut self, idx: usize, data: &Float32x2);
     fn process_f32(&mut self, idx: usize, data: f32);
 
-    fn process_tex_2d(&mut self, idx: usize, data: &UnsafeTextureIndex);
+    fn process_tex_2d(&mut self, idx: usize, data: &UnsafeTexture2DIndex);
     fn process_attribute(&mut self, idx: usize, data: &UnsafeVertexAttributeHandle);
     fn process_index(&mut self, idx: usize, data: &UnsafeIndexBufferIndex);
 }
@@ -60,38 +53,60 @@ pub trait ShaderDeclaration: 'static {
 
 
 /// Structure to store the shader abstraction.
-pub struct ShaderProgram<SD: ShaderDeclaration> {
-    pub ( crate ) platform: ShaderProgramImpl,
-    phantom: PhantomData<SD>,
-}
-
-impl<SD: ShaderDeclaration> ShaderProgram<SD> {
-    /// Creates an empty shader.
-    pub fn new() -> ShaderProgram<SD> {
-        ShaderProgram {
-            platform: ShaderProgramImpl::new(),
-            phantom: PhantomData
-        }
-    }
+pub trait ShaderProgram<DECL: ShaderDeclaration> {
+    /// Uploads and compiles the shader.
+    fn compile<Q: CommandQueue>(&self, queue: &mut Q);
 
     /// Releases the hw resources of a shader.
     ///
     /// No render operation is processed, only a command in the queue is stored.
     /// The HW data is access only during queue processing.
-    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        self.platform.release(queue);
-    }
-
-    /// Compiles the shader.
-    pub fn compile<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        self.platform.compile::<SD, Q>(queue);
-    }
+    fn release<Q: CommandQueue>(&self, queue: &mut Q);
 
     /// Sends a geometry for rendering
-    pub fn draw<Q: CommandQueue>(&mut self, queue: &mut Q,
-                                 parameters: SD::Parameters,
-                                 primitive: Primitive, vertex_start: usize, vertex_count: usize)
-    {
-        self.platform.draw::<SD, Q>(queue, parameters, primitive, vertex_start, vertex_count);
+    fn draw<Q: CommandQueue>(&self, queue: &mut Q, parameters: DECL::Parameters,
+                             primitive: Primitive, vertex_start: usize, vertex_count: usize);
+}
+
+
+use store::handlestore::*;
+
+crate type ShaderProgramStore = Store<ShaderProgramImpl>;
+crate type GuardedShaderProgramStore<'a> = UpdateGuardStore<'a, ShaderProgramImpl>;
+crate type ShaderProgramIndex = Index<ShaderProgramImpl>;
+pub type UnsafeShaderProgramIndex = UnsafeIndex<ShaderProgramImpl>;
+
+
+/// Handle to a texture 2d resource
+#[derive(Clone)]
+pub struct ShaderProgramHandle<DECL: ShaderDeclaration>( crate ShaderProgramIndex, PhantomData<DECL>);
+
+impl<DECL: ShaderDeclaration> ShaderProgramHandle<DECL> {
+    pub fn null() -> ShaderProgramHandle<DECL> {
+        ShaderProgramHandle(ShaderProgramIndex::null(), PhantomData)
+    }
+
+    pub fn create<K: PassKey>(res: &mut RenderManager<K>) -> ShaderProgramHandle<DECL> {
+        ShaderProgramHandle(res.resources.shaders.add(ShaderProgramImpl::new()), PhantomData)
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.0.is_null()
+    }
+
+    pub fn reset(&mut self) {
+        self.0.reset()
+    }
+
+    pub fn as_ref(&self) -> UnsafeIndex<ShaderProgramImpl> {
+        UnsafeIndex::from_index(&self.0)
     }
 }
+
+impl<'a, DECL: ShaderDeclaration> From<&'a ShaderProgramHandle<DECL>> for UnsafeIndex<ShaderProgramImpl> {
+    #[inline(always)]
+    fn from(idx: &ShaderProgramHandle<DECL>) -> UnsafeIndex<ShaderProgramImpl> {
+        UnsafeIndex::from_index(&idx.0)
+    }
+}
+

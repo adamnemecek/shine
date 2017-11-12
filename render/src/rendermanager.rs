@@ -129,7 +129,6 @@ impl<K: PassKey> RenderManager<K> {
             commands.sort(self);
             let mut resources = self.resources.update();
             commands.process(window.platform_mut(), &mut resources);
-            //resources.drain_unused(window.platform_mut());
             commands.clear();
         }
 

@@ -64,7 +64,7 @@ impl Uniform {
                 35675 => quote!(_dragorust_render::Float32x9),// GLenum(GL_FLOAT_MAT3)
                 35676 => quote!(_dragorust_render::Float32x16),// GLenum(GL_FLOAT_MAT4)
 
-                35678 => quote!(_dragorust_render::backend::UnsafeTextureIndex),// GLenum(GL_SAMPLER_2D)
+                35678 => quote!(_dragorust_render::backend::UnsafeTexture2DIndex),// GLenum(GL_SAMPLER_2D)
                 35680 => quote!(_dragorust_render::backend::TextureCubeHandle),// GLenum(GL_SAMPLER_CUBE)
 
                 _ => return Err(format!("Could not find built-in type for uniform {}, type id:{}", self.name, self.type_id))

@@ -49,9 +49,23 @@ impl CommandStore {
 
     pub ( crate ) fn process<'a>(&mut self, window: &mut GLWindow, resources: &mut GuardedResources<'a>) {
         let ll = window.get_ll();
+
+        // handle new resource alocations
+        resources.vertex_buffers.process_requests();
+        resources.index_buffers.process_requests();
+        resources.textures_2d.process_requests();
+        resources.shaders.process_requests();
+
+        // process commands
         for sorted_item in self.sort.iter() {
             let ref mut cmd = self.commands[sorted_item.1];
             cmd.process(resources, ll);
         }
+
+        // release unused allocations
+        resources.vertex_buffers.drain_unused(|e| { e.release(ll); true });
+        resources.index_buffers.drain_unused(|e| { e.release(ll); true });
+        resources.textures_2d.drain_unused(|e| { e.release(ll); true });
+        resources.shaders.drain_unused(|e| { e.release(ll); true });
     }
 }

@@ -1,5 +1,5 @@
-use std::rc::Rc;
-use std::cell::RefCell;
+#![allow(dead_code)]
+
 use std::str::from_utf8;
 use std::marker::PhantomData;
 use std::mem;
@@ -9,10 +9,13 @@ use arrayvec::ArrayVec;
 use backend::*;
 use backend::opengl::lowlevel::*;
 use backend::opengl::commandqueue::*;
+use store::handlestore::*;
 
 
+/// Error reported by the driver during compilation and linking
 #[derive(Clone, Debug)]
 struct ShaderError(String);
+
 
 /// Converts a ShaderType enum to the corresponding GLenum.
 fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
@@ -23,42 +26,32 @@ fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
 }
 
 
-/// Attribute info
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct AttributeLocation {
-    location: GLuint,
-    size: GLint,
-    type_id: GLenum,
-}
-
-impl AttributeLocation {
-    fn is_valid(&self) -> bool {
-        self.type_id != 0
-    }
-}
-
-
-/// Uniform info
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-struct UniformLocation {
-    location: GLuint,
-    size: GLint,
-    type_id: GLenum,
-}
-
-impl UniformLocation {
-    fn is_valid(&self) -> bool {
-        self.type_id != 0
-    }
-}
-
-
-/// Union type for shader parameters: attributes, uniforms
+/// Shader parameters info: required type, binding locations.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 enum ParameterLocation {
-    Attribute(AttributeLocation),
-    Uniform(UniformLocation),
+    Attribute {
+        location: GLuint,
+        size: GLint,
+        type_id: GLenum,
+    },
+
+    Uniform {
+        location: GLuint,
+        size: GLint,
+        type_id: GLenum,
+    },
+
     Empty,
+}
+
+impl ParameterLocation {
+    fn is_valid(&self) -> bool {
+        match self {
+            &ParameterLocation::Attribute { type_id, .. } => type_id != 0,
+            &ParameterLocation::Uniform { type_id, .. } => type_id != 0,
+            _ => false
+        }
+    }
 }
 
 
@@ -75,80 +68,80 @@ struct ParameterUploader<'a, 'r: 'a> {
 
 impl<'a, 'r> ShaderParameterVisitor for ParameterUploader<'a, 'r> {
     fn process_f32x16(&mut self, idx: usize, data: &Float32x16) {
-        if let ParameterLocation::Uniform(loc) = self.locations[idx] {
-            if loc.is_valid() {
-                assert!(loc.type_id == gl::FLOAT_MAT4 && loc.size == 1);
+        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
+            if type_id != 0 {
+                assert!(type_id == gl::FLOAT_MAT4 && size == 1);
                 gl_check_error();
-                gl!(UniformMatrix4fv(loc.location as i32, loc.size, gl::FALSE, mem::transmute(data)));
+                gl!(UniformMatrix4fv(location as i32, size, gl::FALSE, mem::transmute(data)));
                 gl_check_error();
             }
         }
     }
 
     fn process_f32x4(&mut self, idx: usize, data: &Float32x4) {
-        if let ParameterLocation::Uniform(loc) = self.locations[idx] {
-            if loc.is_valid() {
-                assert!(loc.type_id == gl::FLOAT_VEC4 && loc.size == 1);
+        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
+            if type_id != 0 {
+                assert!(type_id == gl::FLOAT_VEC4 && size == 1);
                 gl_check_error();
-                gl!(Uniform4fv(loc.location as i32, loc.size, mem::transmute(data)));
+                gl!(Uniform4fv(location as i32, size, mem::transmute(data)));
                 gl_check_error();
             }
         }
     }
 
     fn process_f32x3(&mut self, idx: usize, data: &Float32x3) {
-        if let ParameterLocation::Uniform(loc) = self.locations[idx] {
-            if loc.is_valid() {
-                assert!(loc.type_id == gl::FLOAT_VEC3 && loc.size == 1);
+        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
+            if type_id != 0 {
+                assert!(type_id == gl::FLOAT_VEC3 && size == 1);
                 gl_check_error();
-                gl!(Uniform3fv(loc.location as i32, loc.size, mem::transmute(data)));
+                gl!(Uniform3fv(location as i32, size, mem::transmute(data)));
                 gl_check_error();
             }
         }
     }
 
     fn process_f32x2(&mut self, idx: usize, data: &Float32x2) {
-        if let ParameterLocation::Uniform(loc) = self.locations[idx] {
-            if loc.is_valid() {
-                assert!(loc.type_id == gl::FLOAT_VEC2 && loc.size == 1);
+        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
+            if type_id != 0 {
+                assert!(type_id == gl::FLOAT_VEC2 && size == 1);
                 gl_check_error();
-                gl!(Uniform2fv(loc.location as i32, loc.size, mem::transmute(data)));
+                gl!(Uniform2fv(location as i32, size, mem::transmute(data)));
                 gl_check_error();
             }
         }
     }
 
     fn process_f32(&mut self, idx: usize, data: f32) {
-        if let ParameterLocation::Uniform(loc) = self.locations[idx] {
-            if loc.is_valid() {
-                assert!(loc.type_id == gl::FLOAT && loc.size == 1);
+        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
+            if type_id != 0 {
+                assert!(type_id == gl::FLOAT && size == 1);
                 gl_check_error();
-                gl!(Uniform1fv(loc.location as i32, loc.size, mem::transmute(&data)));
+                gl!(Uniform1fv(location as i32, size, mem::transmute(&data)));
                 gl_check_error();
             }
         }
     }
 
-    fn process_tex_2d(&mut self, idx: usize, data: &UnsafeTextureIndex) {
-        if let ParameterLocation::Uniform(loc) = self.locations[idx] {
-            if loc.is_valid() {
-                assert!(loc.type_id == gl::SAMPLER_2D && loc.size == 1);
+    fn process_tex_2d(&mut self, idx: usize, data: &UnsafeTexture2DIndex) {
+        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
+            if type_id != 0 {
+                assert!(type_id == gl::SAMPLER_2D && size == 1);
                 gl_check_error();
                 let texture = &mut self.resources[data];
                 let slot = texture.bind(self.ll);
                 let slot = slot as u32;
-                gl!(Uniform1i(loc.location as i32, slot as i32));
+                gl!(Uniform1i(location as i32, slot as i32));
                 gl_check_error();
             }
         }
     }
 
     fn process_attribute(&mut self, idx: usize, data: &UnsafeVertexAttributeHandle) {
-        if let ParameterLocation::Attribute(loc) = self.locations[idx] {
-            if loc.is_valid() {
+        if let ParameterLocation::Attribute { location, type_id, .. } = self.locations[idx] {
+            if type_id != 0 {
                 gl_check_error();
                 let buffer = &mut self.resources[data];
-                buffer.bind(self.ll, loc.location, data.1);
+                buffer.bind(self.ll, location, data.1);
                 gl_check_error();
             }
         }
@@ -168,14 +161,14 @@ impl<'a, 'r> ShaderParameterVisitor for ParameterUploader<'a, 'r> {
 
 
 /// Structure to store hardware data associated to a ShaderProgram.
-struct GLShaderProgramData {
+pub struct GLShaderProgram {
     hw_id: GLuint,
     parameter_locations: ParameterLocations,
 }
 
-impl GLShaderProgramData {
-    fn new() -> GLShaderProgramData {
-        GLShaderProgramData {
+impl GLShaderProgram {
+    pub fn new() -> GLShaderProgram {
+        GLShaderProgram {
             hw_id: 0,
             parameter_locations: ParameterLocations::new(),
         }
@@ -211,7 +204,7 @@ impl GLShaderProgramData {
         }
     }
 
-    fn create_program<SD: ShaderDeclaration>(&mut self, ll: &mut LowLevel) {
+    pub fn create_program<DECL: ShaderDeclaration>(&mut self, ll: &mut LowLevel) {
         gl_check_error();
         if self.hw_id != 0 {
             self.release(ll);
@@ -222,7 +215,7 @@ impl GLShaderProgramData {
 
         // create and attach shaders
         gl_check_error();
-        for source in SD::get_sources() {
+        for source in DECL::get_sources() {
             if let Err(ShaderError(err)) = self.attach_shader(gl_get_shader_enum(source.0), source.1.as_bytes()) {
                 println!("Shader program compilation failed.\n{}\nError:{}", source.1, err);
                 self.release(ll);
@@ -253,17 +246,7 @@ impl GLShaderProgramData {
         gl_check_error();
     }
 
-    fn parse_parameters<SD: ShaderDeclaration>(&mut self, ll: &mut LowLevel) {
-        (0..SD::Parameters::get_count()).for_each(|_| self.parameter_locations.push(ParameterLocation::Empty));
-        assert!(self.parameter_locations.len() <= MAX_USED_PARAMETER_COUNT, "Too many shader parameters in declaration, allowed count: {}", MAX_USED_PARAMETER_COUNT);
-
-        self.parse_attributes::<SD>(ll);
-        self.parse_uniforms::<SD>(ll);
-
-        println!("shader parameters: {:?}", self.parameter_locations);
-    }
-
-    fn parse_attributes<SD: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
+    fn parse_attributes<DECL: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
         let mut name_length: GLsizei = 0;
@@ -289,20 +272,20 @@ impl GLShaderProgramData {
             gl_check_error();
 
             let attribute_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let param_idx = SD::Parameters::get_index_by_name(&attribute_name).expect(&format!("Vertex attribute name {} could not be resolved", attribute_name));
+            let param_idx = DECL::Parameters::get_index_by_name(&attribute_name).expect(&format!("Vertex attribute name {} could not be resolved", attribute_name));
             let attribute = &mut self.parameter_locations[param_idx];
 
             assert!(*attribute == ParameterLocation::Empty);
-            *attribute = ParameterLocation::Attribute(AttributeLocation {
+            *attribute = ParameterLocation::Attribute {
                 location: location,
                 size: attribute_size,
                 type_id: attribute_type,
-            });
+            };
             //println!("Shader program attribute {}({})= {:?}", attribute_name, attribute_idx, attribute);
         }
     }
 
-    fn parse_uniforms<SD: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
+    fn parse_uniforms<DECL: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
         let mut name_length: GLsizei = 0;
@@ -328,21 +311,31 @@ impl GLShaderProgramData {
             gl_check_error();
 
             let uniform_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let param_idx = SD::Parameters::get_index_by_name(&uniform_name).expect(&format!("Uniform name {} could not be resolved", uniform_name));
+            let param_idx = DECL::Parameters::get_index_by_name(&uniform_name).expect(&format!("Uniform name {} could not be resolved", uniform_name));
             let uniform = &mut self.parameter_locations[param_idx];
 
             assert!(*uniform == ParameterLocation::Empty);
-            *uniform = ParameterLocation::Uniform(UniformLocation {
+            *uniform = ParameterLocation::Uniform {
                 location: location,
                 size: uniform_size,
                 type_id: uniform_type,
-            });
+            };
 
             //println!("Shader program uniform {}({})= {:?}", uniform_name, uniform_idx, uniform);
         }
     }
 
-    fn release(&mut self, ll: &mut LowLevel) {
+    pub fn parse_parameters<DECL: ShaderDeclaration>(&mut self, ll: &mut LowLevel) {
+        (0..DECL::Parameters::get_count()).for_each(|_| self.parameter_locations.push(ParameterLocation::Empty));
+        assert!(self.parameter_locations.len() <= MAX_USED_PARAMETER_COUNT, "Too many shader parameters in declaration, allowed count: {}", MAX_USED_PARAMETER_COUNT);
+
+        self.parse_attributes::<DECL>(ll);
+        self.parse_uniforms::<DECL>(ll);
+
+        println!("shader parameters: {:?}", self.parameter_locations);
+    }
+
+    pub fn release(&mut self, ll: &mut LowLevel) {
         if self.hw_id == 0 {
             return;
         }
@@ -379,103 +372,97 @@ impl GLShaderProgramData {
     }
 }
 
-impl Drop for GLShaderProgramData {
+impl Drop for GLShaderProgram {
     fn drop(&mut self) {
         assert! ( self.hw_id == 0, "Leaking shader program");
     }
 }
 
 
-/// RenderCommand to allocate the OpenGL program, set the shader sources and compile (link) a shader program
-struct CreateCommand<SD: ShaderDeclaration> {
-    target: Rc<RefCell<GLShaderProgramData>>,
-    phantom_sd: PhantomData<SD>,
-}
+/// Structure to store the shader abstraction.
+impl<DECL: ShaderDeclaration> ShaderProgram<DECL> for ShaderProgramHandle<DECL> {
+    fn compile<Q: CommandQueue>(&self, queue: &mut Q) {
+        /// RenderCommand to allocate the OpenGL program, set the shader sources and compile (link) a shader program
+        struct CreateCommand<SD: ShaderDeclaration> {
+            target: UnsafeIndex<GLShaderProgram>,
+            phantom_sd: PhantomData<SD>,
+        }
 
-impl<SD: ShaderDeclaration> Command for CreateCommand<SD> {
-    fn get_sort_key(&self) -> usize {
-        1
-    }
-
-    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-        let ref mut shader = *self.target.borrow_mut();
-        shader.create_program::<SD>(ll);
-        shader.parse_parameters::<SD>(ll);
-    }
-}
-
-
-/// RenderCommand to release the allocated OpenGL program.
-struct ReleaseCommand {
-    target: Rc<RefCell<GLShaderProgramData>>,
-}
-
-impl Command for ReleaseCommand {
-    fn get_sort_key(&self) -> usize {
-        1
-    }
-
-    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-        self.target.borrow_mut().release(ll);
-    }
-}
-
-
-/// RenderCommand to submit a geometry for rendering
-struct DrawCommand<SD: ShaderDeclaration> {
-    target: Rc<RefCell<GLShaderProgramData>>,
-    parameters: SD::Parameters,
-    primitive: GLenum,
-    vertex_start: GLuint,
-    vertex_count: GLuint,
-}
-
-impl<SD: ShaderDeclaration> Command for DrawCommand<SD> {
-    fn get_sort_key(&self) -> usize {
-        1
-    }
-
-    fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-        let ref mut shader = *self.target.borrow_mut();
-        shader.draw(resources, ll,
-                    &self.parameters, self.primitive, self.vertex_start, self.vertex_count);
-    }
-}
-
-
-/// ShaderProgram implementation for OpenGL.
-pub struct GLShaderProgram(Rc<RefCell<GLShaderProgramData>>);
-
-impl GLShaderProgram {
-    pub fn new() -> GLShaderProgram {
-        GLShaderProgram(
-            Rc::new(RefCell::new(GLShaderProgramData::new()))
-        )
-    }
-
-    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
-        queue.add(
-            ReleaseCommand {
-                target: self.0.clone()
+        impl<SD: ShaderDeclaration> Command for CreateCommand<SD> {
+            fn get_sort_key(&self) -> usize {
+                1
             }
-        );
-    }
 
-    pub fn compile<SD: ShaderDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q) {
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                let target = &mut resources[&self.target];
+                target.create_program::<SD>(ll);
+                target.parse_parameters::<SD>(ll);
+            }
+        }
+
         queue.add(
-            CreateCommand::<SD> {
-                target: self.0.clone(),
+            CreateCommand::<DECL> {
+                target: UnsafeIndex::from_index(&self.0),
                 phantom_sd: PhantomData,
             }
         );
     }
 
-    pub fn draw<SD: ShaderDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q,
-                                                        parameters: SD::Parameters,
-                                                        primitive: Primitive, vertex_start: usize, vertex_count: usize) {
+    fn release<Q: CommandQueue>(&self, queue: &mut Q) {
+        struct ReleaseCommand {
+            target: UnsafeIndex<GLShaderProgram>,
+        }
+
+        impl Command for ReleaseCommand {
+            fn get_sort_key(&self) -> usize {
+                1
+            }
+
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                let target = &mut resources[&self.target];
+                target.release(ll);
+            }
+        }
+
         queue.add(
-            DrawCommand::<SD> {
-                target: self.0.clone(),
+            ReleaseCommand {
+                target: UnsafeIndex::from_index(&self.0),
+            }
+        );
+    }
+
+    fn draw<Q: CommandQueue>(&self, queue: &mut Q, parameters: DECL::Parameters,
+                             primitive: Primitive, vertex_start: usize, vertex_count: usize)
+    {
+        struct DrawCommand<SD: ShaderDeclaration> {
+            target: UnsafeIndex<GLShaderProgram>,
+            parameters: SD::Parameters,
+            primitive: GLenum,
+            vertex_start: GLuint,
+            vertex_count: GLuint,
+        }
+
+        impl<SD: ShaderDeclaration> Command for DrawCommand<SD> {
+            fn get_sort_key(&self) -> usize {
+                1
+            }
+
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                // Without the unsafe code resourecs is borrowed mutable multiple times
+                // (once for target and once for the draw function call)
+                // As we know (but not the compiler) that, shader won't be accessed
+                // during call, it is safe to have a mutable reference into the shader
+                let target = unsafe {
+                    let a = &mut resources[&self.target] as *mut GLShaderProgram;
+                    &mut *a
+                };
+                target.draw(resources, ll, &self.parameters, self.primitive, self.vertex_start, self.vertex_count);
+            }
+        }
+
+        queue.add(
+            DrawCommand::<DECL> {
+                target: UnsafeIndex::from_index(&self.0),
                 parameters: parameters,
                 primitive: gl_get_primitive_enum(primitive),
                 vertex_start: vertex_start as GLuint,
@@ -485,5 +472,6 @@ impl GLShaderProgram {
     }
 }
 
-/// The shader program implementation
+
+/// The vertex buffer implementation
 pub type ShaderProgramImpl = GLShaderProgram;

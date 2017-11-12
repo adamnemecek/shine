@@ -71,7 +71,7 @@ impl Drop for GLVertexBuffer {
 impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
     fn release<Q: CommandQueue>(&self, queue: &mut Q) {
         struct ReleaseCommand {
-            target: Index<GLVertexBuffer>,
+            target: UnsafeIndex<GLVertexBuffer>,
         }
 
         impl Command for ReleaseCommand {
@@ -80,7 +80,7 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
             }
 
             fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-                let target = &mut resources.vertex_buffers[&self.target];
+                let target = &mut resources[&self.target];
                 target.release(ll);
             }
         }
@@ -88,7 +88,7 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
         //println!("GLVertexBuffer - release");
         queue.add(
             ReleaseCommand {
-                target: self.0.clone()
+                target: UnsafeIndex::from_index(&self.0),
             }
         );
     }
@@ -96,7 +96,7 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
     fn set<'a, SRC: VertexSource<DECL>, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
         /// RenderCommand to create and allocated OpenGL resources.
         struct CreateCommand<VD: VertexDeclaration> {
-            target: Index<GLVertexBuffer>,
+            target: UnsafeIndex<GLVertexBuffer>,
             data: Vec<u8>,
             phantom_data: PhantomData<VD>,
         }
@@ -107,7 +107,7 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
             }
 
             fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-                let target = &mut resources.vertex_buffers[&self.target];
+                let target = &mut resources[&self.target];
                 target.upload_data::<VD>(ll, self.data.as_slice());
             }
         }
@@ -119,7 +119,7 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
 
                 queue.add(
                     CreateCommand::<DECL> {
-                        target: self.0.clone(),
+                        target: UnsafeIndex::from_index(&self.0),
                         data: slice.to_vec(),
                         phantom_data: PhantomData,
                     }

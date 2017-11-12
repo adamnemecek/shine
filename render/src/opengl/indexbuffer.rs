@@ -84,7 +84,7 @@ impl<T> IndexBufferLayoutImpl for T where T: GLIndexTypeInfo {}
 impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
     fn release<Q: CommandQueue>(&self, queue: &mut Q) {
         struct ReleaseCommand {
-            target: Index<GLIndexBuffer>,
+            target: UnsafeIndex<GLIndexBuffer>,
         }
 
         impl Command for ReleaseCommand {
@@ -93,7 +93,7 @@ impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
             }
 
             fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-                let target = &mut resources.index_buffers[&self.target];
+                let target = &mut resources[&self.target];
                 target.release(ll);
             }
         }
@@ -102,7 +102,7 @@ impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
         //println!("GLIndexBuffer - release");
         queue.add(
             ReleaseCommand {
-                target: self.0.clone()
+                target: UnsafeIndex::from_index(&self.0),
             }
         );
     }
@@ -110,7 +110,7 @@ impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
     fn set<'a, SRC: IndexSource<DECL>, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
         /// RenderCommand to create and allocated OpenGL resources.
         struct CreateCommand {
-            target: Index<GLIndexBuffer>,
+            target: UnsafeIndex<GLIndexBuffer>,
             type_id: GLenum,
             data: Vec<u8>,
         }
@@ -121,7 +121,7 @@ impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
             }
 
             fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-                let target = &mut resources.index_buffers[&self.target];
+                let target = &mut resources[&self.target];
                 target.upload_data(ll, self.type_id, self.data.as_slice());
             }
         }
@@ -133,7 +133,7 @@ impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
 
                 queue.add(
                     CreateCommand {
-                        target: self.0.clone(),
+                        target: UnsafeIndex::from_index(&self.0),
                         type_id: DECL::IndexType::get_gl_type_id(),
                         data: slice.to_vec(),
                     }

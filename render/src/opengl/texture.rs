@@ -82,7 +82,7 @@ fn get_upload_enums(fmt: PixelFormat) -> (GLenum, GLenum, GLenum) {
 impl Texture2D for Texture2DHandle {
     fn release<Q: CommandQueue>(&self, queue: &mut Q) {
         struct ReleaseCommand {
-            target: Index<GLTexture>,
+            target: UnsafeIndex<GLTexture>,
         }
 
         impl Command for ReleaseCommand {
@@ -91,7 +91,7 @@ impl Texture2D for Texture2DHandle {
             }
 
             fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-                let target = &mut resources.textures[&self.target];
+                let target = &mut resources[&self.target];
                 target.release(ll);
             }
         }
@@ -100,7 +100,7 @@ impl Texture2D for Texture2DHandle {
         if !self.is_null() {
             queue.add(
                 ReleaseCommand {
-                    target: self.0.clone(),
+                    target: UnsafeIndex::from_index(&self.0),
                 }
             );
         }
@@ -108,7 +108,7 @@ impl Texture2D for Texture2DHandle {
 
     fn set<'a, SRC: ImageSource, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
         struct CreateCommand {
-            target: Index<GLTexture>,
+            target: UnsafeIndex<GLTexture>,
             texture_target: GLenum,
             width: usize,
             height: usize,
@@ -123,7 +123,7 @@ impl Texture2D for Texture2DHandle {
             }
 
             fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-                let target = &mut resources.textures[&self.target];
+                let target = &mut resources[&self.target];
                 target.upload_data(ll, self.texture_target, self.width, self.height, self.format, self.data.as_ptr());
             }
         }
@@ -134,7 +134,7 @@ impl Texture2D for Texture2DHandle {
                 //println!("GLTexture - set_transient {},{},{:?},{}", width, height, format, data.len());
                 queue.add(
                     CreateCommand {
-                        target: self.0.clone(),
+                        target: UnsafeIndex::from_index(&self.0),
                         texture_target: gl::TEXTURE_2D,
                         width: width,
                         height: height,

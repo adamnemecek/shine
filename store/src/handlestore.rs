@@ -172,33 +172,32 @@ pub struct UpdateGuardStore<'a, Data: 'a> {
 }
 
 impl<'a, Data: 'a> UpdateGuardStore<'a, Data> {
-    fn drain_unreferenced<F: Fn(&mut Data)>(v: &mut Vec<Box<Entry<Data>>>, f: &F) {
-        v.drain_filter(|v| {
-            if v.ref_count.load(Ordering::Relaxed) == 0 {
-                f(&mut v.value);
-                false
-            } else {
-                true
-            }
-        });
-    }
-
-    /// Releases unreferenced resources.
-    pub fn drain_unused<F: Fn(&mut Data)>(&mut self, f: F) {
-        Self::drain_unreferenced(&mut self.resources, &f);
-
-        let mut requests = self.requests.lock().unwrap();
-        Self::drain_unreferenced(&mut requests, &f);
-    }
-
-    /// Merges the requests in the "active" items
+    /// Merges the requests into the "active" items
     pub fn process_requests(&mut self) {
         let mut requests = self.requests.lock().unwrap();
         self.resources.append(requests.as_mut());
     }
 
-    /// Gets the referenced item through an unsafe index. Sinc reference counting does not
-    /// guarantee the lifetime of the indexed object, invalid use may result in Undefined Behaviour
+    fn drain_vector<F: FnMut(&mut Data) -> bool>(v: &mut Vec<Box<Entry<Data>>>, filter: &mut F) {
+        v.drain_filter(|v| {
+            if v.ref_count.load(Ordering::Relaxed) == 0 {
+                filter(&mut v.value)
+            } else {
+                false
+            }
+        });
+    }
+
+    /// Releases unreferenced resources.
+    pub fn drain_unused<F: FnMut(&mut Data) -> bool>(&mut self, mut filter: F) {
+        Self::drain_vector(&mut self.resources, &mut filter);
+
+        let mut requests = self.requests.lock().unwrap();
+        Self::drain_vector(&mut requests, &mut filter);
+    }
+
+    /// Gets the referenced item through an unsafe index. Since reference counting does not
+    /// guarantee the lifetime of the indexed object, incorrect use may result in Undefined Behaviour
     pub unsafe fn at_unsafe(&self, index: &UnsafeIndex<Data>) -> &Data {
         assert! ( !index.is_null(), "Indexing by a null-index is not allowed");
         &(*index.0).value
