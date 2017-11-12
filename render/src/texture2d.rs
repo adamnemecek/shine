@@ -1,6 +1,3 @@
-#![deny(missing_docs)]
-#![deny(missing_copy_implementations)]
-
 use backend::*;
 
 
@@ -41,6 +38,14 @@ pub trait Texture2D {
 }
 
 
-pub use backend::Texture2DStore;
-pub use backend::Texture2DHandle;
+use store::handlestore::*;
+use backend::texture2d::Texture2DImpl;
 
+pub type Texture2DStore = Store<Texture2DImpl>;
+pub type GuardedTexture2DStore<'a> = UpdateGuardStore<'a, Texture2DImpl>;
+pub type Texture2DHandle = Index<Texture2DImpl>;
+
+
+pub fn create_texture2d(res: &Texture2DStore) -> Texture2DHandle {
+    res.add(Texture2DImpl::new())
+}

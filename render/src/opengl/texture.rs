@@ -79,48 +79,23 @@ fn get_upload_enums(fmt: PixelFormat) -> (GLenum, GLenum, GLenum) {
 }
 
 
-/// RenderCommand to create and allocated OpenGL resources.
-struct CreateCommand {
-    target: Index<GLTexture>,
-    texture_target: GLenum,
-    width: usize,
-    height: usize,
-    format: (GLenum, GLenum, GLenum),
-    data: Vec<u8>,
-
-}
-
-impl Command for CreateCommand {
-    fn get_sort_key(&self) -> usize {
-        0
-    }
-
-    fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-        let target = &mut resources.textures[&self.target];
-        target.upload_data(ll, self.texture_target, self.width, self.height, self.format, self.data.as_ptr());
-    }
-}
-
-
-/// RenderCommand to release the allocated OpenGL buffer.
-struct ReleaseCommand {
-    target: Index<GLTexture>,
-}
-
-impl Command for ReleaseCommand {
-    fn get_sort_key(&self) -> usize {
-        0
-    }
-
-    fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-        let target = &mut resources.textures[&self.target];
-        target.release(ll);
-    }
-}
-
-
 impl Texture2D for Index<GLTexture> {
     fn release<Q: CommandQueue>(&self, queue: &mut Q) {
+        struct ReleaseCommand {
+            target: Index<GLTexture>,
+        }
+
+        impl Command for ReleaseCommand {
+            fn get_sort_key(&self) -> usize {
+                0
+            }
+
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                let target = &mut resources.textures[&self.target];
+                target.release(ll);
+            }
+        }
+
         //println!("GLTexture - release");
         if !self.is_null() {
             queue.add(
@@ -132,6 +107,28 @@ impl Texture2D for Index<GLTexture> {
     }
 
     fn set<'a, SRC: ImageSource, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
+        struct CreateCommand {
+            target: Index<GLTexture>,
+            texture_target: GLenum,
+            width: usize,
+            height: usize,
+            format: (GLenum, GLenum, GLenum),
+            data: Vec<u8>,
+
+        }
+
+        impl Command for CreateCommand {
+            fn get_sort_key(&self) -> usize {
+                0
+            }
+
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                let target = &mut resources.textures[&self.target];
+                target.upload_data(ll, self.texture_target, self.width, self.height, self.format, self.data.as_ptr());
+            }
+        }
+
+
         match source.to_data() {
             ImageData::Transient { width, height, format, slice } => {
                 //println!("GLTexture - set_transient {},{},{:?},{}", width, height, format, data.len());
@@ -153,11 +150,4 @@ impl Texture2D for Index<GLTexture> {
 }
 
 
-pub type Texture2DStore = Store<GLTexture>;
-pub type GuardedTexture2DStore<'a> = UpdateGuardStore<'a, GLTexture>;
-pub type Texture2DHandle = Index<GLTexture>;
-
-
-pub fn create_texture2d(res: &Texture2DStore) -> Texture2DHandle {
-    res.add(GLTexture::new())
-}
+pub type Texture2DImpl = GLTexture;
