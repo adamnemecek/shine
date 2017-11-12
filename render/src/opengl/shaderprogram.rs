@@ -129,7 +129,7 @@ impl<'a, 'r> ShaderParameterVisitor for ParameterUploader<'a, 'r> {
         }
     }
 
-    fn process_tex_2d(&mut self, idx: usize, data: &Texture2DHandle) {
+    fn process_tex_2d(&mut self, idx: usize, data: &UnsafeTextureIndex) {
         if let ParameterLocation::Uniform(loc) = self.locations[idx] {
             if loc.is_valid() {
                 assert!(loc.type_id == gl::SAMPLER_2D && loc.size == 1);
@@ -143,7 +143,7 @@ impl<'a, 'r> ShaderParameterVisitor for ParameterUploader<'a, 'r> {
         }
     }
 
-    fn process_attribute(&mut self, idx: usize, data: &VertexAttributeHandle) {
+    fn process_attribute(&mut self, idx: usize, data: &UnsafeVertexAttributeHandle) {
         if let ParameterLocation::Attribute(loc) = self.locations[idx] {
             if loc.is_valid() {
                 gl_check_error();
@@ -152,6 +152,17 @@ impl<'a, 'r> ShaderParameterVisitor for ParameterUploader<'a, 'r> {
                 gl_check_error();
             }
         }
+    }
+
+    fn process_index(&mut self, _idx: usize, data: &UnsafeIndexBufferIndex) {
+        gl_check_error();
+        if data.is_null() {
+            self.ll.index_binding.bind_no_index();
+        } else {
+            let buffer = &mut self.resources[data];
+            buffer.bind(self.ll);
+        }
+        gl_check_error();
     }
 }
 
@@ -347,8 +358,7 @@ impl GLShaderProgramData {
     }
 
     fn draw<'r, 'a, P: ShaderParameters>(&mut self, resources: &'a mut GuardedResources<'r>, ll: &'a mut LowLevel,
-                                         parameters: &P, indices: &IndexBufferIndex,
-                                         primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
+                                         parameters: &P, primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
         // bind shader
         if self.hw_id == 0 {
             // no drawing when shader is not valid
@@ -364,14 +374,6 @@ impl GLShaderProgramData {
             resources: resources,
         });
         gl_check_error();
-
-        // bind indices
-        if indices.is_null() {
-            ll.index_binding.bind_no_index();
-        } else {
-            let buffer = &mut resources.index_buffers[indices];
-            buffer.bind(ll);
-        }
 
         ll.draw(primitive, vertex_start, vertex_count);
     }
@@ -423,7 +425,6 @@ impl Command for ReleaseCommand {
 struct DrawCommand<SD: ShaderDeclaration> {
     target: Rc<RefCell<GLShaderProgramData>>,
     parameters: SD::Parameters,
-    indices: IndexBufferIndex,
     primitive: GLenum,
     vertex_start: GLuint,
     vertex_count: GLuint,
@@ -437,7 +438,7 @@ impl<SD: ShaderDeclaration> Command for DrawCommand<SD> {
     fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
         shader.draw(resources, ll,
-                    &self.parameters, &self.indices, self.primitive, self.vertex_start, self.vertex_count);
+                    &self.parameters, self.primitive, self.vertex_start, self.vertex_count);
     }
 }
 
@@ -476,23 +477,6 @@ impl GLShaderProgram {
             DrawCommand::<SD> {
                 target: self.0.clone(),
                 parameters: parameters,
-                indices: IndexBufferIndex::null(),
-                primitive: gl_get_primitive_enum(primitive),
-                vertex_start: vertex_start as GLuint,
-                vertex_count: vertex_count as GLuint,
-            }
-        );
-    }
-
-    pub fn draw_indexed<SD: ShaderDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q,
-                                                                parameters: SD::Parameters,
-                                                                indices: &IndexBufferIndex,
-                                                                primitive: Primitive, vertex_start: usize, vertex_count: usize) {
-        queue.add(
-            DrawCommand::<SD> {
-                target: self.0.clone(),
-                parameters: parameters,
-                indices: indices.clone(),
                 primitive: gl_get_primitive_enum(primitive),
                 vertex_start: vertex_start as GLuint,
                 vertex_count: vertex_count as GLuint,

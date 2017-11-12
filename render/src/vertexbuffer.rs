@@ -99,12 +99,13 @@ use backend::vertexbuffer::VertexBufferImpl;
 crate type VertexBufferStore = Store<VertexBufferImpl>;
 crate type GuardedVertexBufferStore<'a> = UpdateGuardStore<'a, VertexBufferImpl>;
 crate type VertexBufferIndex = Index<VertexBufferImpl>;
+crate type UnsafeVertexBufferIndex = UnsafeIndex<VertexBufferImpl>;
 
 
 /// Handle to an attribute of a vertex buffer resource.
 /// This structure also erases the generic vertex declaration type.
 #[derive(Clone)]
-pub struct VertexAttributeHandle( crate VertexBufferIndex, crate usize);
+pub struct UnsafeVertexAttributeHandle( crate UnsafeVertexBufferIndex, crate usize);
 
 
 /// Handle to a vertex buffer resource
@@ -127,8 +128,12 @@ impl<DECL: VertexDeclaration> VertexBufferHandle<DECL> {
     pub fn reset(&mut self) {
         self.0.reset()
     }
+}
 
-    pub fn get_attribute(&self, attr: DECL::Attribute) -> VertexAttributeHandle {
-        VertexAttributeHandle(self.0.clone(), attr.into())
+impl<'a, DECL: VertexDeclaration> From<(&'a VertexBufferHandle<DECL>, DECL::Attribute)> for UnsafeVertexAttributeHandle {
+    #[inline(always)]
+    fn from(idx: (&'a VertexBufferHandle<DECL>, DECL::Attribute)) -> UnsafeVertexAttributeHandle {
+        UnsafeVertexAttributeHandle(UnsafeVertexBufferIndex::from_index(&(idx.0).0), idx.1.into())
     }
 }
+

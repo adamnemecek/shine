@@ -113,6 +113,8 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
     let mut visit_fields: Vec<quote::Tokens> = vec!();
 
     let mut index: usize = 0;
+
+    // vertex buffers
     for attr in attributes.iter() {
         let attr_name = attr.name.clone();
         let attr_field_ident = {
@@ -124,7 +126,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         };
 
         param_fields.push(quote! {
-            #attr_field_ident : _dragorust_render::backend::VertexAttributeHandle
+            #attr_field_ident : _dragorust_render::backend::UnsafeVertexAttributeHandle
         });
 
         match_name_cases.push(
@@ -143,6 +145,16 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         index += 1;
     }
 
+    // index buffers
+    param_fields.push(quote! {
+        indices: _dragorust_render::backend::UnsafeIndexBufferIndex
+    });
+    visit_fields.push(quote! {
+        visitor.process_index(#index, &self.indices);
+    });
+    index += 1;
+
+    // uniforms
     for uniform in uniforms.iter() {
         let uniform_name = uniform.name.clone();
         let uniform_field_ident = {

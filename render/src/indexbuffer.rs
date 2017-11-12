@@ -7,10 +7,10 @@ use backend::*;
 /// Trait to define index type, one of u8,u16,u32.
 pub trait IndexDeclaration: 'static {
     /// The type of a single index (ex. u8,u16,u32)
-    type IndexType: 'static + Copy + Clone + IndexTypeInfoImpl;
+    type IndexType: 'static + Copy + Clone + IndexBufferLayoutImpl;
 }
 
-impl<T> IndexDeclaration for T where T: 'static + Copy + Clone + IndexTypeInfoImpl {
+impl<T> IndexDeclaration for T where T: 'static + Copy + Clone + IndexBufferLayoutImpl {
     type IndexType = T;
 }
 
@@ -98,6 +98,9 @@ use backend::indexbuffer::IndexBufferImpl;
 crate type IndexBufferStore = Store<IndexBufferImpl>;
 crate type GuardedIndexBufferStore<'a> = UpdateGuardStore<'a, IndexBufferImpl>;
 crate type IndexBufferIndex = Index<IndexBufferImpl>;
+pub type UnsafeIndexBufferIndex = UnsafeIndex<IndexBufferImpl>;
+
+pub struct NoIndex;
 
 
 /// Handle to an index buffer resource
@@ -121,3 +124,18 @@ impl<DECL: IndexDeclaration> IndexBufferHandle<DECL> {
         self.0.reset()
     }
 }
+
+impl<'a, DECL: IndexDeclaration> From<&'a IndexBufferHandle<DECL>> for UnsafeIndex<IndexBufferImpl> {
+    #[inline(always)]
+    fn from(idx: &IndexBufferHandle<DECL>) -> UnsafeIndex<IndexBufferImpl> {
+        UnsafeIndex::from_index(&idx.0)
+    }
+}
+
+impl From<NoIndex> for UnsafeIndex<IndexBufferImpl> {
+    #[inline(always)]
+    fn from(_idx: NoIndex) -> UnsafeIndex<IndexBufferImpl> {
+        UnsafeIndex::null()
+    }
+}
+

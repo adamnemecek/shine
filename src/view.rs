@@ -191,23 +191,22 @@ impl View for SimpleView {
             p0.config_mut().set_clear_color(f32x3!(self.t, game.t, 0.));
             p0.config_mut().set_fullscreen();
 
-            let v1 = &self.vertex_buffer1;
-            let v2 = &self.vertex_buffer2;
-
             let st = self.t.sin();
             let ct = self.t.cos();
 
             let parameters = ShSimpleParameters {
-                v_position: v1.get_attribute(VxPosAttribute::Position),
-                v_color: v2.get_attribute(VxColorTexAttribute::Color),
-                v_tex_coord: v2.get_attribute(VxColorTexAttribute::TexCoord),
+                v_position: From::from((&self.vertex_buffer1, VxPosAttribute::Position)),
+                v_color: From::from((&self.vertex_buffer2, VxColorTexAttribute::Color)),
+                v_tex_coord: From::from((&self.vertex_buffer2, VxColorTexAttribute::TexCoord)),
+
+                indices: Default::default(),
 
                 u_trsf: f32x16!(st, -ct, 0, 0,
                                     ct,  st, 0, 0,
                                      0,   0, 1, 0,
                                      0,   0, 0, 1),
                 u_color: f32x3!(1.2f32, 0.2f32, 0.2f32),
-                u_tex: self.texture1.clone(),
+                u_tex: From::from(&self.texture1),
             };
 
             {
@@ -218,7 +217,7 @@ impl View for SimpleView {
                                        0,    0, 1, 0,
                                        0,    0, 0, 1);
                     p.u_color = f32x3!(1.2f32, 0.2f32, 0.2f32);
-                    p.u_tex = self.texture1.clone();
+                    p.u_tex = From::from(&self.texture1);
                     p
                 };
 
@@ -228,16 +227,17 @@ impl View for SimpleView {
             {
                 let parameters = {
                     let mut p = parameters.clone();
+                    p.indices = From::from(&self.index_buffer1);
                     p.u_trsf = f32x16!(ct, -st, 0, 0,
                                        st,  ct, 0, 0,
                                        0,    0, 1, 0,
                                        0,    0, 0, 1);
                     p.u_color = f32x3!(1.2f32, 0.2f32, 0.2f32);
-                    p.u_tex = self.texture1.clone();
+                    p.u_tex = From::from(&self.texture1);
                     p
                 };
 
-                self.shader.draw_indexed(&mut *p0, parameters, &self.index_buffer1, Primitive::Triangle, 0, 6);
+                self.shader.draw(&mut *p0, parameters, Primitive::Triangle, 0, 6);
             }
         }
 

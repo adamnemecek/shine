@@ -29,9 +29,9 @@ pub trait ShaderParameterVisitor {
     fn process_f32x2(&mut self, idx: usize, data: &Float32x2);
     fn process_f32(&mut self, idx: usize, data: f32);
 
-    fn process_tex_2d(&mut self, idx: usize, data: &Texture2DHandle);
-
-    fn process_attribute(&mut self, idx: usize, data: &VertexAttributeHandle);
+    fn process_tex_2d(&mut self, idx: usize, data: &UnsafeTextureIndex);
+    fn process_attribute(&mut self, idx: usize, data: &UnsafeVertexAttributeHandle);
+    fn process_index(&mut self, idx: usize, data: &UnsafeIndexBufferIndex);
 }
 
 
@@ -93,13 +93,5 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
                                  primitive: Primitive, vertex_start: usize, vertex_count: usize)
     {
         self.platform.draw::<SD, Q>(queue, parameters, primitive, vertex_start, vertex_count);
-    }
-
-    /// Sends a geometry for rendering
-    pub fn draw_indexed<Q: CommandQueue, ID: IndexDeclaration>(&mut self, queue: &mut Q,
-                                                               parameters: SD::Parameters, indices: &IndexBufferHandle<ID>,
-                                                               primitive: Primitive, vertex_start: usize, vertex_count: usize)
-    {
-        self.platform.draw_indexed::<SD, Q>(queue, parameters, &indices.0, primitive, vertex_start, vertex_count);
     }
 }

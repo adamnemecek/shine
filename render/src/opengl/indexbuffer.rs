@@ -1,6 +1,5 @@
 use backend::*;
 use backend::opengl::lowlevel::*;
-use backend::opengl::lowlevel::indexbinding::*;
 use store::handlestore::*;
 
 
@@ -57,10 +56,28 @@ impl Drop for GLIndexBuffer {
 }
 
 
-/// Trait to extract type info for indices
-pub trait IndexTypeInfoImpl: GLIndexTypeInfo {}
+/// Trait to help converting an index attribute into the appropriate GLenum
+pub trait GLIndexTypeInfo {
+    fn get_gl_type_id() -> GLenum;
+}
 
-impl<T> IndexTypeInfoImpl for T where T: GLIndexTypeInfo {}
+impl GLIndexTypeInfo for u32 {
+    fn get_gl_type_id() -> GLenum { gl::UNSIGNED_INT }
+}
+
+impl GLIndexTypeInfo for u16 {
+    fn get_gl_type_id() -> GLenum { gl::UNSIGNED_SHORT }
+}
+
+impl GLIndexTypeInfo for u8 {
+    fn get_gl_type_id() -> GLenum { gl::UNSIGNED_BYTE }
+}
+
+
+/// Trait to extract type info for indices
+pub trait IndexBufferLayoutImpl: GLIndexTypeInfo {}
+
+impl<T> IndexBufferLayoutImpl for T where T: GLIndexTypeInfo {}
 
 
 /// IndexBuffer implementation for OpenGL.

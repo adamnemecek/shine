@@ -36,59 +36,45 @@ pub struct GuardedResources<'a> {
 
 }
 
-impl<'a, 'i, DECL: VertexDeclaration> ops::Index<&'i VertexBufferHandle<DECL>> for GuardedResources<'a> {
+impl<'a, 'i> ops::Index<&'i UnsafeVertexAttributeHandle> for GuardedResources<'a> {
     type Output = VertexBufferImpl;
 
-    fn index(&self, index: &VertexBufferHandle<DECL>) -> &Self::Output {
-        &self.vertex_buffers[&index.0]
+    fn index(&self, index: &UnsafeVertexAttributeHandle) -> &Self::Output {
+        unsafe { self.vertex_buffers.at_unsafe(&index.0) }
     }
 }
 
-impl<'a, 'i, DECL: VertexDeclaration> ops::IndexMut<&'i VertexBufferHandle<DECL>> for GuardedResources<'a> {
-    fn index_mut(&mut self, index: &VertexBufferHandle<DECL>) -> &mut Self::Output {
-        &mut self.vertex_buffers[&index.0]
+impl<'a, 'i> ops::IndexMut<&'i UnsafeVertexAttributeHandle> for GuardedResources<'a> {
+    fn index_mut(&mut self, index: &UnsafeVertexAttributeHandle) -> &mut Self::Output {
+        unsafe { self.vertex_buffers.at_unsafe_mut(&index.0) }
     }
 }
 
-impl<'a, 'i> ops::Index<&'i VertexAttributeHandle> for GuardedResources<'a> {
-    type Output = VertexBufferImpl;
-
-    fn index(&self, index: &VertexAttributeHandle) -> &Self::Output {
-        &self.vertex_buffers[&index.0]
-    }
-}
-
-impl<'a, 'i> ops::IndexMut<&'i VertexAttributeHandle> for GuardedResources<'a> {
-    fn index_mut(&mut self, index: &VertexAttributeHandle) -> &mut Self::Output {
-        &mut self.vertex_buffers[&index.0]
-    }
-}
-
-impl<'a, 'i, DECL: IndexDeclaration> ops::Index<&'i IndexBufferHandle<DECL>> for GuardedResources<'a> {
+impl<'a, 'i> ops::Index<&'i UnsafeIndexBufferIndex> for GuardedResources<'a> {
     type Output = IndexBufferImpl;
 
-    fn index(&self, index: &IndexBufferHandle<DECL>) -> &Self::Output {
-        &self.index_buffers[&index.0]
+    fn index(&self, index: &UnsafeIndexBufferIndex) -> &Self::Output {
+        unsafe { self.index_buffers.at_unsafe(index) }
     }
 }
 
-impl<'a, 'i, DECL: IndexDeclaration> ops::IndexMut<&'i IndexBufferHandle<DECL>> for GuardedResources<'a> {
-    fn index_mut(&mut self, index: &IndexBufferHandle<DECL>) -> &mut Self::Output {
-        &mut self.index_buffers[&index.0]
+impl<'a, 'i> ops::IndexMut<&'i UnsafeIndexBufferIndex> for GuardedResources<'a> {
+    fn index_mut(&mut self, index: &UnsafeIndexBufferIndex) -> &mut Self::Output {
+        unsafe { self.index_buffers.at_unsafe_mut(index) }
     }
 }
 
-impl<'a, 'i> ops::Index<&'i Texture2DHandle> for GuardedResources<'a> {
+impl<'a, 'i> ops::Index<&'i UnsafeTextureIndex> for GuardedResources<'a> {
     type Output = Texture2DImpl;
 
-    fn index(&self, index: &Texture2DHandle) -> &Self::Output {
-        &self.textures[&index.0]
+    fn index(&self, index: &UnsafeTextureIndex) -> &Self::Output {
+        unsafe { self.textures.at_unsafe(index) }
     }
 }
 
-impl<'a, 'i> ops::IndexMut<&'i Texture2DHandle> for GuardedResources<'a> {
-    fn index_mut(&mut self, index: &Texture2DHandle) -> &mut Self::Output {
-        &mut self.textures[&index.0]
+impl<'a, 'i> ops::IndexMut<&'i UnsafeTextureIndex> for GuardedResources<'a> {
+    fn index_mut(&mut self, index: &UnsafeTextureIndex) -> &mut Self::Output {
+        unsafe { self.textures.at_unsafe_mut(index) }
     }
 }
 

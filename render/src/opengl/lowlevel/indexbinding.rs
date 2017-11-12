@@ -1,4 +1,3 @@
-
 use backend::opengl::lowlevel::*;
 
 
@@ -109,22 +108,4 @@ impl IndexBinding {
         }
         self.time_stamp = self.time_stamp.wrapping_add(1);
     }
-}
-
-
-/// Trait to help converting an vertex attribute type into GLVertexBufferLayoutElement
-pub trait GLIndexTypeInfo {
-    fn get_gl_type_id() -> GLenum;
-}
-
-impl GLIndexTypeInfo for u32 {
-    fn get_gl_type_id() -> GLenum { gl::UNSIGNED_INT }
-}
-
-impl GLIndexTypeInfo for u16 {
-    fn get_gl_type_id() -> GLenum { gl::UNSIGNED_SHORT }
-}
-
-impl GLIndexTypeInfo for u8 {
-    fn get_gl_type_id() -> GLenum { gl::UNSIGNED_BYTE }
 }

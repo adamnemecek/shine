@@ -5,7 +5,8 @@ use std::ops;
 use std::sync::*;
 use std::sync::atomic::*;
 
-/// Index into the store to access elements in O(1)
+/// Index into the store to access elements in O(1).
+/// The reference count of the underlying resource is handled automatically. (See UnsafeIndex)
 #[derive(PartialEq, Eq, Debug)]
 pub struct Index<Data>(*mut Entry<Data>);
 
@@ -32,6 +33,12 @@ impl<Data> Index<Data> {
     }
 }
 
+impl<Data> Default for Index<Data> {
+    fn default() -> Index<Data> {
+        Index::null()
+    }
+}
+
 impl<Data> Clone for Index<Data> {
     fn clone(&self) -> Index<Data> {
         if !self.is_null() {
@@ -48,8 +55,10 @@ impl<Data> Drop for Index<Data> {
     }
 }
 
-/*
-/// Unsafe index that does not modify reference counting
+
+/// Unsafe index that does not modify reference counting. It is used to pass
+/// index for the guarded update where it is known that, the guard won't destroy
+/// any object before using the indexed item.
 pub struct UnsafeIndex<Data>(*mut Entry<Data>);
 
 impl<Data> UnsafeIndex<Data> {
@@ -57,7 +66,7 @@ impl<Data> UnsafeIndex<Data> {
         UnsafeIndex(ptr::null_mut())
     }
 
-    pub fn new(idx: &Index<Data>) -> UnsafeIndex<Data> {
+    pub fn from_index(idx: &Index<Data>) -> UnsafeIndex<Data> {
         UnsafeIndex(idx.0)
     }
 
@@ -70,13 +79,18 @@ impl<Data> UnsafeIndex<Data> {
     }
 }
 
-impl<'a, Data> From<&'a Index<Data>> for UnsafeIndex<Data> {
-    #[inline(always)]
-    fn from(idx: &'a Index<Data>) -> UnsafeIndex<Data> {
-        UnsafeIndex::new(idx)
+impl<Data> Default for UnsafeIndex<Data> {
+    fn default() -> UnsafeIndex<Data> {
+        UnsafeIndex::null()
     }
 }
-*/
+
+impl<Data> Clone for UnsafeIndex<Data> {
+    fn clone(&self) -> UnsafeIndex<Data> {
+        UnsafeIndex(self.0)
+    }
+}
+
 
 /// An entry in the store.
 #[derive(Debug)]
@@ -169,7 +183,7 @@ impl<'a, Data: 'a> UpdateGuardStore<'a, Data> {
         });
     }
 
-    /// Release unreferenced resources.
+    /// Releases unreferenced resources.
     pub fn drain_unused<F: Fn(&mut Data)>(&mut self, f: F) {
         Self::drain_unreferenced(&mut self.resources, &f);
 
@@ -177,10 +191,24 @@ impl<'a, Data: 'a> UpdateGuardStore<'a, Data> {
         Self::drain_unreferenced(&mut requests, &f);
     }
 
-    /// Merge the requests in the "active" items
+    /// Merges the requests in the "active" items
     pub fn process_requests(&mut self) {
         let mut requests = self.requests.lock().unwrap();
         self.resources.append(requests.as_mut());
+    }
+
+    /// Gets the referenced item through an unsafe index. Sinc reference counting does not
+    /// guarantee the lifetime of the indexed object, invalid use may result in Undefined Behaviour
+    pub unsafe fn at_unsafe(&self, index: &UnsafeIndex<Data>) -> &Data {
+        assert! ( !index.is_null(), "Indexing by a null-index is not allowed");
+        &(*index.0).value
+    }
+
+    /// Gets the mutable referenced item through an unsafe index. Sinc reference counting does not
+    /// guarantee the lifetime of the indexed object, invalid use may result in Undefined Behaviour
+    pub unsafe fn at_unsafe_mut(&mut self, index: &UnsafeIndex<Data>) -> &mut Data {
+        assert! ( !index.is_null(), "Indexing by a null-index is not allowed");
+        &mut (*index.0).value
     }
 }
 
@@ -201,22 +229,3 @@ impl<'a, 'i, Data> ops::IndexMut<&'i Index<Data>> for UpdateGuardStore<'a, Data>
         &mut entry.value
     }
 }
-
-/*
-impl<'a, 'i, Data> ops::Index<&'i UnsafeIndex<Data>> for UpdateGuardStore<'a, Data> {
-    type Output = Data;
-
-    fn index(&self, index: &UnsafeIndex<Data>) -> &Self::Output {
-        assert! ( !index.is_null(), "Indexing by a null-index is not allowed");
-        let entry = unsafe { &(*index.0) };
-        &entry.value
-    }
-}
-
-impl<'a, 'i, Data> ops::IndexMut<&'i UnsafeIndex<Data>> for UpdateGuardStore<'a, Data> {
-    fn index_mut(&mut self, index: &UnsafeIndex<Data>) -> &mut Self::Output {
-        assert! ( !index.is_null(), "Indexing by a null-index is not allowed");
-        let entry = unsafe { &mut (*index.0) };
-        &mut entry.value
-    }
-}*/

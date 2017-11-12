@@ -74,11 +74,11 @@ pub trait Texture2D {
 
 
 use store::handlestore::*;
-use backend::texture2d::Texture2DImpl;
 
 crate type Texture2DStore = Store<Texture2DImpl>;
 crate type GuardedTexture2DStore<'a> = UpdateGuardStore<'a, Texture2DImpl>;
 crate type Texture2DIndex = Index<Texture2DImpl>;
+pub type UnsafeTextureIndex = UnsafeIndex<Texture2DImpl>;
 
 
 /// Handle to a texture 2d resource
@@ -100,6 +100,17 @@ impl Texture2DHandle {
 
     pub fn reset(&mut self) {
         self.0.reset()
+    }
+
+    pub fn as_ref(&self) -> UnsafeIndex<Texture2DImpl> {
+        UnsafeIndex::from_index(&self.0)
+    }
+}
+
+impl<'a> From<&'a Texture2DHandle> for UnsafeIndex<Texture2DImpl> {
+    #[inline(always)]
+    fn from(idx: &Texture2DHandle) -> UnsafeIndex<Texture2DImpl> {
+        UnsafeIndex::from_index(&idx.0)
     }
 }
 
