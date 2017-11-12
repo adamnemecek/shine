@@ -29,7 +29,7 @@ pub trait ShaderParameterVisitor {
     fn process_f32x2(&mut self, idx: usize, data: &Float32x2);
     fn process_f32(&mut self, idx: usize, data: f32);
 
-    fn process_tex_2d(&mut self, idx: usize, data: &Texture2DRefImpl);
+    fn process_tex_2d(&mut self, idx: usize, data: &Texture2DHandle);
 
     fn process_attribute(&mut self, idx: usize, data: &VertexAttributeRefImpl);
 }

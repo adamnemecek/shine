@@ -17,12 +17,12 @@ pub fn main() {
 
     let mut window = render::WindowSettings::new()
         .title("main")
-        .size((102, 102))
+        .size((1024, 1024))
         .build(&engine, SimpleView::new(game.clone())).expect("Could not initialize main window");
 
     let mut sub_window = render::WindowSettings::new()
         .title("sub")
-        .size((100, 100))
+        .size((256, 256))
         //.gl_profile(render::OpenGLProfile::ES2)
         .build(&engine, SimpleView::new(game.clone())).expect("Could not initialize sub window");
 

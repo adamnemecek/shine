@@ -85,7 +85,7 @@ impl Command for CreateCommand {
         0
     }
 
-    fn process(&mut self, ll: &mut LowLevel) {
+    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
         self.target.borrow_mut().upload_data(ll, self.type_id, self.data.as_slice());
     }
 }
@@ -101,7 +101,7 @@ impl Command for ReleaseCommand {
         0
     }
 
-    fn process(&mut self, ll: &mut LowLevel) {
+    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
         self.target.borrow_mut().release(ll);
     }
 }

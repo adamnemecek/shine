@@ -1,40 +1,21 @@
 #![allow(dead_code, unused_variables)]
 
-use std::ops::{Deref, DerefMut};
 use backend::*;
 use backend::opengl::lowlevel::*;
 use backend::opengl::lowlevel::texturebinding::*;
-
-
-/// Structure to store reference to a texture in shader parameters
-#[derive(Clone)]
-pub struct GLTextureRef(*mut GLTextureData);
-
-impl Deref for GLTextureRef {
-    type Target = GLTextureData;
-
-    fn deref(&self) -> &GLTextureData {
-        unsafe { &*self.0 }
-    }
-}
-
-impl DerefMut for GLTextureRef {
-    fn deref_mut(&mut self) -> &mut GLTextureData {
-        unsafe { &mut *self.0 }
-    }
-}
+use store::handlestore::*;
 
 
 /// Structure to store hardware data associated to a IndexBuffer.
-pub struct GLTextureData {
+pub struct GLTexture {
     hw_id: GLuint,
     target: GLenum,
     filter: GLTextureFilter,
 }
 
-impl GLTextureData {
-    pub fn new() -> GLTextureData {
-        GLTextureData {
+impl GLTexture {
+    pub fn new() -> GLTexture {
+        GLTexture {
             hw_id: 0,
             target: 0,
             filter: GLTextureFilter {
@@ -79,7 +60,7 @@ impl GLTextureData {
     }
 }
 
-impl Drop for GLTextureData {
+impl Drop for GLTexture {
     fn drop(&mut self) {
         assert!(self.hw_id == 0, "Leaking texture");
     }
@@ -100,7 +81,7 @@ fn get_upload_enums(fmt: PixelFormat) -> (GLenum, GLenum, GLenum) {
 
 /// RenderCommand to create and allocated OpenGL resources.
 struct CreateCommand {
-    target: GLTextureRef,
+    target: Index<GLTexture>,
     texture_target: GLenum,
     width: usize,
     height: usize,
@@ -114,15 +95,16 @@ impl Command for CreateCommand {
         0
     }
 
-    fn process(&mut self, ll: &mut LowLevel) {
-        self.target.upload_data(ll, self.texture_target, self.width, self.height, self.format, self.data.as_ptr());
+    fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+        let target = &mut resources.textures[&self.target];
+        target.upload_data(ll, self.texture_target, self.width, self.height, self.format, self.data.as_ptr());
     }
 }
 
 
 /// RenderCommand to release the allocated OpenGL buffer.
 struct ReleaseCommand {
-    target: GLTextureRef,
+    target: Index<GLTexture>,
 }
 
 impl Command for ReleaseCommand {
@@ -130,53 +112,52 @@ impl Command for ReleaseCommand {
         0
     }
 
-    fn process(&mut self, ll: &mut LowLevel) {
-        self.target.release(ll);
+    fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+        let target = &mut resources.textures[&self.target];
+        target.release(ll);
     }
 }
 
 
-/// Texture implementation for OpenGL.
-pub struct GLTexture(Box<GLTextureData>);
-
-impl GLTexture {
-    pub fn new() -> GLTexture {
-        GLTexture(
-            Box::new(GLTextureData::new())
-        )
-    }
-
-    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
+impl Texture2D for Index<GLTexture> {
+    fn release<Q: CommandQueue>(&self, queue: &mut Q) {
         //println!("GLTexture - release");
-        queue.add(
-            ReleaseCommand {
-                target: self.get_ref(),
-            }
-        );
+        if !self.is_null() {
+            queue.add(
+                ReleaseCommand {
+                    target: self.clone(),
+                }
+            );
+        }
     }
 
-    pub fn set_transient_2d<Q: CommandQueue>(&mut self, queue: &mut Q, width: usize, height: usize, format: PixelFormat, data: &[u8]) {
-        //println!("GLTexture - set_transient {},{},{:?},{}", width, height, format, data.len());
-        queue.add(
-            CreateCommand {
-                target: self.get_ref(),
-                texture_target: gl::TEXTURE_2D,
-                width: width,
-                height: height,
-                format: get_upload_enums(format),
-                data: data.to_vec(),
+    fn set<'a, SRC: ImageSource, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
+        match source.to_data() {
+            ImageData::Transient { width, height, format, slice } => {
+                //println!("GLTexture - set_transient {},{},{:?},{}", width, height, format, data.len());
+                queue.add(
+                    CreateCommand {
+                        target: self.clone(),
+                        texture_target: gl::TEXTURE_2D,
+                        width: width,
+                        height: height,
+                        format: get_upload_enums(format),
+                        data: slice.to_vec(),
+                    }
+                );
             }
-        );
-    }
 
-    pub fn get_ref(&self) -> GLTextureRef {
-        let ptr = self.0.deref() as *const GLTextureData as *mut GLTextureData;
-        GLTextureRef(ptr)
+            _ => { unimplemented!() }
+        }
     }
 }
 
-/// The texture implementation
-pub type Texture2DImpl = GLTexture;
 
-/// Reference to a texture
-pub type Texture2DRefImpl = GLTextureRef;
+pub type Texture2DStore = Store<GLTexture>;
+pub type GuardedTexture2DStore<'a> = UpdateGuardStore<'a, GLTexture>;
+pub type Texture2DHandle = Index<GLTexture>;
+
+
+pub fn create_texture2d(res: &Texture2DStore) -> Texture2DHandle {
+    res.add(GLTexture::new())
+}

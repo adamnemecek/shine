@@ -95,8 +95,8 @@ impl SimpleView {
             index_buffer1: IndexBuffer::new(),
             index_buffer2: IndexBuffer::new(),
             img1: world::ImageRef::null(),
-            texture1: Texture2DHandle::new(),
-            texture2: Texture2DHandle::new(),
+            texture1: Texture2DHandle::null(),
+            texture2: Texture2DHandle::null(),
             t: 0f32,
         }
     }
@@ -136,6 +136,8 @@ impl View for SimpleView {
         // self.index_buffer1.set_transient(&mut self.render, &index2);  // shall not compile
         self.index_buffer2.set(&mut self.render, &index2.to_vec());
 
+        self.texture1 = self.render.create_texture2d();
+
         // submit commands
         self.render.submit(window);
     }
@@ -174,7 +176,7 @@ impl View for SimpleView {
             self.texture1.set(&mut self.render, image_store[&self.img1].get_image());
         }
 
-        {
+        if !self.texture1.is_null() {
             let mut p0 = self.render.get_pass(Passes::Present);
             p0.config_mut().set_clear_color(f32x3!(self.t, game.t, 0.));
             p0.config_mut().set_fullscreen();
@@ -195,7 +197,7 @@ impl View for SimpleView {
                                      0,   0, 1, 0,
                                      0,   0, 0, 1),
                 u_color: f32x3!(1.2f32, 0.2f32, 0.2f32),
-                u_tex: self.texture1.get_ref(),
+                u_tex: self.texture1.clone(),
             };
 
             {
@@ -206,7 +208,7 @@ impl View for SimpleView {
                                        0,    0, 1, 0,
                                        0,    0, 0, 1);
                     p.u_color = f32x3!(1.2f32, 0.2f32, 0.2f32);
-                    p.u_tex = self.texture1.get_ref();
+                    p.u_tex = self.texture1.clone();
                     p
                 };
 
@@ -221,7 +223,7 @@ impl View for SimpleView {
                                        0,    0, 1, 0,
                                        0,    0, 0, 1);
                     p.u_color = f32x3!(1.2f32, 0.2f32, 0.2f32);
-                    p.u_tex = self.texture1.get_ref();
+                    p.u_tex = self.texture1.clone();
                     p
                 };
 

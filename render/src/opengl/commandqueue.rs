@@ -8,7 +8,7 @@ struct CommandSortKey(ActivePassIndex, usize);
 /// Trait for each render command
 pub trait Command: 'static {
     fn get_sort_key(&self) -> usize;
-    fn process(&mut self, ll: &mut LowLevel);
+    fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel);
 }
 
 
@@ -47,11 +47,11 @@ impl CommandStore {
             });
     }
 
-    pub ( crate ) fn process(&mut self, window: &mut GLWindow) {
+    pub ( crate ) fn process<'a>(&mut self, window: &mut GLWindow, resources: &mut GuardedResources<'a>) {
         let ll = window.get_ll();
         for sorted_item in self.sort.iter() {
             let ref mut cmd = self.commands[sorted_item.1];
-            cmd.process(ll);
+            cmd.process(resources, ll);
         }
     }
 }

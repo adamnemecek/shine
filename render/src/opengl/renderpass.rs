@@ -29,7 +29,7 @@ impl Command for ClearCommand {
         0
     }
 
-    fn process(&mut self, ll: &mut LowLevel) {
+    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
         gl_check_error();
 
         //todo: handle render target size vs viewport

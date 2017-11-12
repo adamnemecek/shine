@@ -67,12 +67,13 @@ type ParameterLocations = ArrayVec<[ParameterLocation; MAX_USED_PARAMETER_COUNT]
 
 
 /// Helper to upload shader parameters
-struct ParameterUploader<'a> {
+struct ParameterUploader<'a, 'r: 'a> {
     locations: &'a ParameterLocations,
-    ll: &'a mut LowLevel
+    ll: &'a mut LowLevel,
+    resources: &'a mut GuardedResources<'r>,
 }
 
-impl<'a> ShaderParameterVisitor for ParameterUploader<'a> {
+impl<'a, 'r> ShaderParameterVisitor for ParameterUploader<'a, 'r> {
     fn process_f32x16(&mut self, idx: usize, data: &Float32x16) {
         if let ParameterLocation::Uniform(loc) = self.locations[idx] {
             if loc.is_valid() {
@@ -128,12 +129,13 @@ impl<'a> ShaderParameterVisitor for ParameterUploader<'a> {
         }
     }
 
-    fn process_tex_2d(&mut self, idx: usize, data: &Texture2DRefImpl) {
+    fn process_tex_2d(&mut self, idx: usize, data: &Texture2DHandle) {
         if let ParameterLocation::Uniform(loc) = self.locations[idx] {
             if loc.is_valid() {
                 assert!(loc.type_id == gl::SAMPLER_2D && loc.size == 1);
                 gl_check_error();
-                let slot = data.bind(self.ll);
+                let texture = &mut self.resources.textures[&data];
+                let slot = texture.bind(self.ll);
                 let slot = slot as u32;
                 gl!(Uniform1i(loc.location as i32, slot as i32));
                 gl_check_error();
@@ -343,9 +345,9 @@ impl GLShaderProgramData {
         self.parameter_locations.clear();
     }
 
-    fn draw<P: ShaderParameters>(&mut self, ll: &mut LowLevel,
-                                 parameters: &P, indices: Option<&GLIndexBufferRef>,
-                                 primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
+    fn draw<'r, 'a, P: ShaderParameters>(&mut self, resources: &'a mut GuardedResources<'r>, ll: &'a mut LowLevel,
+                                         parameters: &P, indices: Option<&GLIndexBufferRef>,
+                                         primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
         // bind shader
         if self.hw_id == 0 {
             // no drawing when shader is not valid
@@ -357,7 +359,8 @@ impl GLShaderProgramData {
         gl_check_error();
         parameters.visit(&mut ParameterUploader {
             locations: &self.parameter_locations,
-            ll: ll
+            ll: ll,
+            resources: resources,
         });
         gl_check_error();
 
@@ -390,7 +393,7 @@ impl<SD: ShaderDeclaration> Command for CreateCommand<SD> {
         1
     }
 
-    fn process(&mut self, ll: &mut LowLevel) {
+    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
         shader.create_program::<SD>(ll);
         shader.parse_parameters::<SD>(ll);
@@ -408,7 +411,7 @@ impl Command for ReleaseCommand {
         1
     }
 
-    fn process(&mut self, ll: &mut LowLevel) {
+    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
         self.target.borrow_mut().release(ll);
     }
 }
@@ -429,9 +432,10 @@ impl<SD: ShaderDeclaration> Command for DrawCommand<SD> {
         1
     }
 
-    fn process(&mut self, ll: &mut LowLevel) {
+    fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
         let ref mut shader = *self.target.borrow_mut();
-        shader.draw(ll, &self.parameters, self.indices.as_ref(), self.primitive, self.vertex_start, self.vertex_count);
+        shader.draw(resources, ll,
+                    &self.parameters, self.indices.as_ref(), self.primitive, self.vertex_start, self.vertex_count);
     }
 }
 
