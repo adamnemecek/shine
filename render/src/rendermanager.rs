@@ -61,31 +61,6 @@ struct ActivePass {
     order: usize,
 }
 
-
-/// Stores all the render resources.
-#[allow(missing_docs)]
-pub struct Resources {
-    //vertex_buffers: VertexBufferStore,
-    //index_buffers: IndexBufferStore,
-    //shaders: ShaderProgramStore,
-    pub textures: Texture2DStore,
-}
-
-impl Resources {
-    fn update<'a>(&'a self) -> GuardedResources<'a> {
-        GuardedResources {
-            textures: self.textures.update()
-        }
-    }
-}
-
-
-/// Stores locked resource managers for rendering
-#[allow(missing_docs)]
-pub struct GuardedResources<'a> {
-    pub textures: GuardedTexture2DStore<'a>,
-}
-
 /// Structure to manage multi-pass rendering.
 pub struct RenderManager<K: PassKey> {
     passes: Vec<RefCell<RenderPass>>,
@@ -95,7 +70,7 @@ pub struct RenderManager<K: PassKey> {
     command_store: Rc<RefCell<CommandStore>>,
     current_time: usize,
 
-    resources: Resources,
+    pub ( crate )resources: Resources,
 }
 
 impl<K: PassKey> RenderManager<K> {
@@ -107,15 +82,8 @@ impl<K: PassKey> RenderManager<K> {
             active_passes: vec!(),
             command_store: Rc::new(RefCell::new(CommandStore::new())),
             current_time: 0,
-            resources: Resources {
-                textures: Texture2DStore::new(),
-            }
+            resources: Resources::new(),
         }
-    }
-
-    /// Creates a new texture
-    pub fn create_texture2d(&self) -> Texture2DHandle {
-        backend::create_texture2d(&self.resources.textures)
     }
 
     /// Gets or creates a pass with the given id.
@@ -159,7 +127,9 @@ impl<K: PassKey> RenderManager<K> {
         {
             let ref mut commands = *self.command_store.borrow_mut();
             commands.sort(self);
-            commands.process(window.platform_mut(), &mut self.resources.update());
+            let mut resources = self.resources.update();
+            commands.process(window.platform_mut(), &mut resources);
+            //resources.drain_unused(window.platform_mut());
             commands.clear();
         }
 
@@ -201,7 +171,7 @@ impl<K: PassKey> At<ActivePassIndex> for RenderManager<K> {
         if idx == ActivePassIndex::new() {
             0
         } else {
-            assert!(idx.check_time_stamp(self.current_time), "Pass was not activated in the current frame");
+            assert! (idx.check_time_stamp(self.current_time), "Pass was not activated in the current frame");
             self.active_passes[idx.as_index()].order + 1
         }
     }

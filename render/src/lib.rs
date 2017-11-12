@@ -1,6 +1,7 @@
 #![feature(macro_reexport)]
 #![feature(iterator_for_each)]
 #![feature(align_offset)]
+#![feature(crate_visibility_modifier)]
 
 #[cfg(target_os = "windows")]
 extern crate winapi;
@@ -28,13 +29,11 @@ mod window;
 mod shaderprogram;
 #[macro_use]
 mod vertexbuffer;
-mod vertexsource;
 mod indexbuffer;
-mod indexsource;
 mod texture2d;
-mod texture2dsource;
 mod renderpass;
 mod renderpassconfig;
+mod resources;
 mod rendermanager;
 mod commandqueue;
 
@@ -48,13 +47,11 @@ pub use windowsettings::*;
 pub use window::*;
 pub use shaderprogram::*;
 pub use vertexbuffer::*;
-pub use vertexsource::*;
 pub use indexbuffer::*;
-pub use indexsource::*;
 pub use texture2d::*;
-pub use texture2dsource::*;
 pub use renderpass::*;
 pub use renderpassconfig::*;
+pub use resources::*;
 pub use rendermanager::*;
 pub use commandqueue::*;
 

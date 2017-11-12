@@ -124,7 +124,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         };
 
         param_fields.push(quote! {
-            #attr_field_ident : _dragorust_render::backend::VertexAttributeRefImpl
+            #attr_field_ident : _dragorust_render::backend::VertexAttributeHandle
         });
 
         match_name_cases.push(

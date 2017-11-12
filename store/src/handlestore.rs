@@ -23,7 +23,7 @@ impl<Data> Index<Data> {
         self.0.is_null()
     }
 
-    pub fn release(&mut self) {
+    pub fn reset(&mut self) {
         if !self.is_null() {
             let entry = unsafe { &(*self.0) };
             entry.ref_count.fetch_sub(1, Ordering::Relaxed);
@@ -44,7 +44,7 @@ impl<Data> Clone for Index<Data> {
 
 impl<Data> Drop for Index<Data> {
     fn drop(&mut self) {
-        self.release();
+        self.reset();
     }
 }
 

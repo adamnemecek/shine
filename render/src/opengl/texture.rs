@@ -79,7 +79,7 @@ fn get_upload_enums(fmt: PixelFormat) -> (GLenum, GLenum, GLenum) {
 }
 
 
-impl Texture2D for Index<GLTexture> {
+impl Texture2D for Texture2DHandle {
     fn release<Q: CommandQueue>(&self, queue: &mut Q) {
         struct ReleaseCommand {
             target: Index<GLTexture>,
@@ -100,7 +100,7 @@ impl Texture2D for Index<GLTexture> {
         if !self.is_null() {
             queue.add(
                 ReleaseCommand {
-                    target: self.clone(),
+                    target: self.0.clone(),
                 }
             );
         }
@@ -134,7 +134,7 @@ impl Texture2D for Index<GLTexture> {
                 //println!("GLTexture - set_transient {},{},{:?},{}", width, height, format, data.len());
                 queue.add(
                     CreateCommand {
-                        target: self.clone(),
+                        target: self.0.clone(),
                         texture_target: gl::TEXTURE_2D,
                         width: width,
                         height: height,
@@ -143,8 +143,6 @@ impl Texture2D for Index<GLTexture> {
                     }
                 );
             }
-
-            _ => { unimplemented!() }
         }
     }
 }

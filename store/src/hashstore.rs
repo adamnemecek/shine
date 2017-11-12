@@ -52,7 +52,7 @@ impl<F: Factory> Index<F> {
         self.0.is_null()
     }
 
-    pub fn release(&mut self) {
+    pub fn reset(&mut self) {
         if !self.is_null() {
             let entry = unsafe { &(*self.0) };
             entry.ref_count.fetch_sub(1, Ordering::Relaxed);
@@ -73,7 +73,7 @@ impl<F: Factory> Clone for Index<F> {
 
 impl<F: Factory> Drop for Index<F> {
     fn drop(&mut self) {
-        self.release();
+        self.reset();
     }
 }
 

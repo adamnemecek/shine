@@ -31,7 +31,7 @@ pub trait ShaderParameterVisitor {
 
     fn process_tex_2d(&mut self, idx: usize, data: &Texture2DHandle);
 
-    fn process_attribute(&mut self, idx: usize, data: &VertexAttributeRefImpl);
+    fn process_attribute(&mut self, idx: usize, data: &VertexAttributeHandle);
 }
 
 
@@ -96,13 +96,10 @@ impl<SD: ShaderDeclaration> ShaderProgram<SD> {
     }
 
     /// Sends a geometry for rendering
-    pub fn draw_indexed<Q: CommandQueue>(&mut self, queue: &mut Q,
-                                         parameters: SD::Parameters, indices: IndexBufferRefImpl,
-                                         primitive: Primitive, vertex_start: usize, vertex_count: usize)
+    pub fn draw_indexed<Q: CommandQueue, ID: IndexDeclaration>(&mut self, queue: &mut Q,
+                                                               parameters: SD::Parameters, indices: &IndexBufferHandle<ID>,
+                                                               primitive: Primitive, vertex_start: usize, vertex_count: usize)
     {
-        self.platform.draw_indexed::<SD, Q>(queue, parameters, indices, primitive, vertex_start, vertex_count);
+        self.platform.draw_indexed::<SD, Q>(queue, parameters, &indices.0, primitive, vertex_start, vertex_count);
     }
 }
-
-
-

@@ -1,40 +1,24 @@
-use std::rc::Rc;
-use std::cell::RefCell;
-
 use backend::*;
 use backend::opengl::lowlevel::*;
 use backend::opengl::lowlevel::indexbinding::*;
-
-
-/// Structure to store reference to a single attribute os a buffer
-#[derive(Clone)]
-pub struct GLIndexBufferRef {
-    target: Rc<RefCell<GLIndexBufferData>>
-}
-
-impl GLIndexBufferRef {
-    pub fn bind(&self, ll: &mut LowLevel) {
-        let ib = self.target.borrow();
-        ib.bind(ll);
-    }
-}
+use store::handlestore::*;
 
 
 /// Structure to store hardware data associated to a IndexBuffer.
-struct GLIndexBufferData {
+pub struct GLIndexBuffer {
     hw_id: GLuint,
     type_id: GLenum,
 }
 
-impl GLIndexBufferData {
-    fn new() -> GLIndexBufferData {
-        GLIndexBufferData {
+impl GLIndexBuffer {
+    pub fn new() -> GLIndexBuffer {
+        GLIndexBuffer {
             hw_id: 0,
             type_id: 0,
         }
     }
 
-    fn upload_data(&mut self, ll: &mut LowLevel, type_id: GLenum, data: &[u8]) {
+    pub fn upload_data(&mut self, ll: &mut LowLevel, type_id: GLenum, data: &[u8]) {
         gl_check_error();
         if self.hw_id == 0 {
             gl!(GenBuffers(1, &mut self.hw_id));
@@ -50,11 +34,11 @@ impl GLIndexBufferData {
         gl_check_error();
     }
 
-    fn bind(&self, ll: &mut LowLevel) {
+    pub fn bind(&self, ll: &mut LowLevel) {
         ll.index_binding.bind_index(self.hw_id, self.type_id);
     }
 
-    fn release(&mut self, ll: &mut LowLevel) {
+    pub fn release(&mut self, ll: &mut LowLevel) {
         if self.hw_id == 0 {
             return;
         }
@@ -66,57 +50,38 @@ impl GLIndexBufferData {
     }
 }
 
-impl Drop for GLIndexBufferData {
+impl Drop for GLIndexBuffer {
     fn drop(&mut self) {
         assert!(self.hw_id == 0, "Leaking index buffer");
     }
 }
 
 
-/// RenderCommand to create and allocated OpenGL resources.
-struct CreateCommand {
-    target: Rc<RefCell<GLIndexBufferData>>,
-    type_id: GLenum,
-    data: Vec<u8>,
-}
+/// Trait to extract type info for indices
+pub trait IndexTypeInfoImpl: GLIndexTypeInfo {}
 
-impl Command for CreateCommand {
-    fn get_sort_key(&self) -> usize {
-        0
-    }
+impl<T> IndexTypeInfoImpl for T where T: GLIndexTypeInfo {}
 
-    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-        self.target.borrow_mut().upload_data(ll, self.type_id, self.data.as_slice());
-    }
-}
-
-
-/// RenderCommand to release the allocated OpenGL resources.
-struct ReleaseCommand {
-    target: Rc<RefCell<GLIndexBufferData>>,
-}
-
-impl Command for ReleaseCommand {
-    fn get_sort_key(&self) -> usize {
-        0
-    }
-
-    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-        self.target.borrow_mut().release(ll);
-    }
-}
 
 /// IndexBuffer implementation for OpenGL.
-pub struct GLIndexBuffer(Rc<RefCell<GLIndexBufferData>>);
+impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
+    fn release<Q: CommandQueue>(&self, queue: &mut Q) {
+        struct ReleaseCommand {
+            target: Index<GLIndexBuffer>,
+        }
 
-impl GLIndexBuffer {
-    pub fn new() -> GLIndexBuffer {
-        GLIndexBuffer(
-            Rc::new(RefCell::new(GLIndexBufferData::new()))
-        )
-    }
+        impl Command for ReleaseCommand {
+            fn get_sort_key(&self) -> usize {
+                0
+            }
 
-    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                let target = &mut resources.index_buffers[&self.target];
+                target.release(ll);
+            }
+        }
+
+
         //println!("GLIndexBuffer - release");
         queue.add(
             ReleaseCommand {
@@ -125,31 +90,42 @@ impl GLIndexBuffer {
         );
     }
 
-    pub fn set_transient<ID: IndexDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q, index_data: &[u8]) {
-        //println!("GLIndexBuffer - set_copy");
-        queue.add(
-            CreateCommand {
-                target: self.0.clone(),
-                type_id: ID::IndexType::get_gl_type_id(),
-                data: index_data.to_vec(),
-            }
-        );
-    }
+    fn set<'a, SRC: IndexSource<DECL>, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
+        /// RenderCommand to create and allocated OpenGL resources.
+        struct CreateCommand {
+            target: Index<GLIndexBuffer>,
+            type_id: GLenum,
+            data: Vec<u8>,
+        }
 
-    pub fn get_ref(&self) -> GLIndexBufferRef {
-        GLIndexBufferRef {
-            target: self.0.clone()
+        impl Command for CreateCommand {
+            fn get_sort_key(&self) -> usize {
+                0
+            }
+
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                let target = &mut resources.index_buffers[&self.target];
+                target.upload_data(ll, self.type_id, self.data.as_slice());
+            }
+        }
+
+        match source.to_data() {
+            IndexData::Transient(slice) => {
+                //println!("GLIndexBuffer - set_copy");
+                assert!(!self.is_null());
+
+                queue.add(
+                    CreateCommand {
+                        target: self.0.clone(),
+                        type_id: DECL::IndexType::get_gl_type_id(),
+                        data: slice.to_vec(),
+                    }
+                );
+            }
         }
     }
 }
 
-/// Trait to extract type info for indices
-pub trait IndexTypeInfoImpl: GLIndexTypeInfo {}
 
-impl<T> IndexTypeInfoImpl for T where T: GLIndexTypeInfo {}
-
-/// The index buffer implementation
+/// The vertex buffer implementation
 pub type IndexBufferImpl = GLIndexBuffer;
-
-/// Reference to an index buffer
-pub type IndexBufferRefImpl = GLIndexBufferRef;

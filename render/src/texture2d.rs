@@ -24,6 +24,41 @@ pub trait ImageSource {
 }
 
 
+mod image_source {
+    extern crate image;
+
+    use super::*;
+
+    impl ImageSource for image::DynamicImage {
+        fn to_data<'a>(&'a self) -> ImageData<'a> {
+            use self::image::DynamicImage;
+
+            match self {
+                &DynamicImage::ImageRgb8(ref rgb) => {
+                    ImageData::Transient {
+                        width: rgb.width() as usize,
+                        height: rgb.height() as usize,
+                        format: PixelFormat::Rgb8,
+                        slice: &rgb,
+                    }
+                }
+
+                &DynamicImage::ImageRgba8(ref rgb) => {
+                    ImageData::Transient {
+                        width: rgb.width() as usize,
+                        height: rgb.height() as usize,
+                        format: PixelFormat::Rgba8,
+                        slice: &rgb,
+                    }
+                }
+
+                _ => panic!("unsupported image format")
+            }
+        }
+    }
+}
+
+
 /// Trait that defined a 2d texture
 pub trait Texture2D {
     /// Releases the hw resources of the buffer.
@@ -41,11 +76,30 @@ pub trait Texture2D {
 use store::handlestore::*;
 use backend::texture2d::Texture2DImpl;
 
-pub type Texture2DStore = Store<Texture2DImpl>;
-pub type GuardedTexture2DStore<'a> = UpdateGuardStore<'a, Texture2DImpl>;
-pub type Texture2DHandle = Index<Texture2DImpl>;
+crate type Texture2DStore = Store<Texture2DImpl>;
+crate type GuardedTexture2DStore<'a> = UpdateGuardStore<'a, Texture2DImpl>;
+crate type Texture2DIndex = Index<Texture2DImpl>;
 
 
-pub fn create_texture2d(res: &Texture2DStore) -> Texture2DHandle {
-    res.add(Texture2DImpl::new())
+/// Handle to a texture 2d resource
+#[derive(Clone)]
+pub struct Texture2DHandle( crate Texture2DIndex);
+
+impl Texture2DHandle {
+    pub fn null() -> Texture2DHandle {
+        Texture2DHandle(Texture2DIndex::null())
+    }
+
+    pub fn create<K: PassKey>(res: &mut RenderManager<K>) -> Texture2DHandle {
+        Texture2DHandle(res.resources.textures.add(Texture2DImpl::new()))
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.0.is_null()
+    }
+
+    pub fn reset(&mut self) {
+        self.0.reset()
+    }
 }
+

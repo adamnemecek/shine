@@ -73,10 +73,10 @@ pub struct SimpleView {
 
     shader: ShaderProgram<ShSimple>,
 
-    vertex_buffer1: VertexBuffer<VxPos>,
-    vertex_buffer2: VertexBuffer<VxColorTex>,
-    index_buffer1: IndexBuffer<u8>,
-    index_buffer2: IndexBuffer<u16>,
+    vertex_buffer1: VertexBufferHandle<VxPos>,
+    vertex_buffer2: VertexBufferHandle<VxColorTex>,
+    index_buffer1: IndexBufferHandle<u8>,
+    index_buffer2: IndexBufferHandle<u16>,
     img1: world::ImageRef,
     texture1: Texture2DHandle,
     texture2: Texture2DHandle,
@@ -86,19 +86,31 @@ pub struct SimpleView {
 
 impl SimpleView {
     pub fn new(game: game::GameCell) -> SimpleView {
-        SimpleView {
+        //let mut render = RenderManager::new();
+
+        let mut view = SimpleView {
             game: game,
             render: RenderManager::new(),
+
             shader: ShaderProgram::new(),
-            vertex_buffer1: VertexBuffer::new(),
-            vertex_buffer2: VertexBuffer::new(),
-            index_buffer1: IndexBuffer::new(),
-            index_buffer2: IndexBuffer::new(),
-            img1: world::ImageRef::null(),
+            vertex_buffer1: VertexBufferHandle::null(),
+            vertex_buffer2: VertexBufferHandle::null(),
+            index_buffer1: IndexBufferHandle::null(),
+            index_buffer2: IndexBufferHandle::null(),
             texture1: Texture2DHandle::null(),
             texture2: Texture2DHandle::null(),
+
+            img1: world::ImageRef::null(),
             t: 0f32,
-        }
+        };
+
+        view.vertex_buffer1 = VertexBufferHandle::create(&mut view.render);
+        view.vertex_buffer2 = VertexBufferHandle::create(&mut view.render);
+        view.index_buffer1 = IndexBufferHandle::create(&mut view.render);
+        view.index_buffer2 = IndexBufferHandle::create(&mut view.render);
+        view.texture1 = Texture2DHandle::create(&mut view.render);
+
+        view
     }
 }
 
@@ -136,20 +148,18 @@ impl View for SimpleView {
         // self.index_buffer1.set_transient(&mut self.render, &index2);  // shall not compile
         self.index_buffer2.set(&mut self.render, &index2.to_vec());
 
-        self.texture1 = self.render.create_texture2d();
-
         // submit commands
         self.render.submit(window);
     }
 
     fn on_surface_lost(&mut self, window: &mut Window) {
-        self.vertex_buffer1.release(&mut self.render);
-        self.vertex_buffer2.release(&mut self.render);
-        self.index_buffer1.release(&mut self.render);
-        self.index_buffer2.release(&mut self.render);
-        self.texture1.release(&mut self.render);
-        self.texture2.release(&mut self.render);
-        self.shader.release(&mut self.render);
+        self.vertex_buffer1.reset();
+        self.vertex_buffer2.reset();
+        self.index_buffer1.reset();
+        self.index_buffer2.reset();
+        self.texture1.reset();
+        self.texture2.reset();
+        //self.shader.reset();
         self.render.submit(window);
     }
 
@@ -176,7 +186,7 @@ impl View for SimpleView {
             self.texture1.set(&mut self.render, image_store[&self.img1].get_image());
         }
 
-        if !self.texture1.is_null() {
+        {
             let mut p0 = self.render.get_pass(Passes::Present);
             p0.config_mut().set_clear_color(f32x3!(self.t, game.t, 0.));
             p0.config_mut().set_fullscreen();
@@ -188,9 +198,9 @@ impl View for SimpleView {
             let ct = self.t.cos();
 
             let parameters = ShSimpleParameters {
-                v_position: v1.get_attribute_ref(VxPosAttribute::Position),
-                v_color: v2.get_attribute_ref(VxColorTexAttribute::Color),
-                v_tex_coord: v2.get_attribute_ref(VxColorTexAttribute::TexCoord),
+                v_position: v1.get_attribute(VxPosAttribute::Position),
+                v_color: v2.get_attribute(VxColorTexAttribute::Color),
+                v_tex_coord: v2.get_attribute(VxColorTexAttribute::TexCoord),
 
                 u_trsf: f32x16!(st, -ct, 0, 0,
                                     ct,  st, 0, 0,
@@ -227,7 +237,7 @@ impl View for SimpleView {
                     p
                 };
 
-                self.shader.draw_indexed(&mut *p0, parameters, self.index_buffer1.get_ref(), Primitive::Triangle, 0, 6);
+                self.shader.draw_indexed(&mut *p0, parameters, &self.index_buffer1, Primitive::Triangle, 0, 6);
             }
         }
 

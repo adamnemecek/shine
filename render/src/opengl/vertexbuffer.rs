@@ -1,46 +1,30 @@
-use std::rc::Rc;
-use std::cell::RefCell;
-use std::marker::PhantomData;
-
 use arrayvec::ArrayVec;
+use std::marker::PhantomData;
 
 use backend::*;
 use backend::opengl::lowlevel::*;
 use backend::opengl::lowlevel::vertexbinding::*;
+use store::handlestore::*;
 
 
-/// Structure to store reference to a single attribute os a buffer
-#[derive(Clone)]
-pub struct GLVertexAttributeRef {
-    target: Rc<RefCell<GLVertexBufferData>>,
-    attribute_index: usize
-}
-
-impl GLVertexAttributeRef {
-    pub fn bind(&self, ll: &mut LowLevel, location: GLuint) {
-        let vb = self.target.borrow();
-        vb.bind(ll, location, self.attribute_index);
-    }
-}
-
-pub type GLVertexBufferAttributeVec = ArrayVec<[GLVertexBufferAttribute; MAX_VERTEX_ATTRIBUTE_COUNT]>;
+type GLVertexBufferAttributeVec = ArrayVec<[GLVertexBufferAttribute; MAX_VERTEX_ATTRIBUTE_COUNT]>;
 
 
 /// Structure to store hardware data associated to a VertexBuffer.
-struct GLVertexBufferData {
+pub struct GLVertexBuffer {
     hw_id: GLuint,
     attributes: GLVertexBufferAttributeVec,
 }
 
-impl GLVertexBufferData {
-    fn new() -> GLVertexBufferData {
-        GLVertexBufferData {
+impl GLVertexBuffer {
+    pub fn new() -> GLVertexBuffer {
+        GLVertexBuffer {
             hw_id: 0,
             attributes: GLVertexBufferAttributeVec::new(),
         }
     }
 
-    fn upload_data<VD: VertexDeclaration>(&mut self, ll: &mut LowLevel, data: &[u8]) {
+    pub fn upload_data<VD: VertexDeclaration>(&mut self, ll: &mut LowLevel, data: &[u8]) {
         for idx in VD::get_attributes() {
             self.attributes.push(VD::get_attribute_layout(*idx));
             assert!(self.attributes.len() <= MAX_VERTEX_ATTRIBUTE_COUNT, "Vertex attribute count exceeds engine limits ({})", MAX_VERTEX_ATTRIBUTE_COUNT);
@@ -61,11 +45,11 @@ impl GLVertexBufferData {
         gl_check_error();
     }
 
-    fn bind(&self, ll: &mut LowLevel, location: GLuint, attribute: usize) {
+    pub fn bind(&self, ll: &mut LowLevel, location: GLuint, attribute: usize) {
         ll.vertex_binding.bind_attribute(location, self.hw_id, &self.attributes[attribute as usize]);
     }
 
-    fn release(&mut self, ll: &mut LowLevel) {
+    pub fn release(&mut self, ll: &mut LowLevel) {
         if self.hw_id == 0 {
             return;
         }
@@ -76,58 +60,31 @@ impl GLVertexBufferData {
     }
 }
 
-impl Drop for GLVertexBufferData {
+impl Drop for GLVertexBuffer {
     fn drop(&mut self) {
         assert!(self.hw_id == 0, "Leaking vertex buffer");
     }
 }
 
 
-/// RenderCommand to create and allocated OpenGL resources.
-struct CreateCommand<VD: VertexDeclaration> {
-    target: Rc<RefCell<GLVertexBufferData>>,
-    data: Vec<u8>,
-    phantom: PhantomData<VD>,
-}
-
-impl<VD: VertexDeclaration> Command for CreateCommand<VD> {
-    fn get_sort_key(&self) -> usize {
-        0
-    }
-
-    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-        self.target.borrow_mut().upload_data::<VD>(ll, self.data.as_slice());
-    }
-}
-
-
-/// RenderCommand to release the allocated OpenGL buffer.
-struct ReleaseCommand {
-    target: Rc<RefCell<GLVertexBufferData>>,
-}
-
-impl Command for ReleaseCommand {
-    fn get_sort_key(&self) -> usize {
-        0
-    }
-
-    fn process<'a>(&mut self, _resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-        self.target.borrow_mut().release(ll);
-    }
-}
-
-
 /// VertexBuffer implementation for OpenGL.
-pub struct GLVertexBuffer(Rc<RefCell<GLVertexBufferData>>);
+impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
+    fn release<Q: CommandQueue>(&self, queue: &mut Q) {
+        struct ReleaseCommand {
+            target: Index<GLVertexBuffer>,
+        }
 
-impl GLVertexBuffer {
-    pub fn new() -> GLVertexBuffer {
-        GLVertexBuffer(
-            Rc::new(RefCell::new(GLVertexBufferData::new()))
-        )
-    }
+        impl Command for ReleaseCommand {
+            fn get_sort_key(&self) -> usize {
+                0
+            }
 
-    pub fn release<Q: CommandQueue>(&mut self, queue: &mut Q) {
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                let target = &mut resources.vertex_buffers[&self.target];
+                target.release(ll);
+            }
+        }
+
         //println!("GLVertexBuffer - release");
         queue.add(
             ReleaseCommand {
@@ -136,22 +93,38 @@ impl GLVertexBuffer {
         );
     }
 
-    pub fn set_transient<VD: VertexDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q, vertex_data: &[u8]) {
-        //println!("GLVertexBuffer - set_copy");
-        queue.add(
-            CreateCommand::<VD> {
-                target: self.0.clone(),
-                data: vertex_data.to_vec(),
-                phantom: PhantomData,
-            }
-        );
-    }
+    fn set<'a, SRC: VertexSource<DECL>, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
+        /// RenderCommand to create and allocated OpenGL resources.
+        struct CreateCommand<VD: VertexDeclaration> {
+            target: Index<GLVertexBuffer>,
+            data: Vec<u8>,
+            phantom_data: PhantomData<VD>,
+        }
 
-    pub fn get_attribute_ref(&self, attribute_index: usize) -> GLVertexAttributeRef {
-        assert!(attribute_index < MAX_VERTEX_ATTRIBUTE_COUNT);
-        GLVertexAttributeRef {
-            target: self.0.clone(),
-            attribute_index: attribute_index,
+        impl<VD: VertexDeclaration> Command for CreateCommand<VD> {
+            fn get_sort_key(&self) -> usize {
+                0
+            }
+
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                let target = &mut resources.vertex_buffers[&self.target];
+                target.upload_data::<VD>(ll, self.data.as_slice());
+            }
+        }
+
+        match source.to_data() {
+            VertexData::Transient(slice) => {
+                //println!("GLVertexBuffer - set_copy");
+                assert!(!self.is_null());
+
+                queue.add(
+                    CreateCommand::<DECL> {
+                        target: self.0.clone(),
+                        data: slice.to_vec(),
+                        phantom_data: PhantomData,
+                    }
+                );
+            }
         }
     }
 }
@@ -162,6 +135,3 @@ pub type VertexBufferLayoutElementImpl = GLVertexBufferAttribute;
 
 /// The vertex buffer implementation
 pub type VertexBufferImpl = GLVertexBuffer;
-
-/// Reference to an attribute in a vertex buffer
-pub type VertexAttributeRefImpl = GLVertexAttributeRef;
