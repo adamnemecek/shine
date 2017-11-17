@@ -14,6 +14,8 @@ libc = "*"
 gl = "*"
 arrayvec = "*"
 image = "*"
+coco = "*"
+rayon = "*"
 
 [dependency.image]
 # don't add ryon now, we might not need it
