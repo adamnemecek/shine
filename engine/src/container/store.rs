@@ -1,18 +1,20 @@
 #![deny(missing_copy_implementations)]
-#![cfg(off)]
-
 
 use std::fmt;
+use std::ptr;
+use std::collections::HashMap;
+use std::hash::Hash;
+use std::ops;
 use std::sync::*;
 use std::sync::atomic::*;
 use std::marker::PhantomData;
 
 
 /// Trait for resource id
-pub trait Id: Clone + Eq + fmt::Debug {}
+pub trait Id: Clone + Eq + Hash + fmt::Debug {}
 
 
-/// Trait for resources
+/// Trait for resource data
 pub trait Data {
     //fn get_statistics(&self, stats) -> Statistics;
 }
@@ -20,8 +22,7 @@ pub trait Data {
 
 /// Trait to create value items from the resource id
 pub trait Factory<Key: Id, Value: Data>: Send {
-    /// Request the creation of an item. The item is not required immediately, but
-    /// a create call will be triggered soon.
+    /// Request the creation of an item.
     fn request(&mut self, id: &Key) -> Value;
 
     /// Create the item associated with the key
@@ -30,17 +31,46 @@ pub trait Factory<Key: Id, Value: Data>: Send {
 
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct RefIndex<Key: Id, Value: Data>(usize, PhantomData<(Key, Value)>);
+pub struct Index<Key: Id, Value: Data>(*const Entry<Key, Value>);
 
 //impl<Key: Id, Value: Data> !Copy for RefIndex<Key, Value> {}
 
-impl<Key: Id, Value: Data> RefIndex<Key, Value> {
-    pub fn null() -> RefIndex<Key, Value> {
-        RefIndex(!0, PhantomData)
+impl<Key: Id, Value: Data> Index<Key, Value> {
+    pub fn null() -> Index<Key, Value> {
+        Index(ptr::null())
+    }
+
+    fn new(entry: &Box<Entry<Key, Value>>) -> Index<Key, Value> {
+        entry.ref_count.fetch_add(1, Ordering::Relaxed);
+        Index(entry.as_ref() as *const Entry<Key, Value>)
     }
 
     pub fn is_null(&self) -> bool {
-        self.0 == !0
+        self.0.is_null()
+    }
+
+    pub fn release(&mut self) {
+        *self = Self::null();
+    }
+}
+
+impl<Key: Id, Value: Data> Clone for Index<Key, Value> {
+    fn clone(&self) -> Index<Key, Value> {
+        if !self.0.is_null() {
+            let entry = unsafe { &(*self.0) };
+            entry.ref_count.fetch_add(1, Ordering::Relaxed);
+        }
+        Index(self.0)
+    }
+}
+
+
+impl<Key: Id, Value: Data> Drop for Index<Key, Value> {
+    fn drop(&mut self) {
+        if !self.0.is_null() {
+            let entry = unsafe { &*self.0 };
+            entry.ref_count.fetch_sub(1, Ordering::Relaxed);
+        }
     }
 }
 
@@ -48,37 +78,29 @@ impl<Key: Id, Value: Data> RefIndex<Key, Value> {
 /// An entry in the store.
 #[derive(Debug)]
 struct Entry<Key: Id, Value: Data> {
-    key: key,
     ref_count: AtomicUsize,
     value: Value,
-}
-
-enum Slot<Key: Id, Value: Data> {
-    Pending(Box<Entry<Key, Value>>),
-    Ready(Box<Entry<Key, Value>>),
-    Empty(usize),
+    is_pending: bool,
+    phantom: PhantomData<Key>,
 }
 
 
-/// Requests for the missing resources.
-struct Requests<Key: Id, Value: Data> {
+/// Stores requests for the missing resources.
+struct RequestHandler<Key: Id, Value: Data> {
     factory: Box<Factory<Key, Value>>,
-    requests: Vec<Slot<Key, Value>>,
+    requests: HashMap<Key, Option<Box<Entry<Key, Value>>>>,
 }
 
-impl<Key: Id, Value: Data> Requests<Key, Value> {
-    fn process_requests(&mut self, resources: &mut Vec<(Key, Entry<Value>)>) {
+impl<Key: Id, Value: Data> RequestHandler<Key, Value> {
+    fn process_requests(&mut self, resources: &mut HashMap<Key, Box<Entry<Key, Value>>>) {
         let factory = &mut self.factory;
-        self.requests.retain(|id, value| {
+        self.requests.retain(|id, entry| {
             if let Some(new_value) = factory.create(id) {
-                {
-                    unsafe {
-                        let us = &**value as *const _ as *mut Entry<Value>;
-                        (*us).value = new_value;
-                        (*us).is_ready = true;
-                    }
+                if let Some(mut entry) = entry.take() {
+                    entry.value = new_value;
+                    entry.is_pending = false;
+                    resources.insert(id.clone(), entry);
                 }
-                resources.insert(id.clone(), value.clone());
                 false
             } else {
                 true
@@ -90,8 +112,8 @@ impl<Key: Id, Value: Data> Requests<Key, Value> {
 
 /// Resource store. Resources are constants and can be created/requested through the store only.
 pub struct Store<Key: Id, Value: Data> {
-    resources: RwLock<HashMap<Key, Arc<Entry<Value>>>>,
-    requests: Mutex<Requests<Key, Value>>,
+    resources: RwLock<HashMap<Key, Box<Entry<Key, Value>>>>,
+    request_handler: Mutex<RequestHandler<Key, Value>>,
 }
 
 impl<Key: Id, Value: Data> Store<Key, Value> {
@@ -99,7 +121,7 @@ impl<Key: Id, Value: Data> Store<Key, Value> {
     pub fn new<F: 'static + Sized + Factory<Key, Value>>(factory: F) -> Store<Key, Value> {
         Store {
             resources: RwLock::new(HashMap::new()),
-            requests: Mutex::new(Requests {
+            request_handler: Mutex::new(RequestHandler {
                 factory: Box::new(factory),
                 requests: HashMap::new()
             }),
@@ -109,56 +131,120 @@ impl<Key: Id, Value: Data> Store<Key, Value> {
     /// Process the requests.
     pub fn update(&self) {
         let mut resources = self.resources.try_write().unwrap();
-        let mut requests = self.requests.lock().unwrap();
-        requests.process_requests(&mut resources);
+        let mut request_handler = self.request_handler.lock().unwrap();
+
+        request_handler.process_requests(&mut resources);
     }
 
     /// Removes unreferenced resources.
     pub fn drain_unused(&self) {
         let mut resources = self.resources.try_write().unwrap();
-        let mut requests = self.requests.lock().unwrap();
+        let mut request_handler = self.request_handler.lock().unwrap();
 
-        requests.requests.clear();
-        resources.retain(|_, v| {
-            Arc::strong_count(v) > 1
+        request_handler.requests.retain(|_k, v| {
+            let count = v.as_ref().unwrap().ref_count.load(Ordering::Relaxed);
+            //println!("k{:?}, {}", _k, count);
+            count != 0
+        });
+
+        resources.retain(|_k, v| {
+            let count = v.ref_count.load(Ordering::Relaxed);
+            //println!("k{:?}, {}", _k, count);
+            count != 0
         });
     }
 
-    pub fn read<'a>(&'a self) -> StoreUse<Key, Value> {
-        StoreUse {
+    /// Returns if there are any pending requests
+    pub fn has_request(&self) -> bool {
+        let _resources = self.resources.try_write().unwrap();
+        let request_handler = self.request_handler.lock().unwrap();
+
+        !request_handler.requests.is_empty()
+    }
+
+    /// Returns if there are any pending requests
+    pub fn is_empty(&self) -> bool {
+        let resources = self.resources.try_write().unwrap();
+        let request_handler = self.request_handler.lock().unwrap();
+
+        request_handler.requests.is_empty() && resources.is_empty()
+    }
+
+    /// Returns a guard object that no resources are updated during its scope.
+    pub fn read<'a>(&'a self) -> ReadGuardStore<Key, Value> {
+        ReadGuardStore {
             resources: self.resources.read().unwrap(),
-            requests: &self.requests,
+            request_handler: &self.request_handler,
         }
     }
 }
 
+impl<Key: Id, Value: Data> Drop for Store<Key, Value> {
+    fn drop(&mut self) {
+        self.drain_unused();
 
-pub struct StoreUse<'a, Key: 'a + Id, Value: 'a + Data> {
-    resources: RwLockReadGuard<'a, HashMap<Key, Arc<Entry<Value>>>>,
-    requests: &'a Mutex<Requests<Key, Value>>,
+        {
+            let resources = self.resources.try_write().unwrap();
+            if !resources.is_empty() {
+                for res in resources.iter() {
+                    println!("leakin {:?}", res.0);
+                }
+            }
+            assert!( resources.is_empty(), "Leaking loaded resource");
+        }
+
+        assert!( self.request_handler.lock().unwrap().requests.is_empty(), "Leaking requested resource");
+    }
+}
+
+/// Helper
+pub struct ReadGuardStore<'a, Key: 'a + Id, Value: 'a + Data> {
+    resources: RwLockReadGuard<'a, HashMap<Key, Box<Entry<Key, Value>>>>,
+    request_handler: &'a Mutex<RequestHandler<Key, Value>>,
 }
 
 
-impl<'a, Key: Id, Value: Data> StoreUse<'a, Key, Value> {
-    fn request_unchecked(&self, id: &Key) -> Ref<Key, Value> {
-        let mut requests = self.requests.lock().unwrap();
-        // find resource in the requests
-        if let Some(request) = requests.requests.get(id) {
-            return Ref::new(Some(request.clone()));
+impl<'a, Key: Id, Value: Data> ReadGuardStore<'a, Key, Value> {
+    fn request_unchecked(&self, id: &Key) -> Index<Key, Value> {
+        let mut request_handler = self.request_handler.lock().unwrap();
+
+        if let Some(request) = request_handler.requests.get(id) {
+            // resource already found in the requests container
+            return Index::new(request.as_ref().unwrap());
         }
 
-        let value = requests.factory.request(id);
-        let request = Arc::new(Entry {
-            is_ready: false,
+        // resource not found, create a temporary now
+        let value = request_handler.factory.request(id);
+        let request = Box::new(Entry {
+            ref_count: AtomicUsize::new(0),
+            is_pending: true,
             value: value,
+            phantom: PhantomData,
         });
-        requests.requests.insert(id.clone(), request.clone());
-        Ref::new(Some(request))
+        let index = Index::new(&request);
+        request_handler.requests.insert(id.clone(), Some(request));
+        index
+    }
+
+    /// Returns if there are any pending requests
+    pub fn has_request(&self) -> bool {
+        let request_handler = self.request_handler.lock().unwrap();
+        !request_handler.requests.is_empty()
     }
 
     /// Gets a loaded resource. If resource is not found, a none reference is returned
-    pub fn get(&self, id: &Key) -> Ref<Key, Value> {
-        Ref::new(self.resources.get(id).map(|r| r.clone()))
+    pub fn get(&self, id: &Key) -> Index<Key, Value> {
+        if let Some(request) = self.resources.get(id) {
+            // resource already found in the requests container
+            return Index::new(request);
+        }
+
+        let request_handler = self.request_handler.lock().unwrap();
+        if let Some(request) = request_handler.requests.get(id) {
+            // resource already found in the requests container
+            return Index::new(request.as_ref().unwrap());
+        }
+        Index::null()
     }
 
     /// Requests a resource to be loaded without taking a reference to it.
@@ -170,83 +256,33 @@ impl<'a, Key: Id, Value: Data> StoreUse<'a, Key, Value> {
 
     /// Gets a resource by the given id. If the resource is not loaded, reference to pending resource is
     /// returned and the missing is is enqued in the request list.
-    pub fn get_or_request(&self, id: &Key) -> Ref<Key, Value> {
+    pub fn get_or_request(&self, id: &Key) -> Index<Key, Value> {
         let resource = self.get(id);
-        if resource.is_some() {
-            resource
-        } else {
+        if resource.is_null() {
             self.request_unchecked(id)
+        } else {
+            resource
         }
+    }
+
+    pub fn is_pending(&self, index: &Index<Key, Value>) -> bool {
+        assert! ( !index.is_null(), "Indexing store by a null-index is not allowed");
+        let entry = unsafe { &(*index.0) };
+        entry.is_pending
+    }
+
+    pub fn is_ready(&self, index: &Index<Key, Value>) -> bool {
+        !self.is_pending(index)
     }
 }
 
 
-/// Reference to an entry in the store
-#[derive(/*PartialEq, Eq,*/ Debug)]
-pub struct Ref<Key: Id, Value: Data> {
-    value: Option<Arc<Entry<Value>>>,
-    phantom: PhantomData<Key>,
-}
+impl<'a, 'i, Key: Id, Value: Data> ops::Index<&'i Index<Key, Value>> for ReadGuardStore<'a, Key, Value> {
+    type Output = Value;
 
-impl<Key: Id, Value: Data> Ref<Key, Value> {
-    fn new(value: Option<Arc<Entry<Value>>>) -> Ref<Key, Value> {
-        Ref {
-            value: value,
-            phantom: PhantomData,
-        }
-    }
-
-    pub fn none() -> Ref<Key, Value> {
-        Ref {
-            value: None,
-            phantom: PhantomData,
-        }
-    }
-
-    /// Checks if the reference is set
-    pub fn is_some(&self) -> bool {
-        self.value.is_some()
-    }
-
-    /// Checks if the reference is not set
-    pub fn is_none(&self) -> bool {
-        self.value.is_none()
-    }
-
-    /// Checks if the reference is ready
-    pub fn is_ready(&self) -> bool {
-        if let Some(ref value) = self.value {
-            value.is_ready
-        } else {
-            false
-        }
-    }
-
-    /// Checks if the reference is pending
-    pub fn is_pending(&self) -> bool {
-        if let Some(ref value) = self.value {
-            !value.is_ready
-        } else {
-            false
-        }
-    }
-
-    pub fn release(&mut self) {
-        self.value = None;
-    }
-
-    // Returns non-mutable reference to the data.
-    /* pub fn borrow(&self) -> Ref<Value> {
-        if let Some(ref value) = self.value {
-            &value.value
-        } else {
-            panic!("Dereferencing an ampty reference")
-        }
-    } */
-}
-
-impl<Key: Id, Value: Data> Drop for Ref<Key, Value> {
-    fn drop(&mut self) {
-        self.release();
+    fn index(&self, index: &Index<Key, Value>) -> &Value {
+        assert! ( !index.is_null(), "Indexing store by a null-index is not allowed");
+        let entry = unsafe { &(*index.0) };
+        &entry.value
     }
 }

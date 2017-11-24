@@ -87,7 +87,7 @@ impl SimpleView {
             vertex_buffer2: VertexBuffer::new(),
             index_buffer1: IndexBuffer::new(),
             index_buffer2: IndexBuffer::new(),
-            img1: world::ImageRef::new_none(),
+            img1: world::ImageRef::null(),
             texture1: Texture2D::new(),
             texture2: Texture2D::new(),
             t: 0f32,
@@ -156,15 +156,19 @@ impl View for SimpleView {
     }
 
     fn on_render(&mut self, window: &mut Window) {
+        let game = self.game.borrow();
+
         {
-            if self.img1.is_none() {
-                self.img1 = self.game.borrow().image_store.get_or_request(&world::ImageId::new("alma.png"));
+            let image_store = game.image_store.read();
+
+            if self.img1.is_null() {
+                self.img1 = image_store.get_or_request(&world::ImageId::new("alma.png"));
             }
         }
 
         {
             let mut p0 = self.render.get_pass(Passes::Present);
-            p0.config_mut().set_clear_color(f32x3!(self.t, self.game.borrow().t, 0.));
+            p0.config_mut().set_clear_color(f32x3!(self.t, game.t, 0.));
             p0.config_mut().set_fullscreen();
 
             let v1 = &self.vertex_buffer1;

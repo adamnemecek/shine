@@ -1,5 +1,4 @@
 #![deny(missing_copy_implementations)]
-#![cfg(off)]
 
 use std::path::Path;
 use container::store;
@@ -60,6 +59,6 @@ pub fn create() -> ImageStore {
 }
 
 pub type ImageStore = store::Store<Id, Image>;
-pub type ImageRef = store::Ref<Id, Image>;
+pub type ImageRef = store::Index<Id, Image>;
 pub type ImageId = Id;
 
