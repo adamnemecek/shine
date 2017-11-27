@@ -122,12 +122,12 @@ impl View for SimpleView {
         // upload data
         //self.shader.set_sources(&mut self.render, sh_source.iter());
         self.shader.compile(&mut self.render);
-        self.vertex_buffer1.set_transient(&mut self.render, &pos);
-        self.vertex_buffer2.set_transient(&mut self.render, &color_tex.to_vec());
+        self.vertex_buffer1.set(&mut self.render, &pos);
+        self.vertex_buffer2.set(&mut self.render, &color_tex.to_vec());
 
-        self.index_buffer1.set_transient(&mut self.render, &index1);
+        self.index_buffer1.set(&mut self.render, &index1);
         // self.index_buffer1.set_transient(&mut self.render, &index2);  // shall not compile
-        self.index_buffer2.set_transient(&mut self.render, &index2.to_vec());
+        self.index_buffer2.set(&mut self.render, &index2.to_vec());
 
         // submit commands
         self.render.submit(window);

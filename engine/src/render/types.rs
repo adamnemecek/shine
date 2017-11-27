@@ -140,6 +140,16 @@ impl From<Rectangle> for (Position, Size) {
 }
 
 
+/// Enum to define the semantics of raw image data.
+#[derive(Copy, Clone, Debug)]
+pub enum PixelFormat {
+    /// One byte components for Red,Green,Blue image.
+    R8G8B8,
+    /// One byte components for Red,Green,Blue,Alpha image.
+    R8G8B8A8,
+}
+
+
 /// Float array with 16 components
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]

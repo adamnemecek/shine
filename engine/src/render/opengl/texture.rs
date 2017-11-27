@@ -100,16 +100,16 @@ impl GLTexture {
         );
     }
 
-    /*    pub fn set_transient<ID: IndexDeclaration, Q: CommandQueue>(&mut self, queue: &mut Q, index_data: &[u8]) {
-            //println!("GLTexture - set_copy");
-            queue.add(
-                CreateCommand {
-                    target: self.0.clone(),
-                    type_id: ID::IndexType::get_gl_type_id(),
-                    data: index_data.to_vec(),
-                }
-            );
-        }*/
+    pub fn set_transient<Q: CommandQueue>(&mut self, queue: &mut Q, width: usize, height: usize, format: PixelFormat, data: &[u8]) {
+        println!("GLTexture - set_transient {},{},{:?}", width, height, format);
+        /*queue.add(
+            CreateCommand {
+                target: self.0.clone(),
+                type_id: ID::IndexType::get_gl_type_id(),
+                data: index_data.to_vec(),
+            }
+        );*/
+    }
 
     pub fn get_ref(&self) -> GLTextureRef {
         GLTextureRef {
