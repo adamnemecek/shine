@@ -64,8 +64,8 @@ impl Uniform {
                 35675 => quote!(_dragorust_render::Float32x9),// GLenum(GL_FLOAT_MAT3)
                 35676 => quote!(_dragorust_render::Float32x16),// GLenum(GL_FLOAT_MAT4)
 
-                35678 => quote!(_dragorust_render::Texture2DRefImpl),// GLenum(GL_SAMPLER_2D)
-                35680 => quote!(_dragorust_render::TextureCubeRefImpl),// GLenum(GL_SAMPLER_CUBE)
+                35678 => quote!(_dragorust_render::backend::Texture2DRefImpl),// GLenum(GL_SAMPLER_2D)
+                35680 => quote!(_dragorust_render::backend::TextureCubeRefImpl),// GLenum(GL_SAMPLER_CUBE)
 
                 _ => return Err(format!("Could not find built-in type for uniform {}, type id:{}", self.name, self.type_id))
             };
@@ -177,6 +177,7 @@ fn extract_shader_info(shaders: &[String]) -> (Vec<Attribute>, Vec<Uniform>) {
     let mut attributes: Vec<Attribute> = vec!();
 
     for line in stdout.lines() {
+        //println!("{}", line);
         match state {
             State::Ignore => {
                 state = match line {

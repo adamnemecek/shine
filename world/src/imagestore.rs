@@ -26,6 +26,16 @@ pub enum Image {
     Ready(image::DynamicImage),
 }
 
+impl Image {
+    pub fn get_image(&self) -> &image::DynamicImage {
+        match self {
+            &Image::Pending(ref a) => a,
+            &Image::Missing(ref a) => a,
+            &Image::Ready(ref a) => a,
+        }
+    }
+}
+
 impl store::Data for Image {}
 
 

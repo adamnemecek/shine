@@ -145,9 +145,9 @@ impl From<Rectangle> for (Position, Size) {
 #[derive(Copy, Clone, Debug)]
 pub enum PixelFormat {
     /// One byte components for Red,Green,Blue image.
-    R8G8B8,
+    Rgb8,
     /// One byte components for Red,Green,Blue,Alpha image.
-    R8G8B8A8,
+    Rgba8,
 }
 
 

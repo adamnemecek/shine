@@ -72,57 +72,70 @@ impl UniformLocation {
 
 
 /// Helper to upload uniforms
-struct UniformUploader<'a>(&'a UniformLocation, &'a LowLevel);
+struct UniformUploader<'a>(&'a UniformLocation, &'a mut LowLevel);
 
 impl<'a> ShaderUniformVisitor for UniformUploader<'a> {
     fn process_f32x16(&mut self, data: &Float32x16) {
         if !self.0.is_valid() { return; }
         assert!(self.0.type_id == gl::FLOAT_MAT4 && self.0.size == 1);
+        gl_check_error();
         unsafe {
             gl::UniformMatrix4fv(self.0.location as i32, self.0.size, gl::FALSE, mem::transmute(data));
         }
+        gl_check_error();
     }
 
     fn process_f32x4(&mut self, data: &Float32x4) {
         if !self.0.is_valid() { return; }
         assert!(self.0.type_id == gl::FLOAT_VEC4 && self.0.size == 1);
+        gl_check_error();
         unsafe {
             gl::Uniform4fv(self.0.location as i32, self.0.size, mem::transmute(data));
         }
+        gl_check_error();
     }
 
     fn process_f32x3(&mut self, data: &Float32x3) {
         if !self.0.is_valid() { return; }
         assert!(self.0.type_id == gl::FLOAT_VEC3 && self.0.size == 1);
+        gl_check_error();
         unsafe {
             gl::Uniform3fv(self.0.location as i32, self.0.size, mem::transmute(data));
         }
+        gl_check_error();
     }
 
     fn process_f32x2(&mut self, data: &Float32x2)
     {
         if !self.0.is_valid() { return; }
         assert!(self.0.type_id == gl::FLOAT_VEC2 && self.0.size == 1);
+        gl_check_error();
         unsafe {
             gl::Uniform2fv(self.0.location as i32, self.0.size, mem::transmute(data));
         }
+        gl_check_error();
     }
 
     fn process_f32(&mut self, data: f32) {
         if !self.0.is_valid() { return; }
         assert!(self.0.type_id == gl::FLOAT && self.0.size == 1);
+        gl_check_error();
         unsafe {
             gl::Uniform1fv(self.0.location as i32, self.0.size, mem::transmute(&data));
         }
+        gl_check_error();
     }
 
-    fn process_tex_2d(&mut self, _data: &Texture2DRefImpl) {
+    fn process_tex_2d(&mut self, data: &Texture2DRefImpl) {
         if !self.0.is_valid() { return; }
         assert!(self.0.type_id == gl::SAMPLER_2D && self.0.size == 1);
-        /*let slot = self.1.texture_binding.bind(data);
+        let slot = data.bind(self.1);
+        gl_check_error();
         unsafe {
-            gl::Uniform1iv(slot as i32, self.0.size, mem::transmute(&data));
-        }*/
+            let slot = slot as u32;
+            gl::Uniform1i(self.0.location as i32, slot as i32);
+        }
+        gl_check_error();
     }
 }
 
@@ -301,7 +314,7 @@ impl GLShaderProgramData {
             uniform.location = location;
             uniform.size = uniform_size;
             uniform.type_id = uniform_type;
-            //println!("Shader program uniform {}({})= {:?}", uniform_name, uniform_idx, uniform);
+            println!("Shader program uniform {}({})= {:?}", uniform_name, uniform_idx, uniform);
         }
     }
 
@@ -341,10 +354,12 @@ impl GLShaderProgramData {
         }
 
         // bind uniforms
+        gl_check_error();
         for (index, location) in (0..A::get_count()).zip(self.uniforms.iter_mut()) {
             let mut uploader = UniformUploader(&location, ll);
             uniforms.process_by_index(index, &mut uploader);
         }
+        gl_check_error();
 
         // bind indices
         if let Some(ref ib) = indices {

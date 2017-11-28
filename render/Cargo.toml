@@ -13,6 +13,7 @@ dragorust-render-derive = {path = "../render-derive"}
 libc = "*"
 gl = "*"
 arrayvec = "*"
+image = "*"
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = "0.2"

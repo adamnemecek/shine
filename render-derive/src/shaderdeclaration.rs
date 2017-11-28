@@ -92,7 +92,7 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         }
     };
 
-    //println!("{}", gen_attributes);
+    //println!("{}", gen_uniforms);
 
     let dummy_mod = syn::Ident::new(format!("_IMPL_SHADERDECLARATION_FOR_{}", declaration_type_name));
     let gen = quote! {

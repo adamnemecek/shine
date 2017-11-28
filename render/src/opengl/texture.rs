@@ -5,27 +5,27 @@ use std::cell::RefCell;
 
 use backend::*;
 use backend::opengl::lowlevel::*;
-//use backend::opengl::lowlevel::texturebinding::*;
+use backend::opengl::lowlevel::texturebinding::*;
 
 
-/// Structure to store reference to a single attribute os a buffer
+/// Structure to store reference to a texture in shader parameters
 #[derive(Clone)]
 pub struct GLTextureRef {
     target: Rc<RefCell<GLTextureData>>
 }
 
-/*impl GLTextureRef {
-    pub fn bind(&self, ll: &mut LowLevel) {
-        let ib = self.target.borrow();
-        ib.bind(ll);
+impl GLTextureRef {
+    pub fn bind(&self, ll: &mut LowLevel) -> usize {
+        self.target.borrow().bind(ll)
     }
-}*/
+}
 
 
 /// Structure to store hardware data associated to a IndexBuffer.
 struct GLTextureData {
     hw_id: GLuint,
     type_id: GLenum,
+    filter: GLTextureFilter,
 }
 
 impl GLTextureData {
@@ -33,7 +33,31 @@ impl GLTextureData {
         GLTextureData {
             hw_id: 0,
             type_id: 0,
+            filter: GLTextureFilter {
+                mag_filter: gl::NEAREST,
+                min_filter: gl::NEAREST,
+                wrap_s: gl::REPEAT,
+                wrap_t: gl::REPEAT,
+            }
         }
+    }
+
+    fn upload_data(&mut self, ll: &mut LowLevel, width: usize, height: usize, formats: (GLenum, GLenum, GLenum), data: *const u8) {
+        gl_check_error();
+        if self.hw_id == 0 {
+            unsafe {
+                gl::GenTextures(1, &mut self.hw_id);
+            }
+        }
+        assert!(self.hw_id != 0);
+
+        ll.texture_binding.bind(gl::TEXTURE_2D, self.hw_id, self.filter);
+        unsafe {
+            gl::TexImage2D(gl::TEXTURE_2D, 0, formats.0 as i32,
+                           width as i32, height as i32, 0, formats.1, formats.2,
+                           data as *const GLvoid);
+        }
+        gl_check_error();
     }
 
     fn release(&mut self, ll: &mut LowLevel) {
@@ -44,6 +68,14 @@ impl GLTextureData {
         self.hw_id = 0;
         self.type_id = 0;
     }
+
+    fn bind(&self, ll: &mut LowLevel) -> usize {
+        gl_check_error();
+        let slot = ll.texture_binding.bind(gl::TEXTURE_2D, self.hw_id, self.filter);
+        println!("slot:{}", slot);
+        gl_check_error();
+        slot
+    }
 }
 
 impl Drop for GLTextureData {
@@ -53,9 +85,25 @@ impl Drop for GLTextureData {
 }
 
 
+/// Finds the internal and upload enums:
+/// [0] internal format - Specifies the internal format of the stored texture
+/// [1] format - Specifies the format of the source texel data
+/// [2] type - Specifies the data type of the source texel data
+fn get_upload_enums(fmt: PixelFormat) -> (GLenum, GLenum, GLenum) {
+    match fmt {
+        PixelFormat::Rgb8 => (gl::RGB, gl::RGB, gl::UNSIGNED_BYTE),
+        PixelFormat::Rgba8 => (gl::RGBA, gl::RGBA, gl::UNSIGNED_BYTE),
+    }
+}
+
 /// RenderCommand to create and allocated OpenGL resources.
 struct CreateCommand {
     target: Rc<RefCell<GLTextureData>>,
+    width: usize,
+    height: usize,
+    format: (GLenum, GLenum, GLenum),
+    data: Vec<u8>,
+
 }
 
 impl Command for CreateCommand {
@@ -63,7 +111,9 @@ impl Command for CreateCommand {
         0
     }
 
-    fn process(&mut self, ll: &mut LowLevel) {}
+    fn process(&mut self, ll: &mut LowLevel) {
+        self.target.borrow_mut().upload_data(ll, self.width, self.height, self.format, self.data.as_ptr());
+    }
 }
 
 
@@ -102,14 +152,16 @@ impl GLTexture {
     }
 
     pub fn set_transient<Q: CommandQueue>(&mut self, queue: &mut Q, width: usize, height: usize, format: PixelFormat, data: &[u8]) {
-        println!("GLTexture - set_transient {},{},{:?}", width, height, format);
-        /*queue.add(
+        //println!("GLTexture - set_transient {},{},{:?},{:p}", width, height, format, data.as_ptr());
+        queue.add(
             CreateCommand {
                 target: self.0.clone(),
-                type_id: ID::IndexType::get_gl_type_id(),
-                data: index_data.to_vec(),
+                width: width,
+                height: height,
+                format: get_upload_enums(format),
+                data: data.to_vec(),
             }
-        );*/
+        );
     }
 
     pub fn get_ref(&self) -> GLTextureRef {

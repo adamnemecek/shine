@@ -23,7 +23,7 @@ pub enum ImageData<'a> {
 /// Trait to define index source.
 pub trait ImageSource {
     /// Returns the vertex declaration and the reference to the vertex data.
-    fn to_data<'a>(&self) -> ImageData<'a>;
+    fn to_data<'a>(&'a self) -> ImageData<'a>;
 }
 
 

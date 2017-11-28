@@ -6,10 +6,10 @@ use backend::opengl::lowlevel::*;
 /// Texture sampling parameters
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct GLTextureFilter {
-    mag_filter: GLenum,
-    min_filter: GLenum,
-    wrap_s: GLenum,
-    wrap_t: GLenum,
+    pub mag_filter: GLenum,
+    pub min_filter: GLenum,
+    pub wrap_s: GLenum,
+    pub wrap_t: GLenum,
 }
 
 impl GLTextureFilter {
@@ -116,7 +116,7 @@ impl TextureBinding {
 
     /// Binds the given texture to an arbitrary slot and returns the index of its slot.
     /// Slots are selected by LRU algorithm.
-    fn bind(&mut self, target: GLenum, hw_id: GLuint, filter: GLTextureFilter) -> usize {
+    pub fn bind(&mut self, target: GLenum, hw_id: GLuint, filter: GLTextureFilter) -> usize {
         // finds some slot to (re)use
         let mut slot = 0;
         // don't rebind any texture from this draw call (bindings since the last commit call)

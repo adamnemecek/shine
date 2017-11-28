@@ -25,18 +25,25 @@ struct VxColorTex {
     uniform vec3 uColor;
     attribute vec3 vPosition;
     attribute vec3 vColor;
+    attribute vec2 vTexCoord;
     varying vec3 color;
+    varying vec2 txCoord;
     void main()
     {
         color = vColor; + uColor;
+        txCoord = vTexCoord;
         gl_Position = uTrsf * vec4(vPosition, 1.0);
     }
 "]
 #[frag_src = "
     varying vec3 color;
+    varying vec2 txCoord;
+    uniform sampler2D uTex;
     void main()
     {
-        gl_FragColor = vec4(color, 1.0);
+        vec3 txColor = texture2D( uTex, txCoord ).rgb;
+        vec3 col = txColor * color;
+        gl_FragColor = vec4(col, 1.0);
     }
 "]
 //todo 1:
@@ -162,8 +169,9 @@ impl View for SimpleView {
             let image_store = game.image_store.read();
 
             if self.img1.is_null() {
-                self.img1 = image_store.get_or_request(&world::ImageId::new("alma.png"));
+                self.img1 = image_store.get_or_request(&world::ImageId::new("c:\\dev\\alma.png"));
             }
+            self.texture1.set(&mut self.render, image_store[&self.img1].get_image());
         }
 
         {
@@ -177,7 +185,7 @@ impl View for SimpleView {
             let attributes = ShSimpleAttribute {
                 position: v1.get_attribute_ref(VxPosAttribute::Position),
                 color: v2.get_attribute_ref(VxColorTexAttribute::Color),
-                //tex_coord: v2.get_attribute_ref(VxColorTexAttribute::TexCoord),
+                tex_coord: v2.get_attribute_ref(VxColorTexAttribute::TexCoord),
             };
 
             let st = self.t.sin();
@@ -190,7 +198,7 @@ impl View for SimpleView {
                                    0,   0, 1, 0,
                                    0,   0, 0, 1),
                     color: f32x3!(1.2f32, 0.2f32, 0.2f32),
-                    //tex: texture1.get_ref(),
+                    tex: self.texture1.get_ref(),
                 };
                 self.shader.draw(&mut *p0, attributes.clone(), uniforms.clone(), Primitive::Triangle, 0, 3);
             }
@@ -202,7 +210,7 @@ impl View for SimpleView {
                                    0,   0, 1, 0,
                                    0,   0, 0, 1),
                     color: f32x3!(1.2f32, 0.2f32, 0.2f32),
-                    //tex: texture1.get_ref(),
+                    tex: self.texture1.get_ref(),
                 };
                 self.shader.draw_indexed(&mut *p0, attributes.clone(), self.index_buffer1.get_ref(), uniforms, Primitive::Triangle, 0, 6);
             }
