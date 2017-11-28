@@ -6,8 +6,8 @@ use self::spscstate::TripleBuffer;
 
 mod spscstate;
 
-/// Create a Sender/Receiver with an embeded shared buffer for communication.
-/// It is not an Single Producer Single Consumer queue as some massages can be dropped based
+/// Create a Sender/Receiver with an embedded shared buffer for communication.
+/// It is not a "Single Producer Single Consumer" queue as some massages can be dropped based
 /// on thread scheduling.
 pub fn state_channel<T: Default>() -> (Sender<T>, Receiver<T>) {
     let a = Arc::new(TripleBuffer::new());
