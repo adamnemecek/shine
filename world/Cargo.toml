@@ -1,0 +1,15 @@
+[package]
+name = "dragorust-world"
+version = "0.1.0"
+authors = ["gzp <z.p.gaal.devel@gmail.com>"]
+
+[dependencies]
+dragorust-render = {path = "../render"}
+dragorust-store= {path = "../store"}
+
+libc = "*"
+image = "*"
+
+[dependency.image]
+# don't add ryon now, we might not need it
+default-features = false

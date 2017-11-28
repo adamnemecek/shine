@@ -4,6 +4,6 @@ version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
-dragorust-engine = {path = "engine"}
-dragorust-render-derive = {path = "render-derive"}
+dragorust-render = {path = "render"}
+dragorust-world = {path = "world"}
 

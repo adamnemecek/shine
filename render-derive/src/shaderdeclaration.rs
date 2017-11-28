@@ -5,6 +5,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Read;
 
+
 use glslang::*;
 use utils::*;
 
@@ -70,7 +71,7 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
     let sources = sources.iter().map(|shader| {
         let sh_type = shader.0.to_ident();
         let ref source = shader.1;
-        Some(quote! { (::dragorust_engine::render::ShaderType::#sh_type, #source) })
+        Some(quote! { (_dragorust_render::ShaderType::#sh_type, #source) })
     }).collect::<Vec<_>>();
     let source_count = sources.len();
 
@@ -91,13 +92,23 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         }
     };
 
-    //println!("{}", gen_shader_decl);
+    //println!("{}", gen_attributes);
 
-    quote! {
-        #gen_attributes
-        #gen_uniforms
-        #gen_shader_decl
-    }
+    let dummy_mod = syn::Ident::new(format!("_IMPL_SHADERDECLARATION_FOR_{}", declaration_type_name));
+    let gen = quote! {
+        #[allow(unused_imports, non_snake_case)]
+        pub mod #dummy_mod {
+            extern crate dragorust_render as _dragorust_render;
+            #gen_attributes
+            #gen_uniforms
+            #gen_shader_decl
+        }
+        pub use self::#dummy_mod::*;
+    };
+
+    //println!("{}", gen);
+
+    gen
 }
 
 
@@ -117,7 +128,7 @@ fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec
         };
 
         attribute_fields.push(quote! {
-            #attr_field_ident : ::dragorust_engine::render::VertexAttributeRefImpl
+            #attr_field_ident : _dragorust_render::backend::VertexAttributeRefImpl
         });
 
         match_name_cases.push(
@@ -137,11 +148,11 @@ fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec
 
     let gen = quote! {
         #[derive(Clone)]
-        struct #attribute_type_ident {
-            #(#attribute_fields,)*
+        pub struct #attribute_type_ident {
+            #(pub #attribute_fields,)*
         }
 
-        impl ::dragorust_engine::render::ShaderAttribute for #attribute_type_ident {
+        impl _dragorust_render::ShaderAttribute for #attribute_type_ident {
             fn get_count() -> usize {
                 #count
             }
@@ -153,7 +164,7 @@ fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec
                 }
             }
 
-            fn get_by_index(&self, index: usize) -> &VertexAttributeRefImpl {
+            fn get_by_index(&self, index: usize) -> &_dragorust_render::backend::VertexAttributeRefImpl {
                 match index {
                     #(#match_index_cases,)*
                     _ => panic!("Vertex attribute index ({}) is out of range (0..{})", index, #count)
@@ -207,11 +218,11 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
 
     let gen = quote! {
         #[derive(Clone)]
-        struct #uniform_type_ident {
-            #(#uniform_fields,)*
+        pub struct #uniform_type_ident {
+            #(pub #uniform_fields,)*
         }
 
-        impl ::dragorust_engine::render::ShaderUniform for #uniform_type_ident {
+        impl _dragorust_render::ShaderUniform for #uniform_type_ident {
             fn get_count() -> usize {
                 #count
             }
@@ -223,7 +234,7 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
                 }
             }
 
-            fn process_by_index<V: ShaderUniformVisitor>(&self, index: usize, visitor: &mut V) {
+            fn process_by_index<V: _dragorust_render::ShaderUniformVisitor>(&self, index: usize, visitor: &mut V) {
                 match index {
                     #(#match_index_cases,)*
                     _ => panic!("Uniform index ({}) is out of range (0..{})", index, #count)

@@ -4,16 +4,31 @@ use quote;
 use utils::*;
 
 pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
-    match ast.body {
+    let struct_name = &ast.ident;
+
+    let gen_impl = match ast.body {
         syn::Body::Struct(syn::VariantData::Struct(ref fields)) => impl_location_for_struct(&ast.ident, fields),
         _ => panic!("No implementation for {:?}", format!("{:?}", ast.body).split('(').nth(0).unwrap())
-    }
+    };
+
+    let dummy_mod = syn::Ident::new(format!("_IMPL_VERTEXDECLARATION_FOR_{}", struct_name));
+    let gen = quote! {
+        #[allow(unused_imports, non_snake_case)]
+        mod #dummy_mod {
+            extern crate dragorust_render as _dragorust_render;
+            #gen_impl
+        }
+        pub use self::#dummy_mod::*;
+    };
+
+    //println!("{}", gen);
+
+    gen
 }
 
 
 fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) -> quote::Tokens {
     let enum_type_name = syn::Ident::new(format!("{}Attribute", struct_name));
-    let crate_qulifier = quote! {::dragorust_engine::render};
 
     let count = fields.len();
     if count == 0 {
@@ -70,13 +85,22 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         let offset_of = impl_offset_of(struct_name, &field_ident);
         match_get_desc.push(
             quote! {
-               #enum_type_name::#enum_ident => #crate_qulifier::VertexBufferLayoutElementImpl::new_from_element::< #field_ty > ( #offset_of, mem::size_of::< #struct_name > () )
+               #enum_type_name::#enum_ident => _dragorust_render::backend::VertexBufferLayoutElementImpl::new_from_element::< #field_ty > ( #offset_of, mem::size_of::< #struct_name > () )
             }
         )
     }
 
-    let gen_decl = quote! {
-        impl ::dragorust_engine::render::VertexDeclaration for #struct_name {
+    let gen_decl_enum = quote! {
+        #[derive(Copy, Clone, Debug)]
+        #[repr(u8)]
+        #[allow(unused_variables)]
+        pub enum #enum_type_name {
+            #(#enum_idents,)*
+        }
+    };
+
+    let gen_impl_decl = quote! {
+        impl _dragorust_render::VertexDeclaration for #struct_name {
             type Attribute = #enum_type_name;
 
             #[allow(dead_code)]
@@ -86,7 +110,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
             }
 
             #[allow(dead_code)]
-            fn get_attribute_layout(idx: #enum_type_name) -> #crate_qulifier::VertexBufferLayoutElementImpl {
+            fn get_attribute_layout(idx: #enum_type_name) -> _dragorust_render::backend::VertexBufferLayoutElementImpl {
                 use std::mem;
                 match idx {
                     #(#match_get_desc,)*
@@ -95,16 +119,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         }
     };
 
-    let gen_enum = quote! {
-        #[derive(Copy, Clone, Debug)]
-        #[repr(u8)]
-        #[allow(unused_variables)]
-        enum #enum_type_name {
-            #(#enum_idents,)*
-        }
-    };
-
-    let gen_from_usize = quote! {
+    let gen_impl_from_usize = quote! {
         impl From<usize> for #enum_type_name {
             fn from(index: usize) -> #enum_type_name {
                 match index {
@@ -123,7 +138,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         }
     };
 
-    let gen_from_str = quote! {
+    let gen_impl_from_str = quote! {
         impl str::FromStr for #enum_type_name {
             type Err = String;
 
@@ -137,9 +152,9 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
     };
 
     quote! {
-        #gen_decl
-        #gen_enum
-        #gen_from_usize
-        #gen_from_str
+        #gen_decl_enum
+        #gen_impl_decl
+        #gen_impl_from_usize
+        #gen_impl_from_str
     }
 }

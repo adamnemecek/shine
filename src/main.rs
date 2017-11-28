@@ -1,12 +1,13 @@
 #[macro_use]
-extern crate dragorust_engine;
+extern crate dragorust_render as render;
+extern crate dragorust_world as world;
+
 
 use std::time::Duration;
 
 mod game;
 mod view;
 
-pub use dragorust_engine::*;
 use render::*;
 use view::*;
 

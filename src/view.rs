@@ -186,9 +186,9 @@ impl View for SimpleView {
             {
                 let uniforms = ShSimpleUniform {
                     trsf: f32x16!(st, -ct, 0, 0,
-                                   ct,  st, 0, 0,
-                                    0,   0, 1, 0,
-                                    0,   0, 0, 1),
+                                  ct,  st, 0, 0,
+                                   0,   0, 1, 0,
+                                   0,   0, 0, 1),
                     color: f32x3!(1.2f32, 0.2f32, 0.2f32),
                     //tex: texture1.get_ref(),
                 };
