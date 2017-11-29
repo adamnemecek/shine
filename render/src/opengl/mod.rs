@@ -19,6 +19,8 @@ pub const MAX_VERTEX_ATTRIBUTE_COUNT: usize = 16;
 pub const MAX_USED_ATTRIBUTE_COUNT: usize = 16;
 /// Maximum number of uniforms that can be bound (used) at once
 pub const MAX_USED_UNIFORM_COUNT: usize = 16;
+/// Maximum number of shader parameters including attributes and uniforms
+pub const MAX_USED_PARAMETER_COUNT: usize = MAX_USED_ATTRIBUTE_COUNT + MAX_USED_UNIFORM_COUNT;
 /// Maximum number of texture units
 pub const MAX_USED_TEXTURE_COUNT: usize = 16;
 
