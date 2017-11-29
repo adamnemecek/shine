@@ -5,6 +5,7 @@ pub extern crate gl;
 mod engine;
 mod context;
 mod window;
+#[macro_use]
 mod lowlevel;
 mod commandqueue;
 mod shaderprogram;

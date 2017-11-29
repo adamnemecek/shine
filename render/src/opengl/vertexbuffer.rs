@@ -48,19 +48,16 @@ impl GLVertexBufferData {
 
         gl_check_error();
         if self.hw_id == 0 {
-            unsafe {
-                gl::GenBuffers(1, &mut self.hw_id);
-            }
+            gl!(GenBuffers(1, &mut self.hw_id));
         }
         assert!(self.hw_id != 0);
 
         ll.vertex_binding.bind_buffer(self.hw_id);
-        unsafe {
-            gl::BufferData(gl::ARRAY_BUFFER,
-                           data.len() as GLsizeiptr,
-                           data.as_ptr() as *const GLvoid,
-                           gl::STATIC_DRAW);
-        }
+        gl!(BufferData(gl::ARRAY_BUFFER,
+                       data.len() as GLsizeiptr,
+                       data.as_ptr() as *const GLvoid,
+                       gl::STATIC_DRAW));
+
         gl_check_error();
     }
 
@@ -74,9 +71,7 @@ impl GLVertexBufferData {
         }
 
         ll.vertex_binding.unbind_if_active(self.hw_id);
-        unsafe {
-            gl::DeleteBuffers(1, &self.hw_id);
-        }
+        gl!(DeleteBuffers(1, &self.hw_id));
         self.hw_id = 0;
     }
 }

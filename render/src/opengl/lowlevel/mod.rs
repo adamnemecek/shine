@@ -1,3 +1,9 @@
+/// Helper macro to hide unsafe blocks for API calls
+macro_rules! gl {
+    ( $cmd:ident($( $arg:expr ),*) ) => { unsafe { gl::$cmd($($arg,)*) } };
+}
+
+
 mod utils;
 pub mod vertexbinding;
 pub mod indexbinding;
@@ -76,20 +82,19 @@ impl LowLevel {
         self.texture_binding.commit();
 
         gl_check_error();
-        unsafe {
-            if !self.index_binding.is_indexed() {
-                gl::DrawArrays(primitive,
-                               vertex_start as GLint,
-                               vertex_count as GLsizei);
-            } else {
-                let offset = self.index_binding.get_offset(vertex_start);
-                let index_type = self.index_binding.get_index_type();
-                gl::DrawElements(primitive,
-                                 vertex_count as GLsizei,
-                                 index_type,
-                                 offset as *const GLvoid);
-            }
+        if !self.index_binding.is_indexed() {
+            gl!(DrawArrays(primitive,
+                           vertex_start as GLint,
+                           vertex_count as GLsizei));
+        } else {
+            let offset = self.index_binding.get_offset(vertex_start);
+            let index_type = self.index_binding.get_index_type();
+            gl!(DrawElements(primitive,
+                             vertex_count as GLsizei,
+                             index_type,
+                             offset as *const GLvoid));
         }
+
         gl_check_error();
     }
 }

@@ -52,7 +52,7 @@ impl Texture2D {
     /// No render operation or HW acces is performed, only a command in the queue is stored.
     pub fn set<'a, SRC: ImageSource, Q: CommandQueue>(&mut self, queue: &mut Q, source: &SRC) {
         match source.to_data() {
-            ImageData::Transient { width, height, format, slice } => self.platform.set_transient::<Q>(queue, width, height, format, slice)
+            ImageData::Transient { width, height, format, slice } => self.platform.set_transient_2d::<Q>(queue, width, height, format, slice)
         }
     }
 

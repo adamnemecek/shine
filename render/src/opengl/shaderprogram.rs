@@ -78,9 +78,7 @@ impl<'a> ShaderParameterVisitor for ParameterUploader<'a> {
             if loc.is_valid() {
                 assert!(loc.type_id == gl::FLOAT_MAT4 && loc.size == 1);
                 gl_check_error();
-                unsafe {
-                    gl::UniformMatrix4fv(loc.location as i32, loc.size, gl::FALSE, mem::transmute(data));
-                }
+                gl!(UniformMatrix4fv(loc.location as i32, loc.size, gl::FALSE, mem::transmute(data)));
                 gl_check_error();
             }
         }
@@ -91,9 +89,7 @@ impl<'a> ShaderParameterVisitor for ParameterUploader<'a> {
             if loc.is_valid() {
                 assert!(loc.type_id == gl::FLOAT_VEC4 && loc.size == 1);
                 gl_check_error();
-                unsafe {
-                    gl::Uniform4fv(loc.location as i32, loc.size, mem::transmute(data));
-                }
+                gl!(Uniform4fv(loc.location as i32, loc.size, mem::transmute(data)));
                 gl_check_error();
             }
         }
@@ -104,9 +100,7 @@ impl<'a> ShaderParameterVisitor for ParameterUploader<'a> {
             if loc.is_valid() {
                 assert!(loc.type_id == gl::FLOAT_VEC3 && loc.size == 1);
                 gl_check_error();
-                unsafe {
-                    gl::Uniform3fv(loc.location as i32, loc.size, mem::transmute(data));
-                }
+                gl!(Uniform3fv(loc.location as i32, loc.size, mem::transmute(data)));
                 gl_check_error();
             }
         }
@@ -117,9 +111,7 @@ impl<'a> ShaderParameterVisitor for ParameterUploader<'a> {
             if loc.is_valid() {
                 assert!(loc.type_id == gl::FLOAT_VEC2 && loc.size == 1);
                 gl_check_error();
-                unsafe {
-                    gl::Uniform2fv(loc.location as i32, loc.size, mem::transmute(data));
-                }
+                gl!(Uniform2fv(loc.location as i32, loc.size, mem::transmute(data)));
                 gl_check_error();
             }
         }
@@ -130,9 +122,7 @@ impl<'a> ShaderParameterVisitor for ParameterUploader<'a> {
             if loc.is_valid() {
                 assert!(loc.type_id == gl::FLOAT && loc.size == 1);
                 gl_check_error();
-                unsafe {
-                    gl::Uniform1fv(loc.location as i32, loc.size, mem::transmute(&data));
-                }
+                gl!(Uniform1fv(loc.location as i32, loc.size, mem::transmute(&data)));
                 gl_check_error();
             }
         }
@@ -144,10 +134,8 @@ impl<'a> ShaderParameterVisitor for ParameterUploader<'a> {
                 assert!(loc.type_id == gl::SAMPLER_2D && loc.size == 1);
                 gl_check_error();
                 let slot = data.bind(self.ll);
-                unsafe {
-                    let slot = slot as u32;
-                    gl::Uniform1i(loc.location as i32, slot as i32);
-                }
+                let slot = slot as u32;
+                gl!(Uniform1i(loc.location as i32, slot as i32));
                 gl_check_error();
             }
         }
@@ -216,9 +204,7 @@ impl GLShaderProgramData {
         }
 
         gl_check_error();
-        unsafe {
-            self.hw_id = gl::CreateProgram();
-        }
+        self.hw_id = gl!(CreateProgram());
 
         // create and attach shaders
         gl_check_error();
@@ -271,9 +257,7 @@ impl GLShaderProgramData {
         let mut attribute_type: GLenum = 0;
 
         gl_check_error();
-        unsafe {
-            gl::GetProgramiv(self.hw_id, gl::ACTIVE_ATTRIBUTES, &mut count);
-        }
+        gl!(GetProgramiv(self.hw_id, gl::ACTIVE_ATTRIBUTES, &mut count));
         gl_check_error();
 
         let count = count as GLuint;
@@ -281,15 +265,13 @@ impl GLShaderProgramData {
 
         for location in 0..count {
             gl_check_error();
-            unsafe {
-                gl::GetActiveAttrib(self.hw_id,
-                                    location,
-                                    name_buffer.len() as GLint,
-                                    &mut name_length,
-                                    &mut attribute_size,
-                                    &mut attribute_type,
-                                    name_buffer.as_ptr() as *mut GLchar);
-            }
+            gl!(GetActiveAttrib(self.hw_id,
+                                location,
+                                name_buffer.len() as GLint,
+                                &mut name_length,
+                                &mut attribute_size,
+                                &mut attribute_type,
+                                name_buffer.as_ptr() as *mut GLchar));
             gl_check_error();
 
             let attribute_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
@@ -314,9 +296,7 @@ impl GLShaderProgramData {
         let mut uniform_type: GLenum = 0;
 
         gl_check_error();
-        unsafe {
-            gl::GetProgramiv(self.hw_id, gl::ACTIVE_UNIFORMS, &mut count);
-        }
+        gl!(GetProgramiv(self.hw_id, gl::ACTIVE_UNIFORMS, &mut count));
         gl_check_error();
 
         let count = count as GLuint;
@@ -324,15 +304,13 @@ impl GLShaderProgramData {
 
         for location in 0..count {
             gl_check_error();
-            unsafe {
-                gl::GetActiveUniform(self.hw_id,
-                                     location,
-                                     name_buffer.len() as GLint,
-                                     &mut name_length,
-                                     &mut uniform_size,
-                                     &mut uniform_type,
-                                     name_buffer.as_ptr() as *mut GLchar);
-            }
+            gl!(GetActiveUniform(self.hw_id,
+                                 location,
+                                 name_buffer.len() as GLint,
+                                 &mut name_length,
+                                 &mut uniform_size,
+                                 &mut uniform_type,
+                                 name_buffer.as_ptr() as *mut GLchar));
             gl_check_error();
 
             let uniform_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
@@ -358,9 +336,7 @@ impl GLShaderProgramData {
         gl_check_error();
         ll.program_binding.unbind_if_active(self.hw_id);
         gl_check_error();
-        unsafe {
-            gl::DeleteProgram(self.hw_id);
-        }
+        gl!(DeleteProgram(self.hw_id));
         gl_check_error();
 
         self.hw_id = 0;

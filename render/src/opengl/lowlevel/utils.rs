@@ -6,7 +6,7 @@ use backend::opengl::lowlevel::*;
 
 /// Checks the last gl error code
 pub fn gl_check_error() {
-    match unsafe { gl::GetError() } {
+    match gl!(GetError()) {
         gl::NO_ERROR => {}
 
         e @ gl::INVALID_ENUM => { panic!("gl error ({}): GL_INVALID_ENUM, An unacceptable value is specified for an enumerated argument.", e); }

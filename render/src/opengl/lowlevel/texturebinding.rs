@@ -75,10 +75,8 @@ impl TextureBinding {
         // make the texture active
         gl_check_error();
         if self.force || self.active_unit != slot {
-            unsafe {
-                gl::ActiveTexture(gl::TEXTURE0 + slot as u32);
-                self.active_unit = slot;
-            }
+            gl!(ActiveTexture(gl::TEXTURE0 + slot as u32));
+            self.active_unit = slot;
         }
 
         let unit = &mut self.texture_units[slot];
@@ -87,9 +85,7 @@ impl TextureBinding {
         // update texture binding
         gl_check_error();
         if self.force || unit.target != target || unit.hw_id != hw_id {
-            unsafe {
-                gl::BindTexture(target, hw_id);
-            }
+            gl!(BindTexture(target, hw_id));
             if hw_id == 0 {
                 *unit = TextureUnit::new();
             } else {
@@ -102,12 +98,10 @@ impl TextureBinding {
         // update texture parameters
         if hw_id != 0 {
             if self.force || unit.filter != filter {
-                unsafe {
-                    gl::TexParameteri(unit.target, gl::TEXTURE_MAG_FILTER, filter.mag_filter as i32);
-                    gl::TexParameteri(unit.target, gl::TEXTURE_MIN_FILTER, filter.min_filter as i32);
-                    gl::TexParameteri(unit.target, gl::TEXTURE_WRAP_S, filter.wrap_s as i32);
-                    gl::TexParameteri(unit.target, gl::TEXTURE_WRAP_T, filter.wrap_t as i32);
-                }
+                gl!(TexParameteri(unit.target, gl::TEXTURE_MAG_FILTER, filter.mag_filter as i32));
+                gl!(TexParameteri(unit.target, gl::TEXTURE_MIN_FILTER, filter.min_filter as i32));
+                gl!(TexParameteri(unit.target, gl::TEXTURE_WRAP_S, filter.wrap_s as i32));
+                gl!(TexParameteri(unit.target, gl::TEXTURE_WRAP_T, filter.wrap_t as i32));
                 unit.filter = filter;
             }
             gl_check_error();

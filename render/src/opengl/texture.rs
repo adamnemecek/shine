@@ -1,8 +1,6 @@
 #![allow(dead_code, unused_variables)]
 
-use std::rc::Rc;
-use std::cell::RefCell;
-
+use std::ops::{Deref, DerefMut};
 use backend::*;
 use backend::opengl::lowlevel::*;
 use backend::opengl::lowlevel::texturebinding::*;
@@ -10,29 +8,35 @@ use backend::opengl::lowlevel::texturebinding::*;
 
 /// Structure to store reference to a texture in shader parameters
 #[derive(Clone)]
-pub struct GLTextureRef {
-    target: Rc<RefCell<GLTextureData>>
+pub struct GLTextureRef(*mut GLTextureData);
+
+impl Deref for GLTextureRef {
+    type Target = GLTextureData;
+
+    fn deref(&self) -> &GLTextureData {
+        unsafe { &*self.0 }
+    }
 }
 
-impl GLTextureRef {
-    pub fn bind(&self, ll: &mut LowLevel) -> usize {
-        self.target.borrow().bind(ll)
+impl DerefMut for GLTextureRef {
+    fn deref_mut(&mut self) -> &mut GLTextureData {
+        unsafe { &mut *self.0 }
     }
 }
 
 
 /// Structure to store hardware data associated to a IndexBuffer.
-struct GLTextureData {
+pub struct GLTextureData {
     hw_id: GLuint,
-    type_id: GLenum,
+    target: GLenum,
     filter: GLTextureFilter,
 }
 
 impl GLTextureData {
-    fn new() -> GLTextureData {
+    pub fn new() -> GLTextureData {
         GLTextureData {
             hw_id: 0,
-            type_id: 0,
+            target: 0,
             filter: GLTextureFilter {
                 mag_filter: gl::NEAREST,
                 min_filter: gl::NEAREST,
@@ -42,36 +46,34 @@ impl GLTextureData {
         }
     }
 
-    fn upload_data(&mut self, ll: &mut LowLevel, width: usize, height: usize, formats: (GLenum, GLenum, GLenum), data: *const u8) {
+    pub fn upload_data(&mut self, ll: &mut LowLevel, target: GLenum, width: usize, height: usize, formats: (GLenum, GLenum, GLenum), data: *const u8) {
         gl_check_error();
         if self.hw_id == 0 {
-            unsafe {
-                gl::GenTextures(1, &mut self.hw_id);
-            }
+            gl!(GenTextures(1, &mut self.hw_id));
         }
         assert!(self.hw_id != 0);
 
-        ll.texture_binding.bind(gl::TEXTURE_2D, self.hw_id, self.filter);
-        unsafe {
-            gl::TexImage2D(gl::TEXTURE_2D, 0, formats.0 as i32,
-                           width as i32, height as i32, 0, formats.1, formats.2,
-                           data as *const GLvoid);
-        }
+        self.target = target;
+
+        ll.texture_binding.bind(self.target, self.hw_id, self.filter);
+        gl!(TexImage2D(self.target, 0, formats.0 as i32,
+                       width as i32, height as i32, 0, formats.1, formats.2,
+                       data as *const GLvoid));
         gl_check_error();
     }
 
-    fn release(&mut self, ll: &mut LowLevel) {
+    pub fn release(&mut self, ll: &mut LowLevel) {
         if self.hw_id == 0 {
             return;
         }
 
         self.hw_id = 0;
-        self.type_id = 0;
+        self.target = 0;
     }
 
-    fn bind(&self, ll: &mut LowLevel) -> usize {
+    pub fn bind(&self, ll: &mut LowLevel) -> usize {
         gl_check_error();
-        let slot = ll.texture_binding.bind(gl::TEXTURE_2D, self.hw_id, self.filter);
+        let slot = ll.texture_binding.bind(self.target, self.hw_id, self.filter);
         gl_check_error();
         slot
     }
@@ -95,9 +97,11 @@ fn get_upload_enums(fmt: PixelFormat) -> (GLenum, GLenum, GLenum) {
     }
 }
 
+
 /// RenderCommand to create and allocated OpenGL resources.
 struct CreateCommand {
-    target: Rc<RefCell<GLTextureData>>,
+    target: GLTextureRef,
+    texture_target: GLenum,
     width: usize,
     height: usize,
     format: (GLenum, GLenum, GLenum),
@@ -111,14 +115,14 @@ impl Command for CreateCommand {
     }
 
     fn process(&mut self, ll: &mut LowLevel) {
-        self.target.borrow_mut().upload_data(ll, self.width, self.height, self.format, self.data.as_ptr());
+        self.target.upload_data(ll, self.texture_target, self.width, self.height, self.format, self.data.as_ptr());
     }
 }
 
 
 /// RenderCommand to release the allocated OpenGL buffer.
 struct ReleaseCommand {
-    target: Rc<RefCell<GLTextureData>>,
+    target: GLTextureRef,
 }
 
 impl Command for ReleaseCommand {
@@ -127,17 +131,18 @@ impl Command for ReleaseCommand {
     }
 
     fn process(&mut self, ll: &mut LowLevel) {
-        self.target.borrow_mut().release(ll);
+        self.target.release(ll);
     }
 }
 
-/// IndexBuffer implementation for OpenGL.
-pub struct GLTexture(Rc<RefCell<GLTextureData>>);
+
+/// Texture implementation for OpenGL.
+pub struct GLTexture(Box<GLTextureData>);
 
 impl GLTexture {
     pub fn new() -> GLTexture {
         GLTexture(
-            Rc::new(RefCell::new(GLTextureData::new()))
+            Box::new(GLTextureData::new())
         )
     }
 
@@ -145,16 +150,17 @@ impl GLTexture {
         //println!("GLTexture - release");
         queue.add(
             ReleaseCommand {
-                target: self.0.clone()
+                target: self.get_ref(),
             }
         );
     }
 
-    pub fn set_transient<Q: CommandQueue>(&mut self, queue: &mut Q, width: usize, height: usize, format: PixelFormat, data: &[u8]) {
-        //println!("GLTexture - set_transient {},{},{:?},{:p}", width, height, format, data.as_ptr());
+    pub fn set_transient_2d<Q: CommandQueue>(&mut self, queue: &mut Q, width: usize, height: usize, format: PixelFormat, data: &[u8]) {
+        //println!("GLTexture - set_transient {},{},{:?},{}", width, height, format, data.len());
         queue.add(
             CreateCommand {
-                target: self.0.clone(),
+                target: self.get_ref(),
+                texture_target: gl::TEXTURE_2D,
                 width: width,
                 height: height,
                 format: get_upload_enums(format),
@@ -164,9 +170,8 @@ impl GLTexture {
     }
 
     pub fn get_ref(&self) -> GLTextureRef {
-        GLTextureRef {
-            target: self.0.clone()
-        }
+        let ptr = self.0.deref() as *const GLTextureData as *mut GLTextureData;
+        GLTextureRef(ptr)
     }
 }
 

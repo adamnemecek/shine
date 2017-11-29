@@ -35,9 +35,7 @@ impl ProgramBinding {
         }
 
         gl_check_error();
-        unsafe {
-            gl::UseProgram(program_id);
-        }
+        gl!(UseProgram(program_id));
         gl_check_error();
         self.bound_id = program_id;
     }

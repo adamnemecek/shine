@@ -37,15 +37,13 @@ impl Command for ClearCommand {
 
         match self.view_port {
             pass::ViewPort::None => {}
-            pass::ViewPort::PixelRectangle(rect) => unsafe { gl::Viewport(rect.position.x, rect.position.y, rect.size.width, rect.size.height); }
-            pass::ViewPort::Fullscreen => unsafe { gl::Viewport(0, 0, fb_size.width, fb_size.height); }
+            pass::ViewPort::PixelRectangle(rect) => gl!(Viewport(rect.position.x, rect.position.y, rect.size.width, rect.size.height)),
+            pass::ViewPort::Fullscreen => gl!(Viewport(0, 0, fb_size.width, fb_size.height)),
         }
 
         if let Some(clear_color) = self.clear_color {
-            unsafe {
-                gl::ClearColor(clear_color.0, clear_color.1, clear_color.2, 1.0);
-                gl::Clear(gl::COLOR_BUFFER_BIT);
-            }
+            gl!(ClearColor(clear_color.0, clear_color.1, clear_color.2, 1.0));
+            gl!(Clear(gl::COLOR_BUFFER_BIT));
         }
 
         gl_check_error();
