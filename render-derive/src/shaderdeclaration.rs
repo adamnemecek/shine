@@ -115,7 +115,7 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec<Attribute>) -> quote::Tokens {
     let mut attribute_fields = vec!();
     let mut match_name_cases: Vec<quote::Tokens> = vec!();
-    let mut match_index_cases: Vec<quote::Tokens> = vec!();
+    let mut visit_fields: Vec<quote::Tokens> = vec!();
 
     for (index, attr) in attributes.iter().enumerate() {
         let attr_name = attr.name.clone();
@@ -137,9 +137,10 @@ fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec
             }
         );
 
-        match_index_cases.push(
+
+        visit_fields.push(
             quote! {
-                #index => &self.#attr_field_ident
+                visitor.process_attribute(#index, &self.#attr_field_ident);
             }
         );
     }
@@ -164,11 +165,8 @@ fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec
                 }
             }
 
-            fn get_by_index(&self, index: usize) -> &_dragorust_render::backend::VertexAttributeRefImpl {
-                match index {
-                    #(#match_index_cases,)*
-                    _ => panic!("Vertex attribute index ({}) is out of range (0..{})", index, #count)
-                }
+            fn visit<V: _dragorust_render::ShaderAttributeVisitor>(&self, visitor: &mut V) {
+                #(#visit_fields)*
             }
         }
     };
@@ -182,7 +180,7 @@ fn impl_attribute_declaration(attribute_type_ident: &syn::Ident, attributes: Vec
 fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Uniform>) -> quote::Tokens {
     let mut uniform_fields = vec!();
     let mut match_name_cases: Vec<quote::Tokens> = vec!();
-    let mut match_index_cases: Vec<quote::Tokens> = vec!();
+    let mut visit_fields: Vec<quote::Tokens> = vec!();
 
     for (index, uniform) in uniforms.iter().enumerate() {
         let uniform_name = uniform.name.clone();
@@ -207,9 +205,9 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
             }
         );
 
-        match_index_cases.push(
+        visit_fields.push(
             quote! {
-                #index => visitor.#type_function_ident(&self.#uniform_field_ident)
+                visitor.#type_function_ident(#index, &self.#uniform_field_ident);
             }
         );
     }
@@ -234,11 +232,8 @@ fn impl_uniform_declaration(uniform_type_ident: &syn::Ident, uniforms: Vec<Unifo
                 }
             }
 
-            fn process_by_index<V: _dragorust_render::ShaderUniformVisitor>(&self, index: usize, visitor: &mut V) {
-                match index {
-                    #(#match_index_cases,)*
-                    _ => panic!("Uniform index ({}) is out of range (0..{})", index, #count)
-                }
+            fn visit<V: _dragorust_render::ShaderUniformVisitor>(&self, visitor: &mut V) {
+                #(#visit_fields)*
             }
         }
     };

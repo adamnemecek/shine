@@ -72,7 +72,6 @@ impl GLTextureData {
     fn bind(&self, ll: &mut LowLevel) -> usize {
         gl_check_error();
         let slot = ll.texture_binding.bind(gl::TEXTURE_2D, self.hw_id, self.filter);
-        println!("slot:{}", slot);
         gl_check_error();
         slot
     }

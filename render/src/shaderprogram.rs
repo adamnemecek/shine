@@ -16,6 +16,12 @@ pub enum ShaderType {
     FragmentShader,
 }
 
+/// Trait to visit shader attributes. Mainly used for binding and uploading parameters
+#[allow(missing_docs)]
+pub trait ShaderAttributeVisitor {
+    fn process_attribute(&mut self, idx: usize, data: &VertexAttributeRefImpl);
+}
+
 /// Trait to store vertex attribute parameters.
 pub trait ShaderAttribute: Clone {
     /// Returns the number of attributes
@@ -24,21 +30,21 @@ pub trait ShaderAttribute: Clone {
     /// Returns the index by attribute name
     fn get_index_by_name(name: &str) -> Option<usize>;
 
-    /// Returns vertex attribute by index
-    fn get_by_index(&self, index: usize) -> &VertexAttributeRefImpl;
+    /// Visit all the required attributes
+    fn visit<V: ShaderAttributeVisitor>(&self, visitor: &mut V);
 }
 
 
-/// Trait for the mutable visitor to process render types
+/// Trait to visit shader uniforms. Mainly used for binding and uploading parameters.
 #[allow(missing_docs)]
 pub trait ShaderUniformVisitor {
-    fn process_f32x16(&mut self, data: &Float32x16);
-    fn process_f32x4(&mut self, data: &Float32x4);
-    fn process_f32x3(&mut self, data: &Float32x3);
-    fn process_f32x2(&mut self, data: &Float32x2);
-    fn process_f32(&mut self, data: f32);
+    fn process_f32x16(&mut self, idx: usize, data: &Float32x16);
+    fn process_f32x4(&mut self, idx: usize, data: &Float32x4);
+    fn process_f32x3(&mut self, idx: usize, data: &Float32x3);
+    fn process_f32x2(&mut self, idx: usize, data: &Float32x2);
+    fn process_f32(&mut self, idx: usize, data: f32);
 
-    fn process_tex_2d(&mut self, data: &Texture2DRefImpl);
+    fn process_tex_2d(&mut self, idx: usize, data: &Texture2DRefImpl);
 }
 
 
@@ -50,8 +56,8 @@ pub trait ShaderUniform: Clone {
     /// Returns the index by uniform name
     fn get_index_by_name(name: &str) -> Option<usize>;
 
-    /// Visit data by index
-    fn process_by_index<V: ShaderUniformVisitor>(&self, index: usize, visitor: &mut V);
+    /// Visit all the required uniforms
+    fn visit<V: ShaderUniformVisitor>(&self, visitor: &mut V);
 }
 
 
