@@ -9,6 +9,7 @@ gl_generator = "0.5"
 
 [dependencies]
 dragorust-render-derive = {path = "../render-derive"}
+dragorust-store = {path = "../store"}
 
 libc = "*"
 gl = "*"

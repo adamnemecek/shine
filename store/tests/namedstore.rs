@@ -3,13 +3,14 @@ extern crate dragorust_store;
 use std::thread;
 use std::sync::Arc;
 
-use dragorust_store::store;
+use dragorust_store::namedstore;
+use dragorust_store::namedstore::{Id, Factory, FuntionFactory};
 
 /// Resource id for test data
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 struct TestDataId(u32);
 
-impl store::Id for TestDataId {}
+impl Id for TestDataId {}
 
 /// Test resource data
 #[derive(PartialEq, Eq, Debug)]
@@ -22,8 +23,6 @@ impl TestData {
     }
 }
 
-impl store::Data for TestData {}
-
 impl Drop for TestData {
     fn drop(&mut self) {
         //println!("dropping '{}'", self.0);
@@ -33,24 +32,87 @@ impl Drop for TestData {
 /// Test resource factory
 struct TestFactory;
 
-impl store::Factory<TestDataId, TestData> for TestFactory {
-    fn request(&mut self, id: &TestDataId) -> TestData {
-        TestData::new(format!("pending: {}", id.0))
+impl Factory for TestFactory {
+    type Key = TestDataId;
+    type Data = TestData;
+    type MetaData = ();
+
+    fn request(&mut self, id: &TestDataId) -> (TestData, Option<()>) {
+        (TestData::new(format!("pending: {}", id.0)), Some(()))
     }
 
-    fn create(&mut self, id: &TestDataId) -> Option<TestData> {
+    fn create(&mut self, id: &TestDataId, _meta: &mut ()) -> Option<TestData> {
         Some(TestData::new(format!("id: {}", id.0)))
     }
 }
 
-/// Test datat store
-type TestStore = store::Store<TestDataId, TestData>;
-//type TestRef = store::Ref<TestDataId, TestData>;
+#[test]
+fn store_simple_strict() {
+    let store = namedstore::create(FuntionFactory::new(|id: &TestDataId| TestData::new(format!("id: {}", id.0))));
+    let mut r0;// = TestRef::none();
+    let mut r1;// = TestRef::none();
 
+    //println!("request 0,1");
+    {
+        let store_use = store.read();
+        assert!(store_use.get(&TestDataId(0)).is_null());
+        assert!(!store_use.has_request());
+
+        r0 = store_use.get_or_request(&TestDataId(0));
+        assert!(store_use.has_request());
+        assert!(!store_use.is_pending(&r0));
+        assert!(store_use[&r0].0 == format!("id: {}", 0));
+
+        store_use.request(&TestDataId(1));
+        let r11 = store_use.get(&TestDataId(1));
+        assert!(store_use[&r11].0 == format!("id: {}", 1));
+        assert!(store_use.has_request());
+    }
+
+    //println!("create 0,1");
+    assert!(store.has_request());
+    store.update();
+    assert!(!store.has_request());
+
+    {
+        let store_use = store.read();
+        assert!(store_use.is_ready(&store_use.get(&TestDataId(0))));
+        assert!(store_use.is_ready(&r0));
+        assert!(store_use[&r0].0 == format!("id: {}", 0));
+        r1 = store_use.get(&TestDataId(1));
+        assert!(!r1.is_null());
+        assert!(store_use.is_ready(&r1));
+        assert!(store_use[&r1].0 == format!("id: {}", 1));
+    }
+
+    store.drain_unused();
+
+    {
+        let store_use = store.read();
+        assert!(store_use[&r0].0 == format!("id: {}", 0));
+        assert!(store_use[&r1].0 == format!("id: {}", 1));
+        r1.release();
+        assert!(r1.is_null());
+    }
+
+    //println!("drop 1");
+    store.drain_unused();
+
+    {
+        let store_use = store.read();
+        assert!(store_use[&r0].0 == format!("id: {}", 0));
+        assert!(store_use.get(&TestDataId(1)).is_null());
+    }
+
+    //println!("drop 0");
+    r0.release();
+    store.drain_unused();
+    assert!(store.is_empty());
+}
 
 #[test]
-fn store_simple() {
-    let store = TestStore::new(TestFactory);
+fn store_simple_lazy() {
+    let store = namedstore::create(TestFactory);
     let mut r0;// = TestRef::none();
     let mut r1;// = TestRef::none();
 
@@ -112,9 +174,10 @@ fn store_simple() {
     assert!(store.is_empty());
 }
 
+
 #[test]
 fn store_multi_threaded() {
-    let store = Arc::new(TestStore::new(TestFactory));
+    let store = Arc::new(namedstore::create(TestFactory));
 
     const ITER: u32 = 10;
 

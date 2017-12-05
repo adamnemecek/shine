@@ -69,6 +69,11 @@ pub struct RenderManager<K: PassKey> {
 
     command_store: Rc<RefCell<CommandStore>>,
     current_time: usize,
+
+    //vertex_buffers: VertexBufferStore,
+    //index_buffers: IndexBufferStore,
+    //shaders: ShaderProgramStore,
+    //textures: Texture2DStore,
 }
 
 impl<K: PassKey> RenderManager<K> {

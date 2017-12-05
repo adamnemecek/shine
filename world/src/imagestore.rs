@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 use std::path::Path;
-use store::*;
+use store::namedstore as store;
 use image;
 
 /// Resource id of an image.
@@ -36,11 +36,9 @@ impl Image {
     }
 }
 
-impl store::Data for Image {}
-
 
 /// Factory to load images by the resource names
-struct ImageLoader {
+pub struct ImageLoader {
     pending_image: Arc<image::DynamicImage>,
     missing_image: Arc<image::DynamicImage>,
 }
@@ -54,12 +52,17 @@ impl ImageLoader {
     }
 }
 
-impl store::Factory<Id, Image> for ImageLoader {
-    fn request(&mut self, _id: &Id) -> Image {
-        Image::Pending(self.pending_image.clone())
+impl store::Factory for ImageLoader {
+    type Key = Id;
+    type Data = Image;
+    type MetaData = ();
+
+    fn request(&mut self, _id: &Id) -> (Image, Option<()>) {
+        (Image::Pending(self.pending_image.clone()),
+         Some(()))
     }
 
-    fn create(&mut self, id: &Id) -> Option<Image> {
+    fn create(&mut self, id: &Id, _meta: &mut ()) -> Option<Image> {
         let path = Path::new(&id.0);
         let im = image::open(&path);
         if im.is_ok() {
@@ -76,6 +79,6 @@ pub fn create() -> ImageStore {
     ImageStore::new(ImageLoader::new())
 }
 
-pub type ImageStore = store::Store<Id, Image>;
-pub type ImageRef = store::Index<Id, Image>;
+pub type ImageStore = store::Store<ImageLoader>;
+pub type ImageRef = store::Index<ImageLoader>;
 pub type ImageId = Id;

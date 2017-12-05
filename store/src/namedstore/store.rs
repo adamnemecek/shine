@@ -1,23 +1,26 @@
-#![cfg(WIP)]
 #![deny(missing_copy_implementations)]
 
 use std::ptr;
+use std::collections::HashMap;
 use std::ops;
 use std::sync::*;
 use std::sync::atomic::*;
 
+use super::factory::*;
+
+
 /// Index into the store to access elements in O(1)
 #[derive(PartialEq, Eq, Debug)]
-pub struct Index<Data>(*const Entry<Data>);
+pub struct Index<F: Factory>(*const Entry<F>);
 
-impl<Data> Index<Data> {
-    pub fn null() -> Index<Data> {
+impl<F: Factory> Index<F> {
+    pub fn null() -> Index<F> {
         Index(ptr::null())
     }
 
-    fn new(entry: &Box<Entry<Data>>) -> Index<Data> {
+    fn new(entry: &Box<Entry<F>>) -> Index<F> {
         entry.ref_count.fetch_add(1, Ordering::Relaxed);
-        Index(entry.as_ref() as *const Entry<Data>)
+        Index(entry.as_ref() as *const Entry<F>)
     }
 
     pub fn is_null(&self) -> bool {
@@ -29,8 +32,8 @@ impl<Data> Index<Data> {
     }
 }
 
-impl<Data> Clone for Index<Data> {
-    fn clone(&self) -> Index<Data> {
+impl<F: Factory> Clone for Index<F> {
+    fn clone(&self) -> Index<F> {
         if !self.0.is_null() {
             let entry = unsafe { &(*self.0) };
             entry.ref_count.fetch_add(1, Ordering::Relaxed);
@@ -39,7 +42,7 @@ impl<Data> Clone for Index<Data> {
     }
 }
 
-impl<Data> Drop for Index<Data> {
+impl<F: Factory> Drop for Index<F> {
     fn drop(&mut self) {
         if !self.0.is_null() {
             let entry = unsafe { &*self.0 };
@@ -51,24 +54,26 @@ impl<Data> Drop for Index<Data> {
 
 /// An entry in the store.
 #[derive(Debug)]
-struct Entry<Data> {
+struct Entry<F: Factory> {
     /// Number of active Index (number of references) to this entry
     ref_count: AtomicUsize,
     /// The stored data
-    value: Data,
+    value: F::Data,
+    /// Store the meta data for pending request, or None for non-pending
+    meta: Option<F::MetaData>,
 }
 
 
 /// Stores requests for the missing resources.
-struct RequestHandler<Data> {
-    factory: Box<Fn() -> Data>,
-    requests: Vec<Option<Box<Entry<Data>>>>,
+struct RequestHandler<F: Factory> {
+    factory: Box<F>,
+    requests: HashMap<F::Key, Option<Box<Entry<F>>>>,
 }
 
-impl<Data> RequestHandler<Data> {
-    fn process_requests(&mut self, resources: &mut Vec<Box<Entry<Data>>>) {
+impl<F: Factory> RequestHandler<F> {
+    fn process_requests(&mut self, resources: &mut HashMap<F::Key, Box<Entry<F>>>) {
         let factory = &mut self.factory;
-        self.requests.retain(|entry| {
+        self.requests.retain(|id, entry| {
             let retain = entry.as_mut().map_or(false, |entry| {
                 if entry.meta.is_none() {
                     false
@@ -91,20 +96,20 @@ impl<Data> RequestHandler<Data> {
 
 
 /// Resource store. Resources are constants and can be created/requested through the store only.
-pub struct Store<Data> {
-    request_handler: Mutex<RequestHandler<Data>>,
-    resources: RwLock<Vec<Box<Entry<Data>>>>,
+pub struct Store<F: Factory> {
+    request_handler: Mutex<RequestHandler<F>>,
+    resources: RwLock<HashMap<F::Key, Box<Entry<F>>>>,
 }
 
-impl<Data> Store<Data> {
+impl<F: Factory> Store<F> {
     /// Creates a new store with the given factory.
-    pub fn new(factory: Fn() -> Data) -> Store<Data> {
+    pub fn new(factory: F) -> Store<F> {
         Store {
             request_handler: Mutex::new(RequestHandler {
                 factory: Box::new(factory),
-                requests: Vec::new()
+                requests: HashMap::new()
             }),
-            resources: RwLock::new(Vec::new()),
+            resources: RwLock::new(HashMap::new()),
         }
     }
 
@@ -121,13 +126,15 @@ impl<Data> Store<Data> {
         let mut resources = self.resources.try_write().unwrap();
         let mut request_handler = self.request_handler.lock().unwrap();
 
-        request_handler.requests.retain(|v| {
+        request_handler.requests.retain(|_k, v| {
             let count = v.as_ref().unwrap().ref_count.load(Ordering::Relaxed);
+            //println!("k{:?}, {}", _k, count);
             count != 0
         });
 
-        resources.retain(|v| {
+        resources.retain(|_k, v| {
             let count = v.ref_count.load(Ordering::Relaxed);
+            //println!("k{:?}, {}", _k, count);
             count != 0
         });
     }
@@ -157,23 +164,32 @@ impl<Data> Store<Data> {
     }
 }
 
-impl<Data> Drop for Store<Data> {
+impl<F: Factory> Drop for Store<F> {
     fn drop(&mut self) {
         self.drain_unused();
 
-        assert!( resources.is_empty(), "Leaking loaded resource");
+        {
+            let resources = self.resources.try_write().unwrap();
+            if !resources.is_empty() {
+                for res in resources.iter() {
+                    println!("leaking {:?}", res.0);
+                }
+            }
+            assert!( resources.is_empty(), "Leaking loaded resource");
+        }
+
         assert!( self.request_handler.lock().unwrap().requests.is_empty(), "Leaking requested resource");
     }
 }
 
 /// Helper
-pub struct ReadGuardStore<'a, Data: 'a> {
-    resources: RwLockReadGuard<'a, Vec<Box<Entry<Data>>>>,
-    request_handler: &'a Mutex<RequestHandler<Data>>,
+pub struct ReadGuardStore<'a, F: 'a + Factory> {
+    resources: RwLockReadGuard<'a, HashMap<F::Key, Box<Entry<F>>>>,
+    request_handler: &'a Mutex<RequestHandler<F>>,
 }
 
 
-impl<'a, Data: 'a> ReadGuardStore<'a, Data> {
+impl<'a, F: 'a + Factory> ReadGuardStore<'a, F> {
     fn request_unchecked(&self, id: &F::Key) -> Index<F> {
         let mut request_handler = self.request_handler.lock().unwrap();
 

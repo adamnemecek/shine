@@ -14,6 +14,8 @@ extern crate user32;
 #[macro_reexport(VertexDeclaration, ShaderDeclaration)]
 extern crate dragorust_render_derive;
 
+extern crate dragorust_store as store;
+
 extern crate arrayvec;
 
 #[macro_use]
@@ -57,8 +59,9 @@ pub use rendermanager::*;
 pub use commandqueue::*;
 
 pub mod backend {
-	#[path = "../opengl/mod.rs"]
-	mod opengl;
-	pub use super::*;
-	pub use self::opengl::*;
+    #[path = "../opengl/mod.rs"]
+    mod opengl;
+
+    pub use super::*;
+    pub use self::opengl::*;
 }
