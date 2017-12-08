@@ -4,5 +4,5 @@
 
 pub mod spsc;
 pub mod store;
-pub mod namedstore;
+pub mod hashstore;
 

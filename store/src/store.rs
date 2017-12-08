@@ -8,7 +8,7 @@ use std::sync::atomic::*;
 
 /// Index into the store to access elements in O(1)
 #[derive(PartialEq, Eq, Debug)]
-pub struct Index<Data>(*const Entry<Data>);
+pub struct Index<F: Factory>(*const Entry<F>);
 
 impl<Data> Index<Data> {
     pub fn null() -> Index<Data> {
@@ -25,13 +25,17 @@ impl<Data> Index<Data> {
     }
 
     pub fn release(&mut self) {
-        *self = Self::null();
+        if !self.is_null() {
+            let entry = unsafe { &(*self.0) };
+            entry.ref_count.fetch_sub(1, Ordering::Relaxed);
+        }
+        self.0 = ptr::null();
     }
 }
 
 impl<Data> Clone for Index<Data> {
     fn clone(&self) -> Index<Data> {
-        if !self.0.is_null() {
+        if !self.is_null() {
             let entry = unsafe { &(*self.0) };
             entry.ref_count.fetch_add(1, Ordering::Relaxed);
         }
@@ -41,10 +45,7 @@ impl<Data> Clone for Index<Data> {
 
 impl<Data> Drop for Index<Data> {
     fn drop(&mut self) {
-        if !self.0.is_null() {
-            let entry = unsafe { &*self.0 };
-            entry.ref_count.fetch_sub(1, Ordering::Relaxed);
-        }
+        self.release();
     }
 }
 
@@ -59,197 +60,176 @@ struct Entry<Data> {
 }
 
 
-/// Stores requests for the missing resources.
-struct RequestHandler<Data> {
-    factory: Box<Fn() -> Data>,
-    requests: Vec<Option<Box<Entry<Data>>>>,
-}
-
-impl<Data> RequestHandler<Data> {
-    fn process_requests(&mut self, resources: &mut Vec<Box<Entry<Data>>>) {
-        let factory = &mut self.factory;
-        self.requests.retain(|entry| {
-            let retain = entry.as_mut().map_or(false, |entry| {
-                if entry.meta.is_none() {
-                    false
-                } else if let Some(value) = factory.create(id, entry.meta.as_mut().unwrap()) {
-                    entry.value = value;
-                    entry.meta = None;
-                    false
-                } else {
-                    true
-                }
-            });
-
-            if !retain {
-                resources.insert(id.clone(), entry.take().unwrap());
-            }
-            retain
-        });
-    }
+/// The items stored in the vector.
+enum Slot<Data> {
+    /// Occupied items
+    Occupied(Box<Entry<Data>>),
+    /// next free slot
+    Vacant(usize),
 }
 
 
-/// Resource store. Resources are constants and can be created/requested through the store only.
-pub struct Store<Data> {
-    request_handler: Mutex<RequestHandler<Data>>,
-    resources: RwLock<Vec<Box<Entry<Data>>>>,
+/// Item container without the mutex guard
+struct SlotStore<Data> {
+    slots: Vec<Slot<Data>>,
+    free_count: usize,
+    free_head: usize,
 }
 
-impl<Data> Store<Data> {
-    /// Creates a new store with the given factory.
-    pub fn new(factory: Fn() -> Data) -> Store<Data> {
-        Store {
-            request_handler: Mutex::new(RequestHandler {
-                factory: Box::new(factory),
-                requests: Vec::new()
-            }),
-            resources: RwLock::new(Vec::new()),
+impl<Data> SlotStore<Data> {
+    /// Construct the store without memory allocation
+    fn new() -> SlotStore<Data> {
+        SlotStore {
+            slots: vec!(),
+            free_count: 0,
+            free_head: usize::max_value(),
         }
     }
 
-    /// Process the requests.
-    pub fn update(&self) {
-        let mut resources = self.resources.try_write().unwrap();
-        let mut request_handler = self.request_handler.lock().unwrap();
+    /// Construct the store with memory allocated for at least capacity count items
+    fn new_with_capacity(capacity: usize) -> SlotStore<Data> {
+        let mut store = Self::new();
+        store.reserve(capacity);
+        store
+    }
 
-        request_handler.process_requests(&mut resources);
+    /// Reserve slots for additional number of items.
+    fn reserve(&mut self, additional: usize) {
+        if additional <= self.free_count {
+            return;
+        }
+
+        let additional = additional - self.free_count;
+        self.slots.reserve(additional);
+        let additional = self.slots.capacity() - self.slots.len();
+        for _ in 0..additional {
+            let id = self.slots.len();
+            self.slots.push(Slot::Vacant(self.free_head));
+            self.free_head = id;
+            self.free_count += 1;
+        }
     }
 
     /// Removes unreferenced resources.
-    pub fn drain_unused(&self) {
-        let mut resources = self.resources.try_write().unwrap();
-        let mut request_handler = self.request_handler.lock().unwrap();
+    fn add(&mut self, data: Data) -> Index<Data> {
+        if self.free_head == usize::max_value() {
+            //use the default increment of vec
+            self.reserve(1);
+        }
+        assert!(self.free_head != usize::max_value());
 
-        request_handler.requests.retain(|v| {
-            let count = v.as_ref().unwrap().ref_count.load(Ordering::Relaxed);
-            count != 0
-        });
+        let slot = &mut self.slots[self.free_head];
+        if let Slot::Vacant(idx) = *slot {
+            self.free_head = idx
+        } else {
+            unreachable!();
+        }
 
-        resources.retain(|v| {
-            let count = v.ref_count.load(Ordering::Relaxed);
-            count != 0
-        });
+        *slot = Slot::Occupied(Box::new(Entry {
+            ref_count: AtomicUsize::new(0),
+            value: data
+        }));
+
+        match slot {
+            &mut Slot::Occupied(ref slot) => Index::new(slot),
+            _ => unreachable!()
+        }
     }
 
-    /// Returns if there are any pending requests
-    pub fn has_request(&self) -> bool {
-        let _resources = self.resources.try_write().unwrap();
-        let request_handler = self.request_handler.lock().unwrap();
+    /// Removes unreferenced resources.
+    fn drain_unused(&mut self) {
+        for (idx, slot) in self.slots.iter_mut().enumerate() {
+            let release = {
+                if let Slot::Occupied(ref slot) = *slot {
+                    let count = slot.ref_count.load(Ordering::Relaxed);
+                    count == 0
+                } else {
+                    false
+                }
+            };
 
-        !request_handler.requests.is_empty()
+            if release {
+                *slot = Slot::Vacant(self.free_head);
+                self.free_head = idx;
+            }
+        }
+    }
+}
+
+
+/// Resource store.
+pub struct Store<Data> {
+    resources: Mutex<SlotStore<Data>>,
+    reqests: Mutex<SlotStore<Data>>,
+}
+
+impl<Data> Store<Data> {
+    pub fn new() -> Store<Data> {
+        Store {
+            resources: Mutex::new(SlotStore::new()),
+            reqests: Mutex::new(SlotStore::new()),
+        }
     }
 
-    /// Returns if there are any elements in the store
-    pub fn is_empty(&self) -> bool {
-        let resources = self.resources.try_write().unwrap();
-        let request_handler = self.request_handler.lock().unwrap();
-
-        request_handler.requests.is_empty() && resources.is_empty()
+    /// Creates a new store with memory allocated for at least capacity items
+    pub fn new_with_capacity(capacity: usize, request_capacity: usize) -> Store<Data> {
+        Store {
+            resources: Mutex::new(SlotStore::new_with_capacity(capacity)),
+            reqests: Mutex::new(SlotStore::new_with_capacity(request_capacity)),
+        }
     }
 
-    /// Returns a guard object that ensures, no resources are updated during its scope.
-    pub fn read<'a>(&'a self) -> ReadGuardStore<F> {
-        ReadGuardStore {
-            resources: self.resources.read().unwrap(),
-            request_handler: &self.request_handler,
+    /// Adds a new item to the store
+    pub fn add(&self, data: Data) -> Index<Data> {
+        let mut requests = self.requests.lock().unwrap();
+        requests.add(data)
+    }
+
+    /// Returns a guard object that ensures a scope for update.
+    /// The stored items cannot be accessed outside this scope and at most one thread may
+    /// own an UpdateGuardStore.
+    /// # Panic
+    /// If multiple threads try to acquire an update a panic is triggered.
+    pub fn update<'a>(&'a self) -> UpdateGuardStore<Data> {
+        UpdateGuardStore {
+            resources: &self.resources.try_lock().unwrap(),
         }
     }
 }
 
 impl<Data> Drop for Store<Data> {
     fn drop(&mut self) {
-        self.drain_unused();
+        let mut requests = self.requests.try_lock().unwrap();
+        let mut resources = self.resources.try_lock().unwrap();
+        requests.drain_unused();
+        resources.drain_unused();
 
-        assert!( resources.is_empty(), "Leaking loaded resource");
-        assert!( self.request_handler.lock().unwrap().requests.is_empty(), "Leaking requested resource");
+        assert!( resources.is_empty(), "Leaking resource");
+        assert!( requests.is_empty(), "Leaking requests");
     }
 }
+
 
 /// Helper
-pub struct ReadGuardStore<'a, Data: 'a> {
-    resources: RwLockReadGuard<'a, Vec<Box<Entry<Data>>>>,
-    request_handler: &'a Mutex<RequestHandler<Data>>,
+pub struct UpdateGuardStore<'a, Data: 'a> {
+    resources: &'a MutexGuard<'a, SharedSlots<Data>>,
+    requests: &'a Mutex<SharedSlots<Data>>,
 }
 
-
-impl<'a, Data: 'a> ReadGuardStore<'a, Data> {
-    fn request_unchecked(&self, id: &F::Key) -> Index<F> {
-        let mut request_handler = self.request_handler.lock().unwrap();
-
-        if let Some(request) = request_handler.requests.get(id) {
-            // resource already found in the requests container
-            return Index::new(request.as_ref().unwrap());
-        }
-
-        // resource not found, create a temporary now
-        let value = request_handler.factory.request(id);
-        let request = Box::new(Entry {
-            ref_count: AtomicUsize::new(0),
-            value: value.0,
-            meta: value.1,
-        });
-        let index = Index::new(&request);
-        request_handler.requests.insert(id.clone(), Some(request));
-        index
+impl<'a, Data: 'a> CreateGuardStore<'a, Data> {
+    /// Removes unreferenced resources.
+    pub fn drain_unused(&self) {
+        // resources are already locked
+        let mut requests = self.requests.lock().unwrap();
+        self.resources.drain_unused();
+        requests.drain_unused();
     }
 
-    /// Returns if there are any pending requests
-    pub fn has_request(&self) -> bool {
-        let request_handler = self.request_handler.lock().unwrap();
-        !request_handler.requests.is_empty()
-    }
+    /// Process requests and merge the
+    pub fn update(&self) {
+        // resources are already locked
+        let mut requests = self.requests.lock().unwrap();
 
-    /// Gets a loaded resource. If resource is not found, a none reference is returned
-    pub fn get(&self, id: &F::Key) -> Index<F> {
-        if let Some(request) = self.resources.get(id) {
-            // resource already found in the requests container
-            return Index::new(request);
-        }
-
-        let request_handler = self.request_handler.lock().unwrap();
-        if let Some(request) = request_handler.requests.get(id) {
-            // resource already found in the requests container
-            return Index::new(request.as_ref().unwrap());
-        }
-        Index::null()
-    }
-
-    /// Requests a resource to be loaded without taking a reference to it.
-    pub fn request(&self, id: &F::Key) {
-        if !self.resources.contains_key(id) {
-            self.request_unchecked(id);
-        }
-    }
-
-    /// Gets a resource by the given id. If the resource is not loaded, reference to pending resource is
-    /// returned and the missing is is enqued in the request list.
-    pub fn get_or_request(&self, id: &F::Key) -> Index<F> {
-        let resource = self.get(id);
-        if resource.is_null() {
-            self.request_unchecked(id)
-        } else {
-            resource
-        }
-    }
-
-    pub fn is_pending(&self, index: &Index<F>) -> bool {
-        assert! ( !index.is_null(), "Indexing store by a null-index is not allowed");
-        let entry = unsafe { &(*index.0) };
-        entry.meta.is_some()
-    }
-
-    pub fn is_ready(&self, index: &Index<F>) -> bool {
-        !self.is_pending(index)
-    }
-}
-
-impl<'a, 'i, F: Factory> ops::Index<&'i Index<F>> for ReadGuardStore<'a, F> {
-    type Output = F::Data;
-
-    fn index(&self, index: &Index<F>) -> &Self::Output {
-        assert! ( !index.is_null(), "Indexing store by a null-index is not allowed");
-        let entry = unsafe { &(*index.0) };
-        &entry.value
+        vec.
     }
 }

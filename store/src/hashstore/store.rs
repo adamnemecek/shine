@@ -28,13 +28,17 @@ impl<F: Factory> Index<F> {
     }
 
     pub fn release(&mut self) {
-        *self = Self::null();
+        if !self.is_null() {
+            let entry = unsafe { &(*self.0) };
+            entry.ref_count.fetch_sub(1, Ordering::Relaxed);
+        }
+        self.0 = ptr::null();
     }
 }
 
 impl<F: Factory> Clone for Index<F> {
     fn clone(&self) -> Index<F> {
-        if !self.0.is_null() {
+        if !self.is_null() {
             let entry = unsafe { &(*self.0) };
             entry.ref_count.fetch_add(1, Ordering::Relaxed);
         }
@@ -44,10 +48,7 @@ impl<F: Factory> Clone for Index<F> {
 
 impl<F: Factory> Drop for Index<F> {
     fn drop(&mut self) {
-        if !self.0.is_null() {
-            let entry = unsafe { &*self.0 };
-            entry.ref_count.fetch_sub(1, Ordering::Relaxed);
-        }
+        self.release();
     }
 }
 
@@ -96,15 +97,15 @@ impl<F: Factory> RequestHandler<F> {
 
 
 /// Resource store. Resources are constants and can be created/requested through the store only.
-pub struct Store<F: Factory> {
+pub struct HashStore<F: Factory> {
     request_handler: Mutex<RequestHandler<F>>,
     resources: RwLock<HashMap<F::Key, Box<Entry<F>>>>,
 }
 
-impl<F: Factory> Store<F> {
+impl<F: Factory> HashStore<F> {
     /// Creates a new store with the given factory.
-    pub fn new(factory: F) -> Store<F> {
-        Store {
+    pub fn new(factory: F) -> HashStore<F> {
+        HashStore {
             request_handler: Mutex::new(RequestHandler {
                 factory: Box::new(factory),
                 requests: HashMap::new()
@@ -114,6 +115,9 @@ impl<F: Factory> Store<F> {
     }
 
     /// Process the requests.
+    /// # Panic
+    /// This call assumes no other thread is reading(writing) the store. This constraint is checked runtime and
+    /// the function panics if write locks cannot be acquired.
     pub fn update(&self) {
         let mut resources = self.resources.try_write().unwrap();
         let mut request_handler = self.request_handler.lock().unwrap();
@@ -121,7 +125,11 @@ impl<F: Factory> Store<F> {
         request_handler.process_requests(&mut resources);
     }
 
-    /// Removes unreferenced resources.
+    /// Removes unreferenced resources. This is a garbage collection method that release all the unreferenced slots.
+    /// Items are release only through this call.
+    /// # Panic
+    /// This call assumes no other thread is reading(writing) the store. This constraint is checked runtime and
+    /// the function panics if write locks cannot be acquired.
     pub fn drain_unused(&self) {
         let mut resources = self.resources.try_write().unwrap();
         let mut request_handler = self.request_handler.lock().unwrap();
@@ -139,7 +147,7 @@ impl<F: Factory> Store<F> {
         });
     }
 
-    /// Returns if there are any pending requests
+    /// Returns if there are any pending requests.
     pub fn has_request(&self) -> bool {
         let _resources = self.resources.try_write().unwrap();
         let request_handler = self.request_handler.lock().unwrap();
@@ -147,7 +155,7 @@ impl<F: Factory> Store<F> {
         !request_handler.requests.is_empty()
     }
 
-    /// Returns if there are any elements in the store
+    /// Returns if there are any elements in the store.
     pub fn is_empty(&self) -> bool {
         let resources = self.resources.try_write().unwrap();
         let request_handler = self.request_handler.lock().unwrap();
@@ -155,7 +163,7 @@ impl<F: Factory> Store<F> {
         request_handler.requests.is_empty() && resources.is_empty()
     }
 
-    /// Returns a guard object that ensures, no resources are updated during its scope.
+    /// Returns a guard object that ensures no resources are updated during its scope.
     pub fn read<'a>(&'a self) -> ReadGuardStore<F> {
         ReadGuardStore {
             resources: self.resources.read().unwrap(),
@@ -164,7 +172,7 @@ impl<F: Factory> Store<F> {
     }
 }
 
-impl<F: Factory> Drop for Store<F> {
+impl<F: Factory> Drop for HashStore<F> {
     fn drop(&mut self) {
         self.drain_unused();
 
@@ -182,7 +190,11 @@ impl<F: Factory> Drop for Store<F> {
     }
 }
 
-/// Helper
+
+/// A guard to ensure that no resources are updated during its scope.
+/// Through the guard new items can be requested but items already in the store (either ready or pending)
+/// cannot be modified. There is no API to mutate the content without a panic while a read-guard is active.
+/// No pending ot final resources can be modified while this guard is in scope.
 pub struct ReadGuardStore<'a, F: 'a + Factory> {
     resources: RwLockReadGuard<'a, HashMap<F::Key, Box<Entry<F>>>>,
     request_handler: &'a Mutex<RequestHandler<F>>,
@@ -190,7 +202,10 @@ pub struct ReadGuardStore<'a, F: 'a + Factory> {
 
 
 impl<'a, F: 'a + Factory> ReadGuardStore<'a, F> {
-    fn request_unchecked(&self, id: &F::Key) -> Index<F> {
+    /// Helper function to add a new item to the request queue. It is assumed that the requested resource
+    /// is not in the resource store. And as the resources are read-locked it cannot be added while
+    /// the guard is in scope.
+    fn request_new(&self, id: &F::Key) -> Index<F> {
         let mut request_handler = self.request_handler.lock().unwrap();
 
         if let Some(request) = request_handler.requests.get(id) {
@@ -210,51 +225,58 @@ impl<'a, F: 'a + Factory> ReadGuardStore<'a, F> {
         index
     }
 
-    /// Returns if there are any pending requests
+    /// Returns if there are any pending requests.
     pub fn has_request(&self) -> bool {
         let request_handler = self.request_handler.lock().unwrap();
         !request_handler.requests.is_empty()
     }
 
-    /// Gets a loaded resource. If resource is not found, a none reference is returned
+    /// Gets a loaded resource. If resource is not found a null index is returned.
     pub fn get(&self, id: &F::Key) -> Index<F> {
-        if let Some(request) = self.resources.get(id) {
+        if let Some(ref request) = self.resources.get(id) {
             // resource already found in the requests container
             return Index::new(request);
         }
 
         let request_handler = self.request_handler.lock().unwrap();
-        if let Some(request) = request_handler.requests.get(id) {
+        if let Some(ref request) = request_handler.requests.get(id) {
             // resource already found in the requests container
             return Index::new(request.as_ref().unwrap());
         }
+
         Index::null()
     }
 
-    /// Requests a resource to be loaded without taking a reference to it.
+    /// Requests a resource to be loaded (if not loaded yet). No index is returned it is mainly used
+    /// to preload resources before they are used.
     pub fn request(&self, id: &F::Key) {
         if !self.resources.contains_key(id) {
-            self.request_unchecked(id);
+            self.request_new(id);
         }
     }
 
-    /// Gets a resource by the given id. If the resource is not loaded, reference to pending resource is
-    /// returned and the missing is is enqued in the request list.
+    /// Gets a resource by the given id. If the resource is not loaded the index to the (pending)
+    /// object created by the factory is returned. The object is created only during the next update.
+    /// Based on the factory implementation it is possible
+    /// -- that the pending resource is the "final" resource
+    /// -- the client has to wait multiple updates before the "final" resource is ready
     pub fn get_or_request(&self, id: &F::Key) -> Index<F> {
         let resource = self.get(id);
         if resource.is_null() {
-            self.request_unchecked(id)
+            self.request_new(id)
         } else {
             resource
         }
     }
 
+    /// Returns if the object referenced by the index is pending.
     pub fn is_pending(&self, index: &Index<F>) -> bool {
         assert! ( !index.is_null(), "Indexing store by a null-index is not allowed");
         let entry = unsafe { &(*index.0) };
         entry.meta.is_some()
     }
 
+    /// Returns if the object referenced by the index is final.
     pub fn is_ready(&self, index: &Index<F>) -> bool {
         !self.is_pending(index)
     }

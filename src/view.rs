@@ -78,8 +78,8 @@ pub struct SimpleView {
     index_buffer1: IndexBuffer<u8>,
     index_buffer2: IndexBuffer<u16>,
     img1: world::ImageRef,
-    texture1: Texture2D,
-    texture2: Texture2D,
+    texture1: Texture2DHandle,
+    texture2: Texture2DHandle,
 
     t: f32,
 }
@@ -95,8 +95,8 @@ impl SimpleView {
             index_buffer1: IndexBuffer::new(),
             index_buffer2: IndexBuffer::new(),
             img1: world::ImageRef::null(),
-            texture1: Texture2D::new(),
-            texture2: Texture2D::new(),
+            texture1: Texture2DHandle::new(),
+            texture2: Texture2DHandle::new(),
             t: 0f32,
         }
     }

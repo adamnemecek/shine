@@ -5,7 +5,7 @@ use std::marker::PhantomData;
 /// Trait for resource id
 pub trait Id: Clone + Send + Eq + Hash + fmt::Debug {}
 
-/// Trait to create value items from the resource id
+/// Trait to create the resource from its id
 pub trait Factory: Send {
     /// The uniqueue key of the created, stored item
     type Key: Id;
@@ -28,26 +28,26 @@ pub trait Factory: Send {
 
 /// Factory that creates items synchronously using a function,
 /// The items are constructed on request and no pending data is created.
-pub struct FuntionFactory<Key: Id, Data, F>
+pub struct FunctionFactory<Key: Id, Data, F>
     where
         F: Send + Fn(&Key) -> Data {
     function: F,
     phantom: PhantomData<Key>
 }
 
-impl<Key: Id, Data, F> FuntionFactory<Key, Data, F>
+impl<Key: Id, Data, F> FunctionFactory<Key, Data, F>
     where
         F: Send + Fn(&Key) -> Data {
     /// Construct a Factory from a function object
-    pub fn new(f: F) -> FuntionFactory<Key, Data, F> {
-        FuntionFactory {
+    pub fn new(f: F) -> FunctionFactory<Key, Data, F> {
+        FunctionFactory {
             function: f,
             phantom: PhantomData,
         }
     }
 }
 
-impl<Key: Id, Data, F> Factory for FuntionFactory<Key, Data, F>
+impl<Key: Id, Data, F> Factory for FunctionFactory<Key, Data, F>
     where
         F: Send + Fn(&Key) -> Data {
     type Key = Key;

@@ -3,8 +3,8 @@ extern crate dragorust_store;
 use std::thread;
 use std::sync::Arc;
 
-use dragorust_store::namedstore;
-use dragorust_store::namedstore::{Id, Factory, FuntionFactory};
+use dragorust_store::hashstore;
+use dragorust_store::hashstore::{Id, Factory, FunctionFactory};
 
 /// Resource id for test data
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -48,7 +48,7 @@ impl Factory for TestFactory {
 
 #[test]
 fn store_simple_strict() {
-    let store = namedstore::create(FuntionFactory::new(|id: &TestDataId| TestData::new(format!("id: {}", id.0))));
+    let store = hashstore::create(FunctionFactory::new(|id: &TestDataId| TestData::new(format!("id: {}", id.0))));
     let mut r0;// = TestRef::none();
     let mut r1;// = TestRef::none();
 
@@ -112,7 +112,7 @@ fn store_simple_strict() {
 
 #[test]
 fn store_simple_lazy() {
-    let store = namedstore::create(TestFactory);
+    let store = hashstore::create(TestFactory);
     let mut r0;// = TestRef::none();
     let mut r1;// = TestRef::none();
 
@@ -177,7 +177,7 @@ fn store_simple_lazy() {
 
 #[test]
 fn store_multi_threaded() {
-    let store = Arc::new(namedstore::create(TestFactory));
+    let store = Arc::new(hashstore::create(TestFactory));
 
     const ITER: u32 = 10;
 

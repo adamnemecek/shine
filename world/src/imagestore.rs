@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 use std::path::Path;
-use store::namedstore as store;
+use store::hashstore;
 use image;
 
 /// Resource id of an image.
@@ -15,7 +15,7 @@ impl Id {
     }
 }
 
-impl store::Id for Id {}
+impl hashstore::Id for Id {}
 
 /// The Image resources.
 /// Error and pending images are shared. As they can be requested from multiple threads at the same time,
@@ -52,7 +52,7 @@ impl ImageLoader {
     }
 }
 
-impl store::Factory for ImageLoader {
+impl hashstore::Factory for ImageLoader {
     type Key = Id;
     type Data = Image;
     type MetaData = ();
@@ -79,6 +79,6 @@ pub fn create() -> ImageStore {
     ImageStore::new(ImageLoader::new())
 }
 
-pub type ImageStore = store::Store<ImageLoader>;
-pub type ImageRef = store::Index<ImageLoader>;
+pub type ImageStore = hashstore::HashStore<ImageLoader>;
+pub type ImageRef = hashstore::Index<ImageLoader>;
 pub type ImageId = Id;
