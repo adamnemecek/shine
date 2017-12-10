@@ -6,6 +6,7 @@ extern crate quote;
 use proc_macro::TokenStream;
 
 mod utils;
+mod glslang;
 mod vertexdeclaration;
 mod shaderdeclaration;
 

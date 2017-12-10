@@ -5,7 +5,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Read;
 
-//use utils::*;
+use glslang::*;
 
 #[derive(Debug)]
 enum SourceKind {
@@ -20,31 +20,30 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         .filter_map(|attr| {
             match attr.value {
                 syn::MetaItem::NameValue(ref i, syn::Lit::Str(ref val, _)) if i == "vert_src" => {
-                    Some(("VertexShader".to_string(), SourceKind::Src(val.clone())))
+                    Some((ShaderType::VertexShader, SourceKind::Src(val.clone())))
                 }
 
                 syn::MetaItem::NameValue(ref i, syn::Lit::Str(ref val, _)) if i == "vert_path" => {
-                    Some(("VertexShader".to_string(), SourceKind::Path(val.clone())))
+                    Some((ShaderType::VertexShader, SourceKind::Path(val.clone())))
                 }
 
                 syn::MetaItem::NameValue(ref i, syn::Lit::Str(ref val, _)) if i == "frag_src" => {
-                    Some(("FragmentShader".to_string(), SourceKind::Src(val.clone())))
+                    Some((ShaderType::FragmentShader, SourceKind::Src(val.clone())))
                 }
 
                 syn::MetaItem::NameValue(ref i, syn::Lit::Str(ref val, _)) if i == "frag_path" => {
-                    Some(("FragmentShader".to_string(), SourceKind::Path(val.clone())))
+                    Some((ShaderType::FragmentShader, SourceKind::Path(val.clone())))
                 }
 
                 _ => None
             }
         })
         .filter_map(|(sh_type, source)| {
-            let sh_type = syn::Ident::new(sh_type);
             match source {
-                SourceKind::Src(source) => Some(quote! { (::dragorust_engine::render::ShaderType::#sh_type, #source) }),
+                SourceKind::Src(source) => Some((sh_type, source)),
 
                 SourceKind::Path(path) => {
-                    let root = env::var("CARGO_MANIFEST_DIR").unwrap_or(".".into());
+                    let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
                     let full_path = Path::new(&root).join(&path);
 
                     if full_path.is_file() {
@@ -52,15 +51,23 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
                         File::open(full_path)
                             .and_then(|mut file| file.read_to_string(&mut buf))
                             .expect(&format!("Error reading source from {:?}", path));
-                        Some(quote! { (::dragorust_engine::render::ShaderType::#sh_type, #buf) })
+                        Some((sh_type, buf))
                     } else {
-                        panic!("File {:?} was not found. Path must be relative to your Cargo.toml", path);
+                        panic!("Derive proc-macro ShaderDeclaration: file {:?} was not found. Path must be relative to your Cargo.toml", path);
                     }
                 }
             }
-        });
+        }).collect::<Vec<_>>();
 
-    let sources = sources.collect::<Vec<_>>();
+
+    let (attributes, uniforms, sources) = prepocess_sources(name.to_string(), sources.iter());
+
+    let sources = sources.iter().map(|shader| {
+        let sh_type = shader.0.to_ident();
+        let ref source = shader.1;
+        Some(quote! { (::dragorust_engine::render::ShaderType::#sh_type, #source) })
+    }).collect::<Vec<_>>();
+
     let gen = quote! {
         impl ShaderDeclaration for #name {
             type Attribute = ShSimpleAttribute;

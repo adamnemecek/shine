@@ -46,7 +46,7 @@ fn impl_get_declaration_for_struct(name: &syn::Ident, fields: &Vec<syn::Field>) 
 
     gen.push(
         quote! {
-         _ => panic!("invalid attribute index: {}, must be in the range 0..{}", idx, #enum_type_name::count()),
+         _ => panic!("Derive proc-macro VertexDeclaration: invalid attribute index: {}, must be in the range 0..{}", idx, #enum_type_name::count()),
         }
     );
 

@@ -1,20 +1,47 @@
 use std::process::Command;
 use std::str;
+use std::env;
+use std::path::Path;
+use std::fs;
+use std::io::prelude::*;
+
+use syn;
 
 static GLSL_VALIDATOR_EXECUTABLE: &'static str = "glslangValidator";
 static GLSL_VALIDATOR_ARGS_INFO: [&'static str; 3] = ["-l", "-d", "-q"];
 static GLSL_VALIDATOR_ARGS_PREPROCESS: [&'static str; 1] = ["-E"];
 
+#[derive(Copy, Clone, Debug)]
+pub enum ShaderType {
+    VertexShader,
+    FragmentShader,
+}
+
+impl ShaderType {
+    pub fn to_ident(&self) -> syn::Ident {
+        match self {
+            &ShaderType::VertexShader => syn::Ident::new("VertexShader"),
+            &ShaderType::FragmentShader => syn::Ident::new("FragmentShader"),
+        }
+    }
+
+    pub fn to_extension(&self) -> &str {
+        match self {
+            &ShaderType::VertexShader => ".vert",
+            &ShaderType::FragmentShader => ".frag",
+        }
+    }
+}
 
 #[derive(Debug)]
-struct Uniform {
+pub struct Uniform {
     name: String,
     type_id: u32,
     size: u32,
 }
 
 #[derive(Debug)]
-struct Attribute {
+pub struct Attribute {
     name: String,
 }
 
@@ -43,14 +70,22 @@ fn parse_attribute(line: &str) -> Attribute {
     }
 }
 
+fn get_glslangValidator_executable() -> String {
+    let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
+    let root = Path::new(&root).join("tools").join(GLSL_VALIDATOR_EXECUTABLE);
+    root.to_str().unwrap().to_string()
+}
 
-fn extract_shader_info(shaders: &[&str]) -> (Vec<Attribute>, Vec<Uniform>) {
+
+fn extract_shader_info(shaders: &[String]) -> (Vec<Attribute>, Vec<Uniform>) {
+    let bin = get_glslangValidator_executable();
+
     let output =
-        Command::new(GLSL_VALIDATOR_EXECUTABLE)
+        Command::new(bin.clone())
             .args(shaders)
             .args(&GLSL_VALIDATOR_ARGS_INFO)
             .output()
-            .expect(&format!("failed execute {} to extract info. args: {:?}", GLSL_VALIDATOR_EXECUTABLE, GLSL_VALIDATOR_ARGS_INFO));
+            .expect(&format!("Failed execute {} {:?} to extract info", bin, GLSL_VALIDATOR_ARGS_INFO));
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
 
@@ -98,23 +133,49 @@ fn extract_shader_info(shaders: &[&str]) -> (Vec<Attribute>, Vec<Uniform>) {
 }
 
 
-fn prepocess_shader(shaders: &[&str]) -> [String; 2] {
-    let mut res = [String::new(), String::new()];
+fn prepocess_shader(shaders: &[String]) -> Vec<(ShaderType, String)> {
+    let bin = get_glslangValidator_executable();
+    let mut res = vec!();
 
-    for (idx, ext) in [".vert", ".frag"].iter().enumerate() {
-        let ext_shader: Vec<_> = shaders.iter().filter(|e| e.ends_with(ext)).collect();
+    for sh_type in vec!(ShaderType::VertexShader, ShaderType::FragmentShader).into_iter() {
+        let shaders: Vec<_> = shaders.iter().filter(|e| e.ends_with(sh_type.to_extension())).collect();
         let output =
-            Command::new(GLSL_VALIDATOR_EXECUTABLE)
-                .args(&ext_shader)
+            Command::new(bin.clone())
+                .args(&shaders)
                 .args(&GLSL_VALIDATOR_ARGS_PREPROCESS)
                 .output()
-                .expect(&format!("failed execute {} to prerocess shader. args: {:?}", GLSL_VALIDATOR_EXECUTABLE, GLSL_VALIDATOR_ARGS_PREPROCESS));
+                .expect(&format!("Failed execute {} {:?} to prerocess shader", bin, GLSL_VALIDATOR_ARGS_PREPROCESS));
 
         let stdout = str::from_utf8(&output.stdout).unwrap();
-        res[idx] = stdout.to_string();
+        res.push((sh_type, stdout.to_string()))
     }
 
     res
+}
+
+pub fn prepocess_sources<'a, I: Iterator<Item=&'a (ShaderType, String)>>(name: String, shaders: I) -> (Vec<Attribute>, Vec<Uniform>, Vec<(ShaderType, String)>) {
+    // create temp files froom the shader
+
+    let sources: Vec<String> = vec!();
+    let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
+    let root = Path::new(&root).join("target").join("shaders").join(name.to_string());
+
+    let mut source_files: Vec<String> = vec!();
+    fs::DirBuilder::new().recursive(true).create(root.clone()).expect("Temporary target directory could not be created:");
+
+    for (idx, ref shader) in shaders.enumerate() {
+        let file = root.join(format!("{}{}", idx, shader.0.to_extension()));
+        source_files.push(file.to_str().unwrap().to_string());
+        let mut file = fs::File::create(file).expect("Temporary shader files could not be created:");
+        file.write_all(shader.1.as_bytes()).expect("Temporary shader files could not be written:");
+    }
+
+    let (attributes, uniforms) = extract_shader_info(&source_files);
+    let sources = prepocess_shader(&source_files);
+
+    println!("{:?},{:?}", attributes, uniforms);
+
+    (attributes, uniforms, sources)
 }
 
 /*

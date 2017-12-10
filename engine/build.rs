@@ -6,6 +6,13 @@ use std::fs::File;
 use std::path::PathBuf;
 
 fn main() {
+
+    for (key, value) in env::vars() {
+        if key.starts_with("CARGO_CFG_") {
+            println!("{}: {:?}", key, value);
+        }
+    }
+
     let target = env::var("TARGET").unwrap();
     let dest = PathBuf::from(&env::var("OUT_DIR").unwrap());
 
