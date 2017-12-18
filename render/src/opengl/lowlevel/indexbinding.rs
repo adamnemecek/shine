@@ -1,5 +1,14 @@
 use backend::opengl::lowlevel::*;
 
+impl From<IndexBufferLayout> for GLenum {
+    fn from(l: IndexBufferLayout) -> GLenum {
+        match l {
+            IndexBufferLayout::U8 => gl::UNSIGNED_BYTE,
+            IndexBufferLayout::U16 => gl::UNSIGNED_SHORT,
+            IndexBufferLayout::U32 => gl::UNSIGNED_INT,
+        }
+    }
+}
 
 /// The current index buffer bound for the GL
 #[derive(Clone, Copy)]

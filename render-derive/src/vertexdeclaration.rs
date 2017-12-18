@@ -85,7 +85,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         let offset_of = impl_offset_of(struct_name, &field_ident);
         match_get_desc.push(
             quote! {
-               #enum_type_name::#enum_ident => _dragorust_render::backend::VertexBufferLayoutElementImpl::new_from_element::< #field_ty > ( #offset_of, mem::size_of::< #struct_name > () )
+               #enum_type_name::#enum_ident => _dragorust_render::VertexBufferLayoutElement::#field_ty{offset: #offset_of, stride:mem::size_of::< #struct_name >()}
             }
         )
     }
@@ -110,7 +110,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
             }
 
             #[allow(dead_code)]
-            fn get_attribute_layout(idx: #enum_type_name) -> _dragorust_render::backend::VertexBufferLayoutElementImpl {
+            fn get_attribute_layout(idx: #enum_type_name) -> _dragorust_render::VertexBufferLayoutElement {
                 use std::mem;
                 match idx {
                     #(#match_get_desc,)*

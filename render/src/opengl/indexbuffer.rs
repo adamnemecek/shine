@@ -56,32 +56,7 @@ impl Drop for GLIndexBuffer {
 }
 
 
-/// Trait to help converting an index attribute into the appropriate GLenum
-pub trait GLIndexTypeInfo {
-    fn get_gl_type_id() -> GLenum;
-}
-
-impl GLIndexTypeInfo for u32 {
-    fn get_gl_type_id() -> GLenum { gl::UNSIGNED_INT }
-}
-
-impl GLIndexTypeInfo for u16 {
-    fn get_gl_type_id() -> GLenum { gl::UNSIGNED_SHORT }
-}
-
-impl GLIndexTypeInfo for u8 {
-    fn get_gl_type_id() -> GLenum { gl::UNSIGNED_BYTE }
-}
-
-
-/// Trait to extract type info for indices
-pub trait IndexBufferLayoutImpl: GLIndexTypeInfo {}
-
-impl<T> IndexBufferLayoutImpl for T where T: GLIndexTypeInfo {}
-
-
-/// IndexBuffer implementation for OpenGL.
-impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
+impl<DECL: IndexDeclaration> Resource for IndexBufferHandle<DECL> {
     fn release<Q: CommandQueue>(&self, queue: &mut Q) {
         struct ReleaseCommand {
             target: UnsafeIndex<GLIndexBuffer>,
@@ -106,7 +81,9 @@ impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
             }
         );
     }
+}
 
+impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
     fn set<'a, SRC: IndexSource<DECL>, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
         /// RenderCommand to create and allocated OpenGL resources.
         struct CreateCommand {
@@ -134,7 +111,7 @@ impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
                 queue.add(
                     CreateCommand {
                         target: UnsafeIndex::from_index(&self.0),
-                        type_id: DECL::IndexType::get_gl_type_id(),
+                        type_id: From::from(DECL::get_layout()),
                         data: slice.to_vec(),
                     }
                 );

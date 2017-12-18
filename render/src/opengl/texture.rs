@@ -79,7 +79,7 @@ fn get_upload_enums(fmt: PixelFormat) -> (GLenum, GLenum, GLenum) {
 }
 
 
-impl Texture2D for Texture2DHandle {
+impl Resource for Texture2DHandle {
     fn release<Q: CommandQueue>(&self, queue: &mut Q) {
         struct ReleaseCommand {
             target: UnsafeIndex<GLTexture>,
@@ -105,7 +105,9 @@ impl Texture2D for Texture2DHandle {
             );
         }
     }
+}
 
+impl Texture2D for Texture2DHandle {
     fn set<'a, SRC: ImageSource, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
         struct CreateCommand {
             target: UnsafeIndex<GLTexture>,

@@ -26,7 +26,7 @@ impl GLVertexBuffer {
 
     pub fn upload_data<VD: VertexDeclaration>(&mut self, ll: &mut LowLevel, data: &[u8]) {
         for idx in VD::get_attributes() {
-            self.attributes.push(VD::get_attribute_layout(*idx));
+            self.attributes.push(GLVertexBufferAttribute::from_layout(&VD::get_attribute_layout(*idx)));
             assert!(self.attributes.len() <= MAX_VERTEX_ATTRIBUTE_COUNT, "Vertex attribute count exceeds engine limits ({})", MAX_VERTEX_ATTRIBUTE_COUNT);
         }
 
@@ -68,7 +68,7 @@ impl Drop for GLVertexBuffer {
 
 
 /// VertexBuffer implementation for OpenGL.
-impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
+impl<DECL: VertexDeclaration> Resource for VertexBufferHandle<DECL> {
     fn release<Q: CommandQueue>(&self, queue: &mut Q) {
         struct ReleaseCommand {
             target: UnsafeIndex<GLVertexBuffer>,
@@ -92,7 +92,9 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
             }
         );
     }
+}
 
+impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
     fn set<'a, SRC: VertexSource<DECL>, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC) {
         /// RenderCommand to create and allocated OpenGL resources.
         struct CreateCommand<VD: VertexDeclaration> {
@@ -131,7 +133,7 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
 
 
 /// Describe the memory layout of a vertex attribute
-pub type VertexBufferLayoutElementImpl = GLVertexBufferAttribute;
+//pub type VertexBufferLayoutElementImpl = GLVertexBufferAttribute;
 
 /// The vertex buffer implementation
 pub type VertexBufferImpl = GLVertexBuffer;

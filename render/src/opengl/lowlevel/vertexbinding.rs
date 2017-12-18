@@ -22,13 +22,39 @@ impl GLVertexBufferAttribute {
         }
     }
 
-    pub fn new_from_element<T: GLVertexAttributeTypeInfo>(offset: usize, stride: usize) -> GLVertexBufferAttribute {
-        GLVertexBufferAttribute {
-            component_type: T::get_gl_type_id(),
-            components: T::get_component_count(),
-            normalize: T::is_fixed_point(),
-            stride: stride as GLsizei,
-            offset: offset as GLintptr,
+    pub fn from_layout(layout: &VertexBufferLayoutElement) -> GLVertexBufferAttribute {
+        match layout {
+            &VertexBufferLayoutElement::Float32 { stride, offset } => GLVertexBufferAttribute {
+                component_type: gl::FLOAT,
+                components: 1,
+                normalize: gl::FALSE,
+                stride: stride as GLsizei,
+                offset: offset as GLintptr,
+            },
+
+            &VertexBufferLayoutElement::Float32x2 { stride, offset } => GLVertexBufferAttribute {
+                component_type: gl::FLOAT,
+                components: 2,
+                normalize: gl::FALSE,
+                stride: stride as GLsizei,
+                offset: offset as GLintptr,
+            },
+
+            &VertexBufferLayoutElement::Float32x3 { stride, offset } => GLVertexBufferAttribute {
+                component_type: gl::FLOAT,
+                components: 3,
+                normalize: gl::FALSE,
+                stride: stride as GLsizei,
+                offset: offset as GLintptr,
+            },
+
+            &VertexBufferLayoutElement::Float32x4 { stride, offset } => GLVertexBufferAttribute {
+                component_type: gl::FLOAT,
+                components: 4,
+                normalize: gl::FALSE,
+                stride: stride as GLsizei,
+                offset: offset as GLintptr,
+            },
         }
     }
 
@@ -150,30 +176,4 @@ impl VertexBinding {
 
         self.time_stamp = self.time_stamp.wrapping_add(1);
     }
-}
-
-
-/// Trait to help converting an vertex attribute type into GLVertexBufferAttribute
-pub trait GLVertexAttributeTypeInfo {
-    fn get_component_count() -> GLint;
-    fn get_gl_type_id() -> GLenum;
-    fn is_fixed_point() -> GLboolean;
-}
-
-impl GLVertexAttributeTypeInfo for Float32x4 {
-    fn get_component_count() -> GLint { 4 }
-    fn get_gl_type_id() -> GLenum { gl::FLOAT }
-    fn is_fixed_point() -> GLboolean { gl::FALSE }
-}
-
-impl GLVertexAttributeTypeInfo for Float32x3 {
-    fn get_component_count() -> GLint { 3 }
-    fn get_gl_type_id() -> GLenum { gl::FLOAT }
-    fn is_fixed_point() -> GLboolean { gl::FALSE }
-}
-
-impl GLVertexAttributeTypeInfo for Float32x2 {
-    fn get_component_count() -> GLint { 2 }
-    fn get_gl_type_id() -> GLenum { gl::FLOAT }
-    fn is_fixed_point() -> GLboolean { gl::FALSE }
 }
