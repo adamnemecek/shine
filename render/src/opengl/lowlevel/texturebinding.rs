@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 
-use backend::opengl::lowlevel::*;
+use opengl::*;
+use opengl::lowlevel::*;
 
 
 /// Texture sampling parameters

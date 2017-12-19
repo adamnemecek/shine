@@ -19,15 +19,30 @@ extern crate dragorust_store as store;
 
 extern crate arrayvec;
 
-#[macro_use] mod common;
-pub use common::*;
-
-mod types;
-mod error;
-mod keycodes;
+#[macro_use]
+mod common;
 mod engine;
-mod windowsettings;
-mod window;
+
+pub use common::*;
+pub use engine::*;
+
+pub mod opengl;
+
+pub mod backend {
+    pub use opengl::PlatformResourceManager;
+    pub use opengl::PlatformEngine;
+    pub use opengl::PlatformWindow;
+    pub use opengl::PlatformWindowSettings;
+}
+
+pub type RenderManager<K: PassId> = common::RenderManager<K, backend::PlatformResourceManager>;
+
+pub use backend::PlatformEngine;
+pub use backend::PlatformWindow;
+pub use backend::PlatformWindowSettings;
+
+/*
+
 mod shaderprogram;
 #[macro_use]
 mod vertexbuffer;
@@ -37,15 +52,9 @@ mod renderpass;
 mod renderpassconfig;
 mod resources;
 mod rendermanager;
+*/
 
-mod ops;
-
-pub use types::*;
-pub use error::*;
-pub use keycodes::*;
-pub use engine::*;
-pub use windowsettings::*;
-pub use window::*;
+/*pub use types::*;
 pub use shaderprogram::*;
 pub use vertexbuffer::*;
 pub use indexbuffer::*;
@@ -53,13 +62,4 @@ pub use texture2d::*;
 pub use renderpass::*;
 pub use renderpassconfig::*;
 pub use resources::*;
-pub use rendermanager::*;
-
-
-pub mod backend {
-    #[path = "../opengl/mod.rs"]
-    mod opengl;
-
-    pub use super::*;
-    pub use self::opengl::*;
-}
+pub use rendermanager::*;*/

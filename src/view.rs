@@ -7,18 +7,18 @@ use world;
 use render::*;
 
 #[derive(Copy, Clone, Debug)]
-#[derive(VertexDeclaration)]
+//#[derive(VertexDeclaration)]
 struct VxPos {
     position: Float32x3,
 }
 
 #[derive(Copy, Clone, Debug)]
-#[derive(VertexDeclaration)]
+//#[derive(VertexDeclaration)]
 struct VxColorTex {
     color: Float32x3,
     tex_coord: Float32x2,
 }
-
+/*
 #[derive(ShaderDeclaration)]
 #[vert_src = "
     uniform mat4 uTrsf;
@@ -54,7 +54,7 @@ struct VxColorTex {
 //todo 3:
 //#[unifrom(uTrsf) = engine.trsf]
 struct ShSimple {}
-
+*/
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum Passes {
@@ -63,15 +63,15 @@ enum Passes {
     //Debug,
 }
 
-impl PassKey for Passes {}
+impl PassId for Passes {}
 
 
 /// Structure to handle view dependent data
 pub struct SimpleView {
     game: game::GameCell,
-    render: RenderManager<Passes>,
+    //render: RenderManager<Passes>,
 
-    shader: ShaderProgramHandle<ShSimple>,
+    /*shader: ShaderProgramHandle<ShSimple>,
 
     vertex_buffer1: VertexBufferHandle<VxPos>,
     vertex_buffer2: VertexBufferHandle<VxColorTex>,
@@ -79,7 +79,7 @@ pub struct SimpleView {
     index_buffer2: IndexBufferHandle<u16>,
     img1: world::ImageRef,
     texture1: Texture2DHandle,
-    texture2: Texture2DHandle,
+    texture2: Texture2DHandle,*/
 
     t: f32,
 }
@@ -90,7 +90,8 @@ impl SimpleView {
 
         let mut view = SimpleView {
             game: game,
-            render: RenderManager::new(),
+            a: AA { k: Passes::Present, d: 0 },
+            /*render: RenderManager::new(),
 
             shader: ShaderProgramHandle::null(),
             vertex_buffer1: VertexBufferHandle::null(),
@@ -100,16 +101,16 @@ impl SimpleView {
             texture1: Texture2DHandle::null(),
             texture2: Texture2DHandle::null(),
 
-            img1: world::ImageRef::null(),
+            img1: world::ImageRef::null(),*/
             t: 0f32,
         };
 
-        view.shader = ShaderProgramHandle::create(&mut view.render);
-        view.vertex_buffer1 = VertexBufferHandle::create(&mut view.render);
-        view.vertex_buffer2 = VertexBufferHandle::create(&mut view.render);
-        view.index_buffer1 = IndexBufferHandle::create(&mut view.render);
-        view.index_buffer2 = IndexBufferHandle::create(&mut view.render);
-        view.texture1 = Texture2DHandle::create(&mut view.render);
+        /* view.shader = ShaderProgramHandle::create(&mut view.render);
+         view.vertex_buffer1 = VertexBufferHandle::create(&mut view.render);
+         view.vertex_buffer2 = VertexBufferHandle::create(&mut view.render);
+         view.index_buffer1 = IndexBufferHandle::create(&mut view.render);
+         view.index_buffer2 = IndexBufferHandle::create(&mut view.render);
+         view.texture1 = Texture2DHandle::create(&mut view.render);*/
 
         view
     }
@@ -140,27 +141,27 @@ impl View for SimpleView {
         let index2 = [0u16, 1, 2, 0, 2, 3];
 
         // upload data
-        self.shader.compile(&mut self.render);
-        self.vertex_buffer1.set(&mut self.render, &pos);
-        self.vertex_buffer2.set(&mut self.render, &color_tex.to_vec());
+        /* self.shader.compile(&mut self.render);
+         self.vertex_buffer1.set(&mut self.render, &pos);
+         self.vertex_buffer2.set(&mut self.render, &color_tex.to_vec());
 
-        self.index_buffer1.set(&mut self.render, &index1);
-        // self.index_buffer1.set_transient(&mut self.render, &index2);  // shall not compile
-        self.index_buffer2.set(&mut self.render, &index2.to_vec());
+         self.index_buffer1.set(&mut self.render, &index1);
+         // self.index_buffer1.set_transient(&mut self.render, &index2);  // shall not compile
+         self.index_buffer2.set(&mut self.render, &index2.to_vec());
 
-        // submit commands
-        self.render.submit(window);
+         // submit commands
+         self.render.submit(window);*/
     }
 
     fn on_surface_lost(&mut self, window: &mut Window) {
-        self.vertex_buffer1.reset();
-        self.vertex_buffer2.reset();
-        self.index_buffer1.reset();
-        self.index_buffer2.reset();
-        self.texture1.reset();
-        self.texture2.reset();
-        self.shader.reset();
-        self.render.submit(window);
+        /* self.vertex_buffer1.reset();
+         self.vertex_buffer2.reset();
+         self.index_buffer1.reset();
+         self.index_buffer2.reset();
+         self.texture1.reset();
+         self.texture2.reset();
+         self.shader.reset();
+         self.render.submit(window);*/
     }
 
     fn on_surface_changed(&mut self, _window: &mut Window) {
@@ -177,75 +178,75 @@ impl View for SimpleView {
     fn on_render(&mut self, window: &mut Window) {
         let game = self.game.borrow();
 
-        {
-            let image_store = game.image_store.read();
+        /* {
+             let image_store = game.image_store.read();
 
-            if self.img1.is_null() {
-                self.img1 = image_store.get_or_request(&world::ImageId::new("c:\\dev\\alma.png"));
-            }
-            self.texture1.set(&mut self.render, image_store[&self.img1].get_image());
-        }
+             if self.img1.is_null() {
+                 self.img1 = image_store.get_or_request(&world::ImageId::new("c:\\dev\\alma.png"));
+             }
+             self.texture1.set(&mut self.render, image_store[&self.img1].get_image());
+         }
 
-        {
-            let mut p0 = self.render.get_pass(Passes::Present);
-            p0.config_mut().set_clear_color(f32x3!(self.t, game.t, 0.));
-            p0.config_mut().set_fullscreen();
+         {
+             let mut p0 = self.render.get_pass(Passes::Present);
+             p0.config_mut().set_clear_color(f32x3!(self.t, game.t, 0.));
+             p0.config_mut().set_fullscreen();
 
-            let st = self.t.sin();
-            let ct = self.t.cos();
+             let st = self.t.sin();
+             let ct = self.t.cos();
 
-            let parameters = ShSimpleParameters {
-                v_position: From::from((&self.vertex_buffer1, VxPosAttribute::Position)),
-                v_color: From::from((&self.vertex_buffer2, VxColorTexAttribute::Color)),
-                v_tex_coord: From::from((&self.vertex_buffer2, VxColorTexAttribute::TexCoord)),
+             let parameters = ShSimpleParameters {
+                 v_position: From::from((&self.vertex_buffer1, VxPosAttribute::Position)),
+                 v_color: From::from((&self.vertex_buffer2, VxColorTexAttribute::Color)),
+                 v_tex_coord: From::from((&self.vertex_buffer2, VxColorTexAttribute::TexCoord)),
 
-                indices: Default::default(),
+                 indices: Default::default(),
 
-                u_trsf: f32x16!(st, -ct, 0, 0,
-                                    ct,  st, 0, 0,
-                                     0,   0, 1, 0,
-                                     0,   0, 0, 1),
-                u_color: f32x3!(1.2f32, 0.2f32, 0.2f32),
-                u_tex: From::from(&self.texture1),
-            };
+                 u_trsf: f32x16!(st, -ct, 0, 0,
+                                     ct,  st, 0, 0,
+                                      0,   0, 1, 0,
+                                      0,   0, 0, 1),
+                 u_color: f32x3!(1.2f32, 0.2f32, 0.2f32),
+                 u_tex: From::from(&self.texture1),
+             };
 
-            {
-                let parameters = {
-                    let mut p = parameters.clone();
-                    p.u_trsf = f32x16!(st, -ct, 0, 0,
-                                       ct,  st, 0, 0,
-                                       0,    0, 1, 0,
-                                       0,    0, 0, 1);
-                    p.u_color = f32x3!(1.2f32, 0.2f32, 0.2f32);
-                    p.u_tex = From::from(&self.texture1);
-                    p
-                };
+             {
+                 let parameters = {
+                     let mut p = parameters.clone();
+                     p.u_trsf = f32x16!(st, -ct, 0, 0,
+                                        ct,  st, 0, 0,
+                                        0,    0, 1, 0,
+                                        0,    0, 0, 1);
+                     p.u_color = f32x3!(1.2f32, 0.2f32, 0.2f32);
+                     p.u_tex = From::from(&self.texture1);
+                     p
+                 };
 
-                self.shader.draw(&mut *p0, parameters, Primitive::Triangle, 0, 3);
-            }
+                 self.shader.draw(&mut *p0, parameters, Primitive::Triangle, 0, 3);
+             }
 
-            {
-                let parameters = {
-                    let mut p = parameters.clone();
-                    p.indices = From::from(&self.index_buffer1);
-                    p.u_trsf = f32x16!(ct, -st, 0, 0,
-                                       st,  ct, 0, 0,
-                                       0,    0, 1, 0,
-                                       0,    0, 0, 1);
-                    p.u_color = f32x3!(1.2f32, 0.2f32, 0.2f32);
-                    p.u_tex = From::from(&self.texture1);
-                    p
-                };
+             {
+                 let parameters = {
+                     let mut p = parameters.clone();
+                     p.indices = From::from(&self.index_buffer1);
+                     p.u_trsf = f32x16!(ct, -st, 0, 0,
+                                        st,  ct, 0, 0,
+                                        0,    0, 1, 0,
+                                        0,    0, 0, 1);
+                     p.u_color = f32x3!(1.2f32, 0.2f32, 0.2f32);
+                     p.u_tex = From::from(&self.texture1);
+                     p
+                 };
 
-                self.shader.draw(&mut *p0, parameters, Primitive::Triangle, 0, 6);
-            }
-        }
+                 self.shader.draw(&mut *p0, parameters, Primitive::Triangle, 0, 6);
+             }
+         }
 
-        {
-            //let mut p1 = self.render.get_pass(Passes::Shadow);
-        }
+         {
+             //let mut p1 = self.render.get_pass(Passes::Shadow);
+         }
 
-        self.render.submit(window);
+         self.render.submit(window);*/
     }
 
     fn on_key(&mut self, window: &mut Window, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {

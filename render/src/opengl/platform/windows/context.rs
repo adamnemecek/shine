@@ -1,8 +1,9 @@
-use backend::opengl::context::wgl;
-use backend::opengl::context::egl;
-
 use winapi;
-use backend::*;
+
+use engine::*;
+use opengl::*;
+use opengl::context::wgl;
+use opengl::context::egl;
 
 
 /// Enum defining the context for the render backend
@@ -17,8 +18,8 @@ pub enum Context {
 /// It support the EGL and WGL API interfaces. The implementation can be selected
 /// through WindowSettings.
 impl Context {
-    pub fn new(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &WindowSettings) -> Result<Context, Error> {
-        match settings.fb_config.gl_profile {
+    pub fn new(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &PlatformWindowSettings) -> Result<Context, Error> {
+        match settings.platform_extra.gl_profile {
             OpenGLProfile::ES2 => {
                 // for opengl es2 we are using egl context
                 let ctx = try!(egl::Context::new(app_instance, hwnd, settings));

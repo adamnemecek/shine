@@ -7,9 +7,8 @@ use std::os::windows::ffi::OsStrExt;
 use kernel32;
 use user32;
 use winapi;
-use backend::*;
 
-use backend::opengl::window::window::*;
+use opengl::engine::*;
 
 
 /// Window message handler callback function
@@ -119,14 +118,14 @@ impl GLEngine {
                 }
             }
 
-            if msg.message == WM_DR_WINDOW_CREATED {
+            if msg.message == win_messages::WM_DR_WINDOW_CREATED {
                 println!("WM_DR_WINDOW_CREATED");
                 if new_window_count == i32::max_value() {
                     new_window_count = 1;
                 } else {
                     new_window_count += 1;
                 }
-            } else if msg.message == WM_DR_WINDOW_DESTROYED {
+            } else if msg.message == win_messages::WM_DR_WINDOW_DESTROYED {
                 println!("WM_DR_WINDOW_DESTROYED");
                 new_window_count -= 1;
             }
@@ -156,4 +155,3 @@ impl Drop for GLEngine {
     }
 }
 
-pub type EngineImpl = GLEngine;

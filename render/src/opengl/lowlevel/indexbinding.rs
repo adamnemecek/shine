@@ -1,4 +1,4 @@
-use backend::opengl::lowlevel::*;
+use opengl::lowlevel::*;
 
 impl From<IndexBufferLayout> for GLenum {
     fn from(l: IndexBufferLayout) -> GLenum {

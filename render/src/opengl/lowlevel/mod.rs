@@ -10,16 +10,15 @@ pub mod indexbinding;
 pub mod texturebinding;
 pub mod programbinding;
 
-pub use backend::opengl::gl;
-pub use backend::opengl::gl::types::*;
-
+use engine::*;
+use common::*;
+pub use opengl::gl;
+pub use opengl::gl::types::*;
 pub use self::utils::*;
 use self::vertexbinding::VertexBinding;
 use self::indexbinding::IndexBinding;
 use self::programbinding::ProgramBinding;
 use self::texturebinding::TextureBinding;
-
-use backend::*;
 
 /// Structure to manage the GL state machine at a low level.
 ///

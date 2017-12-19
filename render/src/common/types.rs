@@ -11,6 +11,18 @@ pub enum PixelFormat {
 }
 
 
+/// Geometry primitive type
+#[derive(Copy, Clone, Debug)]
+pub enum Primitive {
+    /// Point primitive (1 vertex per primitive)
+    Point,
+    /// Line primitive (2 vertex per primitive)
+    Line,
+    /// Triangle primitive (3 vertex per primitive)
+    Triangle,
+}
+
+
 /// Float array with 16 components
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq)]

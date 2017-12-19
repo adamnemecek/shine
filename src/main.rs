@@ -11,19 +11,20 @@ mod view;
 use render::*;
 use view::*;
 
+
 pub fn main() {
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
     let game = game::create();
 
-    let mut window = render::WindowSettings::new()
+    let mut window = render::PlatformWindowSettings::default()
         .title("main")
         .size((1024, 1024))
         .build(&engine, SimpleView::new(game.clone())).expect("Could not initialize main window");
 
-    let mut sub_window = render::WindowSettings::new()
+    let mut sub_window = render::PlatformWindowSettings::default()
         .title("sub")
         .size((256, 256))
-        //.gl_profile(render::OpenGLProfile::ES2)
+        //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine, SimpleView::new(game.clone())).expect("Could not initialize sub window");
 
     loop {

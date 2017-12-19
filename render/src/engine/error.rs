@@ -1,4 +1,3 @@
-
 /// Enum to store the error occurred during a call to a render function.
 #[derive(Debug, Clone)]
 pub enum Error {

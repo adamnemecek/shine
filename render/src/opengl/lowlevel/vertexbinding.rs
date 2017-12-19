@@ -1,4 +1,5 @@
-use backend::opengl::lowlevel::*;
+use opengl::*;
+use opengl::lowlevel::*;
 
 
 /// Structure to store vertex attribute info for open GL.

@@ -28,8 +28,8 @@ use kernel32;
 use gdi32;
 use user32;
 
-use backend::*;
-use backend::opengl::*;
+use engine::*;
+use opengl::*;
 
 use self::dummywindow::DummyWindow;
 
@@ -101,6 +101,7 @@ unsafe fn get_wgl_extension_string(wgl_ext: &wgl_ext::Wgl, hdc: winapi::HDC) -> 
     }
 }
 
+
 /// Structure to handle WGL context
 pub struct Context {
     hwnd: winapi::HWND,
@@ -117,7 +118,7 @@ impl Context {
     ///
     /// # Error
     /// If context connat be created an error is returned describing the reason.
-    pub fn new(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &WindowSettings) -> Result<Context, Error> {
+    pub fn new(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &PlatformWindowSettings) -> Result<Context, Error> {
         unsafe {
             let gl_library = try!(load_gl_library());
             let (wgl_ext, wgl_extensions) = try!(load_wgl_extension(app_instance, hwnd));
@@ -149,7 +150,7 @@ impl Context {
             println!("selected pixel format: {:?}", fb_config);
 
             // create context
-            context.hglrc = try!(context.create_context(pixel_format, &settings.fb_config));
+            context.hglrc = try!(context.create_context(pixel_format, &settings.fb_config, &settings.platform_extra));
 
             try!(context.make_current());
             try!(context.load_gl_functions());
@@ -254,11 +255,6 @@ impl Context {
             // values not considered or not part of pixel format
             debug: false,
             vsync: false,
-            gl_version: (0, 0),
-            gl_forward_compatible: false,
-            gl_profile: OpenGLProfile::DontCare,
-            gl_release: OpenGLRelease::DontCare,
-            gl_robustness: OpenGLRobustness::DontCare,
         })
     }
 
@@ -308,11 +304,6 @@ impl Context {
             // values not considered or not part of pixel format
             debug: false,
             vsync: false,
-            gl_version: (0, 0),
-            gl_forward_compatible: false,
-            gl_profile: OpenGLProfile::DontCare,
-            gl_release: OpenGLRelease::DontCare,
-            gl_robustness: OpenGLRobustness::DontCare,
         })
     }
 
@@ -495,7 +486,7 @@ impl Context {
         Ok(closest_handle)
     }
 
-    unsafe fn create_context(&self, pixel_format: u32, config: &FBConfig) -> Result<(winapi::HGLRC), Error> {
+    unsafe fn create_context(&self, pixel_format: u32, config: &FBConfig, extra: &GLWindowSettings) -> Result<(winapi::HGLRC), Error> {
         let share: winapi::HGLRC = ptr::null_mut(); // no sharing is implemented yet
 
         let mut pfd: winapi::PIXELFORMATDESCRIPTOR = mem::zeroed();
@@ -508,11 +499,11 @@ impl Context {
             return Err(Error::WindowCreationError(format!("WGL: Failed to set selected pixel format ({}): {}", pixel_format, io::Error::last_os_error())));
         }
 
-        if config.gl_forward_compatible && !self.has_wgl_extension("WGL_ARB_create_context") {
+        if extra.gl_forward_compatible && !self.has_wgl_extension("WGL_ARB_create_context") {
             return Err(Error::WindowCreationError(format!("WGL: A forward compatible OpenGL context requested but WGL_ARB_create_context is unavailable")));
         }
 
-        if config.gl_profile != OpenGLProfile::DontCare && !self.has_wgl_extension("WGL_ARB_create_context_profile") {
+        if extra.gl_profile != OpenGLProfile::DontCare && !self.has_wgl_extension("WGL_ARB_create_context_profile") {
             return Err(Error::WindowCreationError(format!("WGL: OpenGL profile requested but WGL_ARB_create_context_profile is unavailable")));
         }
 
@@ -521,19 +512,19 @@ impl Context {
             let mut attribs: Vec<u32> = vec!();
             let mut flags: u32 = 0;
 
-            if config.gl_profile != OpenGLProfile::DontCare {
-                if config.gl_profile == OpenGLProfile::ES2 {
+            if extra.gl_profile != OpenGLProfile::DontCare {
+                if extra.gl_profile == OpenGLProfile::ES2 {
                     attribs.push(wgl_ext::CONTEXT_PROFILE_MASK_ARB);
                     attribs.push(wgl_ext::CONTEXT_ES2_PROFILE_BIT_EXT);
                 } else {
-                    if config.gl_forward_compatible {
+                    if extra.gl_forward_compatible {
                         flags = flags | wgl_ext::CONTEXT_FORWARD_COMPATIBLE_BIT_ARB;
                     }
 
-                    if config.gl_profile == OpenGLProfile::Core {
+                    if extra.gl_profile == OpenGLProfile::Core {
                         attribs.push(wgl_ext::CONTEXT_PROFILE_MASK_ARB);
                         attribs.push(wgl_ext::CONTEXT_CORE_PROFILE_BIT_ARB);
-                    } else if config.gl_profile == OpenGLProfile::Compatibility {
+                    } else if extra.gl_profile == OpenGLProfile::Compatibility {
                         attribs.push(wgl_ext::CONTEXT_PROFILE_MASK_ARB);
                         attribs.push(wgl_ext::CONTEXT_COMPATIBILITY_PROFILE_BIT_ARB);
                     }
@@ -544,12 +535,12 @@ impl Context {
                 flags = flags | wgl_ext::CONTEXT_DEBUG_BIT_ARB;
             }
 
-            if config.gl_robustness != OpenGLRobustness::DontCare {
+            if extra.gl_robustness != OpenGLRobustness::DontCare {
                 if self.has_wgl_extension("WGL_ARB_create_context_robustness") {
-                    if config.gl_robustness == OpenGLRobustness::NoReset {
+                    if extra.gl_robustness == OpenGLRobustness::NoReset {
                         attribs.push(wgl_ext::CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB);
                         attribs.push(wgl_ext::NO_RESET_NOTIFICATION_ARB);
-                    } else if config.gl_robustness == OpenGLRobustness::LoseContextOnReset {
+                    } else if extra.gl_robustness == OpenGLRobustness::LoseContextOnReset {
                         attribs.push(wgl_ext::CONTEXT_RESET_NOTIFICATION_STRATEGY_ARB);
                         attribs.push(wgl_ext::LOSE_CONTEXT_ON_RESET_ARB);
                     }
@@ -558,12 +549,12 @@ impl Context {
             }
 
 
-            if config.gl_release != OpenGLRelease::DontCare {
+            if extra.gl_release != OpenGLRelease::DontCare {
                 if self.has_wgl_extension("WGL_ARB_context_flush_control") {
-                    if config.gl_release == OpenGLRelease::None {
+                    if extra.gl_release == OpenGLRelease::None {
                         attribs.push(wgl_ext::CONTEXT_RELEASE_BEHAVIOR_ARB);
                         attribs.push(wgl_ext::CONTEXT_RELEASE_BEHAVIOR_NONE_ARB);
-                    } else if config.gl_release == OpenGLRelease::Flush {
+                    } else if extra.gl_release == OpenGLRelease::Flush {
                         attribs.push(wgl_ext::CONTEXT_RELEASE_BEHAVIOR_ARB);
                         attribs.push(wgl_ext::CONTEXT_RELEASE_BEHAVIOR_FLUSH_ARB);
                     }
@@ -577,11 +568,11 @@ impl Context {
                 }
             }*/
 
-            if config.gl_version != (0, 0) {
+            if extra.gl_version != (0, 0) {
                 attribs.push(wgl_ext::CONTEXT_MAJOR_VERSION_ARB);
-                attribs.push(config.gl_version.0 as u32);
+                attribs.push(extra.gl_version.0 as u32);
                 attribs.push(wgl_ext::CONTEXT_MINOR_VERSION_ARB);
-                attribs.push(config.gl_version.1 as u32);
+                attribs.push(extra.gl_version.1 as u32);
             }
 
             if flags != 0 {

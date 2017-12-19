@@ -61,6 +61,8 @@ mod image_source {
 
 /// Trait that defined a 2d texture
 pub trait Texture2D: Resource {
+    type Ref: Clone;
+
     /// Sets the content of the buffer from a transient source.
-    fn set<'a, SRC: ImageSource, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC);
+    fn set<'a, SRC: ImageSource, Q: CommandQueue>(&self, queue: &Q, source: &SRC);
 }

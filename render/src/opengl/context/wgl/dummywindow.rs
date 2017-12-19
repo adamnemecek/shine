@@ -6,9 +6,11 @@ use std::os::windows::ffi::OsStrExt;
 
 use user32;
 use winapi;
-use backend::*;
 
+use engine::*;
 
+/// A dummy window created to detect gl capabilities.
+/// It has no message handling and usually destroyed immediately after creation.
 pub struct DummyWindow {
     pub hwnd: winapi::HWND,
     pub hdc: winapi::HDC,

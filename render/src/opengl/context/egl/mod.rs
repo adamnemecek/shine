@@ -1,17 +1,20 @@
 #![cfg(any(target_os = "windows"))]
 
 use winapi;
-use backend::*;
+
+use engine::*;
+use opengl::*;
 
 
+/// Egl context
 pub struct Context {}
 
 impl Context {
-    /// Creates a Wgl context with the given config.
+    /// Creates an Egl context with the given config.
     ///
     /// # Error
     /// If context connat be created an error is returned describing the reason.
-    pub fn new(_: winapi::HINSTANCE, _: winapi::HWND, _: &WindowSettings) -> Result<Context, Error> {
+    pub fn new(_: winapi::HINSTANCE, _: winapi::HWND, _: &PlatformWindowSettings) -> Result<Context, Error> {
         Err(Error::WindowCreationError(format!("EGL context is not supported yet")))
     }
 

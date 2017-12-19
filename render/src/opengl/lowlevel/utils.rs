@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
 use std::mem;
-use backend::opengl::lowlevel::*;
+
+use opengl::lowlevel::*;
 
 
 /// Checks the last gl error code

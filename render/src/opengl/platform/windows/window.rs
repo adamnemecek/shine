@@ -1,26 +1,32 @@
+use std::rc::Rc;
+use std::cell::RefCell;
 use std::ptr;
 use std::io;
 use std::mem;
 use std::ffi::OsStr;
-use std::rc::Rc;
-use std::cell::RefCell;
 use std::os::windows::ffi::OsStrExt;
 
 use user32;
 use winapi;
-use backend::*;
 
-use backend::opengl::context::Context;
+use engine::*;
+use opengl::*;
+use opengl::lowlevel::*;
+use opengl::context::Context;
+use opengl::engine::GLEngine;
 
+pub mod win_messages {
+    use winapi;
 
-/// User window message indicating the window creating has completed and surface ready
-/// callback can be called.
-pub const WM_DR_WINDOW_CREATED: winapi::UINT = winapi::WM_USER + 1;
-pub const WM_DR_WINDOW_DESTROYED: winapi::UINT = winapi::WM_USER + 2;
+    /// User window message indicating the window creating has completed and surface ready
+    /// callback can be called.
+    pub const WM_DR_WINDOW_CREATED: winapi::UINT = winapi::WM_USER + 1;
+    pub const WM_DR_WINDOW_DESTROYED: winapi::UINT = winapi::WM_USER + 2;
+}
 
 
 /// Returns the window style for the specified settings
-fn get_window_style(settings: &WindowSettings) -> u32 {
+fn get_window_style(settings: &PlatformWindowSettings) -> u32 {
     let mut style = winapi::WS_CLIPSIBLINGS | winapi::WS_CLIPCHILDREN;
 
     //if settings.monitor {
@@ -48,7 +54,7 @@ fn get_window_style(settings: &WindowSettings) -> u32 {
 
 /// Returns the extended window style for the specified settings
 #[allow(unused_variables)]
-fn get_window_exstyle(settings: &WindowSettings) -> u32 {
+fn get_window_exstyle(settings: &PlatformWindowSettings) -> u32 {
     let style = winapi::WS_EX_APPWINDOW;
 
     //if settings.monitor  {
@@ -290,12 +296,11 @@ pub struct GLWindow {
 }
 
 impl GLWindow {
-    pub fn new(settings: WindowSettings, engine: &Engine, view: Rc<RefCell<View>>) -> Result<Box<GLWindow>, Error> {
+    pub fn new_boxed(settings: &PlatformWindowSettings, engine: &GLEngine, view: Rc<RefCell<View>>) -> Result<Box<GLWindow>, Error> {
         // create OS window
-        let engine = engine.platform();
         let app_instance = engine.get_instance();
 
-        let (style, exstyle) = (get_window_style(&settings), get_window_exstyle(&settings));
+        let (style, exstyle) = (get_window_style(settings), get_window_exstyle(settings));
         let (xpos, ypos) = (winapi::CW_USEDEFAULT, winapi::CW_USEDEFAULT);
         let full_size = get_full_window_size(style, exstyle, settings.size);
         let title = OsStr::new(&settings.title).encode_wide().chain(Some(0).into_iter()).collect::<Vec<_>>();
@@ -317,7 +322,7 @@ impl GLWindow {
         }
 
         //create context
-        let context = match Context::new(app_instance, hwnd, &settings) {
+        let context = match Context::new(app_instance, hwnd, settings) {
             Err(err) => {
                 unsafe {
                     user32::DestroyWindow(hwnd);
@@ -352,7 +357,7 @@ impl GLWindow {
             // The native window creation completes before our callback is injected into the system,
             // thus  a delayed message is sent, that is delivered only when the message loop
             // has started. (engine.dispatch_events)
-            user32::PostMessageW(hwnd, WM_DR_WINDOW_CREATED, 0, 0);
+            user32::PostMessageW(hwnd, win_messages::WM_DR_WINDOW_CREATED, 0, 0);
         }
 
         Ok(data)
@@ -362,10 +367,6 @@ impl GLWindow {
         unsafe {
             user32::PostMessageW(self.hwnd, winapi::WM_CLOSE, 0, 0);
         }
-    }
-
-    pub fn is_read_to_render(&self) -> bool {
-        self.state == WindowState::Open
     }
 
     pub fn is_closed(&self) -> bool {
@@ -386,15 +387,38 @@ impl GLWindow {
         self.ll.get_screen_size()
     }
 
-    pub fn start_render(&mut self) -> Result<(), Error> {
+    pub fn update_view(&mut self) {
+        let view = self.view.clone();
+        view.borrow_mut().on_update(/*self*/);
+    }
+
+    fn start_render(&mut self) -> Result<(), Error> {
         try!(self.context.make_current());
         self.ll.start_render();
         Ok(())
     }
 
-    pub fn end_render(&mut self) -> Result<(), Error> {
+    fn end_render(&mut self) -> Result<(), Error> {
         self.ll.end_render();
         try!(self.context.swap_buffers());
+        Ok(())
+    }
+
+    pub fn is_ready_to_render(&self) -> bool {
+        self.state == WindowState::Open
+    }
+
+    pub fn render(&mut self) -> Result<(), Error> {
+        if self.is_ready_to_render() {
+            try!(self.start_render());
+            {
+                let view = self.view.clone();
+                let mut win = unsafe { Box::from_raw(self as *mut GLWindow) };
+                view.borrow_mut().on_render(&mut win);
+                mem::forget(win);
+            }
+            try!(self.end_render());
+        }
         Ok(())
     }
 
@@ -412,19 +436,20 @@ impl GLWindow {
     pub fn handle_os_message(win_ptr: winapi::LONG_PTR, hwnd: winapi::HWND,
                              msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM)
                              -> winapi::LRESULT {
-        let (mut this, win) = unsafe {
+        let mut win = unsafe {
             assert!(win_ptr != 0);
             let win_ptr = win_ptr as *mut GLWindow;
-            let win = &mut (*win_ptr);
-            (TmpWindow(&mut *win_ptr), win)
+            Box::from_raw(win_ptr)
         };
         let mut result: Option<winapi::LRESULT> = None;
-
         match msg {
-            WM_DR_WINDOW_CREATED => {
+            win_messages::WM_DR_WINDOW_CREATED => {
                 win.state = WindowState::Open;
                 if win.start_render().is_ok() {
-                    win.view.borrow_mut().on_surface_ready(&mut this);
+                    {
+                        let view = win.view.clone();
+                        view.borrow_mut().on_surface_ready(&mut win);
+                    }
                     win.end_render().unwrap();
                 }
             }
@@ -432,7 +457,10 @@ impl GLWindow {
             winapi::WM_CLOSE => {
                 win.state = WindowState::WaitingClose;
                 if win.start_render().is_ok() {
-                    win.view.borrow_mut().on_surface_lost(&mut this);
+                    {
+                        let view = win.view.clone();
+                        view.borrow_mut().on_surface_lost(&mut win);
+                    }
                     win.end_render().unwrap();
                 }
             }
@@ -440,7 +468,7 @@ impl GLWindow {
             winapi::WM_DESTROY => {
                 win.state = WindowState::Closed;
                 unsafe {
-                    user32::PostMessageW(ptr::null_mut(), WM_DR_WINDOW_DESTROYED, 0, 0);
+                    user32::PostMessageW(ptr::null_mut(), win_messages::WM_DR_WINDOW_DESTROYED, 0, 0);
                 }
             }
 
@@ -461,7 +489,10 @@ impl GLWindow {
                 }
                 win.ll.set_screen_size(size);
                 if win.start_render().is_ok() {
-                    win.view.borrow_mut().on_surface_changed(&mut this);
+                    {
+                        let view = win.view.clone();
+                        view.borrow_mut().on_surface_changed(&mut win);
+                    }
                     win.end_render().unwrap();
                 }
 
@@ -481,7 +512,10 @@ impl GLWindow {
                     result = None;
                 } else {
                     let (sc, vkey) = vkeycode_to_element(wparam, lparam);
-                    win.view.borrow_mut().on_key(&mut this, sc, vkey, true);
+                    {
+                        let view = win.view.clone();
+                        view.borrow_mut().on_key(&mut win, sc, vkey, true);
+                    }
                     result = Some(0);
                 }
             }
@@ -492,7 +526,10 @@ impl GLWindow {
                     result = None;
                 } else {
                     let (sc, vkey) = vkeycode_to_element(wparam, lparam);
-                    win.view.borrow_mut().on_key(&mut this, sc, vkey, false);
+                    {
+                        let view = win.view.clone();
+                        view.borrow_mut().on_key(&mut win, sc, vkey, false);
+                    }
                     result = Some(0);
                 }
             }
@@ -500,6 +537,7 @@ impl GLWindow {
             _ => {}
         }
 
+        mem::forget(win);
         if let Some(res) = result {
             return res;
         }
@@ -520,20 +558,3 @@ impl Drop for GLWindow {
         }
     }
 }
-
-
-/// Temporary window during view callback handling
-struct TmpWindow<'tmp>(&'tmp mut GLWindow);
-
-impl<'engine> Window<'engine> for TmpWindow<'engine> {
-    fn platform(&self) -> &GLWindow {
-        self.0
-    }
-
-    fn platform_mut(&mut self) -> &mut GLWindow {
-        self.0
-    }
-}
-
-
-pub type WindowImpl = GLWindow;

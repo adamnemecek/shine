@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use backend::opengl::lowlevel::*;
+use opengl::lowlevel::*;
 
 
 /// Handle shader binding states

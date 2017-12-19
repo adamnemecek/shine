@@ -1,6 +1,7 @@
+#![allow(dead_code)]
 #![deny(missing_docs)]
 
-use backend::*;
+use common::*;
 
 
 /// Module to store pass related objects.
@@ -39,7 +40,7 @@ pub mod pass {
 /// This structure stores everything that can be customized when
 /// constructing a render pass.
 #[derive(Copy, Clone, Debug)]
-pub struct RenderPassConfig {
+pub struct PassConfig {
     /// Viewport.
     pub view_port: pass::ViewPort,
 
@@ -47,23 +48,23 @@ pub struct RenderPassConfig {
     pub clear: pass::Clear,
 }
 
-impl RenderPassConfig {
+impl PassConfig {
     /// Creates render pass  settings with defaults.
-    pub fn new() -> RenderPassConfig {
-        RenderPassConfig {
+    pub fn new() -> PassConfig {
+        PassConfig {
             view_port: pass::ViewPort::Fullscreen,
             clear: pass::Clear::None,
         }
     }
 
     /// Sets the clear color and returns Self for chained function calls.
-    pub fn set_clear_color<C: Into<Float32x3>>(&mut self, clear_color: C) -> &mut RenderPassConfig {
+    pub fn set_clear_color<C: Into<Float32x3>>(&mut self, clear_color: C) -> &mut PassConfig {
         self.clear = pass::Clear::Frame(clear_color.into());
         self
     }
 
     /// Sets the viewport to fullscreen
-    pub fn set_fullscreen(&mut self) -> &mut RenderPassConfig {
+    pub fn set_fullscreen(&mut self) -> &mut PassConfig {
         self.view_port = pass::ViewPort::Fullscreen;
         self
     }

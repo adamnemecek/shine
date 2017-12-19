@@ -87,9 +87,16 @@ impl<DECL: VertexDeclaration + Sized> VertexSource<DECL> for Vec<DECL> {
     }
 }
 
+pub trait VertexBufferBase: Resource {
+    type Ref: Clone;
+    type AttributeRef: Clone;
+}
 
 /// Trait that defines a vertex buffer
-pub trait VertexBuffer<DECL: VertexDeclaration>: Resource {
+pub trait VertexBuffer<DECL: VertexDeclaration>: VertexBufferBase {
     /// Sets the content of the buffer from a transient source.
-    fn set<'a, SRC: VertexSource<DECL>, Q: CommandQueue>(&self, queue: &mut Q, source: &SRC);
+    fn set<'a, SRC: VertexSource<DECL>, Q: CommandQueue>(&self, queue: &Q, source: &SRC);
 }
+
+/// Reference to an index buffer
+pub trait VertexAttributeRef: Clone {}

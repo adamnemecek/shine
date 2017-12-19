@@ -380,6 +380,31 @@ impl Drop for GLShaderProgram {
 
 
 /// Structure to store the shader abstraction.
+impl<DECL: ShaderDeclaration> Resource for ShaderProgramHandle<DECL> {
+    fn release<Q: CommandQueue>(&self, queue: &mut Q) {
+        struct ReleaseCommand {
+            target: UnsafeIndex<GLShaderProgram>,
+        }
+
+        impl Command for ReleaseCommand {
+            fn get_sort_key(&self) -> usize {
+                1
+            }
+
+            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+                let target = &mut resources[&self.target];
+                target.release(ll);
+            }
+        }
+
+        queue.add(
+            ReleaseCommand {
+                target: UnsafeIndex::from_index(&self.0),
+            }
+        );
+    }
+}
+
 impl<DECL: ShaderDeclaration> ShaderProgram<DECL> for ShaderProgramHandle<DECL> {
     fn compile<Q: CommandQueue>(&self, queue: &mut Q) {
         /// RenderCommand to allocate the OpenGL program, set the shader sources and compile (link) a shader program
@@ -407,30 +432,6 @@ impl<DECL: ShaderDeclaration> ShaderProgram<DECL> for ShaderProgramHandle<DECL> 
             }
         );
     }
-
-    fn release<Q: CommandQueue>(&self, queue: &mut Q) {
-        struct ReleaseCommand {
-            target: UnsafeIndex<GLShaderProgram>,
-        }
-
-        impl Command for ReleaseCommand {
-            fn get_sort_key(&self) -> usize {
-                1
-            }
-
-            fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-                let target = &mut resources[&self.target];
-                target.release(ll);
-            }
-        }
-
-        queue.add(
-            ReleaseCommand {
-                target: UnsafeIndex::from_index(&self.0),
-            }
-        );
-    }
-
     fn draw<Q: CommandQueue>(&self, queue: &mut Q, parameters: DECL::Parameters,
                              primitive: Primitive, vertex_start: usize, vertex_count: usize)
     {
@@ -472,6 +473,49 @@ impl<DECL: ShaderDeclaration> ShaderProgram<DECL> for ShaderProgramHandle<DECL> 
     }
 }
 
+/*
+use std::marker::PhantomData;
+use backend::*;
 
-/// The vertex buffer implementation
-pub type ShaderProgramImpl = GLShaderProgram;
+use store::handlestore::*;
+
+crate type ShaderProgramStore = Store<ShaderProgramImpl>;
+crate type GuardedShaderProgramStore<'a> = UpdateGuardStore<'a, ShaderProgramImpl>;
+crate type ShaderProgramIndex = Index<ShaderProgramImpl>;
+pub type UnsafeShaderProgramIndex = UnsafeIndex<ShaderProgramImpl>;
+
+
+/// Handle to a texture 2d resource
+#[derive(Clone)]
+pub struct ShaderProgramHandle<DECL: ShaderDeclaration>( crate ShaderProgramIndex, PhantomData<DECL>);
+
+impl<DECL: ShaderDeclaration> ShaderProgramHandle<DECL> {
+    pub fn null() -> ShaderProgramHandle<DECL> {
+        ShaderProgramHandle(ShaderProgramIndex::null(), PhantomData)
+    }
+
+    pub fn create<K: PassKey>(res: &mut RenderManager<K>) -> ShaderProgramHandle<DECL> {
+        ShaderProgramHandle(res.resources.shaders.add(ShaderProgramImpl::new()), PhantomData)
+    }
+
+    pub fn is_null(&self) -> bool {
+        self.0.is_null()
+    }
+
+    pub fn reset(&mut self) {
+        self.0.reset()
+    }
+
+    pub fn as_ref(&self) -> UnsafeIndex<ShaderProgramImpl> {
+        UnsafeIndex::from_index(&self.0)
+    }
+}
+
+impl<'a, DECL: ShaderDeclaration> From<&'a ShaderProgramHandle<DECL>> for UnsafeIndex<ShaderProgramImpl> {
+    #[inline(always)]
+    fn from(idx: &ShaderProgramHandle<DECL>) -> UnsafeIndex<ShaderProgramImpl> {
+        UnsafeIndex::from_index(&idx.0)
+    }
+}
+
+*/
