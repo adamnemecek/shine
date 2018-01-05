@@ -12,6 +12,7 @@ use winapi;
 use core::*;
 use framework::*;
 use lowlevel::*;
+use resources::*;
 
 pub mod win_messages {
     use winapi;
@@ -290,11 +291,11 @@ pub struct GLWindow {
     context: GLContext,
     ll: LowLevel,
 
-    view: Rc<RefCell<View>>,
+    view: Rc<RefCell<View<R=GLResources>>>,
 }
 
 impl GLWindow {
-    pub fn new_boxed(settings: &PlatformWindowSettings, engine: &GLEngine, view: Rc<RefCell<View>>) -> Result<Box<GLWindow>, Error> {
+    pub fn new_boxed(settings: &PlatformWindowSettings, engine: &GLEngine, view: Rc<RefCell<View<R=GLResources>>>) -> Result<Box<GLWindow>, Error> {
         // create OS window
         let app_instance = engine.get_instance();
 

@@ -107,15 +107,9 @@ impl<DECL: IndexDeclaration + Sized> IndexSource<DECL> for Vec<DECL> {
 }
 
 
-/// Trait that defines an index buffer
-pub trait IndexBufferBase: Resource {
-    /// Reference to this index buffer used in shader parameters.
-    type Ref: Clone;
-}
-
 /// Trait that defines an index buffer with index format declaration
-pub trait IndexBuffer<DECL: IndexDeclaration>: IndexBufferBase {
+pub trait IndexBuffer<DECL: IndexDeclaration>: Resource {
     /// Sets the content of the buffer
-    fn set<'a, SRC: IndexSource<DECL>, Q: CommandQueue>(&self, queue: &Q, source: &SRC);
+    fn set<'a, SRC: IndexSource<DECL>, Q: CommandQueue<Command=Self::Command>>(&self, queue: &Q, source: &SRC);
 }
 

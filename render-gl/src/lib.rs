@@ -13,6 +13,7 @@ extern crate gdi32;
 extern crate user32;
 
 extern crate dragorust_render_core as core;
+extern crate dragorust_store as store;
 
 //#![cfg(target_os = "null")]
 pub extern crate gl;
@@ -31,8 +32,16 @@ pub mod limits {
     pub const MAX_USED_TEXTURE_COUNT: usize = 16;
 }
 
+/// Helper macro to hide unsafe blocks for API calls
+#[macro_export]
+macro_rules! gl {
+    ( $cmd:ident($( $arg:expr ),*) ) => { unsafe { gl::$cmd($($arg,)*) } };
+}
+
 pub mod lowlevel;
 pub mod framework;
+pub mod resources;
 
 pub use core::*;
 pub use framework::*;
+pub use resources::*;

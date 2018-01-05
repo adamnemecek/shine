@@ -91,21 +91,15 @@ impl<DECL: VertexDeclaration + Sized> VertexSource<DECL> for Vec<DECL> {
 }
 
 
-/// Reference to an index buffer
-pub trait VertexAttributeRef: Clone {}
-
-/// Trait that defines a vertex buffer
-pub trait VertexBufferBase: Resource {
-    /// Reference to an attribute of this vertex buffer used in shader parameters.
-    type AttributeRef: VertexAttributeRef;
-}
-
 /// Trait that defines a vertex buffer with vertex format declaration.
-pub trait VertexBuffer<DECL: VertexDeclaration>: VertexBufferBase {
+pub trait VertexBuffer<DECL: VertexDeclaration>: Resource {
+    /// Reference to an attribute of this vertex buffer used in shader parameters.
+    type AttributeRef: 'static + Clone;
+
     /// Sets the content of the buffer.
-    fn set<'a, SRC: VertexSource<DECL>, Q: CommandQueue>(&self, queue: &Q, source: &SRC);
+    fn set<'a, SRC: VertexSource<DECL>, Q: CommandQueue<Command=Self::Command>>(&self, queue: &Q, source: &SRC);
 
     /// Gets a referenc to an attribute.
-    fn get_attribute(&self, attr: DECL::Attribute) -> <Self as VertexBufferBase>::AttributeRef;
+    fn get_attribute(&self, attr: DECL::Attribute) -> Self::AttributeRef;
 }
 

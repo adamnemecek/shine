@@ -19,6 +19,9 @@ pub trait CommandQueue {
 /// Cloning a Resource won't duplicate the resource, it is more like a handle, and only the handle
 /// is duplicated. The same hw resource is referenced from both entity.
 pub trait Resource: Clone {
+    /// Command type used to store in the render command buffer.
+    type Command: Command;
+
     /// Releases the allocated hw resources.
-    fn release<Q: CommandQueue>(&self, queue: &Q);
+    fn release<Q: CommandQueue<Command=Self::Command>>(&self, queue: &Q);
 }

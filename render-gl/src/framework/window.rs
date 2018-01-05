@@ -1,10 +1,10 @@
 use core::*;
 use framework::*;
-
+use resources::*;
 
 
 pub trait PlatformWindowBuilder {
-    fn build<V: View>(&self, engine: &PlatformEngine, view: V) -> Result<PlatformWindow, Error>;
+    fn build<V: View<R=GLResources>>(&self, engine: &PlatformEngine, view: V) -> Result<PlatformWindow, Error>;
 }
 
 
@@ -12,6 +12,8 @@ pub trait PlatformWindowBuilder {
 pub type PlatformWindow = Box<GLWindow>;
 
 impl Window for Box<GLWindow> {
+    type R = GLResources;
+
     fn close(&mut self) {
         if !self.is_closed() {
             self.as_mut().close()

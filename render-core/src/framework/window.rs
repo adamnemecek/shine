@@ -7,20 +7,23 @@ use framework::*;
 
 /// Implements the view dependent aspect of an application.
 pub trait View: 'static {
+    /// TBD.
+    type R: 'static;
+
     /// Handles the surface lost event.
     ///
     /// Window still has the OS resources, but will be released soon after this call.
-    fn on_surface_lost(&mut self, window: &mut Window);
+    fn on_surface_lost(&mut self, window: &mut Window<R=Self::R>);
 
     /// Handles the surface ready event.
     ///
     /// Window has create all the OS resources.
-    fn on_surface_ready(&mut self, window: &mut Window);
+    fn on_surface_ready(&mut self, window: &mut Window<R=Self::R>);
 
     /// Handles the surface size or other config change.
     ///
     /// Window has create all the OS resources.
-    fn on_surface_changed(&mut self, window: &mut Window);
+    fn on_surface_changed(&mut self, window: &mut Window<R=Self::R>);
 
     /// Handles update requests.
     fn on_update(&mut self);
@@ -29,15 +32,18 @@ pub trait View: 'static {
     ///
     /// Rendering can be triggered manually by calling the render function of window or
     /// by the system if paint event handing is enabled.
-    fn on_render(&mut self, window: &mut Window);
+    fn on_render(&mut self, window: &mut Window<R=Self::R>);
 
     /// Handles key down and up events.
-    fn on_key(&mut self, window: &mut Window, scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool);
+    fn on_key(&mut self, window: &mut Window<R=Self::R>, scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool);
 }
 
 
 /// Trait for window abstraction.
 pub trait Window {
+    /// TBD.
+    type R: 'static;
+
     /// Requests to close the window.
     ///
     /// This function asks the OS to close the window. Window is not closed immediately,

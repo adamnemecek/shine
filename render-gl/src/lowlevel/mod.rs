@@ -1,10 +1,3 @@
-/// Helper macro to hide unsafe blocks for API calls
-#[macro_export]
-macro_rules! gl {
-    ( $cmd:ident($( $arg:expr ),*) ) => { unsafe { gl::$cmd($($arg,)*) } };
-}
-
-
 mod utils;
 pub mod vertexbinding;
 pub mod indexbinding;
@@ -15,10 +8,10 @@ use core::*;
 pub use gl;
 pub use gl::types::*;
 pub use self::utils::*;
-use self::vertexbinding::VertexBinding;
-use self::indexbinding::IndexBinding;
-use self::programbinding::ProgramBinding;
-use self::texturebinding::TextureBinding;
+pub use self::vertexbinding::VertexBinding;
+pub use self::indexbinding::IndexBinding;
+pub use self::programbinding::ProgramBinding;
+pub use self::texturebinding::TextureBinding;
 
 /// Structure to manage the GL state machine at a low level.
 ///

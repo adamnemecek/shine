@@ -1,8 +1,9 @@
-use std::marker::PhantomData;
+#![allow(dead_code)]
 
-use engine::*;
-use opengl::*;
-use opengl::lowlevel::*;
+use std::marker::PhantomData;
+use core::*;
+use lowlevel::*;
+use resources::*;
 use store::handlestore::*;
 
 
@@ -59,10 +60,50 @@ impl Drop for GLIndexBuffer {
 }
 
 
+/// Command to release and index buffer
+pub struct ReleaseCommand {
+    target: UnsafeIndex<GLIndexBuffer>,
+}
+
+impl Command for ReleaseCommand {
+    fn get_sort_key(&self) -> usize {
+        0
+    }
+}
+
+/*impl GLCommand for ReleaseCommand {
+    /*fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
+        let target = &mut resources[&self.target];
+        target.release(ll);
+    }*/
+}*/
+
+impl From<ReleaseCommand> for GLCommand {
+    #[inline(always)]
+    fn from(value: ReleaseCommand) -> GLCommand {
+        GLCommand::IndexRelease(value)
+    }
+}
+
+
+/// Command to create an index buffer
+pub struct CreateCommand {
+    target: UnsafeIndex<GLIndexBuffer>,
+    type_id: GLenum,
+    data: Vec<u8>,
+}
+
+impl From<CreateCommand> for GLCommand {
+    #[inline(always)]
+    fn from(value: CreateCommand) -> GLCommand {
+        GLCommand::IndexCreate(value)
+    }
+}
+
+
 pub type IndexBufferStore = Store<GLIndexBuffer>;
 pub type GuardedIndexBufferStore<'a> = UpdateGuardStore<'a, GLIndexBuffer>;
 pub type IndexBufferIndex = Index<GLIndexBuffer>;
-
 
 /// Handle to an index buffer resource
 #[derive(Clone)]
@@ -87,71 +128,30 @@ impl<DECL: IndexDeclaration> IndexBufferHandle<DECL> {
 }
 
 impl<DECL: IndexDeclaration> Resource for IndexBufferHandle<DECL> {
-    fn release<Q: CommandQueue>(&self, queue: &Q) {
-        struct ReleaseCommand {
-            target: UnsafeIndex<GLIndexBuffer>,
-        }
+    type Command = GLCommand;
 
-        impl Command for ReleaseCommand {
-            fn get_sort_key(&self) -> usize {
-                0
-            }
-        }
-
-        impl GLCommand for ReleaseCommand {
-            /*fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-                let target = &mut resources[&self.target];
-                target.release(ll);
-            }*/
-        }
-
-
-        //println!("GLIndexBuffer - release");
+    fn release<Q: CommandQueue<Command=Self::Command>>(&self, queue: &Q) {
+        println!("GLIndexBuffer - release");
         queue.add(
             ReleaseCommand {
                 target: UnsafeIndex::from_index(&self.0),
-            }
+            }.into()
         );
     }
 }
 
-impl<DECL: IndexDeclaration> IndexBufferBase for IndexBufferHandle<DECL> {
-    type Ref = IndexBufferIndex;
-}
-
 impl<DECL: IndexDeclaration> IndexBuffer<DECL> for IndexBufferHandle<DECL> {
-    fn set<'a, SRC: IndexSource<DECL>, Q: CommandQueue>(&self, queue: &Q, source: &SRC) {
-        /// RenderCommand to create and allocated OpenGL resources.
-        struct CreateCommand {
-            target: UnsafeIndex<GLIndexBuffer>,
-            type_id: GLenum,
-            data: Vec<u8>,
-        }
-
-        impl Command for CreateCommand {
-            fn get_sort_key(&self) -> usize {
-                0
-            }
-        }
-
-        impl GLCommand for CreateCommand {
-            /*fn process<'a>(&mut self, resources: &mut GuardedResources<'a>, ll: &mut LowLevel) {
-                let target = &mut resources[&self.target];
-                target.upload_data(ll, self.type_id, self.data.as_slice());
-            }*/
-        }
-
+    fn set<'a, SRC: IndexSource<DECL>, Q: CommandQueue<Command=Self::Command>>(&self, queue: &Q, source: &SRC) {
         match source.to_data() {
             IndexData::Transient(slice) => {
-                //println!("GLIndexBuffer - set_copy");
+                println!("GLIndexBuffer - set_copy");
                 assert!(!self.is_null());
-
                 queue.add(
                     CreateCommand {
                         target: UnsafeIndex::from_index(&self.0),
-                        type_id: From::from(DECL::get_layout()),
+                        type_id: IndexBinding::glenum_from_index_type(DECL::get_layout()),
                         data: slice.to_vec(),
-                    }
+                    }.into()
                 );
             }
         }

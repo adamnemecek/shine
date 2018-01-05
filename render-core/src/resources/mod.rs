@@ -24,4 +24,10 @@ pub use self::shaderprogram::*;
 
 pub trait Resources: 'static {
     type Command: Command;
+
+    type IndexRef: 'static;
+    type VertexAttributeRef: 'static;
+    /*type Texture2DRef: Texture2D;
+    type RenderTargetRef: RenderTarget;
+    type ShaderProgramRef: ShaderProgramBase;*/
 }
