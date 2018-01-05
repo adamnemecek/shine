@@ -1,0 +1,10 @@
+[package]
+name = "dragorust-render-core"
+version = "0.1.0"
+authors = ["gzp <z.p.gaal.devel@gmail.com>"]
+
+[dependencies]
+dragorust-store = {path = "../store"}
+
+libc = "*"
+image = "*"

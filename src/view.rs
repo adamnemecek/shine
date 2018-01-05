@@ -2,8 +2,8 @@ use std::slice;
 use std::str;
 use std::f32;
 
-use game;
-use world;
+//use game;
+//use world;
 use render::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -65,11 +65,10 @@ enum Passes {
 
 impl PassId for Passes {}
 
-
 /// Structure to handle view dependent data
-pub struct SimpleView {
+pub struct SimpleView<R: Resources> {
     game: game::GameCell,
-    //render: RenderManager<Passes>,
+    render: RenderManager<Passes, R>,
 
     /*shader: ShaderProgramHandle<ShSimple>,
 
@@ -84,16 +83,13 @@ pub struct SimpleView {
     t: f32,
 }
 
-impl SimpleView {
-    pub fn new(game: game::GameCell) -> SimpleView {
-        //let mut render = RenderManager::new();
-
+impl<R: Resources> SimpleView<R> {
+    pub fn new(game: game::GameCell) -> SimpleView<R> {
         let mut view = SimpleView {
             game: game,
-            a: AA { k: Passes::Present, d: 0 },
-            /*render: RenderManager::new(),
+            render: RenderManager::new(),
 
-            shader: ShaderProgramHandle::null(),
+            /*shader: ShaderProgramHandle::null(),
             vertex_buffer1: VertexBufferHandle::null(),
             vertex_buffer2: VertexBufferHandle::null(),
             index_buffer1: IndexBufferHandle::null(),
@@ -116,7 +112,7 @@ impl SimpleView {
     }
 }
 
-impl View for SimpleView {
+impl<R: Resources> View for SimpleView<R> {
     fn on_surface_ready(&mut self, window: &mut Window) {
         // create some shaders
 
