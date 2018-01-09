@@ -11,18 +11,9 @@ use limits::*;
 struct ShaderError(String);
 
 
-/// Converts a ShaderType enum to the corresponding GLenum.
-fn gl_get_shader_enum(shader_type: ShaderType) -> GLenum {
-    match shader_type {
-        ShaderType::VertexShader => gl::VERTEX_SHADER,
-        ShaderType::FragmentShader => gl::FRAGMENT_SHADER
-    }
-}
-
-
 /// Shader parameters info: required type, binding locations.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-enum ParameterLocation {
+pub enum ParameterLocation {
     Attribute {
         location: GLuint,
         size: GLint,
@@ -50,109 +41,8 @@ impl ParameterLocation {
 
 
 /// Attributes in the order defined by the descriptor
-type ParameterLocations = ArrayVec<[ParameterLocation; MAX_USED_PARAMETER_COUNT]>;
+pub type ParameterLocations = ArrayVec<[ParameterLocation; MAX_USED_PARAMETER_COUNT]>;
 
-
-/// Helper to upload shader parameters
-/*struct ParameterUploader<'a, 'r: 'a> {
-    locations: &'a ParameterLocations,
-    ll: &'a mut LowLevel,
-    resources: &'a mut GuardedResources<'r>,
-}
-
-impl<'a, 'r> ShaderParameterVisitor for ParameterUploader<'a, 'r> {
-    fn process_f32x16(&mut self, idx: usize, data: &Float32x16) {
-        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
-            if type_id != 0 {
-                assert!(type_id == gl::FLOAT_MAT4 && size == 1);
-                gl_check_error();
-                gl!(UniformMatrix4fv(location as i32, size, gl::FALSE, mem::transmute(data)));
-                gl_check_error();
-            }
-        }
-    }
-
-    fn process_f32x4(&mut self, idx: usize, data: &Float32x4) {
-        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
-            if type_id != 0 {
-                assert!(type_id == gl::FLOAT_VEC4 && size == 1);
-                gl_check_error();
-                gl!(Uniform4fv(location as i32, size, mem::transmute(data)));
-                gl_check_error();
-            }
-        }
-    }
-
-    fn process_f32x3(&mut self, idx: usize, data: &Float32x3) {
-        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
-            if type_id != 0 {
-                assert!(type_id == gl::FLOAT_VEC3 && size == 1);
-                gl_check_error();
-                gl!(Uniform3fv(location as i32, size, mem::transmute(data)));
-                gl_check_error();
-            }
-        }
-    }
-
-    fn process_f32x2(&mut self, idx: usize, data: &Float32x2) {
-        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
-            if type_id != 0 {
-                assert!(type_id == gl::FLOAT_VEC2 && size == 1);
-                gl_check_error();
-                gl!(Uniform2fv(location as i32, size, mem::transmute(data)));
-                gl_check_error();
-            }
-        }
-    }
-
-    fn process_f32(&mut self, idx: usize, data: f32) {
-        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
-            if type_id != 0 {
-                assert!(type_id == gl::FLOAT && size == 1);
-                gl_check_error();
-                gl!(Uniform1fv(location as i32, size, mem::transmute(&data)));
-                gl_check_error();
-            }
-        }
-    }
-
-    /*fn process_tex_2d(&mut self, idx: usize, data: &UnsafeTexture2DIndex) {
-        if let ParameterLocation::Uniform { location, size, type_id } = self.locations[idx] {
-            if type_id != 0 {
-                assert!(type_id == gl::SAMPLER_2D && size == 1);
-                gl_check_error();
-                let texture = &mut self.resources[data];
-                let slot = texture.bind(self.ll);
-                let slot = slot as u32;
-                gl!(Uniform1i(location as i32, slot as i32));
-                gl_check_error();
-            }
-        }
-    }
-
-    fn process_attribute(&mut self, idx: usize, data: &UnsafeVertexAttributeHandle) {
-        if let ParameterLocation::Attribute { location, type_id, .. } = self.locations[idx] {
-            if type_id != 0 {
-                gl_check_error();
-                let buffer = &mut self.resources[data];
-                buffer.bind(self.ll, location, data.1);
-                gl_check_error();
-            }
-        }
-    }
-
-    fn process_index(&mut self, _idx: usize, data: &UnsafeIndexBufferIndex) {
-        gl_check_error();
-        if data.is_null() {
-            self.ll.index_binding.bind_no_index();
-        } else {
-            let buffer = &mut self.resources[data];
-            buffer.bind(self.ll);
-        }
-        gl_check_error();
-    }*/
-}
-*/
 
 /// Structure to store hardware data associated to a ShaderProgram.
 pub struct GLShaderProgram {
@@ -210,7 +100,7 @@ impl GLShaderProgram {
         // create and attach shaders
         gl_check_error();
         for source in DECL::get_sources() {
-            if let Err(ShaderError(err)) = self.attach_shader(gl_get_shader_enum(source.0), source.1.as_bytes()) {
+            if let Err(ShaderError(err)) = self.attach_shader(ProgramBinding::glenum_from_shader_type(source.0), source.1.as_bytes()) {
                 println!("Shader program compilation failed.\n{}\nError:{}", source.1, err);
                 self.release(ll);
                 return;
@@ -344,8 +234,8 @@ impl GLShaderProgram {
         self.parameter_locations.clear();
     }
 
-    /*fn draw<'r, 'a, P: ShaderParameters>(&mut self, resources: &'a mut GuardedResources<'r>, ll: &'a mut LowLevel,
-                                         parameters: &P, primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
+    fn draw<F: Fn(&mut LowLevel, &ParameterLocations)>(&mut self, ll: &mut LowLevel, parameter_update: &F,
+                                                       primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
         // bind shader
         if self.hw_id == 0 {
             // no drawing when shader is not valid
@@ -355,15 +245,11 @@ impl GLShaderProgram {
 
         // bind parameters
         gl_check_error();
-        parameters.visit(&mut ParameterUploader {
-            locations: &self.parameter_locations,
-            ll: ll,
-            resources: resources,
-        });
+        parameter_update(ll, &self.parameter_locations);
         gl_check_error();
 
         ll.draw(primitive, vertex_start, vertex_count);
-    }*/
+    }
 }
 
 impl Drop for GLShaderProgram {

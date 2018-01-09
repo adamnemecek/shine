@@ -16,6 +16,8 @@ extern crate arrayvec;
 
 extern crate dragorust_render_core as core;
 extern crate dragorust_store as store;
+#[macro_reexport(VertexDeclaration)]
+extern crate dragorust_render_gl_derive;
 
 //#![cfg(target_os = "null")]
 pub extern crate gl;

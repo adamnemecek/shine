@@ -67,18 +67,6 @@ impl Drop for GLTexture {
 }
 
 
-/// Finds the internal and upload enums:
-/// [0] internal format - Specifies the internal format of the stored texture
-/// [1] format - Specifies the format of the source texel data
-/// [2] type - Specifies the data type of the source texel data
-fn get_upload_enums(fmt: PixelFormat) -> (GLenum, GLenum, GLenum) {
-    match fmt {
-        PixelFormat::Rgb8 => (gl::RGB, gl::RGB, gl::UNSIGNED_BYTE),
-        PixelFormat::Rgba8 => (gl::RGBA, gl::RGBA, gl::UNSIGNED_BYTE),
-    }
-}
-
-
 impl Resource for Texture2DHandle {
     fn release<Q: CommandQueue>(&self, queue: &mut Q) {
         struct ReleaseCommand {

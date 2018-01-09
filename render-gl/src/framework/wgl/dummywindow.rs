@@ -80,7 +80,7 @@ impl DummyWindow {
 
 impl Drop for DummyWindow {
     fn drop(&mut self) {
-        println!("DummyWindow close");
+        //println!("DummyWindow dropped");
         unsafe {
             user32::ReleaseDC(self.hwnd, self.hdc);
             user32::DestroyWindow(self.hwnd);

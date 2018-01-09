@@ -22,6 +22,8 @@ impl GLIndexBuffer {
         assert!(self.hw_id != 0);
         self.type_id = type_id;
 
+        //println!("upload ib id: {}, t: {}\n  d: {:?}", self.hw_id, self.type_id, data);
+
         ll.index_binding.bind_buffer(self.hw_id);
         gl!(BufferData(gl::ELEMENT_ARRAY_BUFFER,
                        data.len() as GLsizeiptr,

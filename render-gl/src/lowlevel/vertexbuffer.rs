@@ -2,7 +2,8 @@ use arrayvec::ArrayVec;
 use lowlevel::*;
 use limits::*;
 
-type GLVertexBufferAttributeVec = ArrayVec<[GLVertexBufferAttribute; MAX_VERTEX_ATTRIBUTE_COUNT]>;
+
+pub type GLVertexBufferAttributeVec = ArrayVec<[GLVertexBufferAttribute; MAX_VERTEX_ATTRIBUTE_COUNT]>;
 
 
 /// Structure to store hardware data associated to a VertexBuffer.
@@ -19,17 +20,16 @@ impl GLVertexBuffer {
         }
     }
 
-    pub fn upload_data<VD: VertexDeclaration>(&mut self, ll: &mut LowLevel, data: &[u8]) {
-        for idx in VD::get_attributes() {
-            self.attributes.push(GLVertexBufferAttribute::from_layout(&VD::get_attribute_layout(*idx)));
-            assert!(self.attributes.len() <= MAX_VERTEX_ATTRIBUTE_COUNT, "Vertex attribute count exceeds engine limits ({})", MAX_VERTEX_ATTRIBUTE_COUNT);
-        }
+    pub fn upload_data(&mut self, ll: &mut LowLevel, attributes: GLVertexBufferAttributeVec, data: &[u8]) {
+        self.attributes = attributes;
 
         gl_check_error();
         if self.hw_id == 0 {
             gl!(GenBuffers(1, &mut self.hw_id));
         }
         assert!(self.hw_id != 0);
+
+        //println!("upload vb id: {}, t: {:?}\n  d: {:?}", self.hw_id, self.attributes, data);
 
         ll.vertex_binding.bind_buffer(self.hw_id);
         gl!(BufferData(gl::ARRAY_BUFFER,

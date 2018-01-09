@@ -1,4 +1,5 @@
-//#[macro_use]
+#![cfg(OFF)]
+
 extern crate dragorust_render_gl as render;
 
 use std::time::Duration;

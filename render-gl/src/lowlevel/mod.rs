@@ -6,6 +6,7 @@ pub mod programbinding;
 
 mod vertexbuffer;
 mod indexbuffer;
+mod texture;
 mod shaderprogram;
 
 use core::*;
@@ -20,6 +21,7 @@ pub use self::texturebinding::*;
 
 pub use self::indexbuffer::*;
 pub use self::vertexbuffer::*;
+pub use self::texture::*;
 pub use self::shaderprogram::*;
 
 

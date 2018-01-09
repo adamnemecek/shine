@@ -15,7 +15,9 @@ pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
     let gen = quote! {
         #[allow(unused_imports, non_snake_case)]
         mod #dummy_mod {
-            extern crate dragorust_render as _dragorust_render;
+            extern crate dragorust_render_gl as _dragorust_render;
+            use std::slice;
+            use std::str;
             #gen_impl
         }
         pub use self::#dummy_mod::*;

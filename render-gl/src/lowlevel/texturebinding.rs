@@ -65,6 +65,17 @@ impl TextureBinding {
         }
     }
 
+    /// Finds the internal and upload enums:
+    /// [0] internal format - Specifies the internal format of the stored texture
+    /// [1] format - Specifies the format of the source texel data
+    /// [2] type - Specifies the data type of the source texel data
+    pub fn glenum_from_pixel_format(fmt: PixelFormat) -> (GLenum, GLenum, GLenum) {
+        match fmt {
+            PixelFormat::Rgb8 => (gl::RGB, gl::RGB, gl::UNSIGNED_BYTE),
+            PixelFormat::Rgba8 => (gl::RGBA, gl::RGBA, gl::UNSIGNED_BYTE),
+        }
+    }
+
     /// Enables/Disables the forced state changed. When enabled, the cached state is ignored
     /// and gl commands are always generated.
     pub fn set_forced(&mut self, force: bool) {

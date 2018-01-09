@@ -11,7 +11,6 @@ use winapi;
 
 use core::*;
 use framework::*;
-use lowlevel::*;
 use resources::*;
 
 pub mod win_messages {
@@ -301,7 +300,6 @@ pub struct GLWindow {
     size: Size,
     position: Position,
     context: GLContext,
-    ll: LowLevel,
     control: GLWindowControl,
     resources: GLResources,
 
@@ -329,7 +327,7 @@ impl GLWindow {
                                     app_instance,
                                     ptr::null_mut())
         };
-        println!("Os window created: {:?}", hwnd);
+        //println!("Os window created, hwnd: {:?}", hwnd);
         if hwnd.is_null() {
             return Err(Error::WindowCreationError(format!("Window: CreateWindowEx function failed: {}", io::Error::last_os_error())));
         }
@@ -352,10 +350,8 @@ impl GLWindow {
             size: settings.size,
             position: Position { x: 0, y: 0 },
             context: context,
-            ll: LowLevel::new(),
             control: GLWindowControl { hwnd: hwnd },
-            resources: GLResources {},
-
+            resources: GLResources::new(),
             view: view,
         });
 
@@ -397,7 +393,7 @@ impl GLWindow {
     }
 
     pub fn get_draw_size(&self) -> Size {
-        self.ll.get_screen_size()
+        self.resources.get_screen_size()
     }
 
     pub fn update_view(&mut self) {
@@ -406,12 +402,12 @@ impl GLWindow {
 
     fn start_render(&mut self) -> Result<(), Error> {
         try!(self.context.make_current());
-        self.ll.start_render();
+        try!(self.resources.start_render());
         Ok(())
     }
 
     fn end_render(&mut self) -> Result<(), Error> {
-        self.ll.end_render();
+        try!(self.resources.end_render());
         try!(self.context.swap_buffers());
         Ok(())
     }
@@ -431,10 +427,6 @@ impl GLWindow {
 
     pub fn get_hwnd(&self) -> winapi::HWND {
         self.hwnd
-    }
-
-    pub fn get_ll(&mut self) -> &mut LowLevel {
-        &mut self.ll
     }
 
     fn handle_surface_ready(&mut self) {
@@ -504,7 +496,7 @@ impl GLWindow {
                         height: rect.bottom - rect.top
                     };
                 }
-                win.ll.set_screen_size(size);
+                win.resources.set_screen_size(size);
                 if win.start_render().is_ok() {
                     win.handle_surface_changed();
                     win.end_render().unwrap();
@@ -555,7 +547,7 @@ impl GLWindow {
 
 impl Drop for GLWindow {
     fn drop(&mut self) {
-        println!("GLWindow dropped");
+        //println!("GLWindow dropped");
 
         unsafe {
             if self.hwnd != ptr::null_mut() {

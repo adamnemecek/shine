@@ -1,19 +1,27 @@
-//#[macro_use]
+#[macro_use]
 extern crate dragorust_render_gl as render;
 
 use std::time::Duration;
 use render::*;
 
+#[derive(Copy, Clone, Debug)]
+#[derive(VertexDeclaration)]
+struct VxPos {
+    position: Float32x3,
+}
+
 struct SimpleView {
     //PlatformRenderManager,
-    index_buffer1: IndexBufferHandle<u8>,
+    vb: lowlevel::GLVertexBuffer,
+    ib: lowlevel::GLIndexBuffer,
 }
 
 impl SimpleView {
     fn new() -> SimpleView {
         SimpleView {
             //r: PlatformRenderManager::new(),
-            index_buffer1: IndexBufferHandle::null(),
+            vb: lowlevel::GLVertexBuffer::new(),
+            ib: lowlevel::GLIndexBuffer::new(),
         }
     }
 }
@@ -21,9 +29,36 @@ impl SimpleView {
 impl View for SimpleView {
     type Resources = GLResources;
 
-    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, _r: &mut GLResources) {}
+    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut GLResources) {
+        use lowlevel::*;
 
-    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut GLResources) {}
+        let pos = [
+            VxPos { position: f32x3!(1, 0, 0) },
+            VxPos { position: f32x3!(1, 1, 0) },
+            VxPos { position: f32x3!(0, 1, 0) },
+            VxPos { position: f32x3!(0, 0, 0) },
+        ];
+
+        {
+            let VertexData::Transient(slice) = pos.to_data();
+            let mut attributes = GLVertexBufferAttributeVec::new();
+            for idx in VxPos::get_attributes() {
+                attributes.push(GLVertexBufferAttribute::from_layout(&VxPos::get_attribute_layout(*idx)));
+            }
+            self.vb.upload_data(r.ll_mut(), attributes, slice);
+        }
+
+        {
+            let indices = [0u8, 1, 2, 0, 2, 3];
+            let IndexData::Transient(slice) = indices.to_data();
+            self.ib.upload_data(r.ll_mut(), IndexBinding::glenum_from_index_type(<u8 as IndexType>::get_layout()), slice);
+        }
+    }
+
+    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, r: &mut GLResources) {
+        self.vb.release(r.ll_mut());
+        self.ib.release(r.ll_mut());
+    }
 
     fn on_surface_changed(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {}
 

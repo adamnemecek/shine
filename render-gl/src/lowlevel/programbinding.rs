@@ -17,6 +17,14 @@ impl ProgramBinding {
         }
     }
 
+    /// Converts a ShaderType enum to the corresponding GLenum.
+    pub fn glenum_from_shader_type(shader_type: ShaderType) -> GLenum {
+        match shader_type {
+            ShaderType::VertexShader => gl::VERTEX_SHADER,
+            ShaderType::FragmentShader => gl::FRAGMENT_SHADER
+        }
+    }
+
     /// Enables/Disables the forced state changed. When enabled, the cached state is ignored
     /// and gl commands are always generated.
     pub fn set_forced(&mut self, force: bool) {

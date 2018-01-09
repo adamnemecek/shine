@@ -629,7 +629,7 @@ impl Context {
 
 impl Drop for Context {
     fn drop(&mut self) {
-        println!("Context close");
+        //println!("Context dropped");
         unsafe {
             self.release_context();
             kernel32::FreeLibrary(self.gl_library);

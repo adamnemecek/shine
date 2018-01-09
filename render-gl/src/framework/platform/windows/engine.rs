@@ -120,15 +120,15 @@ impl GLEngine {
             }
 
             if msg.message == win_messages::WM_DR_WINDOW_CREATED {
-                println!("WM_DR_WINDOW_CREATED");
+                //println!("dispatching WM_DR_WINDOW_CREATED, new_window_count: {}", new_window_count);
                 if new_window_count == i32::max_value() {
                     new_window_count = 1;
                 } else {
                     new_window_count += 1;
                 }
             } else if msg.message == win_messages::WM_DR_WINDOW_DESTROYED {
-                println!("WM_DR_WINDOW_DESTROYED");
                 new_window_count -= 1;
+                //println!("dispatching  WM_DR_WINDOW_DESTROYED, new_window_count: {}", new_window_count);
             }
 
             // messages are delegated to the window in the window proc
