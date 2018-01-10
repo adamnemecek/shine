@@ -106,7 +106,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
             type Attribute = #enum_type_name;
 
             #[allow(dead_code)]
-            fn get_attributes() -> slice::Iter<'static, #enum_type_name> {
+            fn attribute_iter() -> slice::Iter<'static, #enum_type_name> {
                 static IDS : [#enum_type_name; #count] = #qualified_enum_idents;
                 IDS.iter()
             }

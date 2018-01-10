@@ -22,10 +22,15 @@ pub trait VertexDeclaration: 'static + Clone {
     type Attribute: 'static + Copy + From<usize> + Into<usize> + FromStr;
 
     /// Returns an iterator over the possible attribute values.
-    fn get_attributes() -> slice::Iter<'static, Self::Attribute>;
+    fn attribute_iter() -> slice::Iter<'static, Self::Attribute>;
 
     /// Returns the platform dependent vertex attribute description.
     fn get_attribute_layout(index: Self::Attribute) -> VertexBufferLayoutElement;
+
+    /// Returns an iterator over the layout elements
+    fn attribute_layout_iter() -> Box<Iterator<Item=VertexBufferLayoutElement>> {
+        Box::new(Self::attribute_iter().map(move |&idx| Self::get_attribute_layout(idx)))
+    }
 }
 
 

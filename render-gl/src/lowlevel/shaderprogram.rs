@@ -1,7 +1,6 @@
 #![allow(dead_code)]
 
 use std::str::from_utf8;
-use arrayvec::ArrayVec;
 use lowlevel::*;
 use limits::*;
 
@@ -40,8 +39,8 @@ impl ParameterLocation {
 }
 
 
-/// Attributes in the order defined by the descriptor
-pub type ParameterLocations = ArrayVec<[ParameterLocation; MAX_USED_PARAMETER_COUNT]>;
+/// Type to store the required shader parameter locations.
+pub type ParameterLocations = [ParameterLocation; MAX_USED_PARAMETER_COUNT];
 
 
 /// Structure to store hardware data associated to a ShaderProgram.
@@ -54,7 +53,7 @@ impl GLShaderProgram {
     pub fn new() -> GLShaderProgram {
         GLShaderProgram {
             hw_id: 0,
-            parameter_locations: ParameterLocations::new(),
+            parameter_locations: [ParameterLocation::Empty; MAX_USED_PARAMETER_COUNT],
         }
     }
 
@@ -88,7 +87,7 @@ impl GLShaderProgram {
         }
     }
 
-    pub fn create_program<DECL: ShaderDeclaration>(&mut self, ll: &mut LowLevel) {
+    pub fn create_program<'a, I: Iterator<Item=&'a (ShaderType, &'static str)>>(&mut self, ll: &mut LowLevel, sources: I) {
         gl_check_error();
         if self.hw_id != 0 {
             self.release(ll);
@@ -99,7 +98,7 @@ impl GLShaderProgram {
 
         // create and attach shaders
         gl_check_error();
-        for source in DECL::get_sources() {
+        for source in sources {
             if let Err(ShaderError(err)) = self.attach_shader(ProgramBinding::glenum_from_shader_type(source.0), source.1.as_bytes()) {
                 println!("Shader program compilation failed.\n{}\nError:{}", source.1, err);
                 self.release(ll);
@@ -130,7 +129,7 @@ impl GLShaderProgram {
         gl_check_error();
     }
 
-    fn parse_attributes<DECL: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
+    fn parse_attributes<F: Fn(&str) -> usize>(&mut self, _ll: &mut LowLevel, name_to_index: F) {
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
         let mut name_length: GLsizei = 0;
@@ -156,7 +155,8 @@ impl GLShaderProgram {
             gl_check_error();
 
             let attribute_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let param_idx = DECL::Parameters::get_index_by_name(&attribute_name).expect(&format!("Vertex attribute name {} could not be resolved", attribute_name));
+            let param_idx = name_to_index(&attribute_name);
+            assert!(param_idx <= MAX_USED_PARAMETER_COUNT, "Invalid shader parameters index (attribute), allowed: {}, got: {}", MAX_USED_PARAMETER_COUNT, param_idx);
             let attribute = &mut self.parameter_locations[param_idx];
 
             assert!(*attribute == ParameterLocation::Empty);
@@ -165,11 +165,11 @@ impl GLShaderProgram {
                 size: attribute_size,
                 type_id: attribute_type,
             };
-            //println!("Shader program attribute {}({})= {:?}", attribute_name, attribute_idx, attribute);
+            println!("Shader program attribute {}({})= {:?}", attribute_name, param_idx, attribute);
         }
     }
 
-    fn parse_uniforms<DECL: ShaderDeclaration>(&mut self, _ll: &mut LowLevel) {
+    fn parse_uniforms<F: Fn(&str) -> usize>(&mut self, _ll: &mut LowLevel, name_to_index: F) {
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
         let mut name_length: GLsizei = 0;
@@ -195,7 +195,8 @@ impl GLShaderProgram {
             gl_check_error();
 
             let uniform_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let param_idx = DECL::Parameters::get_index_by_name(&uniform_name).expect(&format!("Uniform name {} could not be resolved", uniform_name));
+            let param_idx = name_to_index(&uniform_name);
+            assert!(param_idx <= MAX_USED_PARAMETER_COUNT, "Invalid many shader parameters index (uniform), allowed: {}, got: {}", MAX_USED_PARAMETER_COUNT, param_idx);
             let uniform = &mut self.parameter_locations[param_idx];
 
             assert!(*uniform == ParameterLocation::Empty);
@@ -204,18 +205,15 @@ impl GLShaderProgram {
                 size: uniform_size,
                 type_id: uniform_type,
             };
-
-            //println!("Shader program uniform {}({})= {:?}", uniform_name, uniform_idx, uniform);
+            println!("Shader program uniform {}({})= {:?}", uniform_name, param_idx, uniform);
         }
     }
 
-    pub fn parse_parameters<DECL: ShaderDeclaration>(&mut self, ll: &mut LowLevel) {
-        (0..DECL::Parameters::get_count()).for_each(|_| self.parameter_locations.push(ParameterLocation::Empty));
-        assert!(self.parameter_locations.len() <= MAX_USED_PARAMETER_COUNT, "Too many shader parameters in declaration, allowed count: {}", MAX_USED_PARAMETER_COUNT);
+    pub fn parse_parameters<FA: Fn(&str) -> usize, FU: Fn(&str) -> usize>(&mut self, ll: &mut LowLevel, attribute_name_to_index: FA, uniform_name_to_index: FU) {
+        self.parameter_locations = [ParameterLocation::Empty; MAX_USED_PARAMETER_COUNT];
 
-        self.parse_attributes::<DECL>(ll);
-        self.parse_uniforms::<DECL>(ll);
-
+        self.parse_attributes(ll, attribute_name_to_index);
+        self.parse_uniforms(ll, uniform_name_to_index);
         println!("shader parameters: {:?}", self.parameter_locations);
     }
 
@@ -231,11 +229,12 @@ impl GLShaderProgram {
         gl_check_error();
 
         self.hw_id = 0;
-        self.parameter_locations.clear();
+        self.parameter_locations = [ParameterLocation::Empty; MAX_USED_PARAMETER_COUNT];
     }
 
-    fn draw<F: Fn(&mut LowLevel, &ParameterLocations)>(&mut self, ll: &mut LowLevel, parameter_update: &F,
-                                                       primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
+    pub fn draw<F: Fn(&mut LowLevel, &ParameterLocations)>(&mut self, ll: &mut LowLevel,
+                                                           primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint,
+                                                           parameter_update: F) {
         // bind shader
         if self.hw_id == 0 {
             // no drawing when shader is not valid
