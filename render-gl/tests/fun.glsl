@@ -1,4 +1,4 @@
 // a dummy shader file
 vec3 col_mod(vec3 c) {
-    return c*2.0;
+    return c.rgb;
 }

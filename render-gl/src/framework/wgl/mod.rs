@@ -190,11 +190,11 @@ impl Context {
         let addr = addr.as_ptr();
 
         unsafe {
-            let p = wgl::GetProcAddress(addr) as *const _;
+            let p = wgl::GetProcAddress(addr) as *const ();
             if !p.is_null() { return p; }
-            //let p = gl::GetProcAddress(addr) as *const _;
+            //let p = gl::GetProcAddress(addr) as *const ();
             //if !p.is_null() { return p; }
-            kernel32::GetProcAddress(self.gl_library, addr) as *const _
+            kernel32::GetProcAddress(self.gl_library, addr) as *const ()
         }
     }
 

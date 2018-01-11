@@ -8,9 +8,9 @@ use std::io::prelude::*;
 use syn;
 use quote;
 
-static GLSL_VALIDATOR_EXECUTABLE: &'static str = "glslangValidator";
-static GLSL_VALIDATOR_ARGS_INFO: [&'static str; 3] = ["-l", "-d", "-q"];
-static GLSL_VALIDATOR_ARGS_PREPROCESS: [&'static str; 1] = ["-E"];
+const GLSL_VALIDATOR_EXECUTABLE: &'static str = "glslangValidator";
+const GLSL_VALIDATOR_ARGS_INFO: [&'static str; 3] = ["-l", "-d", "-q"];
+const GLSL_VALIDATOR_ARGS_PREPROCESS: [&'static str; 1] = ["-E"];
 
 #[derive(Copy, Clone, Debug)]
 pub enum ShaderType {
@@ -133,7 +133,7 @@ fn parse_uniform(line: &str) -> Uniform {
     Uniform {
         name: name.to_string(),
         type_id: type_id,
-        size: size
+        size: size,
     }
 }
 

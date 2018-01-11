@@ -1,3 +1,9 @@
+//#![feature(proc_macro)]
+
+#![allow(unused_imports)]
+#![allow(unused_variables)]
+#![allow(dead_code)]
+
 extern crate proc_macro;
 extern crate syn;
 #[macro_use]
@@ -12,6 +18,8 @@ mod shaderdeclaration;
 
 use vertexdeclaration::*;
 use shaderdeclaration::*;
+
+
 
 #[proc_macro_derive(VertexDeclaration)]
 pub fn vertex_declaration(input: TokenStream) -> TokenStream {

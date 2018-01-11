@@ -47,10 +47,10 @@ pub trait ShaderParameters: Clone {
 /// Trait to define shader attribute and uniform names
 pub trait ShaderDeclaration: 'static {
     /// The structure storing the shader parameters.
-    type Parameters: ShaderParameters;
+    //type Parameters: ShaderParameters;
 
     /// Returns an iterator over the shader sources
-    fn get_sources() -> slice::Iter<'static, (ShaderType, &'static str)>;
+    fn source_iter() -> slice::Iter<'static, (ShaderType, &'static str)>;
 }
 
 /// Structure to store the shader abstraction.
@@ -62,6 +62,6 @@ pub trait ShaderProgramBase: Resource {
 /// Structure to store the shader abstraction.
 pub trait ShaderProgram<DECL: ShaderDeclaration>: ShaderProgramBase {
     /// Sends a geometry for rendering
-    fn draw<Q: CommandQueue>(&self, queue: &Q, parameters: DECL::Parameters,
+    fn draw<Q: CommandQueue>(&self, queue: &Q/*, parameters: DECL::Parameters*/,
                              primitive: Primitive, vertex_start: usize, vertex_count: usize);
 }

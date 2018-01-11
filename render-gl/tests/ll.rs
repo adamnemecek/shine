@@ -18,9 +18,8 @@ struct VxColorTex {
     tex_coord: Float32x2,
 }
 
-/*
 #[derive(ShaderDeclaration)]
-//#[vert_path = "fun.glsl"]
+#[vert_path = "fun.glsl"]
 #[vert_src = "
     attribute vec3 vPosition;
     attribute vec3 vColor;
@@ -41,8 +40,8 @@ struct VxColorTex {
     uniform sampler2D uTex;
     void main()
     {
-        vec3 txColor = texture2D( uTex, txCoord ).rgb;
-        vec3 col = txColor;
+        float intensity = texture2D( uTex, txCoord ).r;
+        vec3 col =  color * intensity;
         gl_FragColor = vec4(col, 1.0);
     }"]
 //todo 1:
@@ -53,7 +52,6 @@ struct VxColorTex {
 //todo 3:
 //#[unifrom(uTrsf) = engine.trsf]
 struct ShSimple {}
-*/
 
 struct SimpleView {
     t: f32,
@@ -127,33 +125,7 @@ impl View for SimpleView {
         }
 
         {
-            let src = [
-                (ShaderType::VertexShader,
-                 "uniform mat4 uTrsf;
-                  uniform vec3 uColor;
-                  attribute vec3 vPosition;
-                  attribute vec3 vColor;
-                  attribute vec2 vTexCoord;
-                  varying vec3 color;
-                  varying vec2 txCoord;
-                  void main()
-                  {
-                    color = vTexCoord.yyy;//uColor * vColor;
-                    txCoord = vTexCoord.xy;
-                    gl_Position = /*uTrsf **/ vec4(vPosition, 1.0);
-                  }"),
-                (ShaderType::FragmentShader,
-                 "varying vec3 color;
-                  varying vec2 txCoord;
-                  uniform sampler2D uTex;
-                  void main()
-                  {
-                    vec3 txColor = texture2D( uTex, txCoord ).rgb;
-                    vec3 col = txColor;
-                    gl_FragColor = vec4(col, 1.0);
-                  }"), ];
-
-            self.sh.create_program(ll, src.iter());
+            self.sh.create_program(ll, ShSimple::source_iter());
             self.sh.parse_parameters(ll,
                                      |n| match n {
                                          "vPosition" => 0,
