@@ -26,14 +26,14 @@ impl GLVertexBuffer {
 
         gl_check_error();
         if self.hw_id == 0 {
-            gl!(GenBuffers(1, &mut self.hw_id));
+            ugl!(GenBuffers(1, &mut self.hw_id));
         }
         assert!(self.hw_id != 0);
 
         //println!("upload vb id: {}, t: {:?}\n  d: {:?}", self.hw_id, self.attributes, data);
 
         ll.vertex_binding.bind_buffer(self.hw_id);
-        gl!(BufferData(gl::ARRAY_BUFFER,
+        ugl!(BufferData(gl::ARRAY_BUFFER,
                        data.len() as GLsizeiptr,
                        data.as_ptr() as *const GLvoid,
                        gl::STATIC_DRAW));
@@ -51,7 +51,7 @@ impl GLVertexBuffer {
         }
 
         ll.vertex_binding.unbind_if_active(self.hw_id);
-        gl!(DeleteBuffers(1, &self.hw_id));
+        ugl!(DeleteBuffers(1, &self.hw_id));
         self.hw_id = 0;
     }
 }

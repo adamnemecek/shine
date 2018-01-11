@@ -144,6 +144,8 @@ impl From<Rectangle> for (Position, Size) {
 /// Enum to define the semantics of raw image data.
 #[derive(Copy, Clone, Debug)]
 pub enum PixelFormat {
+    /// 8bit grayscale image.
+    R8,
     /// One byte components for Red,Green,Blue image.
     Rgb8,
     /// One byte components for Red,Green,Blue,Alpha image.

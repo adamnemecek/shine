@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::mem;
 use std::str::from_utf8;
 use lowlevel::*;
 use limits::*;
@@ -11,15 +12,17 @@ struct ShaderError(String);
 
 
 /// Shader parameters info: required type, binding locations.
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ParameterLocation {
     Attribute {
+        name: String,
         location: GLuint,
         size: GLint,
         type_id: GLenum,
     },
 
     Uniform {
+        name: String,
         location: GLuint,
         size: GLint,
         type_id: GLenum,
@@ -29,12 +32,118 @@ pub enum ParameterLocation {
 }
 
 impl ParameterLocation {
-    fn is_valid(&self) -> bool {
+    pub fn is_valid(&self) -> bool {
         match self {
             &ParameterLocation::Attribute { type_id, .. } => type_id != 0,
             &ParameterLocation::Uniform { type_id, .. } => type_id != 0,
             _ => false
         }
+    }
+
+    pub fn set_attribute<A: Into<usize>>(&self, ll: &mut LowLevel, vb: &GLVertexBuffer, attribute: A) {
+        match self {
+            &ParameterLocation::Attribute { location, type_id, .. } =>
+                if type_id != 0 {
+                    gl_check_error();
+                    vb.bind(ll, location, attribute.into());
+                    gl_check_error();
+                },
+            &ParameterLocation::Empty => {}
+            _ => panic!("Invalid Shader location: {:?}", self)
+        }
+    }
+
+    pub fn set_f32(&self, _ll: &mut LowLevel, data: f32) {
+        match self {
+            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+                if type_id != 0 {
+                    assert!(type_id == gl::FLOAT && size == 1);
+                    gl_check_error();
+                    ugl!(Uniform1fv(location as i32, size, mem::transmute(&data)));
+                    gl_check_error();
+                },
+            &ParameterLocation::Empty => {}
+            _ => panic!("Invalid Shader location: {:?}", self)
+        }
+    }
+
+    pub fn set_f32x2(&self, _ll: &mut LowLevel, data: &Float32x2) {
+        match self {
+            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+                if type_id != 0 {
+                    assert!(type_id == gl::FLOAT_VEC2 && size == 1);
+                    gl_check_error();
+                    ugl!(Uniform2fv(location as i32, size, mem::transmute(data)));
+                    gl_check_error();
+                },
+            &ParameterLocation::Empty => {}
+            _ => panic!("Invalid Shader location: {:?}", self)
+        }
+    }
+
+    pub fn set_f32x3(&self, _ll: &mut LowLevel, data: &Float32x3) {
+        match self {
+            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+                if type_id != 0 {
+                    assert!(type_id == gl::FLOAT_VEC3 && size == 1);
+                    gl_check_error();
+                    ugl!(Uniform3fv(location as i32, size, mem::transmute(data)));
+                    gl_check_error();
+                },
+            &ParameterLocation::Empty => {}
+            _ => panic!("Invalid Shader location: {:?}", self)
+        }
+    }
+
+    pub fn set_f32x4(&self, _ll: &mut LowLevel, data: &Float32x4) {
+        match self {
+            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+                if type_id != 0 {
+                    assert!(type_id == gl::FLOAT_VEC4 && size == 1);
+                    gl_check_error();
+                    ugl!(Uniform4fv(location as i32, size, mem::transmute(data)));
+                    gl_check_error();
+                },
+            &ParameterLocation::Empty => {}
+            _ => panic!("Invalid Shader location: {:?}", self)
+        }
+    }
+
+    pub fn set_f32x16(&self, _ll: &mut LowLevel, data: &Float32x16) {
+        match self {
+            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+                if type_id != 0 {
+                    assert!(type_id == gl::FLOAT_MAT4 && size == 1);
+                    gl_check_error();
+                    ugl!(UniformMatrix4fv(location as i32, size, gl::FALSE, mem::transmute(data)));
+                    gl_check_error();
+                },
+            &ParameterLocation::Empty => {}
+            _ => panic!("Invalid Shader location: {:?}", self)
+        }
+    }
+
+
+    pub fn set_texture(&self, ll: &mut LowLevel, tx: &GLTexture) {
+        match self {
+            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+                if type_id != 0 {
+                    // todo: check if texture conforms to the sampler
+                    assert!( type_id == gl::SAMPLER_2D && size == 1);
+                    gl_check_error();
+                    let slot = tx.bind(ll) as u32;
+                    ugl!(Uniform1i(location as i32, slot as i32));
+                    gl_check_error();
+                },
+            &ParameterLocation::Empty => {}
+            _ => panic!("Invalid Shader location: {:?}", self)
+        }
+    }
+}
+
+impl Default for ParameterLocation {
+    fn default() -> ParameterLocation {
+        ParameterLocation::Empty
     }
 }
 
@@ -53,7 +162,7 @@ impl GLShaderProgram {
     pub fn new() -> GLShaderProgram {
         GLShaderProgram {
             hw_id: 0,
-            parameter_locations: [ParameterLocation::Empty; MAX_USED_PARAMETER_COUNT],
+            parameter_locations: Default::default(),
         }
     }
 
@@ -94,7 +203,7 @@ impl GLShaderProgram {
         }
 
         gl_check_error();
-        self.hw_id = gl!(CreateProgram());
+        self.hw_id = ugl!(CreateProgram());
 
         // create and attach shaders
         gl_check_error();
@@ -114,7 +223,6 @@ impl GLShaderProgram {
             gl::GetProgramiv(self.hw_id, gl::LINK_STATUS, &mut status);
 
             if status != gl::TRUE as GLint {
-                // link failed, find error message
                 let mut info_len: GLsizei = 0;
                 gl::GetProgramiv(self.hw_id, gl::INFO_LOG_LENGTH, &mut info_len);
                 let info_buf = vec![0u8; info_len as usize];
@@ -137,7 +245,7 @@ impl GLShaderProgram {
         let mut attribute_type: GLenum = 0;
 
         gl_check_error();
-        gl!(GetProgramiv(self.hw_id, gl::ACTIVE_ATTRIBUTES, &mut count));
+        ugl!(GetProgramiv(self.hw_id, gl::ACTIVE_ATTRIBUTES, &mut count));
         gl_check_error();
 
         let count = count as GLuint;
@@ -145,7 +253,7 @@ impl GLShaderProgram {
 
         for location in 0..count {
             gl_check_error();
-            gl!(GetActiveAttrib(self.hw_id,
+            ugl!(GetActiveAttrib(self.hw_id,
                                 location,
                                 name_buffer.len() as GLint,
                                 &mut name_length,
@@ -161,11 +269,12 @@ impl GLShaderProgram {
 
             assert!(*attribute == ParameterLocation::Empty);
             *attribute = ParameterLocation::Attribute {
+                name: attribute_name,
                 location: location,
                 size: attribute_size,
                 type_id: attribute_type,
             };
-            println!("Shader program attribute {}({})= {:?}", attribute_name, param_idx, attribute);
+            //println!("Shader program attribute {}({})= {:?}", attribute_name, param_idx, attribute);
         }
     }
 
@@ -177,7 +286,7 @@ impl GLShaderProgram {
         let mut uniform_type: GLenum = 0;
 
         gl_check_error();
-        gl!(GetProgramiv(self.hw_id, gl::ACTIVE_UNIFORMS, &mut count));
+        ugl!(GetProgramiv(self.hw_id, gl::ACTIVE_UNIFORMS, &mut count));
         gl_check_error();
 
         let count = count as GLuint;
@@ -185,7 +294,7 @@ impl GLShaderProgram {
 
         for location in 0..count {
             gl_check_error();
-            gl!(GetActiveUniform(self.hw_id,
+            ugl!(GetActiveUniform(self.hw_id,
                                  location,
                                  name_buffer.len() as GLint,
                                  &mut name_length,
@@ -201,16 +310,17 @@ impl GLShaderProgram {
 
             assert!(*uniform == ParameterLocation::Empty);
             *uniform = ParameterLocation::Uniform {
+                name: uniform_name,
                 location: location,
                 size: uniform_size,
                 type_id: uniform_type,
             };
-            println!("Shader program uniform {}({})= {:?}", uniform_name, param_idx, uniform);
+            //println!("Shader program uniform {}({})= {:?}", uniform_name, param_idx, uniform);
         }
     }
 
     pub fn parse_parameters<FA: Fn(&str) -> usize, FU: Fn(&str) -> usize>(&mut self, ll: &mut LowLevel, attribute_name_to_index: FA, uniform_name_to_index: FU) {
-        self.parameter_locations = [ParameterLocation::Empty; MAX_USED_PARAMETER_COUNT];
+        self.parameter_locations = Default::default();
 
         self.parse_attributes(ll, attribute_name_to_index);
         self.parse_uniforms(ll, uniform_name_to_index);
@@ -225,11 +335,11 @@ impl GLShaderProgram {
         gl_check_error();
         ll.program_binding.unbind_if_active(self.hw_id);
         gl_check_error();
-        gl!(DeleteProgram(self.hw_id));
+        ugl!(DeleteProgram(self.hw_id));
         gl_check_error();
 
         self.hw_id = 0;
-        self.parameter_locations = [ParameterLocation::Empty; MAX_USED_PARAMETER_COUNT];
+        self.parameter_locations = Default::default();
     }
 
     pub fn draw<F: Fn(&mut LowLevel, &ParameterLocations)>(&mut self, ll: &mut LowLevel,

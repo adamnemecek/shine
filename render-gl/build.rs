@@ -1,6 +1,6 @@
 extern crate gl_generator;
 
-use gl_generator::{Registry, Api, Profile, Fallbacks};
+use gl_generator::{Registry, Api, Profile, Fallbacks, GlobalGenerator};
 use std::env;
 use std::fs::File;
 use std::path::PathBuf;
@@ -17,6 +17,15 @@ fn main() {
 
     println!("cargo:rerun-if-changed=build.rs");
     //println!("cargo:rerun-if-changed=*.glsl");
+
+    {
+        let mut file = File::create(&dest.join("gl_bindings.rs")).unwrap();
+        Registry::new(Api::Gl, (4, 5), Profile::Core, Fallbacks::All, [
+            //"GL_EXT_texture_filter_anisotropic",
+            //"GL_ARB_draw_buffers_blend",
+            //"GL_ARB_program_interface_query",
+        ]).write_bindings(GlobalGenerator/*gl_generator::StructGenerator*/, &mut file).unwrap();
+    }
 
     if target.contains("windows") {
         let mut file = File::create(&dest.join("wgl_bindings.rs")).unwrap();
@@ -40,8 +49,7 @@ fn main() {
             "WGL_EXT_framebuffer_sRGB",
             "WGL_EXT_swap_control",
             // "WGL_EXT_colorspace",
-        ])
-            .write_bindings(gl_generator::StructGenerator, &mut file).unwrap();
+        ]).write_bindings(gl_generator::StructGenerator, &mut file).unwrap();
 
         let mut file = File::create(&dest.join("egl_bindings.rs")).unwrap();
         Registry::new(Api::Egl, (1, 5), Profile::Core, Fallbacks::All, [
@@ -57,8 +65,7 @@ fn main() {
             "EGL_MESA_platform_gbm",
             "EGL_EXT_platform_wayland",
             "EGL_EXT_platform_device",
-        ])
-            .write_bindings(gl_generator::StructGenerator, &mut file).unwrap();
+        ]).write_bindings(gl_generator::StructGenerator, &mut file).unwrap();
     }
 
     if target.contains("linux") || target.contains("dragonfly") || target.contains("freebsd") || target.contains("openbsd") {
@@ -78,8 +85,7 @@ fn main() {
             "GLX_ARB_multisample",
             "GLX_EXT_swap_control",
             "GLX_SGI_swap_control"
-        ])
-            .write_bindings(gl_generator::StructGenerator, &mut file).unwrap();
+        ]).write_bindings(gl_generator::StructGenerator, &mut file).unwrap();
 
         let mut file = File::create(&dest.join("egl_bindings.rs")).unwrap();
         Registry::new(Api::Egl, (1, 5), Profile::Core, Fallbacks::All, [
@@ -95,8 +101,7 @@ fn main() {
             "EGL_MESA_platform_gbm",
             "EGL_EXT_platform_wayland",
             "EGL_EXT_platform_device",
-        ])
-            .write_bindings(gl_generator::StructGenerator, &mut file).unwrap();
+        ]).write_bindings(gl_generator::StructGenerator, &mut file).unwrap();
     }
 
     if target.contains("android") {
@@ -114,8 +119,7 @@ fn main() {
             "EGL_MESA_platform_gbm",
             "EGL_EXT_platform_wayland",
             "EGL_EXT_platform_device",
-        ])
-            .write_bindings(gl_generator::StaticStructGenerator, &mut file).unwrap();
+        ]).write_bindings(gl_generator::StaticStructGenerator, &mut file).unwrap();
     }
 
     if target.contains("ios") {
@@ -133,8 +137,7 @@ fn main() {
             "EGL_MESA_platform_gbm",
             "EGL_EXT_platform_wayland",
             "EGL_EXT_platform_device",
-        ])
-            .write_bindings(gl_generator::StaticStructGenerator, &mut file).unwrap();
+        ]).write_bindings(gl_generator::StaticStructGenerator, &mut file).unwrap();
 
         let mut file = File::create(&dest.join("gles2_bindings.rs")).unwrap();
         Registry::new(Api::Gles2, (2, 0), Profile::Core, Fallbacks::None, [])

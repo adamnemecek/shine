@@ -76,7 +76,7 @@ impl IndexBinding {
         }
 
         gl_check_error();
-        gl!(BindBuffer(gl::ELEMENT_ARRAY_BUFFER, hw_id));
+        ugl!(BindBuffer(gl::ELEMENT_ARRAY_BUFFER, hw_id));
         gl_check_error();
         self.bound_index.hw_id = hw_id;
         self.bound_index.index_type = 0;

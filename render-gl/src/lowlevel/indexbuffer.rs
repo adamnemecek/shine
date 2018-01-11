@@ -17,7 +17,7 @@ impl GLIndexBuffer {
     pub fn upload_data(&mut self, ll: &mut LowLevel, type_id: GLenum, data: &[u8]) {
         gl_check_error();
         if self.hw_id == 0 {
-            gl!(GenBuffers(1, &mut self.hw_id));
+            ugl!(GenBuffers(1, &mut self.hw_id));
         }
         assert!(self.hw_id != 0);
         self.type_id = type_id;
@@ -25,7 +25,7 @@ impl GLIndexBuffer {
         //println!("upload ib id: {}, t: {}\n  d: {:?}", self.hw_id, self.type_id, data);
 
         ll.index_binding.bind_buffer(self.hw_id);
-        gl!(BufferData(gl::ELEMENT_ARRAY_BUFFER,
+        ugl!(BufferData(gl::ELEMENT_ARRAY_BUFFER,
                        data.len() as GLsizeiptr,
                        data.as_ptr() as *const GLvoid,
                        gl::STATIC_DRAW));
@@ -42,7 +42,7 @@ impl GLIndexBuffer {
         }
 
         ll.index_binding.unbind_if_active(self.hw_id);
-        gl!(DeleteBuffers(1, &self.hw_id));
+        ugl!(DeleteBuffers(1, &self.hw_id));
         self.hw_id = 0;
         self.type_id = 0;
     }

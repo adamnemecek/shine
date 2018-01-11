@@ -13,7 +13,7 @@ dragorust-render-core = {path = "../render-core"}
 dragorust-render-gl-derive = {path = "../render-gl-derive"}
 
 libc = "*"
-gl = "*"
+#gl = "*"
 arrayvec = "*"
 image = "*"
 

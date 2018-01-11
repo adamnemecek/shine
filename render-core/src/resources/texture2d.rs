@@ -6,16 +6,7 @@ use resources::*;
 /// Enum to define index data.
 pub enum ImageData<'a> {
     /// Transient means that a copy is created in the command buffer and no references kept of the source.
-    Transient {
-        /// width og the image
-        width: usize,
-        /// height of the image
-        height: usize,
-        /// pixel format
-        format: PixelFormat,
-        /// raw data
-        slice: &'a [u8]
-    }
+    Transient(usize, usize, PixelFormat, &'a [u8])
 }
 
 
@@ -36,29 +27,40 @@ mod image_source {
             use self::image::DynamicImage;
 
             match self {
-                &DynamicImage::ImageRgb8(ref rgb) => {
-                    ImageData::Transient {
-                        width: rgb.width() as usize,
-                        height: rgb.height() as usize,
-                        format: PixelFormat::Rgb8,
-                        slice: &rgb,
-                    }
+                &DynamicImage::ImageLuma8(ref img) => {
+                    ImageData::Transient(
+                        img.width() as usize,
+                        img.height() as usize,
+                        PixelFormat::R8,
+                        &img,
+                    )
                 }
 
-                &DynamicImage::ImageRgba8(ref rgb) => {
-                    ImageData::Transient {
-                        width: rgb.width() as usize,
-                        height: rgb.height() as usize,
-                        format: PixelFormat::Rgba8,
-                        slice: &rgb,
-                    }
+                &DynamicImage::ImageRgb8(ref img) => {
+                    ImageData::Transient(
+                        img.width() as usize,
+                        img.height() as usize,
+                        PixelFormat::Rgb8,
+                        &img,
+                    )
                 }
 
-                _ => panic!("unsupported image format")
+                &DynamicImage::ImageRgba8(ref img) => {
+                    ImageData::Transient(
+                        img.width() as usize,
+                        img.height() as usize,
+                        PixelFormat::Rgba8,
+                        &img,
+                    )
+                }
+
+                _ => panic!("unsupported image format: {:?}", self.color())
             }
         }
     }
 }
+
+pub use self::image_source::*;
 
 
 /// Trait that defined a 2d texture

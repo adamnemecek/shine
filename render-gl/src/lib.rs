@@ -12,15 +12,18 @@ extern crate gdi32;
 #[cfg(target_os = "windows")]
 extern crate user32;
 
+extern crate image;
 extern crate arrayvec;
 
 extern crate dragorust_render_core as core;
 extern crate dragorust_store as store;
-#[macro_reexport(VertexDeclaration)]
+#[macro_reexport(VertexDeclaration, ShaderDeclaration)]
 extern crate dragorust_render_gl_derive;
 
-//#![cfg(target_os = "null")]
-pub extern crate gl;
+#[allow(unused_mut)]
+pub mod gl {
+    include!(concat!(env!("OUT_DIR"), "/gl_bindings.rs"));
+}
 
 /// Define engine limitations
 pub mod limits {
@@ -38,7 +41,7 @@ pub mod limits {
 
 /// Helper macro to hide unsafe blocks for API calls
 #[macro_export]
-macro_rules! gl {
+macro_rules! ugl {
     ( $cmd:ident($( $arg:expr ),*) ) => { unsafe { gl::$cmd($($arg,)*) } };
 }
 

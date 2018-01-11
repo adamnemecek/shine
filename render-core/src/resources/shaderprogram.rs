@@ -25,8 +25,8 @@ pub trait ShaderParameterVisitor<R: Resources> {
     fn process_f32(&mut self, idx: usize, data: f32);
 
     //fn process_tex_2d(&mut self, idx: usize, data: &R::Texture2DRef);
-    fn process_attribute(&mut self, idx: usize, data: &R::VertexAttributeRef);
-    fn process_index(&mut self, idx: usize, data: &R::IndexRef);
+    //fn process_attribute(&mut self, idx: usize, data: &R::VertexAttributeRef);
+    //fn process_index(&mut self, idx: usize, data: &R::IndexRef);
 }
 
 

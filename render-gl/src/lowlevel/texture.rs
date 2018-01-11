@@ -26,14 +26,14 @@ impl GLTexture {
     pub fn upload_data(&mut self, ll: &mut LowLevel, target: GLenum, width: usize, height: usize, formats: (GLenum, GLenum, GLenum), data: &[u8]) {
         gl_check_error();
         if self.hw_id == 0 {
-            gl!(GenTextures(1, &mut self.hw_id));
+            ugl!(GenTextures(1, &mut self.hw_id));
         }
         assert!(self.hw_id != 0);
 
         self.target = target;
 
         ll.texture_binding.bind(self.target, self.hw_id, self.filter);
-        gl!(TexImage2D(self.target, 0, formats.0 as i32,
+        ugl!(TexImage2D(self.target, 0, formats.0 as i32,
                        width as i32, height as i32, 0, formats.1, formats.2,
                        data.as_ptr() as *const GLvoid));
         gl_check_error();

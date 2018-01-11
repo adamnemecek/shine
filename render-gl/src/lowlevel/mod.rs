@@ -87,13 +87,13 @@ impl LowLevel {
 
         gl_check_error();
         if !self.index_binding.is_indexed() {
-            gl!(DrawArrays(primitive,
+            ugl!(DrawArrays(primitive,
                            vertex_start as GLint,
                            vertex_count as GLsizei));
         } else {
             let offset = self.index_binding.get_offset(vertex_start);
             let index_type = self.index_binding.get_index_type();
-            gl!(DrawElements(primitive,
+            ugl!(DrawElements(primitive,
                              vertex_count as GLsizei,
                              index_type,
                              offset as *const GLvoid));

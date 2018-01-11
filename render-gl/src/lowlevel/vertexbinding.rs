@@ -126,7 +126,7 @@ impl VertexBinding {
         }
 
         gl_check_error();
-        gl!(BindBuffer(gl::ARRAY_BUFFER, hw_id));
+        ugl!(BindBuffer(gl::ARRAY_BUFFER, hw_id));
         gl_check_error();
         self.bound_id = hw_id;
     }
@@ -141,11 +141,11 @@ impl VertexBinding {
         if self.force || attr.hw_id != hw_id || attr.attribute != *attribute {
             //bind buffer
             if self.force || self.bound_id == hw_id {
-                gl!(BindBuffer(gl::ARRAY_BUFFER, hw_id));
-                gl!(VertexAttribPointer(location,
+                ugl!(BindBuffer(gl::ARRAY_BUFFER, hw_id));
+                ugl!(VertexAttribPointer(location,
                                         attribute.components, attribute.component_type, attribute.normalize,
                                         attribute.stride, attribute.offset as *const GLvoid));
-                gl!(EnableVertexAttribArray(location));
+                ugl!(EnableVertexAttribArray(location));
             }
             self.bound_id = hw_id;
             attr.hw_id = hw_id;
@@ -171,7 +171,7 @@ impl VertexBinding {
                 // active attributes not bound for this call are disabled automatically
                 attr.attribute = GLVertexBufferAttribute::new();
                 attr.hw_id = 0;
-                gl!(DisableVertexAttribArray(location as GLuint));
+                ugl!(DisableVertexAttribArray(location as GLuint));
                 gl_check_error();
             }
         }

@@ -43,7 +43,7 @@ impl ProgramBinding {
         }
 
         gl_check_error();
-        gl!(UseProgram(program_id));
+        ugl!(UseProgram(program_id));
         gl_check_error();
         self.bound_id = program_id;
     }
