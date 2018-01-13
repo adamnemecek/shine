@@ -81,7 +81,7 @@ impl PartialEq for GLVertexBufferAttribute {
 struct BoundVertexAttribute {
     hw_id: GLuint,
     attribute: GLVertexBufferAttribute,
-    time_stamp: u8,
+    is_used: bool,
 }
 
 impl BoundVertexAttribute {
@@ -89,7 +89,7 @@ impl BoundVertexAttribute {
         BoundVertexAttribute {
             hw_id: 0,
             attribute: GLVertexBufferAttribute::new(),
-            time_stamp: 0,
+            is_used: false,
         }
     }
 }
@@ -100,7 +100,6 @@ pub struct VertexBinding {
     force: bool,
     bound_id: GLuint,
     bound_attributes: [BoundVertexAttribute; MAX_USED_ATTRIBUTE_COUNT],
-    time_stamp: u8,
 }
 
 impl VertexBinding {
@@ -109,7 +108,6 @@ impl VertexBinding {
             force: false,
             bound_id: 0,
             bound_attributes: [BoundVertexAttribute::new(); MAX_USED_ATTRIBUTE_COUNT],
-            time_stamp: 1,
         }
     }
 
@@ -136,8 +134,8 @@ impl VertexBinding {
         assert!(hw_id != 0);
 
         let attr = &mut self.bound_attributes[location as usize];
-        assert!(attr.time_stamp != self.time_stamp, "Vertex attribute ({}) already bound for drawing", location);
-        attr.time_stamp = self.time_stamp;
+        assert!(!attr.is_used, "Vertex location ({}) already bound for the draw call", location);
+        attr.is_used = true;
 
         gl_check_error();
         if self.force || attr.hw_id != hw_id || attr.attribute != *attribute {
@@ -169,15 +167,14 @@ impl VertexBinding {
     pub fn commit(&mut self) {
         gl_check_error();
         for (location, attr) in self.bound_attributes.iter_mut().enumerate() {
-            if attr.time_stamp != self.time_stamp && attr.hw_id != 0 {
+            if !attr.is_used && attr.hw_id != 0 {
                 // active attributes not bound for this call are disabled automatically
                 attr.attribute = GLVertexBufferAttribute::new();
                 attr.hw_id = 0;
                 ugl!(DisableVertexAttribArray(location as GLuint));
                 gl_check_error();
             }
+            attr.is_used = false;
         }
-
-        self.time_stamp += 1;
     }
 }

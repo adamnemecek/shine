@@ -1,5 +1,3 @@
-#![cfg(OFF)]
-
 extern crate dragorust_render_gl as render;
 
 use std::time::Duration;
@@ -28,8 +26,8 @@ impl View for SimpleView {
     fn on_render(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {
         use render::lowlevel::*;
 
-        gl!(ClearColor(0.0, 0.0, self.t, 1.0));
-        gl!(Clear(gl::COLOR_BUFFER_BIT));
+        ugl!(ClearColor(0.0, 0.0, self.t, 1.0));
+        ugl!(Clear(gl::COLOR_BUFFER_BIT));
     }
 
     fn on_key(&mut self, ctl: &mut WindowControl, _r: &mut Self::Resources,

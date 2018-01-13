@@ -86,6 +86,7 @@ impl LowLevel {
         "vertex count does not match primitive type; vertex_count:{} primitive:{} ",
         vertex_count, gl_get_primitive_name(primitive) );
 
+        self.states.set_render_size(self.screen_size);
 
         self.program_binding.commit();
         self.vertex_binding.commit();

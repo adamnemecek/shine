@@ -171,8 +171,9 @@ impl View for SimpleView {
 
         ugl!(ClearColor(0.0, 0.0, 0.5, 1.0));
         ugl!(Clear(gl::COLOR_BUFFER_BIT));
-        let size = ll.get_screen_size();
-        ugl!(Viewport(0,0,size.width, size.height));
+
+        //ll.states.set_viewport(lowlevel::Viewport::FullScreen);
+        ll.states.set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
 
         let st = self.t.sin();
         let ct = self.t.cos();
