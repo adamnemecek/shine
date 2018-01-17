@@ -4,7 +4,7 @@ use std::marker::PhantomData;
 use core::*;
 use lowlevel::*;
 use resources::*;
-use store::handlestore::*;
+use store::store::*;
 
 /// Command to release and index buffer
 pub struct ReleaseCommand {
@@ -48,7 +48,7 @@ impl From<CreateCommand> for GLCommand {
 
 
 pub type IndexBufferStore = Store<GLIndexBuffer>;
-pub type GuardedIndexBufferStore<'a> = UpdateGuardStore<'a, GLIndexBuffer>;
+pub type GuardedIndexBuffer<'a> = UpdateGuard<'a, GLIndexBuffer>;
 pub type IndexBufferIndex = Index<GLIndexBuffer>;
 
 /// Handle to an index buffer resource

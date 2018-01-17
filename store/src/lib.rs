@@ -4,6 +4,7 @@
 #![feature(drain_filter)]
 
 pub mod spsc;
-pub mod handlestore;
+pub mod arena;
+pub mod store;
 pub mod hashstore;
 

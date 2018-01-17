@@ -1,33 +1,24 @@
 #![deny(missing_copy_implementations)]
 
-#![deny(missing_copy_implementations)]
-
 use std::ptr;
 use std::ops;
 use std::sync::*;
 use std::sync::atomic::*;
 use arena::*;
-use std::collections::HashMap;
-use std::fmt;
-use std::hash::Hash;
-use std::marker::PhantomData;
-
-/// Trait for resource id
-pub trait Key: Clone + Send + Eq + Hash + fmt::Debug {}
 
 
 /// Reference counted indexing of the store items in O(1).
 #[derive(PartialEq, Eq, Debug)]
-pub struct Index<K: Key, Data>(*mut Entry<Data>, PhantomData<I>);
+pub struct Index<Data>(*mut Entry<Data>);
 
-impl<K: Key, Data> Index<Id, Data> {
-    pub fn null() -> Index<Id, Data> {
-        Index(ptr::null_mut(), PhantomData)
+impl<Data> Index<Data> {
+    pub fn null() -> Index<Data> {
+        Index(ptr::null_mut())
     }
 
-    fn new(entry: *mut Entry<Id, Data>) -> Index<Id, Data> {
+    fn new(entry: *mut Entry<Data>) -> Index<Data> {
         unsafe { &(*entry).ref_count.fetch_add(1, Ordering::Relaxed) };
-        Index(entry, PhantomData)
+        Index(entry)
     }
 
     pub fn is_null(&self) -> bool {
@@ -42,7 +33,7 @@ impl<K: Key, Data> Index<Id, Data> {
     }
 }
 
-impl<Id:Id, Data> Default for Index<Data> {
+impl<Data> Default for Index<Data> {
     fn default() -> Index<Data> {
         Index::null()
     }
