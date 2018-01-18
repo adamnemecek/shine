@@ -248,45 +248,42 @@ pub struct UpdateGuard<'a, Data: 'a> {
     exclusive: MutexGuard<'a, ExclusiveData<Data>>,
 }
 
+
 impl<'a, Data: 'a> UpdateGuard<'a, Data> {
     pub fn add(&mut self, data: Data) -> Index<Data> {
         self.exclusive.add(data)
     }
 
     /// Merges the requests into the "active" items
-    pub fn process_requests(&mut self) {
+    pub fn finalize_requests(&mut self) {
         // Move all resources into the stored resources
         self.shared.resources.append(&mut self.exclusive.requests);
     }
 
-    fn map_vector<F: FnMut(&mut Data)>(v: &mut Vec<*mut Entry<Data>>, f: &mut F) {
+    fn retain_impl<F: FnMut(&mut Data, bool) -> bool>(arena: &mut Arena<Entry<Data>>, v: &mut Vec<*mut Entry<Data>>, filter: &mut F) {
         v.drain_filter(|&mut e| {
             let e = unsafe { &mut *e };
-            f(&mut e.value);
-            false
-        });
-    }
-
-    pub fn update_resources<F: FnMut(&mut Data)>(&mut self, mut f: F) {
-        Self::map_vector(&mut self.shared.resources, &mut f);
-        Self::map_vector(&mut self.exclusive.requests, &mut f);
-    }
-
-    fn drain_vector<F: FnMut(&mut Data) -> bool>(v: &mut Vec<*mut Entry<Data>>, f: &mut F) {
-        v.drain_filter(|&mut e| {
-            let e = unsafe { &mut *e };
-            if e.ref_count.load(Ordering::Relaxed) == 0 {
-                f(&mut e.value)
-            } else {
-                false
+            let is_referenced = e.ref_count.load(Ordering::Relaxed) > 0;
+            let is_retain = filter(&mut e.value, is_referenced);
+            if !is_referenced & !is_retain {
+                arena.deallocate(e);
             }
+            is_referenced || is_retain
         });
     }
 
-    /// Releases unreferenced resources using the given function.
-    pub fn drain_unused<F: FnMut(&mut Data) -> bool>(&mut self, mut f: F) {
-        Self::drain_vector(&mut self.shared.resources, &mut f);
-        Self::drain_vector(&mut self.exclusive.requests, &mut f);
+    /// Retains the referenced elements and the those specified by the predicate.
+    /// In other words, remove all unreferenced resources such that f(&mut v) returns false.
+    pub fn retain<F: FnMut(&mut Data, bool) -> bool>(&mut self, filter: &mut F) {
+        let exclusive = &mut *self.exclusive;
+        Self::retain_impl(&mut exclusive.arena, &mut self.shared.resources, filter);
+        Self::retain_impl(&mut exclusive.arena, &mut exclusive.requests, filter);
+    }
+
+    /// Retains the referenced items only.
+    /// In other words, remove all unreferenced resources.
+    pub fn drain_unused(&mut self) {
+        self.retain(&mut |_, _| false)
     }
 
     pub fn at(&self, index: &Index<Data>) -> &Data {

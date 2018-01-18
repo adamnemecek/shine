@@ -4,180 +4,145 @@ use std::thread;
 use std::sync::Arc;
 
 use dragorust_store::hashstore;
-use dragorust_store::hashstore::{Id, Factory, FunctionFactory};
+use dragorust_store::hashstore::{Key, Data};
+
 
 /// Resource id for test data
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 struct TestDataId(u32);
 
-impl Id for TestDataId {}
+impl Key for TestDataId {}
+
 
 /// Test resource data
-#[derive(PartialEq, Eq, Debug)]
+#[derive(Debug)]
 struct TestData(String);
+
+impl Data<TestDataId> for TestData {}
 
 impl TestData {
     fn new(s: String) -> TestData {
-        //println!("creating '{}'", s);
+        println!("creating '{}'", s);
         TestData(s)
+    }
+
+    fn from_key(k: &TestDataId) -> TestData {
+        Self::new(format!("id: {}", k.0))
     }
 }
 
 impl Drop for TestData {
     fn drop(&mut self) {
-        //println!("dropping '{}'", self.0);
+        println!("dropping '{}'", self.0);
     }
 }
 
-/// Test resource factory
-struct TestFactory;
-
-impl Factory for TestFactory {
-    type Key = TestDataId;
-    type Data = TestData;
-    type MetaData = ();
-
-    fn request(&mut self, id: &TestDataId) -> (TestData, Option<()>) {
-        (TestData::new(format!("pending: {}", id.0)), Some(()))
-    }
-
-    fn create(&mut self, id: &TestDataId, _meta: &mut ()) -> Option<TestData> {
-        Some(TestData::new(format!("id: {}", id.0)))
+impl From<TestDataId> for TestData {
+    fn from(k: TestDataId) -> TestData {
+        TestData::from_key(&k)
     }
 }
+
 
 #[test]
-fn store_simple_strict() {
-    let store = hashstore::create(FunctionFactory::new(|id: &TestDataId| TestData::new(format!("id: {}", id.0))));
+fn hashstore_single_threaded() {
+    let store = hashstore::HashStore::<TestDataId, TestData>::new();
     let mut r0;// = TestRef::none();
     let mut r1;// = TestRef::none();
 
     //println!("request 0,1");
     {
-        let store_use = store.read();
-        assert!(store_use.get(&TestDataId(0)).is_null());
-        assert!(!store_use.has_request());
+        let store = store.read();
+        assert!(store.get(&TestDataId(0)).is_null());
 
-        r0 = store_use.get_or_request(&TestDataId(0));
-        assert!(store_use.has_request());
-        assert!(!store_use.is_pending(&r0));
-        assert!(store_use[&r0].0 == format!("id: {}", 0));
+        r0 = store.get_or_add(TestDataId(0));
+        assert!(store[&r0].0 == format!("id: {}", 0));
 
-        store_use.request(&TestDataId(1));
-        let r11 = store_use.get(&TestDataId(1));
-        assert!(store_use[&r11].0 == format!("id: {}", 1));
-        assert!(store_use.has_request());
+        r1 = store.get_or_add(TestDataId(1));
+        assert!(store[&r1].0 == format!("id: {}", 1));
+        let r11 = store.get(&TestDataId(1));
+        assert!(store[&r11].0 == format!("id: {}", 1));
+        assert!(r11 == r1);
+        let r12 = store.get_or_add(TestDataId(1));
+        assert!(store[&r12].0 == format!("id: {}", 1));
+        assert!(r12 == r1);
     }
 
-    //println!("create 0,1");
-    assert!(store.has_request());
-    store.update();
-    assert!(!store.has_request());
-
+    //println!("request process");
     {
-        let store_use = store.read();
-        assert!(store_use.is_ready(&store_use.get(&TestDataId(0))));
-        assert!(store_use.is_ready(&r0));
-        assert!(store_use[&r0].0 == format!("id: {}", 0));
-        r1 = store_use.get(&TestDataId(1));
-        assert!(!r1.is_null());
-        assert!(store_use.is_ready(&r1));
-        assert!(store_use[&r1].0 == format!("id: {}", 1));
+        let mut store = store.update();
+        store.finalize_requests();
     }
 
-    store.drain_unused();
+    //println!("check 0,1, request 2");
+    {
+        let store = store.read();
+        assert!(store[&r0].0 == format!("id: {}", 0));
+        assert!(store.get(&TestDataId(0)) == r0);
+        assert!(store[&r1].0 == format!("id: {}", 1));
+        assert!(store.get(&TestDataId(1)) == r1);
+
+        let r2 = store.get_or_add(TestDataId(2));
+        assert!(store[&r2].0 == format!("id: {}", 2));
+    }
+
+    //println!("drop 2");
+    {
+        let mut store = store.update();
+        store.finalize_requests();
+        store.drain_unused();
+    }
 
     {
-        let store_use = store.read();
-        assert!(store_use[&r0].0 == format!("id: {}", 0));
-        assert!(store_use[&r1].0 == format!("id: {}", 1));
-        r1.release();
+        let store = store.read();
+        assert!(store.get(&TestDataId(2)).is_null());
+
+        assert!(store[&r0].0 == format!("id: {}", 0));
+        assert!(store.get(&TestDataId(0)) == r0);
+        assert!(store[&r1].0 == format!("id: {}", 1));
+        assert!(store.get(&TestDataId(1)) == r1);
+
+        r1.reset();
+        // check that store is not modified
+        assert!(store[&store.get(&TestDataId(1))].0 == format!("id: {}", 1));
         assert!(r1.is_null());
     }
 
     //println!("drop 1");
-    store.drain_unused();
+    {
+        let mut store = store.update();
+        store.finalize_requests();
+        store.drain_unused();
+    }
 
     {
-        let store_use = store.read();
-        assert!(store_use[&r0].0 == format!("id: {}", 0));
-        assert!(store_use.get(&TestDataId(1)).is_null());
+        let store = store.read();
+        assert!(store[&r0].0 == format!("id: {}", 0));
+        assert!(store.get(&TestDataId(0)) == r0);
+        assert!(store.get(&TestDataId(1)).is_null());
+        assert!(store.get(&TestDataId(2)).is_null());
+
+        r0.reset();
+        // check that store is not modified yet
+        assert!(store[&store.get(&TestDataId(0))].0 == format!("id: {}", 0));
+        assert!(r0.is_null());
     }
 
     //println!("drop 0");
-    r0.release();
-    store.drain_unused();
-    assert!(store.is_empty());
-}
-
-#[test]
-fn store_simple_lazy() {
-    let store = hashstore::create(TestFactory);
-    let mut r0;// = TestRef::none();
-    let mut r1;// = TestRef::none();
-
-    //println!("request 0,1");
     {
-        let store_use = store.read();
-        assert!(store_use.get(&TestDataId(0)).is_null());
-        assert!(!store_use.has_request());
-
-        r0 = store_use.get_or_request(&TestDataId(0));
-        assert!(store_use.has_request());
-        assert!(store_use.is_pending(&r0));
-        assert!(store_use[&r0].0 == format!("pending: {}", 0));
-
-        store_use.request(&TestDataId(1));
-        let r11 = store_use.get(&TestDataId(1));
-        assert!(store_use[&r11].0 == format!("pending: {}", 1));
-        assert!(store_use.has_request());
+        let mut store = store.update();
+        store.finalize_requests();
+        store.drain_unused();
+        assert!(store.is_empty());
     }
-
-    //println!("create 0,1");
-    assert!(store.has_request());
-    store.update();
-    assert!(!store.has_request());
-
-    {
-        let store_use = store.read();
-        assert!(store_use.is_ready(&store_use.get(&TestDataId(0))));
-        assert!(store_use.is_ready(&r0));
-        assert!(store_use[&r0].0 == format!("id: {}", 0));
-        r1 = store_use.get(&TestDataId(1));
-        assert!(!r1.is_null());
-        assert!(store_use.is_ready(&r1));
-        assert!(store_use[&r1].0 == format!("id: {}", 1));
-    }
-
-    store.drain_unused();
-
-    {
-        let store_use = store.read();
-        assert!(store_use[&r0].0 == format!("id: {}", 0));
-        assert!(store_use[&r1].0 == format!("id: {}", 1));
-        r1.release();
-        assert!(r1.is_null());
-    }
-
-    //println!("drop 1");
-    store.drain_unused();
-
-    {
-        let store_use = store.read();
-        assert!(store_use[&r0].0 == format!("id: {}", 0));
-        assert!(store_use.get(&TestDataId(1)).is_null());
-    }
-
-    //println!("drop 0");
-    r0.release();
-    store.drain_unused();
-    assert!(store.is_empty());
 }
 
 
 #[test]
-fn store_multi_threaded() {
-    let store = Arc::new(hashstore::create(TestFactory));
+#[ignore]
+fn hashstore_multi_threaded() {
+    let store = hashstore::HashStore::<TestDataId, TestData>::new();
+    let store = Arc::new(store);
 
     const ITER: u32 = 10;
 
@@ -185,20 +150,23 @@ fn store_multi_threaded() {
     {
         let mut tp = vec!();
         for i in 0..ITER {
-            let s = store.clone();
+            let store = store.clone();
             tp.push(thread::spawn(move || {
-                let store_use = s.read();
-                assert!(store_use.get(&TestDataId(0)).is_null());
+                let store = store.read();
+                assert!(store.get(&TestDataId(0)).is_null());
 
                 // request 1
-                let r1 = store_use.get_or_request(&TestDataId(1));
-                assert!(store_use.is_pending(&r1));
+                let r1 = store.get_or_add(TestDataId(1));
+                assert!(store[&r1].0 == format!("id: {}", 1));
 
                 // request 100 + threadId
-                let r100 = store_use.get_or_request(&TestDataId(100 + i));
-                assert!(store_use.is_pending(&r100));
+                let r100 = store.get_or_add(TestDataId(100 + i));
+                assert!(store[&r100].0 == format!("id: {}", 100 + i));
 
-                //println!("get_or_request {}", i);
+                for _ in 0..100 {
+                    assert!(store[&r1].0 == format!("id: {}", 1));
+                    assert!(store[&r100].0 == format!("id: {}", 100 + i));
+                }
             }));
         }
         for t in tp.drain(..) {
@@ -206,29 +174,61 @@ fn store_multi_threaded() {
         }
     }
 
-    // create 1, 100 + threadId
-    //println!("updating...");
-    store.update();
+    //println!("request process");
+    {
+        let mut store = store.update();
+        store.finalize_requests();
+        // no drain
+    }
 
+    // check after process
     {
         let mut tp = vec!();
         for i in 0..ITER {
-            let s = store.clone();
+            let store = store.clone();
             tp.push(thread::spawn(move || {
-                let store_use = s.read();
-                assert!(store_use.get(&TestDataId(0)).is_null());
+                let store = store.read();
+                assert!(store.get(&TestDataId(0)).is_null());
 
                 // get 1
-                let r1 = store_use.get(&TestDataId(1));
-                assert!(!r1.is_null() && store_use.is_ready(&r1));
-                assert!(store_use[&r1].0 == format!("id: {}", 1));
+                let r1 = store.get(&TestDataId(1));
+                assert!(!r1.is_null());
+                assert!(store[&r1].0 == format!("id: {}", 1));
 
                 // get 100 + threadId
-                let r100 = store_use.get(&TestDataId(100 + i));
-                assert!(!r1.is_null() && store_use.is_ready(&r1));
-                assert!(store_use[&r100].0 == format!("id: {}", 100 + i));
+                let r100 = store.get(&TestDataId(100 + i));
+                assert!(!r100.is_null());
+                assert!(store[&r100].0 == format!("id: {}", 100 + i));
+            }));
+        }
+        for t in tp.drain(..) {
+            t.join().unwrap();
+        }
+    }
 
-                //println!("get {}", i);
+    //println!("drain");
+    {
+        let mut store = store.update();
+        store.finalize_requests();
+        store.drain_unused();
+        // no drain
+    }
+
+    println!("drain");
+    // check after drain
+    {
+        let mut tp = vec!();
+        for i in 0..ITER {
+            let store = store.clone();
+            tp.push(thread::spawn(move || {
+                let store = store.read();
+                assert!(store.get(&TestDataId(0)).is_null());
+
+                // get 1
+                assert!(store.get(&TestDataId(1)).is_null());
+
+                // get 100 + threadId
+                assert!(store.get(&TestDataId(100 + i)).is_null());
             }));
         }
         for t in tp.drain(..) {
