@@ -8,7 +8,7 @@ use std::ops::{Deref, DerefMut};
 type AtomicFlag = AtomicUsize;
 
 /// Triple buffer that uses atomic operations to rotate the 3 buffers during consume/produce operations
-pub struct TripleBuffer<T> {
+struct TripleBuffer<T> {
     buffers: UnsafeCell<[T; 3]>,
 
     // flag bits:
@@ -87,7 +87,7 @@ unsafe impl<T: Send> Send for Sender<T> {}
 //impl<T> !Sync for Sender<T> { }
 
 impl<T> Sender<T> {
-    pub fn new(owner: &Arc<TripleBuffer<T>>) -> Sender<T> {
+    fn new(owner: &Arc<TripleBuffer<T>>) -> Sender<T> {
         Sender(owner.clone())
     }
 
@@ -142,7 +142,7 @@ unsafe impl<T: Send> Send for Receiver<T> {}
 //impl<T> !Sync for Receiver<T> { }
 
 impl<T> Receiver<T> {
-    pub fn new(owner: &Arc<TripleBuffer<T>>) -> Receiver<T> {
+    fn new(owner: &Arc<TripleBuffer<T>>) -> Receiver<T> {
         Receiver(owner.clone())
     }
 
@@ -178,4 +178,13 @@ impl<'a, T> DerefMut for RefReceiveBuffer<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
         unsafe { &mut (*self.0.buffers.get())[self.1] }
     }
+}
+
+
+/// Create a Sender/Receiver with an embedded shared buffer for communication.
+/// It is not a "Single Producer Single Consumer" queue as some massages can be dropped based
+/// on thread scheduling.
+pub fn state_channel<T: Default>() -> (Sender<T>, Receiver<T>) {
+    let a = Arc::new(TripleBuffer::new());
+    (Sender::new(&a), Receiver::new(&a))
 }

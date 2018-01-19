@@ -3,8 +3,7 @@
 #![feature(align_offset)]
 #![feature(drain_filter)]
 
-pub mod spsc;
 pub mod arena;
 pub mod store;
 pub mod hashstore;
-
+pub mod spscstate;

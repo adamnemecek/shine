@@ -1,8 +1,8 @@
-mod spsc {
+mod spscstate {
 	extern crate dragorust_store;
 	
     use std::thread;
-	use self::dragorust_store::spsc::*;	
+	use self::dragorust_store::spscstate::*;
 
     const ITER_COUNT: i32 = 0x2ffff;
 

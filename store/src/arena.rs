@@ -1,5 +1,10 @@
 use std::marker::PhantomData;
 
+/// Arena allocator that ensure stable memory location for the objects.
+/// todo: System memory is allocated in pages, but no memory is given back to the system.
+/// todo: The allocated memory is managed by the Arena using free list.
+/// Arena has no concurrency handling. At most one thread may accessing the arean at a time, hence
+/// some synchronisation method have to be used in parallel environment.
 pub struct Arena<T> {
     size: usize,
     _ph: PhantomData<T>,

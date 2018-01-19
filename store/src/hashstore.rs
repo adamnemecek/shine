@@ -15,14 +15,13 @@ use std::marker::PhantomData;
 /// Trait for resource id
 pub trait Key: Clone + Send + Eq + Hash + fmt::Debug {}
 
-pub trait Data<K: Key>: From<K> + fmt::Debug {}
+pub trait Data<K: Key>: From<K> {}
 
 
 /// Reference counted indexing of the store items in O(1).
-#[derive(Debug)]
-pub struct Index<K: Key, D: Data<K>>(*mut Entry<K, D>);
+pub struct Index<K: Key, D: From<K>>(*mut Entry<K, D>);
 
-impl<K: Key, D: Data<K>> Index<K, D> {
+impl<K: Key, D: From<K>> Index<K, D> {
     pub fn null() -> Index<K, D> {
         Index(ptr::null_mut())
     }
@@ -44,13 +43,25 @@ impl<K: Key, D: Data<K>> Index<K, D> {
     }
 }
 
-impl<K: Key, D: Data<K>> Default for Index<K, D> {
+impl<K: Key, D: From<K>> Default for Index<K, D> {
     fn default() -> Index<K, D> {
         Index::null()
     }
 }
 
-impl<K: Key, D: Data<K>> Clone for Index<K, D> {
+impl<K: Key, D: From<K>> fmt::Debug for Index<K, D> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Index({:p})", self.0)
+    }
+}
+
+impl<K: Key, D: From<K>> PartialEq for Index<K, D> {
+    fn eq(&self, e: &Self) -> bool {
+        self.0 == e.0
+    }
+}
+
+impl<K: Key, D: From<K>> Clone for Index<K, D> {
     fn clone(&self) -> Index<K, D> {
         if !self.is_null() {
             unsafe { &(*self.0).ref_count.fetch_add(1, Ordering::Relaxed) };
@@ -59,13 +70,7 @@ impl<K: Key, D: Data<K>> Clone for Index<K, D> {
     }
 }
 
-impl<K: Key, D: Data<K>> PartialEq for Index<K, D> {
-    fn eq(&self, e: &Self) -> bool {
-        self.0 == e.0
-    }
-}
-
-impl<K: Key, D: Data<K>> Drop for Index<K, D> {
+impl<K: Key, D: From<K>> Drop for Index<K, D> {
     fn drop(&mut self) {
         self.reset();
     }
@@ -73,10 +78,9 @@ impl<K: Key, D: Data<K>> Drop for Index<K, D> {
 
 
 /// Unsafe indexing of the store items in O(1) without reference count maintenance.
-#[derive(Debug)]
-pub struct UnsafeIndex<K: Key, D: Data<K>>(*mut Entry<K, D>);
+pub struct UnsafeIndex<K: Key, D: From<K>>(*mut Entry<K, D>);
 
-impl<K: Key, D: Data<K>> UnsafeIndex<K, D> {
+impl<K: Key, D: From<K>> UnsafeIndex<K, D> {
     pub fn null() -> UnsafeIndex<K, D> {
         UnsafeIndex(ptr::null_mut())
     }
@@ -94,19 +98,25 @@ impl<K: Key, D: Data<K>> UnsafeIndex<K, D> {
     }
 }
 
-impl<K: Key, D: Data<K>> Default for UnsafeIndex<K, D> {
+impl<K: Key, D: From<K>> Default for UnsafeIndex<K, D> {
     fn default() -> UnsafeIndex<K, D> {
         UnsafeIndex::null()
     }
 }
 
-impl<K: Key, D: Data<K>> PartialEq for UnsafeIndex<K, D> {
+impl<K: Key, D: From<K>> fmt::Debug for UnsafeIndex<K, D> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "UnsafeIndex({:p})", self.0)
+    }
+}
+
+impl<K: Key, D: From<K>> PartialEq for UnsafeIndex<K, D> {
     fn eq(&self, e: &Self) -> bool {
         self.0 == e.0
     }
 }
 
-impl<K: Key, D: Data<K>> Clone for UnsafeIndex<K, D> {
+impl<K: Key, D: From<K>> Clone for UnsafeIndex<K, D> {
     fn clone(&self) -> UnsafeIndex<K, D> {
         UnsafeIndex(self.0)
     }
@@ -115,7 +125,7 @@ impl<K: Key, D: Data<K>> Clone for UnsafeIndex<K, D> {
 
 /// An entry in the store.
 #[derive(Debug)]
-struct Entry<K: Key, D: Data<K>> {
+struct Entry<K: Key, D: From<K>> {
     /// Number of active Index (number of references) to this entry
     ref_count: AtomicUsize,
     /// The stored data
@@ -125,11 +135,11 @@ struct Entry<K: Key, D: Data<K>> {
 
 
 // Store data that requires exclusive lock
-struct SharedData<K: Key, D: Data<K>> {
+struct SharedData<K: Key, D: From<K>> {
     resources: HashMap<K, *mut Entry<K, D>>,
 }
 
-impl<K: Key, D: Data<K>> SharedData<K, D> {
+impl<K: Key, D: From<K>> SharedData<K, D> {
     fn get(&self, k: &K) -> Index<K, D> {
         match self.resources.get(k) {
             Some(&v) => Index::new(v),
@@ -140,12 +150,12 @@ impl<K: Key, D: Data<K>> SharedData<K, D> {
 
 
 // D that requires exclusive lock
-struct ExclusiveData<K: Key, D: Data<K>> {
+struct ExclusiveData<K: Key, D: From<K>> {
     arena: Arena<Entry<K, D>>,
     requests: HashMap<K, *mut Entry<K, D>>,
 }
 
-impl<K: Key, D: Data<K>> ExclusiveData<K, D> {
+impl<K: Key, D: From<K>> ExclusiveData<K, D> {
     fn get(&self, k: &K) -> Index<K, D> {
         match self.requests.get(k) {
             Some(&v) => Index::new(v),
@@ -158,7 +168,7 @@ impl<K: Key, D: Data<K>> ExclusiveData<K, D> {
         let arena = &mut self.arena;
         let entry =
             self.requests.entry(k.clone())
-                .or_insert_with( || {
+                .or_insert_with(|| {
                     let new_entry = arena.allocate(
                         Entry {
                             ref_count: AtomicUsize::new(0),
@@ -174,16 +184,16 @@ impl<K: Key, D: Data<K>> ExclusiveData<K, D> {
 
 
 /// Resource store.
-pub struct HashStore<K: Key, D: Data<K>> {
+pub struct HashStore<K: Key, D: From<K>> {
     shared: RwLock<SharedData<K, D>>,
     exclusive: Mutex<ExclusiveData<K, D>>,
 }
 
-unsafe impl<K: Key, D: Data<K>> Send for HashStore<K, D> {}
+unsafe impl<K: Key, D: From<K>> Send for HashStore<K, D> {}
 
-unsafe impl<K: Key, D: Data<K>> Sync for HashStore<K, D> {}
+unsafe impl<K: Key, D: From<K>> Sync for HashStore<K, D> {}
 
-impl<K: Key, D: Data<K>> HashStore<K, D> {
+impl<K: Key, D: From<K>> HashStore<K, D> {
     pub fn new() -> HashStore<K, D> {
         HashStore {
             shared: RwLock::new(
@@ -235,7 +245,7 @@ impl<K: Key, D: Data<K>> HashStore<K, D> {
     }
 }
 
-impl<K: Key, D: Data<K>> Drop for HashStore<K, D> {
+impl<K: Key, D: From<K>> Drop for HashStore<K, D> {
     fn drop(&mut self) {
         let shared = &mut *(self.shared.write().unwrap());
         let exclusive = &mut *(self.exclusive.lock().unwrap());
@@ -265,12 +275,12 @@ impl<K: Key, D: Data<K>> Drop for HashStore<K, D> {
 
 
 /// Guarded read access to a store
-pub struct ReadGuard<'a, K: 'a + Key, D: 'a + Data<K>> {
+pub struct ReadGuard<'a, K: 'a + Key, D: 'a + From<K>> {
     shared: RwLockReadGuard<'a, SharedData<K, D>>,
     exclusive: &'a Mutex<ExclusiveData<K, D>>,
 }
 
-impl<'a, K: 'a + Key, D: 'a + Data<K>> ReadGuard<'a, K, D> {
+impl<'a, K: 'a + Key, D: 'a + From<K>> ReadGuard<'a, K, D> {
     pub fn get(&self, k: &K) -> Index<K, D> {
         let index = self.shared.get(k);
         if !index.is_null() {
@@ -297,14 +307,14 @@ impl<'a, K: 'a + Key, D: 'a + Data<K>> ReadGuard<'a, K, D> {
         &entry.value
     }
 
-    pub unsafe fn unsafe_at(&self, index: &UnsafeIndex<K, D>) -> &D {
+    pub unsafe fn at_unsafe(&self, index: &UnsafeIndex<K, D>) -> &D {
         assert!(!index.is_null(), "Indexing by a null-index is not allowed");
         let entry = &(*index.0);
         &entry.value
     }
 }
 
-impl<'a, 'i, K: 'a + Key, D: 'a + Data<K>> ops::Index<&'i Index<K, D>> for ReadGuard<'a, K, D> {
+impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::Index<&'i Index<K, D>> for ReadGuard<'a, K, D> {
     type Output = D;
 
     fn index(&self, index: &Index<K, D>) -> &Self::Output {
@@ -314,12 +324,12 @@ impl<'a, 'i, K: 'a + Key, D: 'a + Data<K>> ops::Index<&'i Index<K, D>> for ReadG
 
 
 /// Guarded update access to a store
-pub struct UpdateGuard<'a, K: 'a + Key, D: 'a + Data<K>> {
+pub struct UpdateGuard<'a, K: 'a + Key, D: 'a + From<K>> {
     shared: RwLockWriteGuard<'a, SharedData<K, D>>,
     exclusive: MutexGuard<'a, ExclusiveData<K, D>>,
 }
 
-impl<'a, K: 'a + Key, D: 'a + Data<K>> UpdateGuard<'a, K, D> {
+impl<'a, K: 'a + Key, D: 'a + From<K>> UpdateGuard<'a, K, D> {
     pub fn get(&self, k: &K) -> Index<K, D> {
         let index = self.shared.get(k);
         if !index.is_null() {
@@ -338,6 +348,7 @@ impl<'a, K: 'a + Key, D: 'a + Data<K>> UpdateGuard<'a, K, D> {
         self.exclusive.get_or_add(k)
     }
 
+    /// Returns if the store is empty.
     pub fn is_empty(&self) -> bool {
         self.exclusive.requests.is_empty() && self.shared.resources.is_empty()
     }
@@ -386,20 +397,20 @@ impl<'a, K: 'a + Key, D: 'a + Data<K>> UpdateGuard<'a, K, D> {
         &mut entry.value
     }
 
-    pub unsafe fn unsafe_at(&self, index: &UnsafeIndex<K, D>) -> &D {
+    pub unsafe fn at_unsafe(&self, index: &UnsafeIndex<K, D>) -> &D {
         assert!(!index.is_null(), "Indexing by a null-index is not allowed");
         let entry = &(*index.0);
         &entry.value
     }
 
-    pub unsafe fn unsafe_at_mut(&self, index: &UnsafeIndex<K, D>) -> &mut D {
+    pub unsafe fn at_unsafe_mut(&self, index: &UnsafeIndex<K, D>) -> &mut D {
         assert!(!index.is_null(), "Indexing by a null-index is not allowed");
         let entry = &mut (*index.0);
         &mut entry.value
     }
 }
 
-impl<'a, 'i, K: 'a + Key, D: 'a + Data<K>> ops::Index<&'i Index<K, D>> for UpdateGuard<'a, K, D> {
+impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::Index<&'i Index<K, D>> for UpdateGuard<'a, K, D> {
     type Output = D;
 
     fn index(&self, index: &Index<K, D>) -> &Self::Output {
@@ -407,7 +418,7 @@ impl<'a, 'i, K: 'a + Key, D: 'a + Data<K>> ops::Index<&'i Index<K, D>> for Updat
     }
 }
 
-impl<'a, 'i, K: 'a + Key, D: 'a + Data<K>> ops::IndexMut<&'i Index<K, D>> for UpdateGuard<'a, K, D> {
+impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::IndexMut<&'i Index<K, D>> for UpdateGuard<'a, K, D> {
     fn index_mut(&mut self, index: &Index<K, D>) -> &mut Self::Output {
         self.at_mut(index)
     }
