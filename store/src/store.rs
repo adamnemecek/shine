@@ -194,7 +194,7 @@ impl<D> Store<D> {
 
     /// Returns a read locked access
     pub fn read<'a>(&'a self) -> ReadGuard<'a, D> {
-        let shared = self.shared.read().unwrap();
+        let shared = self.shared.try_read().unwrap();
 
         ReadGuard {
             _shared: shared,
@@ -203,11 +203,11 @@ impl<D> Store<D> {
     }
 
     /// Returns a write locked access
-    pub fn update<'a>(&'a self) -> UpdateGuard<'a, D> {
-        let shared = self.shared.write().unwrap();
+    pub fn write<'a>(&'a self) -> WriteGuard<'a, D> {
+        let shared = self.shared.try_write().unwrap();
         let exclusive = self.exclusive.lock().unwrap();
 
-        UpdateGuard {
+        WriteGuard {
             shared: shared,
             exclusive: exclusive,
         }
@@ -278,13 +278,13 @@ impl<'a, 'i, D: 'a> ops::Index<&'i Index<D>> for ReadGuard<'a, D> {
 
 
 /// Guarded update access to a store
-pub struct UpdateGuard<'a, D: 'a> {
+pub struct WriteGuard<'a, D: 'a> {
     shared: RwLockWriteGuard<'a, SharedData<D>>,
     exclusive: MutexGuard<'a, ExclusiveData<D>>,
 }
 
 
-impl<'a, D: 'a> UpdateGuard<'a, D> {
+impl<'a, D: 'a> WriteGuard<'a, D> {
     pub fn add(&mut self, data: D) -> Index<D> {
         self.exclusive.add(data)
     }
@@ -351,7 +351,7 @@ impl<'a, D: 'a> UpdateGuard<'a, D> {
     }
 }
 
-impl<'a, 'i, D: 'a> ops::Index<&'i Index<D>> for UpdateGuard<'a, D> {
+impl<'a, 'i, D: 'a> ops::Index<&'i Index<D>> for WriteGuard<'a, D> {
     type Output = D;
 
     fn index(&self, index: &Index<D>) -> &Self::Output {
@@ -359,7 +359,7 @@ impl<'a, 'i, D: 'a> ops::Index<&'i Index<D>> for UpdateGuard<'a, D> {
     }
 }
 
-impl<'a, 'i, D: 'a> ops::IndexMut<&'i Index<D>> for UpdateGuard<'a, D> {
+impl<'a, 'i, D: 'a> ops::IndexMut<&'i Index<D>> for WriteGuard<'a, D> {
     fn index_mut(&mut self, index: &Index<D>) -> &mut Self::Output {
         self.at_mut(index)
     }

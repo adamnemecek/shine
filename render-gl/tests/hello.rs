@@ -40,7 +40,9 @@ impl View for SimpleView {
 }
 
 #[test]
-pub fn hello() {
+pub fn hello_world() {
+    assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
 
     let mut window = render::PlatformWindowSettings::default()

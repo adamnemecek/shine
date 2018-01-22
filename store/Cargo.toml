@@ -5,3 +5,5 @@ authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
 libc = "*"
+lazy_static = "*"
+num_cpus="*"

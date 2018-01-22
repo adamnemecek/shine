@@ -1,5 +1,5 @@
 use core::*;
-use limits::*;
+use libconfig::*;
 use lowlevel::*;
 
 

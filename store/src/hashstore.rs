@@ -225,7 +225,7 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
 
     /// Returns a read locked access
     pub fn read<'a>(&'a self) -> ReadGuard<'a, K, D> {
-        let shared = self.shared.read().unwrap();
+        let shared = self.shared.try_read().unwrap();
 
         ReadGuard {
             shared: shared,
@@ -234,11 +234,11 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
     }
 
     /// Returns a write locked access
-    pub fn update<'a>(&'a self) -> UpdateGuard<'a, K, D> {
-        let shared = self.shared.write().unwrap();
+    pub fn write<'a>(&'a self) -> WriteGuard<'a, K, D> {
+        let shared = self.shared.try_write().unwrap();
         let exclusive = self.exclusive.lock().unwrap();
 
-        UpdateGuard {
+        WriteGuard {
             shared: shared,
             exclusive: exclusive,
         }
@@ -247,7 +247,7 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
 
 impl<K: Key, D: From<K>> Drop for HashStore<K, D> {
     fn drop(&mut self) {
-        let shared = &mut *(self.shared.write().unwrap());
+        let shared = &mut *(self.shared.try_write().unwrap());
         let exclusive = &mut *(self.exclusive.lock().unwrap());
         let arena = &mut exclusive.arena;
         let requests = &mut exclusive.requests;
@@ -324,12 +324,12 @@ impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::Index<&'i Index<K, D>> for ReadG
 
 
 /// Guarded update access to a store
-pub struct UpdateGuard<'a, K: 'a + Key, D: 'a + From<K>> {
+pub struct WriteGuard<'a, K: 'a + Key, D: 'a + From<K>> {
     shared: RwLockWriteGuard<'a, SharedData<K, D>>,
     exclusive: MutexGuard<'a, ExclusiveData<K, D>>,
 }
 
-impl<'a, K: 'a + Key, D: 'a + From<K>> UpdateGuard<'a, K, D> {
+impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
     pub fn get(&self, k: &K) -> Index<K, D> {
         let index = self.shared.get(k);
         if !index.is_null() {
@@ -410,7 +410,7 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> UpdateGuard<'a, K, D> {
     }
 }
 
-impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::Index<&'i Index<K, D>> for UpdateGuard<'a, K, D> {
+impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::Index<&'i Index<K, D>> for WriteGuard<'a, K, D> {
     type Output = D;
 
     fn index(&self, index: &Index<K, D>) -> &Self::Output {
@@ -418,7 +418,7 @@ impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::Index<&'i Index<K, D>> for Updat
     }
 }
 
-impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::IndexMut<&'i Index<K, D>> for UpdateGuard<'a, K, D> {
+impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::IndexMut<&'i Index<K, D>> for WriteGuard<'a, K, D> {
     fn index_mut(&mut self, index: &Index<K, D>) -> &mut Self::Output {
         self.at_mut(index)
     }

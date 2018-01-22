@@ -1,7 +1,7 @@
 use std::iter::FromIterator;
 use arrayvec::ArrayVec;
 use lowlevel::*;
-use limits::*;
+use libconfig::*;
 
 
 pub type GLVertexBufferAttributeVec = ArrayVec<[GLVertexBufferAttribute; MAX_VERTEX_ATTRIBUTE_COUNT]>;

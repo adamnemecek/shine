@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use limits::*;
+use libconfig::*;
 use lowlevel::*;
 
 

@@ -45,7 +45,7 @@ mod store {
 
         //println!("request process");
         {
-            let mut store = store.update();
+            let mut store = store.write();
             store.finalize_requests();
         }
 
@@ -61,7 +61,7 @@ mod store {
 
         //println!("drop 2");
         {
-            let mut store = store.update();
+            let mut store = store.write();
             store.finalize_requests();
             store.drain_unused();
         }
@@ -80,7 +80,7 @@ mod store {
 
         //println!("drop 1");
         {
-            let mut store = store.update();
+            let mut store = store.write();
             store.finalize_requests();
             store.drain_unused();
         }
@@ -96,7 +96,7 @@ mod store {
 
         //println!("drop 0");
         {
-            let mut store = store.update();
+            let mut store = store.write();
             store.finalize_requests();
             store.drain_unused();
             assert!(store.is_empty());
@@ -106,6 +106,8 @@ mod store {
 
     #[test]
     fn simple_multi_threaded() {
+        assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+
         let store = Store::<TestData>::new();
         let store = Arc::new(store);
 
@@ -140,9 +142,56 @@ mod store {
 
         //println!("request process");
         {
-            let mut store = store.update();
+            let mut store = store.write();
             store.finalize_requests();
             // no drain
         }
+    }
+
+
+    #[test]
+    fn check_lock() {
+        // single threaded as panic hook is a global resource
+        assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+
+        use std::mem;
+        use std::panic;
+
+        panic::set_hook(Box::new(|_info| { /*println!("panic: {:?}", _info);*/ }));
+
+        {
+            let store = Store::<TestData>::new();
+            assert!(panic::catch_unwind(|| {
+                let w = store.write();
+                let r = store.read();
+                drop(r);
+                drop(w);
+            }).is_err());
+            mem::forget(store);
+        }
+
+        {
+            let store = Store::<TestData>::new();
+            assert!(panic::catch_unwind(|| {
+                let r = store.read();
+                let w = store.write();
+                drop(w);
+                drop(r);
+            }).is_err());
+            mem::forget(store);
+        }
+
+        {
+            let store = Store::<TestData>::new();
+            assert!(panic::catch_unwind(|| {
+                let w1 = store.write();
+                let w2 = store.write();
+                drop(w2);
+                drop(w1);
+            }).is_err());
+            mem::forget(store);
+        }
+
+        panic::take_hook();
     }
 }

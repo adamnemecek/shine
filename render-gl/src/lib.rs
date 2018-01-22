@@ -26,7 +26,7 @@ pub mod gl {
 }
 
 /// Define engine limitations
-pub mod limits {
+pub mod libconfig {
     /// Maximum number of attributes that can be stored for a vertex.
     pub const MAX_VERTEX_ATTRIBUTE_COUNT: usize = 16;
     /// Maximum number of attributes that can be bound (used) at once

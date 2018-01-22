@@ -1,8 +1,8 @@
 mod spscstate {
-	extern crate dragorust_store;
-	
+    extern crate dragorust_store;
+
     use std::thread;
-	use self::dragorust_store::spscstate::*;
+    use self::dragorust_store::spscstate::*;
 
     const ITER_COUNT: i32 = 0x2ffff;
 
@@ -45,6 +45,8 @@ mod spscstate {
 
     #[test]
     fn multi_threaded_stress_small_buffer() {
+        assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+
         let (p, c) = state_channel();
 
         let tp = thread::spawn(move || {
@@ -141,6 +143,8 @@ mod spscstate {
 
     #[test]
     fn multi_threaded_stress_big_buffer() {
+        assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+
         let (p, c) = state_channel::<BigData>();
 
         let tp = thread::spawn(move || {

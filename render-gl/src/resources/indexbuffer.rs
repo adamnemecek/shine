@@ -48,7 +48,7 @@ impl From<CreateCommand> for GLCommand {
 
 
 pub type IndexBufferStore = Store<GLIndexBuffer>;
-pub type GuardedIndexBuffer<'a> = UpdateGuard<'a, GLIndexBuffer>;
+pub type GuardedIndexBuffer<'a> = WriteGuard<'a, GLIndexBuffer>;
 pub type IndexBufferIndex = Index<GLIndexBuffer>;
 
 /// Handle to an index buffer resource

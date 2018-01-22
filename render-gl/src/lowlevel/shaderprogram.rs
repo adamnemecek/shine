@@ -3,7 +3,7 @@
 use std::mem;
 use std::str::from_utf8;
 use lowlevel::*;
-use limits::*;
+use libconfig::*;
 
 
 /// Error reported by the driver during compilation and linking
