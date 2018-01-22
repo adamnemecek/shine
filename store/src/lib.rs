@@ -28,4 +28,4 @@ pub mod hashstore;
 pub mod threadid;
 pub mod spscstate;
 
-//pub mod fjcommandqueue;
+pub mod mpscfjqueue;
