@@ -7,9 +7,12 @@ use std::ops::{Deref, DerefMut};
 
 type AtomicFlag = AtomicUsize;
 
+#[repr(align(64))]
+struct AlignedData<T>(T);
+
 /// Triple buffer that uses atomic operations to rotate the 3 buffers during consume/produce operations
 struct TripleBuffer<T> {
-    buffers: UnsafeCell<[T; 3]>,
+    buffers: UnsafeCell<[AlignedData<T>; 3]>,
 
     // flag bits:
     // newWrite   = (flags & 0x40)
@@ -24,7 +27,7 @@ unsafe impl<T> Sync for TripleBuffer<T> {}
 impl<T: Default> TripleBuffer<T> {
     pub fn new() -> TripleBuffer<T> {
         TripleBuffer {
-            buffers: UnsafeCell::new([Default::default(), Default::default(), Default::default()]),
+            buffers: UnsafeCell::new([AlignedData(Default::default()), AlignedData(Default::default()), AlignedData(Default::default())]),
             flags: AtomicFlag::new(0x6),
         }
     }
@@ -121,13 +124,13 @@ impl<'a, T> Drop for RefSendBuffer<'a, T> {
 impl<'a, T> Deref for RefSendBuffer<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { &(*self.0.buffers.get())[self.1] }
+        unsafe { &(*self.0.buffers.get())[self.1].0 }
     }
 }
 
 impl<'a, T> DerefMut for RefSendBuffer<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { &mut (*self.0.buffers.get())[self.1] }
+        unsafe { &mut (*self.0.buffers.get())[self.1].0 }
     }
 }
 
@@ -170,13 +173,13 @@ pub struct RefReceiveBuffer<'a, T: 'a>(&'a TripleBuffer<T>, usize);
 impl<'a, T> Deref for RefReceiveBuffer<'a, T> {
     type Target = T;
     fn deref(&self) -> &T {
-        unsafe { &(*self.0.buffers.get())[self.1] }
+        unsafe { &(*self.0.buffers.get())[self.1].0 }
     }
 }
 
 impl<'a, T> DerefMut for RefReceiveBuffer<'a, T> {
     fn deref_mut(&mut self) -> &mut T {
-        unsafe { &mut (*self.0.buffers.get())[self.1] }
+        unsafe { &mut (*self.0.buffers.get())[self.1].0 }
     }
 }
 

@@ -17,8 +17,8 @@ fn thread_count() {
 fn alloc_free() {
     assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
-    let max_thread_count = threadid::get_max_thread_count();
-    //println!("number of threads: {}", max_thread_count);
+        let max_thread_count = threadid::get_max_thread_count();
+        //println!("number of threads: {}", max_thread_count);
 
     for len in 1..max_thread_count {
         //println!("testing thread count: {}", len);

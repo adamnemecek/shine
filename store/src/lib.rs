@@ -2,6 +2,8 @@
 #![feature(iterator_for_each)]
 #![feature(align_offset)]
 #![feature(drain_filter)]
+#![feature(repr_align)]
+#![feature(attr_literals)]
 
 #[macro_use]
 extern crate lazy_static;
@@ -28,4 +30,4 @@ pub mod hashstore;
 pub mod threadid;
 pub mod spscstate;
 
-pub mod mpscfjqueue;
+pub mod fjsqueue;

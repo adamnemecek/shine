@@ -1,197 +1,195 @@
-mod store {
-    extern crate dragorust_store;
+extern crate dragorust_store;
 
-    use std::thread;
-    use std::sync::Arc;
+use std::thread;
+use std::sync::Arc;
 
-    use self::dragorust_store::store::*;
-
-
-    /// Test resource data
-    struct TestData(String);
+use self::dragorust_store::store::*;
 
 
-    impl TestData {
-        fn new<S: Into<String>>(s: S) -> TestData {
-            let string: String = s.into();
-            //println!("creating '{}'", string);
-            TestData(string.into())
-        }
+/// Test resource data
+struct TestData(String);
+
+
+impl TestData {
+    fn new<S: Into<String>>(s: S) -> TestData {
+        let string: String = s.into();
+        //println!("creating '{}'", string);
+        TestData(string.into())
+    }
+}
+
+impl Drop for TestData {
+    fn drop(&mut self) {
+        //println!("dropping '{}'", self.0);
+    }
+}
+
+#[test]
+fn simple_single_threaded() {
+    let store = Store::<TestData>::new();
+    let mut r0;// = TestRef::none();
+    let mut r1;// = TestRef::none();
+
+    //println!("request 0,1");
+    {
+        let store = store.read();
+
+        r0 = store.add(TestData::new("zero"));
+        assert!(store[&r0].0 == "zero");
+
+        r1 = store.add(TestData::new("one"));
+        assert!(store[&r0].0 == "zero");
+        assert!(store[&r1].0 == "one");
     }
 
-    impl Drop for TestData {
-        fn drop(&mut self) {
-            //println!("dropping '{}'", self.0);
-        }
+    //println!("request process");
+    {
+        let mut store = store.write();
+        store.finalize_requests();
     }
 
-    #[test]
-    fn simple_single_threaded() {
-        let store = Store::<TestData>::new();
-        let mut r0;// = TestRef::none();
-        let mut r1;// = TestRef::none();
+    //println!("check 0,1, request 2");
+    {
+        let store = store.read();
+        assert!(store[&r0].0 == "zero");
+        assert!(store[&r1].0 == "one");
 
-        //println!("request 0,1");
-        {
-            let store = store.read();
-
-            r0 = store.add(TestData::new("zero"));
-            assert!(store[&r0].0 == "zero");
-
-            r1 = store.add(TestData::new("one"));
-            assert!(store[&r0].0 == "zero");
-            assert!(store[&r1].0 == "one");
-        }
-
-        //println!("request process");
-        {
-            let mut store = store.write();
-            store.finalize_requests();
-        }
-
-        //println!("check 0,1, request 2");
-        {
-            let store = store.read();
-            assert!(store[&r0].0 == "zero");
-            assert!(store[&r1].0 == "one");
-
-            let r2 = store.add(TestData::new("two"));
-            assert!(store[&r2].0 == "two");
-        }
-
-        //println!("drop 2");
-        {
-            let mut store = store.write();
-            store.finalize_requests();
-            store.drain_unused();
-        }
-
-        {
-            let store = store.read();
-            assert!(store[&r0].0 == "zero");
-            assert!(store[&r1].0 == "one");
-
-            let ur1 = UnsafeIndex::from_index(&r1);
-            r1.reset();
-            assert!(store[&r0].0 == "zero");
-            assert!(unsafe { store.at_unsafe(&ur1).0 == "one" });
-            assert!(r1.is_null());
-        }
-
-        //println!("drop 1");
-        {
-            let mut store = store.write();
-            store.finalize_requests();
-            store.drain_unused();
-        }
-
-        {
-            let store = store.read();
-
-            let ur0 = UnsafeIndex::from_index(&r0);
-            r0.reset();
-            assert!(unsafe { store.at_unsafe(&ur0).0 == "zero" });
-            assert!(r0.is_null());
-        }
-
-        //println!("drop 0");
-        {
-            let mut store = store.write();
-            store.finalize_requests();
-            store.drain_unused();
-            assert!(store.is_empty());
-        }
+        let r2 = store.add(TestData::new("two"));
+        assert!(store[&r2].0 == "two");
     }
 
+    //println!("drop 2");
+    {
+        let mut store = store.write();
+        store.finalize_requests();
+        store.drain_unused();
+    }
 
-    #[test]
-    fn simple_multi_threaded() {
-        assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    {
+        let store = store.read();
+        assert!(store[&r0].0 == "zero");
+        assert!(store[&r1].0 == "one");
 
-        let store = Store::<TestData>::new();
-        let store = Arc::new(store);
+        let ur1 = UnsafeIndex::from_index(&r1);
+        r1.reset();
+        assert!(store[&r0].0 == "zero");
+        assert!(unsafe { store.at_unsafe(&ur1).0 == "one" });
+        assert!(r1.is_null());
+    }
 
-        const ITER: u32 = 10;
+    //println!("drop 1");
+    {
+        let mut store = store.write();
+        store.finalize_requests();
+        store.drain_unused();
+    }
 
-        // request from multiple threads
-        {
-            let mut tp = vec!();
-            for i in 0..ITER {
-                let store = store.clone();
-                tp.push(thread::spawn(move || {
-                    let store = store.read();
+    {
+        let store = store.read();
 
-                    // request 1
-                    let r1 = store.add(TestData::new("one"));
+        let ur0 = UnsafeIndex::from_index(&r0);
+        r0.reset();
+        assert!(unsafe { store.at_unsafe(&ur0).0 == "zero" });
+        assert!(r0.is_null());
+    }
+
+    //println!("drop 0");
+    {
+        let mut store = store.write();
+        store.finalize_requests();
+        store.drain_unused();
+        assert!(store.is_empty());
+    }
+}
+
+
+#[test]
+fn simple_multi_threaded() {
+    assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+
+    let store = Store::<TestData>::new();
+    let store = Arc::new(store);
+
+    const ITER: u32 = 10;
+
+    // request from multiple threads
+    {
+        let mut tp = vec!();
+        for i in 0..ITER {
+            let store = store.clone();
+            tp.push(thread::spawn(move || {
+                let store = store.read();
+
+                // request 1
+                let r1 = store.add(TestData::new("one"));
+                assert!(store[&r1].0 == "one");
+
+                // request 100 + threadId
+                let r100 = store.add(TestData::new(format!("id: {}", 100 + i)));
+                assert!(store[&r100].0 == format!("id: {}", 100 + i));
+
+                for _ in 0..100 {
                     assert!(store[&r1].0 == "one");
-
-                    // request 100 + threadId
-                    let r100 = store.add(TestData::new(format!("id: {}", 100 + i)));
                     assert!(store[&r100].0 == format!("id: {}", 100 + i));
-
-                    for _ in 0..100 {
-                        assert!(store[&r1].0 == "one");
-                        assert!(store[&r100].0 == format!("id: {}", 100 + i));
-                    }
-                }));
-            }
-            for t in tp.drain(..) {
-                t.join().unwrap();
-            }
+                }
+            }));
         }
-
-        //println!("request process");
-        {
-            let mut store = store.write();
-            store.finalize_requests();
-            // no drain
+        for t in tp.drain(..) {
+            t.join().unwrap();
         }
     }
 
-
-    #[test]
-    fn check_lock() {
-        // single threaded as panic hook is a global resource
-        assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
-
-        use std::mem;
-        use std::panic;
-
-        panic::set_hook(Box::new(|_info| { /*println!("panic: {:?}", _info);*/ }));
-
-        {
-            let store = Store::<TestData>::new();
-            assert!(panic::catch_unwind(|| {
-                let w = store.write();
-                let r = store.read();
-                drop(r);
-                drop(w);
-            }).is_err());
-            mem::forget(store);
-        }
-
-        {
-            let store = Store::<TestData>::new();
-            assert!(panic::catch_unwind(|| {
-                let r = store.read();
-                let w = store.write();
-                drop(w);
-                drop(r);
-            }).is_err());
-            mem::forget(store);
-        }
-
-        {
-            let store = Store::<TestData>::new();
-            assert!(panic::catch_unwind(|| {
-                let w1 = store.write();
-                let w2 = store.write();
-                drop(w2);
-                drop(w1);
-            }).is_err());
-            mem::forget(store);
-        }
-
-        panic::take_hook();
+    //println!("request process");
+    {
+        let mut store = store.write();
+        store.finalize_requests();
+        // no drain
     }
+}
+
+
+#[test]
+fn check_lock() {
+    // single threaded as panic hook is a global resource
+    assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+
+    use std::mem;
+    use std::panic;
+
+    panic::set_hook(Box::new(|_info| { /*println!("panic: {:?}", _info);*/ }));
+
+    {
+        let store = Store::<TestData>::new();
+        assert!(panic::catch_unwind(|| {
+            let w = store.write();
+            let r = store.read();
+            drop(r);
+            drop(w);
+        }).is_err());
+        mem::forget(store);
+    }
+
+    {
+        let store = Store::<TestData>::new();
+        assert!(panic::catch_unwind(|| {
+            let r = store.read();
+            let w = store.write();
+            drop(w);
+            drop(r);
+        }).is_err());
+        mem::forget(store);
+    }
+
+    {
+        let store = Store::<TestData>::new();
+        assert!(panic::catch_unwind(|| {
+            let w1 = store.write();
+            let w2 = store.write();
+            drop(w2);
+            drop(w1);
+        }).is_err());
+        mem::forget(store);
+    }
+
+    panic::take_hook();
 }
