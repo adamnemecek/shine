@@ -1,4 +1,3 @@
-/*
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::fmt::Debug;
@@ -11,7 +10,9 @@ use manager::*;
 
 pub trait PassId: 'static + Clone + Hash + Eq + Debug {}
 
-struct PassData<E: Engine> {}
+struct PassData<E: Engine> {
+    //active_index: usize
+}
 
 
 /// Structure to store the render pass abstraction.
@@ -39,11 +40,21 @@ impl<'p, E: Engine> Pass<'p, E> {
     }
 }
 
+struct PassId {
+    pass: usize,
+    active: usize,
+}
+
+struct ActivePassId {
+    pass: usize,
+    order: usize,
+}
+
 
 pub struct PassManager<K: PassId, E: Engine> {
-    passes: HashMap<K, (usize, usize)>,
-
-    active_passes: Vec<K>,
+    passes: Vec<PassData>,
+    active_passes: Vec<ActivePass>,
+    passes_lookup: HashMap<K, PassId>,
 }
 
 impl<K: PassId, E: Engine> PassManager<K, E> {
@@ -59,29 +70,33 @@ impl<K: PassId, E: Engine> PassManager<K, E> {
     /// By default passes are activated only for a single frame and whenever a pass is acquired from the
     /// manager, it is activated automatically.
     pub fn get_pass<'p>(&'p mut self, id: K, command_store: &'p E: FrameCompose) -> Pass<'p, E> {
-        let passes = &mut self.passes;
-        let passes_lookup = &mut self.passes_lookup;
-        let active_passes = &self.active_passes;
+        let entry = {
+            let passes = &mut self.passes;
+            let passes_lookup = &mut self.passes_lookup;
+            let active_passes = &self.active_passes;
 
-        let entry = passes.entry(id).or_insert(PassData {});
-        if entry.1.index == 0 {
-            entry.1.index = active_passes.size();
-            active_passes.push(id);
-        }
-
-
-
-        let (pass_idx, active_idx) = ((entry.0).0, (entry.1).0);
+            passes_lookup.entry(id).or_insert_with(|| {
+                let id = passes.size();
+                passes.push(PassData {});
+                PassId {
+                    pass: id,
+                    active: max_value(),
+                }
+            });
+        };
 
         // find or create the active pass
-        if active_idx > = self.active_passes.len() {
-            self.active_passes.push(ActivePass {
-                index: pass_idx,
+        if entry.active >= self.active_passes.len() {
+            entry.active = self.active_passes.size();
+            self.active_passes.push(ActivePassId {
+                pass: entry.pass,
                 order: 0,
             });
         }
-        assert!(active_idx < self.active_passes.len());
 
+        Pass {
+            
+        }
         self.passes[pass_idx].as_ref()
     }
 

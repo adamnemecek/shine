@@ -52,7 +52,9 @@ impl GLFrameCompose {
     }
 }
 
-impl FrameCompose for GLFrameCompose {}
+impl FrameCompose for GLFrameCompose {
+    fn flush(&mut self) {}
+}
 
 impl Backend for GLBackend {
     type FrameCompose = GLFrameCompose;
@@ -62,6 +64,4 @@ impl Backend for GLBackend {
             ll: &mut self.ll
         }
     }
-
-    fn present(&mut self) {}
 }

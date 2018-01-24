@@ -398,8 +398,9 @@ impl GLWindow {
 
     pub fn update_view(&mut self) {
         if self.is_ready_to_render() && self.context.make_current().is_ok() {
-            self.view.borrow_mut().on_update(&mut self.control, &mut self.backend.compose());
-            self.backend.present();
+            let ref mut compose = self.backend.compose();
+            self.view.borrow_mut().on_update(&mut self.control, compose);
+            compose.flush();
         }
     }
 
@@ -410,8 +411,9 @@ impl GLWindow {
     pub fn render(&mut self) -> Result<(), Error> {
         if self.is_ready_to_render() {
             try!(self.context.make_current());
-            self.view.borrow_mut().on_render(&mut self.control, &mut self.backend.compose());
-            self.backend.present();
+            let ref mut compose = self.backend.compose();
+            self.view.borrow_mut().on_render(&mut self.control, compose);
+            compose.flush();
             try!(self.context.swap_buffers());
         }
         Ok(())
@@ -423,25 +425,25 @@ impl GLWindow {
 
     fn handle_surface_ready(&mut self) {
         if self.context.make_current().is_ok() {
-            self.view.borrow_mut().on_surface_ready(&mut self.control, &mut self.backend.compose());
-            self.backend.present();
-            //try!(self.context.swap_buffers());
+            let ref mut compose = self.backend.compose();
+            self.view.borrow_mut().on_surface_ready(&mut self.control, compose);
+            compose.flush();
         }
     }
 
     fn handle_surface_lost(&mut self) {
         if self.context.make_current().is_ok() {
-            self.view.borrow_mut().on_surface_lost(&mut self.control, &mut self.backend.compose());
-            self.backend.present();
-            //try!(self.context.swap_buffers());
+            let ref mut compose = self.backend.compose();
+            self.view.borrow_mut().on_surface_lost(&mut self.control, compose);
+            compose.flush();
         }
     }
 
     fn handle_surface_changed(&mut self) {
         if self.context.make_current().is_ok() {
-            self.view.borrow_mut().on_surface_changed(&mut self.control, &mut self.backend.compose());
-            self.backend.present();
-            //try!(self.context.swap_buffers());
+            let ref mut compose = self.backend.compose();
+            self.view.borrow_mut().on_surface_changed(&mut self.control, compose);
+            compose.flush();
         }
     }
 
