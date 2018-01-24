@@ -7,8 +7,11 @@ use std::ops::{Deref, DerefMut};
 
 type AtomicFlag = AtomicUsize;
 
+/// Struct to force the alignment of the stored data match the typical size of a cache-line
+/// to avoid false sharing.
 #[repr(align(64))]
 struct AlignedData<T>(T);
+
 
 /// Triple buffer that uses atomic operations to rotate the 3 buffers during consume/produce operations
 struct TripleBuffer<T> {
