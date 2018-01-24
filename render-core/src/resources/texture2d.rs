@@ -1,6 +1,7 @@
 #![deny(missing_docs)]
 
 use types::*;
+use framework::*;
 use resources::*;
 
 /// Enum to define index data.
@@ -64,10 +65,10 @@ pub use self::image_source::*;
 
 
 /// Trait that defined a 2d texture
-pub trait Texture2D: Resource {
+pub trait Texture2D<E: Engine>: Resource<E> {
     /// Reference to this index buffer used in shader parameters.
     type Ref: Clone;
 
     /// Sets the content of the buffer.
-    fn set<'a, SRC: ImageSource, Q: CommandQueue>(&self, queue: &Q, source: &SRC);
+    fn set<'a, SRC: ImageSource>(&self, queue: &mut E::FrameCompose, source: &SRC);
 }

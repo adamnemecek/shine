@@ -7,31 +7,28 @@ struct SimpleView {
     t: f32
 }
 
-impl View for SimpleView {
-    type Resources = GLResources;
+impl View<PlatformEngine> for SimpleView {
+    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, _r: &mut GLFrameCompose) {}
 
-    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {}
+    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut GLFrameCompose) {}
 
-    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {}
+    fn on_surface_changed(&mut self, _ctl: &mut WindowControl, _r: &mut GLFrameCompose) {}
 
-    fn on_surface_changed(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {}
-
-    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {
+    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut GLFrameCompose) {
         self.t += 0.01;
         if self.t >= 1.0 {
             self.t = 0.0
         }
     }
 
-    fn on_render(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {
+    fn on_render(&mut self, _ctl: &mut WindowControl, _r: &mut GLFrameCompose) {
         use render::lowlevel::*;
 
         ugl!(ClearColor(0.0, 0.0, self.t, 1.0));
         ugl!(Clear(gl::COLOR_BUFFER_BIT));
     }
 
-    fn on_key(&mut self, ctl: &mut WindowControl, _r: &mut Self::Resources,
-              _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
+    fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
         match virtual_key {
             Some(VirtualKeyCode::Escape) if !is_down => { ctl.close(); }
             _ => {}

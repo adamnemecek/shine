@@ -8,14 +8,14 @@ use threadid;
 /// Buffer associated to a thread to store commands. To avoid false sharing, alignment of this
 /// struct is set to the typical size of a cache-line
 #[repr(align(64))]
-struct CommandBuffer<K: fmt::Debug, C> {
+struct Buffer<K: fmt::Debug, C> {
     commands: Vec<C>,
     sort_keys: Vec<K>,
 }
 
-impl<K: fmt::Debug, C> CommandBuffer<K, C> {
-    fn new() -> CommandBuffer<K, C> {
-        CommandBuffer {
+impl<K: fmt::Debug, C> Buffer<K, C> {
+    fn new() -> Buffer<K, C> {
+        Buffer {
             commands: Vec::new(),
             sort_keys: Vec::new(),
         }
@@ -32,7 +32,7 @@ impl<K: fmt::Debug, C> CommandBuffer<K, C> {
 }
 
 struct SharedData<K: fmt::Debug, C> {
-    buffers: Vec<CommandBuffer<K, C>>,
+    buffers: Vec<Buffer<K, C>>,
     order: Vec<(u64, (u8, usize))>,
 }
 
@@ -50,7 +50,7 @@ impl<K: fmt::Debug, C> FJSQueue<K, C> {
                 buffers: {
                     let mut v = Vec::with_capacity(thread_count);
                     for _ in 0..thread_count {
-                        v.push(CommandBuffer::new());
+                        v.push(Buffer::new());
                     }
                     v
                 },
@@ -86,7 +86,7 @@ impl<'a, K: 'a + fmt::Debug, C: 'a> ProduceGuard<'a, K, C> {
         let id = threadid::get();
         let ref buffer = self.shared.buffers[id];
         // cast to mut, despite having a read lock, no two threads may use the same slot due to threadid
-        let buffer = buffer as *const CommandBuffer<K, C> as *mut CommandBuffer<K, C>;
+        let buffer = buffer as *const Buffer<K, C> as *mut Buffer<K, C>;
         let buffer = unsafe { &mut *buffer };
         buffer.store(k, c);
     }

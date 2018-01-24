@@ -2,6 +2,7 @@
 
 use std::slice;
 use std::mem;
+use framework::*;
 use resources::*;
 
 /// Memory layout of the indices
@@ -9,7 +10,7 @@ use resources::*;
 pub enum IndexBufferLayout {
     U8,
     U16,
-    U32
+    U32,
 }
 
 /// Helper to convert index type into index type enum
@@ -108,8 +109,8 @@ impl<DECL: IndexDeclaration + Sized> IndexSource<DECL> for Vec<DECL> {
 
 
 /// Trait that defines an index buffer with index format declaration
-pub trait IndexBuffer<DECL: IndexDeclaration>: Resource {
+pub trait IndexBuffer<DECL: IndexDeclaration, E: Engine>: Resource<E> {
     /// Sets the content of the buffer
-    fn set<'a, SRC: IndexSource<DECL>, Q: CommandQueue<Command=Self::Command>>(&self, queue: &Q, source: &SRC);
+    fn set<'a, SRC: IndexSource<DECL>>(&self, queue: &mut E::FrameCompose, source: &SRC);
 }
 

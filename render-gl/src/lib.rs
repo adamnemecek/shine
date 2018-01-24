@@ -2,6 +2,7 @@
 #![feature(iterator_for_each)]
 #![feature(align_offset)]
 #![feature(crate_visibility_modifier)]
+#![feature(generic_associated_types)]
 
 #[cfg(target_os = "windows")]
 extern crate winapi;

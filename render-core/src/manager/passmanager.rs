@@ -1,24 +1,29 @@
+/*
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::fmt::Debug;
-use std::marker::PhantomData;
+//use std::marker::PhantomData;
 
 use resources::*;
 use manager::*;
+//use store::fjsqueue::*;
+
 
 pub trait PassId: 'static + Clone + Hash + Eq + Debug {}
 
+struct PassData<E: Engine> {}
+
+
 /// Structure to store the render pass abstraction.
-pub struct Pass<R: Resources> {
-    command_store: *mut CommandStore<R::Command>,
+pub struct Pass<'p, E: Eninge> {
+    data: &mut PassData<E>,
     index: ActivePassIndex,
-    _ph: PhantomData<R>
+    _ph: PhantomData<E>,
 }
 
-impl<R: Resources> Pass<R> {
-    fn new(command_store: &CommandStore<R::Command>) -> Pass<R> {
+impl<'p, E: Engine> Pass<'p, E> {
+    fn new<'p>() -> Pass<'p, E> {
         Pass {
-            command_store: command_store as *const CommandStore<R::Command> as *mut CommandStore<R::Command>,
             index: ActivePassIndex::inactive(),
             _ph: PhantomData,
         }
@@ -34,61 +39,17 @@ impl<R: Resources> Pass<R> {
     }
 }
 
-impl<R: Resources> CommandQueue for Pass<R> {
-    type Command = R::Command;
 
-    fn add(&self, cmd: R::Command) {
-        unsafe { &mut *self.command_store }.add(self.index, cmd);
-    }
+pub struct PassManager<K: PassId, E: Engine> {
+    passes: HashMap<K, (usize, usize)>,
+
+    active_passes: Vec<K>,
 }
 
-
-/// Index into the available passes vector
-#[derive(Copy, Clone, Debug)]
-struct PassIndex(usize);
-
-
-/// Index into the active passes vector
-#[derive(Copy, Clone, Debug)]
-pub struct ActivePassIndex(usize);
-
-impl ActivePassIndex {
-    pub fn inactive() -> ActivePassIndex {
-        ActivePassIndex(usize::max_value())
-    }
-
-    pub fn active(idx: usize) -> ActivePassIndex {
-        ActivePassIndex(idx)
-    }
-
-    pub fn is_active(&self) -> bool {
-        self.0 != usize::max_value()
-    }
-}
-
-
-/// Meta-data for the active passes
-struct ActivePass {
-    /// Index into the available passes vector
-    index: usize,
-
-    /// The order of the passes according to topology sort
-    order: usize,
-}
-
-
-/// Manage passes
-pub struct PassManager<K: PassId, R: Resources> {
-    passes: Vec<Box<Pass<R>>>,
-    passes_lookup: HashMap<K, (PassIndex, ActivePassIndex)>,
-    active_passes: Vec<ActivePass>,
-}
-
-impl<K: PassId, R: Resources> PassManager<K, R> {
-    pub fn new() -> PassManager<K, R> {
+impl<K: PassId, E: Engine> PassManager<K, E> {
+    pub fn new() -> PassManager<K, E> {
         PassManager {
-            passes: vec!(),
-            passes_lookup: HashMap::new(),
+            passes: HashMap::new(),
             active_passes: vec!(),
         }
     }
@@ -97,28 +58,26 @@ impl<K: PassId, R: Resources> PassManager<K, R> {
     ///
     /// By default passes are activated only for a single frame and whenever a pass is acquired from the
     /// manager, it is activated automatically.
-    pub fn get_pass(&mut self, id: K, command_store: &CommandStore<R::Command>) -> &Pass<R> {
-        // Get the pass by the provided key.
-        // If pass is not defined yet, a new one is created
-        let entry = {
-            let passes = &mut self.passes;
-            let passes_lookup = &mut self.passes_lookup;
-            let active_passes = &self.active_passes;
+    pub fn get_pass<'p>(&'p mut self, id: K, command_store: &'p E: FrameCompose) -> Pass<'p, E> {
+        let passes = &mut self.passes;
+        let passes_lookup = &mut self.passes_lookup;
+        let active_passes = &self.active_passes;
 
-            let entry = passes_lookup.entry(id);
-            entry.or_insert_with(|| {
-                passes.push(Box::new(Pass::new(command_store)));
-                (PassIndex(passes.len() - 1, ), ActivePassIndex::active(active_passes.len()))
-            })
-        };
+        let entry = passes.entry(id).or_insert(PassData {});
+        if entry.1.index == 0 {
+            entry.1.index = active_passes.size();
+            active_passes.push(id);
+        }
+
+
 
         let (pass_idx, active_idx) = ((entry.0).0, (entry.1).0);
 
         // find or create the active pass
-        if active_idx >= self.active_passes.len() {
+        if active_idx > = self.active_passes.len() {
             self.active_passes.push(ActivePass {
                 index: pass_idx,
-                order: 0
+                order: 0,
             });
         }
         assert!(active_idx < self.active_passes.len());
@@ -147,3 +106,4 @@ impl<K: PassId, R: Resources> PassManager<K, R> {
         self.active_passes.clear();
     }
 }
+* /

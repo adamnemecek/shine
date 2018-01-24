@@ -1,5 +1,6 @@
 use core::*;
 use framework::*;
+use resources::*;
 
 
 /// Engine implementation for opengl
@@ -20,6 +21,9 @@ impl PlatformEngine {
 }
 
 impl Engine for PlatformEngine {
+    type FrameCompose = GLFrameCompose;
+    type Backend = GLBackend;
+
     fn quit(&self) {
         self.platform.quit();
     }

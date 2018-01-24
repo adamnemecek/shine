@@ -2,6 +2,7 @@
 
 use std::slice;
 use types::*;
+use framework::*;
 use resources::*;
 
 
@@ -17,7 +18,7 @@ pub enum ShaderType {
 
 /// Trait to visit shader parameters. Mainly used for binding and uploading parameters.
 #[allow(missing_docs)]
-pub trait ShaderParameterVisitor<R: Resources> {
+pub trait ShaderParameterVisitor<E: Engine> {
     fn process_f32x16(&mut self, idx: usize, data: &Float32x16);
     fn process_f32x4(&mut self, idx: usize, data: &Float32x4);
     fn process_f32x3(&mut self, idx: usize, data: &Float32x3);
@@ -40,7 +41,7 @@ pub trait ShaderParameters: Clone {
     fn get_index_by_name(name: &str) -> Option<usize>;
 
     /// Visit all the required attributes
-    fn visit<R: Resources, V: ShaderParameterVisitor<R>>(&self, visitor: &mut V);
+    fn visit<E: Engine, V: ShaderParameterVisitor<E>>(&self, visitor: &mut V);
 }
 
 
@@ -54,14 +55,14 @@ pub trait ShaderDeclaration: 'static {
 }
 
 /// Structure to store the shader abstraction.
-pub trait ShaderProgramBase: Resource {
+pub trait ShaderProgramBase<E: Engine>: Resource<E> {
     /// Uploads and compiles the shader.
-    fn compile<Q: CommandQueue>(&self, queue: &Q);
+    fn compile(&self, queue: &mut <E::Backend as Backend>::FrameCompose);
 }
 
 /// Structure to store the shader abstraction.
-pub trait ShaderProgram<DECL: ShaderDeclaration>: ShaderProgramBase {
+pub trait ShaderProgram<DECL: ShaderDeclaration, E: Engine>: ShaderProgramBase<E> {
     /// Sends a geometry for rendering
-    fn draw<Q: CommandQueue>(&self, queue: &Q/*, parameters: DECL::Parameters*/,
-                             primitive: Primitive, vertex_start: usize, vertex_count: usize);
+    fn draw(&self, queue: &mut <E::Backend as Backend>::FrameCompose/*, parameters: DECL::Parameters*/,
+            primitive: Primitive, vertex_start: usize, vertex_count: usize);
 }

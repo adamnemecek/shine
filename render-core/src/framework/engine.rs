@@ -1,6 +1,7 @@
 #![deny(missing_docs)]
 
 use std::time::Duration;
+use resources::*;
 
 /// Enum to define the timeout policy for dispatch event
 #[derive(Debug, Copy, Clone)]
@@ -16,7 +17,13 @@ pub enum DispatchTimeout {
 /// Trait for engine abstraction.
 ///
 /// The engine is responsible for the event loop and event dispatching.
-pub trait Engine {
+pub trait Engine: 'static {
+    /// Backend types used as alias.
+    type FrameCompose: FrameCompose;
+
+    /// Trait defining the render backend
+    type Backend: Backend<FrameCompose=Self::FrameCompose>;
+
     /// Initiates the shutdown process.
     ///
     /// Engine is not shut down immediately, as some OS messages requires multiple cycle

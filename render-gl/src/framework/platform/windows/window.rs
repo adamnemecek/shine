@@ -70,7 +70,7 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
         top: 0,
         left: 0,
         bottom: client_size.height as winapi::LONG,
-        right: client_size.width as winapi::LONG
+        right: client_size.width as winapi::LONG,
     };
 
     //todo: error handling
@@ -78,7 +78,7 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
 
     Size {
         width: rect.right - rect.left,
-        height: rect.bottom - rect.top
+        height: rect.bottom - rect.top,
     }
 }
 
@@ -301,13 +301,13 @@ pub struct GLWindow {
     position: Position,
     context: GLContext,
     control: GLWindowControl,
-    resources: GLResources,
+    backend: GLBackend,
 
-    view: Rc<RefCell<View<Resources=GLResources>>>,
+    view: Rc<RefCell<View<PlatformEngine>>>,
 }
 
 impl GLWindow {
-    pub fn new_boxed(settings: &PlatformWindowSettings, engine: &GLEngine, view: Rc<RefCell<View<Resources=GLResources>>>) -> Result<Box<GLWindow>, Error> {
+    pub fn new_boxed(settings: &PlatformWindowSettings, engine: &GLEngine, view: Rc<RefCell<View<PlatformEngine>>>) -> Result<Box<GLWindow>, Error> {
         // create OS window
         let app_instance = engine.get_instance();
 
@@ -351,7 +351,7 @@ impl GLWindow {
             position: Position { x: 0, y: 0 },
             context: context,
             control: GLWindowControl { hwnd: hwnd },
-            resources: GLResources::new(),
+            backend: GLBackend::new(),
             view: view,
         });
 
@@ -393,23 +393,14 @@ impl GLWindow {
     }
 
     pub fn get_draw_size(&self) -> Size {
-        self.resources.get_screen_size()
+        self.backend.get_screen_size()
     }
 
     pub fn update_view(&mut self) {
-        self.view.borrow_mut().on_update(&mut self.control, &mut self.resources);
-    }
-
-    fn start_render(&mut self) -> Result<(), Error> {
-        try!(self.context.make_current());
-        try!(self.resources.start_render());
-        Ok(())
-    }
-
-    fn end_render(&mut self) -> Result<(), Error> {
-        try!(self.resources.end_render());
-        try!(self.context.swap_buffers());
-        Ok(())
+        if self.is_ready_to_render() && self.context.make_current().is_ok() {
+            self.view.borrow_mut().on_update(&mut self.control, &mut self.backend.compose());
+            self.backend.present();
+        }
     }
 
     pub fn is_ready_to_render(&self) -> bool {
@@ -418,9 +409,10 @@ impl GLWindow {
 
     pub fn render(&mut self) -> Result<(), Error> {
         if self.is_ready_to_render() {
-            try!(self.start_render());
-            self.view.borrow_mut().on_render(&mut self.control, &mut self.resources);
-            try!(self.end_render());
+            try!(self.context.make_current());
+            self.view.borrow_mut().on_render(&mut self.control, &mut self.backend.compose());
+            self.backend.present();
+            try!(self.context.swap_buffers());
         }
         Ok(())
     }
@@ -430,19 +422,31 @@ impl GLWindow {
     }
 
     fn handle_surface_ready(&mut self) {
-        self.view.borrow_mut().on_surface_ready(&mut self.control, &mut self.resources);
+        if self.context.make_current().is_ok() {
+            self.view.borrow_mut().on_surface_ready(&mut self.control, &mut self.backend.compose());
+            self.backend.present();
+            //try!(self.context.swap_buffers());
+        }
     }
 
     fn handle_surface_lost(&mut self) {
-        self.view.borrow_mut().on_surface_lost(&mut self.control, &mut self.resources);
+        if self.context.make_current().is_ok() {
+            self.view.borrow_mut().on_surface_lost(&mut self.control, &mut self.backend.compose());
+            self.backend.present();
+            //try!(self.context.swap_buffers());
+        }
     }
 
     fn handle_surface_changed(&mut self) {
-        self.view.borrow_mut().on_surface_changed(&mut self.control, &mut self.resources);
+        if self.context.make_current().is_ok() {
+            self.view.borrow_mut().on_surface_changed(&mut self.control, &mut self.backend.compose());
+            self.backend.present();
+            //try!(self.context.swap_buffers());
+        }
     }
 
     fn handle_key(&mut self, scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
-        self.view.borrow_mut().on_key(&mut self.control, &mut self.resources, scan_code, virtual_key, is_down);
+        self.view.borrow_mut().on_key(&mut self.control, scan_code, virtual_key, is_down);
     }
 
     /// Static function to handle os messages.
@@ -460,18 +464,12 @@ impl GLWindow {
         match msg {
             win_messages::WM_DR_WINDOW_CREATED => {
                 win.state = WindowState::Open;
-                if win.start_render().is_ok() {
-                    win.handle_surface_ready();
-                    win.end_render().unwrap();
-                }
+                win.handle_surface_ready();
             }
 
             winapi::WM_CLOSE => {
                 win.state = WindowState::WaitingClose;
-                if win.start_render().is_ok() {
-                    win.handle_surface_lost();
-                    win.end_render().unwrap();
-                }
+                win.handle_surface_lost();
             }
 
             winapi::WM_DESTROY => {
@@ -493,14 +491,11 @@ impl GLWindow {
 
                     win.size = Size {
                         width: rect.right - rect.left,
-                        height: rect.bottom - rect.top
+                        height: rect.bottom - rect.top,
                     };
                 }
-                win.resources.set_screen_size(size);
-                if win.start_render().is_ok() {
-                    win.handle_surface_changed();
-                    win.end_render().unwrap();
-                }
+                win.backend.set_screen_size(size);
+                win.handle_surface_changed();
 
                 result = Some(0);
             }

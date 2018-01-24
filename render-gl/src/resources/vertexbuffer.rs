@@ -4,9 +4,14 @@ use std::marker::PhantomData;
 use engine::*;
 use opengl::*;
 use opengl::lowlevel::vertexbinding::*;
-use store::handlestore::*;
+use store::store::*;
 
 
+pub type GLVertexBufferStore = Store<GLVertexBuffer>;
+
+
+
+/*
 
 pub type VertexBufferStore = Store<GLVertexBuffer>;
 pub type GuardedVertexBufferStore<'a> = UpdateGuardStore<'a, GLVertexBuffer>;
@@ -109,3 +114,4 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL> for VertexBufferHandle<DECL> {
         (self.0.clone(), attr.into())
     }
 }
+*/

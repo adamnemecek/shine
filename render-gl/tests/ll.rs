@@ -75,10 +75,8 @@ impl SimpleView {
     }
 }
 
-impl View for SimpleView {
-    type Resources = GLResources;
-
-    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut GLResources) {
+impl View<PlatformEngine> for SimpleView {
+    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut GLFrameCompose) {
         use lowlevel::*;
 
         let ll = r.ll_mut();
@@ -142,7 +140,7 @@ impl View for SimpleView {
         }
     }
 
-    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, r: &mut GLResources) {
+    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, r: &mut GLFrameCompose) {
         let ll = r.ll_mut();
         self.vb1.release(ll);
         self.vb2.release(ll);
@@ -151,12 +149,12 @@ impl View for SimpleView {
         self.sh.release(ll);
     }
 
-    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut Self::Resources) {
+    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut GLFrameCompose) {
         self.on_surface_lost(ctl, r);
         self.on_surface_ready(ctl, r);
     }
 
-    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {
+    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut GLFrameCompose) {
         use std::f32;
         self.t += 0.05f32;
         if self.t > 2. * f32::consts::PI {
@@ -164,7 +162,7 @@ impl View for SimpleView {
         }
     }
 
-    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut Self::Resources) {
+    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLFrameCompose) {
         use render::lowlevel::*;
 
         let ll = r.ll_mut();
@@ -201,8 +199,7 @@ impl View for SimpleView {
                 });
     }
 
-    fn on_key(&mut self, ctl: &mut WindowControl, _r: &mut Self::Resources,
-              _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
+    fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
         match virtual_key {
             Some(VirtualKeyCode::Escape) if !is_down => { ctl.close(); }
             _ => {}
