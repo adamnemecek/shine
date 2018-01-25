@@ -13,8 +13,10 @@ dragorust-render-core = {path = "../render-core"}
 dragorust-render-gl-derive = {path = "../render-gl-derive"}
 
 libc = "*"
-#gl = "*"
 arrayvec = "*"
+
+#todo: make these optional or dev-dependency
+rayon = "*"
 image = "*"
 
 [target.'cfg(target_os = "windows")'.dependencies]

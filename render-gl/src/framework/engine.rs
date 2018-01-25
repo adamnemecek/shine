@@ -21,7 +21,7 @@ impl PlatformEngine {
 }
 
 impl Engine for PlatformEngine {
-    type FrameCompose = GLFrameCompose;
+    type FrameCompose/*<'a>*/ = GLFrameCompose/*<'a>*/;
     type Backend = GLBackend;
 
     fn quit(&self) {

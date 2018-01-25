@@ -95,7 +95,7 @@ impl<K: PassId, E: Engine> PassManager<K, E> {
         }
 
         Pass {
-            
+
         }
         self.passes[pass_idx].as_ref()
     }

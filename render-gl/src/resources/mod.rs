@@ -1,9 +1,9 @@
 mod backend;
-//mod command;
+mod command;
 //mod vertexbuffer;
-//mod indexbuffer;
+mod indexbuffer;
 
 pub use self::backend::*;
-//pub use self::command::*;
-//pub use self::indexbuffer::{IndexBufferIndex, IndexBufferHandle};
+pub use self::command::*;
+pub use self::indexbuffer::*;
 

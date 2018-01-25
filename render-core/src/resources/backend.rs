@@ -1,9 +1,6 @@
-pub trait FrameCompose {
-    fn flush(&mut self);
-}
-
 pub trait Backend: 'static {
-    type FrameCompose: FrameCompose;
+    type FrameCompose;
 
-    fn compose(&mut self) -> Self::FrameCompose;
+    fn compose(&self) -> Self::FrameCompose;
+    fn flush(&mut self);
 }

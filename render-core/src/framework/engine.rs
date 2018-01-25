@@ -18,8 +18,8 @@ pub enum DispatchTimeout {
 ///
 /// The engine is responsible for the event loop and event dispatching.
 pub trait Engine: 'static {
-    /// Backend types used as alias.
-    type FrameCompose: FrameCompose;
+    /// Backend alias types used as alias.
+    type FrameCompose: 'static;
 
     /// Trait defining the render backend
     type Backend: Backend<FrameCompose=Self::FrameCompose>;

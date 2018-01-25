@@ -38,7 +38,7 @@ pub struct LowLevel {
     pub index_binding: IndexBinding,
     pub texture_binding: TextureBinding,
     pub program_binding: ProgramBinding,
-    pub states: StateManager
+    pub states: StateManager,
 }
 
 impl LowLevel {
@@ -80,11 +80,11 @@ impl LowLevel {
 
     /// Draws a geometry using the current states.
     pub fn draw(&mut self, primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
-        assert!( self.program_binding.get_bound_id() != 0, "shaderless (fixed function pipeline) rendering is not supported" );
-        assert!( (vertex_count % 2 == 0 || primitive != gl::LINES)
-            && (vertex_count % 3 == 0 || primitive != gl::TRIANGLES),
-        "vertex count does not match primitive type; vertex_count:{} primitive:{} ",
-        vertex_count, gl_get_primitive_name(primitive) );
+        assert!(self.program_binding.get_bound_id() != 0, "shaderless (fixed function pipeline) rendering is not supported");
+        assert!((vertex_count % 2 == 0 || primitive != gl::LINES)
+                    && (vertex_count % 3 == 0 || primitive != gl::TRIANGLES),
+                "vertex count does not match primitive type; vertex_count:{} primitive:{} ",
+                vertex_count, gl_get_primitive_name(primitive));
 
         self.states.set_render_size(self.screen_size);
 
@@ -109,5 +109,11 @@ impl LowLevel {
         }
 
         gl_check_error();
+    }
+
+    /// A simple test function to check if ll is alive
+    pub fn hello(&mut self, time: f32) {
+        ugl!(ClearColor(0.0, 0.0, time, 1.0));
+        ugl!(Clear(gl::COLOR_BUFFER_BIT));
     }
 }

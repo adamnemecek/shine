@@ -42,6 +42,11 @@ pub struct FJSQueue<K: fmt::Debug, C> {
     shared: RwLock<SharedData<K, C>>,
 }
 
+unsafe impl<K: fmt::Debug, C> Send for FJSQueue<K, C> {}
+
+unsafe impl<K: fmt::Debug, C> Sync for FJSQueue<K, C> {}
+
+
 impl<K: fmt::Debug, C> FJSQueue<K, C> {
     pub fn new() -> FJSQueue<K, C> {
         let thread_count = threadid::get_max_thread_count();

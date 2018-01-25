@@ -76,7 +76,7 @@ impl SimpleView {
 }
 
 impl View<PlatformEngine> for SimpleView {
-    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut GLFrameCompose) {
+    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
         use lowlevel::*;
 
         let ll = r.ll_mut();
@@ -140,7 +140,7 @@ impl View<PlatformEngine> for SimpleView {
         }
     }
 
-    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, r: &mut GLFrameCompose) {
+    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
         let ll = r.ll_mut();
         self.vb1.release(ll);
         self.vb2.release(ll);
@@ -149,12 +149,12 @@ impl View<PlatformEngine> for SimpleView {
         self.sh.release(ll);
     }
 
-    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut GLFrameCompose) {
+    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut GLBackend) {
         self.on_surface_lost(ctl, r);
         self.on_surface_ready(ctl, r);
     }
 
-    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut GLFrameCompose) {
+    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
         use std::f32;
         self.t += 0.05f32;
         if self.t > 2. * f32::consts::PI {
@@ -162,7 +162,7 @@ impl View<PlatformEngine> for SimpleView {
         }
     }
 
-    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLFrameCompose) {
+    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
         use render::lowlevel::*;
 
         let ll = r.ll_mut();

@@ -2,7 +2,6 @@
 #![feature(iterator_for_each)]
 #![feature(align_offset)]
 #![feature(crate_visibility_modifier)]
-#![feature(associated_type_defaults)]
 
 #[macro_use]
 mod types;
