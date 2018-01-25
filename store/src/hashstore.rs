@@ -372,17 +372,19 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
     }
 
     /// Retains the referenced elements and the those specified by the predicate.
-    /// In other words, remove all unreferenced resources such that f(&mut v) returns false.
-    pub fn retain<F: FnMut(&mut D, bool) -> bool>(&mut self, filter: &mut F) {
+    /// In other words, remove all unreferenced resources such that f(&mut data, is_referenced) returns false.
+    /// The first parameter for the predicate is the item in the store, the second parameter
+    /// indicates if item has any reference.
+    pub fn retain<F: FnMut(&mut D, bool) -> bool>(&mut self, mut filter: F) {
         let exclusive = &mut *self.exclusive;
-        Self::retain_impl(&mut exclusive.arena, &mut self.shared.resources, filter);
-        Self::retain_impl(&mut exclusive.arena, &mut exclusive.requests, filter);
+        Self::retain_impl(&mut exclusive.arena, &mut self.shared.resources, &mut filter);
+        Self::retain_impl(&mut exclusive.arena, &mut exclusive.requests, &mut filter);
     }
 
     /// Retains the referenced items only.
     /// In other words, remove all unreferenced resources.
     pub fn drain_unused(&mut self) {
-        self.retain(&mut |_, _| false)
+        self.retain(|_, _| false)
     }
 
     pub fn at(&self, index: &Index<K, D>) -> &D {

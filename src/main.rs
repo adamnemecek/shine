@@ -1,19 +1,19 @@
-#[macro_use]
-extern crate dragorust_render_gl as render;
+//#[macro_use]
+//extern crate dragorust_render_gl as render;
 //extern crate dragorust_world as world;
 
 
-use std::time::Duration;
+//use std::time::Duration;
 
 //mod game;
-mod view;
+//mod view;
 
-use render::*;
-use view::*;
+//use render::*;
+//use view::*;
 
 
 pub fn main() {
-    let engine = render::opengl::PlatformEngine::new().expect("Could not initialize render engine");
+/*    let engine = render::opengl::PlatformEngine::new().expect("Could not initialize render engine");
 //    let game = game::create();
 
     let mut window = engine.window_builder()/*render::PlatformWindowSettings::default()*/
@@ -39,5 +39,5 @@ pub fn main() {
 
         window.render().unwrap();
         sub_window.render().unwrap();
-    }
+    }*/
 }

@@ -1,28 +1,27 @@
-use std::iter::FromIterator;
 use arrayvec::ArrayVec;
 use lowlevel::*;
 use libconfig::*;
 
 
-pub type GLVertexBufferAttributeVec = ArrayVec<[GLVertexBufferAttribute; MAX_VERTEX_ATTRIBUTE_COUNT]>;
+pub type GLVertexBufferFormat = ArrayVec<[GLVertexBufferAttribute; MAX_VERTEX_ATTRIBUTE_COUNT]>;
 
 
 /// Structure to store hardware data associated to a VertexBuffer.
 pub struct GLVertexBuffer {
     hw_id: GLuint,
-    attributes: GLVertexBufferAttributeVec,
+    attributes: GLVertexBufferFormat,
 }
 
 impl GLVertexBuffer {
     pub fn new() -> GLVertexBuffer {
         GLVertexBuffer {
             hw_id: 0,
-            attributes: GLVertexBufferAttributeVec::new(),
+            attributes: GLVertexBufferFormat::new(),
         }
     }
 
-    pub fn upload_data<A: Iterator<Item=GLVertexBufferAttribute>>(&mut self, ll: &mut LowLevel, attributes: A, data: &[u8]) {
-        self.attributes = GLVertexBufferAttributeVec::from_iter(attributes);
+    pub fn upload_data(&mut self, ll: &mut LowLevel, attributes: GLVertexBufferFormat, data: &[u8]) {
+        self.attributes = attributes;
 
         gl_check_error();
         if self.hw_id == 0 {
@@ -30,7 +29,7 @@ impl GLVertexBuffer {
         }
         assert!(self.hw_id != 0);
 
-        //println!("upload vb id: {}, t: {:?}\n  d: {:?}", self.hw_id, self.attributes, data);
+        //println!("upload vertex buffer id: {}, t: {:?}\n  d: {:?}", self.hw_id, self.attributes, data);
 
         ll.vertex_binding.bind_buffer(self.hw_id);
         ugl!(BufferData(gl::ARRAY_BUFFER,
@@ -49,6 +48,8 @@ impl GLVertexBuffer {
         if self.hw_id == 0 {
             return;
         }
+
+        println!("Release verte buffer");
 
         ll.vertex_binding.unbind_if_active(self.hw_id);
         ugl!(DeleteBuffers(1, &self.hw_id));

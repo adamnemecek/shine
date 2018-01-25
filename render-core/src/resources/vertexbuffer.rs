@@ -105,6 +105,14 @@ pub trait VertexBuffer<DECL: VertexDeclaration, E: Engine>: Resource<E> {
     /// Sets the content of the buffer.
     fn set<'a, SRC: VertexSource<DECL>>(&self, queue: &mut E::FrameCompose, source: &SRC);
 
+    /// Reset self to new handle and sets the content of the buffer.
+    /// If handle pointed to an existing resource prior this call, that resource is not modified, Backend will
+    /// garbage collect it depending on the reference count.
+    fn create_and_set<'a, SRC: VertexSource<DECL>>(&mut self, queue: &mut E::FrameCompose, source: &SRC) {
+        self.create(queue);
+        self.set(queue, source);
+    }
+
     /// Gets a referenc to an attribute.
     fn get_attribute(&self, attr: DECL::Attribute) -> Self::AttributeRef;
 }

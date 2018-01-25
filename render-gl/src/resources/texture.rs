@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_variables)]
-
 use common::*;
 use opengl::lowlevel::*;
 use opengl::lowlevel::texturebinding::*;

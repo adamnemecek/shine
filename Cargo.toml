@@ -7,3 +7,6 @@ authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 dragorust-render-gl = {path = "render-gl"}
 #dragorust-world = {path = "world"}
 
+rayon = "*"
+image = "*"
+

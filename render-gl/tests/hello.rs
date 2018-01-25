@@ -26,8 +26,8 @@ impl View<PlatformEngine> for SimpleView {
     fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
         (0..300).into_par_iter()
             .for_each(|tid| {
-                let compose = r.compose();
-                compose.command_queue.add(CommandOrder(0, 0), Command::Hello { time: (self.time * tid as f32).sin() });
+                let mut compose = r.compose();
+                compose.add_command(0, Command::Hello { time: (self.time * tid as f32).sin() });
             });
     }
 

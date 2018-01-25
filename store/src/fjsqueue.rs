@@ -87,7 +87,7 @@ pub struct ProduceGuard<'a, K: 'a + fmt::Debug, C: 'a> {
 }
 
 impl<'a, K: 'a + fmt::Debug, C: 'a> ProduceGuard<'a, K, C> {
-    pub fn add(&self, k: K, c: C) {
+    pub fn add(&mut self, k: K, c: C) {
         let id = threadid::get();
         let ref buffer = self.shared.buffers[id];
         // cast to mut, despite having a read lock, no two threads may use the same slot due to threadid
@@ -130,7 +130,8 @@ impl<'a, K: 'a + fmt::Debug, C: 'a> ConsumeGuard<'a, K, C> {
         order.sort_by_key(|a| a.0);
     }
 
-    // Clears the queue returning all items in sorted order. Keeps the allocated memory for reuse.
+    // Clears the queue returning all items in sorted order.
+    // Keeps the allocated memory for reuse.
     // ## Note: If the Drain is leaked, queue items might be leaked as well.
     pub fn drain<'d>(&'d mut self) -> Drain<'d, 'a, K, C> {
         // command buffer is cleared by setting the length to 0. As self is moved out,

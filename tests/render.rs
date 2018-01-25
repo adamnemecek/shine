@@ -18,6 +18,7 @@ struct VxColorTex {
     tex_coord: Float32x2,
 }
 
+/*
 #[derive(ShaderDeclaration)]
 #[vert_path = "fun.glsl"]
 #[vert_src = "
@@ -52,111 +53,70 @@ struct VxColorTex {
 //todo 3:
 //#[unifrom(uTrsf) = engine.trsf]
 struct ShSimple {}
+*/
 
 struct SimpleView {
     t: f32,
-    vb1: lowlevel::GLVertexBuffer,
-    vb2: lowlevel::GLVertexBuffer,
-    ib: lowlevel::GLIndexBuffer,
-    sh: lowlevel::GLShaderProgram,
-    tx: lowlevel::GLTexture,
+    vb1: VertexBufferHandle<VxPos>,
+    vb2: VertexBufferHandle<VxColorTex>,
+    ib: IndexBufferHandle<u8>,
+    //sh: lowlevel::GLShaderProgram,
+    //tx: lowlevel::GLTexture,
 }
 
 impl SimpleView {
     fn new() -> SimpleView {
         SimpleView {
             t: 0.0,
-            vb1: lowlevel::GLVertexBuffer::new(),
-            vb2: lowlevel::GLVertexBuffer::new(),
-            ib: lowlevel::GLIndexBuffer::new(),
-            sh: lowlevel::GLShaderProgram::new(),
-            tx: lowlevel::GLTexture::new(),
+            vb1: Handle::null(),
+            vb2: Handle::null(),
+            ib: Handle::null(),
+            //sh: lowlevel::GLShaderProgram::new(),
+            //tx: lowlevel::GLTexture::new(),
         }
     }
 }
 
 impl View<PlatformEngine> for SimpleView {
     fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
-        use lowlevel::*;
+        println!("surface ready");
+        let mut compose = r.compose();
 
-        let ll = r.ll_mut();
+        let pos = [
+            VxPos { position: f32x3!(1, 0, 0) },
+            VxPos { position: f32x3!(1, 1, 0) },
+            VxPos { position: f32x3!(0, 1, 0) },
+            VxPos { position: f32x3!(0, 0, 0) },
+        ];
+        self.vb1.create_and_set(&mut compose, &pos);
 
-        {
-            let pos = [
-                VxPos { position: f32x3!(1, 0, 0) },
-                VxPos { position: f32x3!(1, 1, 0) },
-                VxPos { position: f32x3!(0, 1, 0) },
-                VxPos { position: f32x3!(0, 0, 0) },
-            ];
+        let color_tex = [
+            VxColorTex { color: f32x3!(1, 0, 0), tex_coord: f32x2!(1, 0) },
+            VxColorTex { color: f32x3!(1, 1, 0), tex_coord: f32x2!(1, 1) },
+            VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 1) },
+            VxColorTex { color: f32x3!(0, 0, 0), tex_coord: f32x2!(0, 0) }
+        ];
+        self.vb2.create_and_set(&mut compose, &color_tex);
 
-            let VertexData::Transient(slice) = pos.to_data();
-            let attributes: GLVertexBufferFormat = VxPos::attribute_layout_iter()
-                .map(|a| GLVertexBufferAttribute::from_layout(&a))
-                .collect();
-            self.vb1.upload_data(ll, attributes, slice);
-        }
+        let indices = [0u8, 1, 2, 0, 2, 3];
+        self.ib.create_and_set(&mut compose, &indices);
 
-        {
-            let color_tex = [
-                VxColorTex { color: f32x3!(1, 0, 0), tex_coord: f32x2!(1, 0) },
-                VxColorTex { color: f32x3!(1, 1, 0), tex_coord: f32x2!(1, 1) },
-                VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 1) },
-                VxColorTex { color: f32x3!(0, 0, 0), tex_coord: f32x2!(0, 0) }
-            ];
-
-            let VertexData::Transient(slice) = color_tex.to_data();
-            let attributes: GLVertexBufferFormat = VxColorTex::attribute_layout_iter()
-                .map(|a| GLVertexBufferAttribute::from_layout(&a))
-                .collect();
-            self.vb2.upload_data(ll, attributes, slice);
-        }
-
-        {
-            let indices = [0u8, 1, 2, 0, 2, 3];
-
-            let IndexData::Transient(slice) = indices.to_data();
-            self.ib.upload_data(ll, IndexBinding::glenum_from_index_type(<u8 as IndexType>::get_layout()), slice);
-        }
-
-        {
-            let img = include_bytes!("img.jpg");
-            let img = image::load_from_memory(img).unwrap();
-
-            let ImageData::Transient(width, height, format, slice) = img.to_data();
-            self.tx.upload_data(ll, gl::TEXTURE_2D, width, height, TextureBinding::glenum_from_pixel_format(format), slice);
-        }
-
-        {
-            self.sh.create_program(ll, ShSimple::source_iter());
-            self.sh.parse_parameters(ll,
-                                     |n| match n {
-                                         "vPosition" => 0,
-                                         "vColor" => 1,
-                                         "vTexCoord" => 2,
-                                         _ => panic!("unknown attribute: {}", n)
-                                     },
-                                     |n| match n {
-                                         "uTrsf" => 3,
-                                         "uColor" => 4,
-                                         "uTex" => 5,
-                                         _ => panic!("unknown uniform: {}", n)
-                                     });
-        }
+        let img = include_bytes!("img.jpg");
+        let _img = image::load_from_memory(img).unwrap();
+        //self.tx.create_and_set(&mut compose, &img);
     }
 
-    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
-        let ll = r.ll_mut();
-        self.vb1.release(ll);
-        self.vb2.release(ll);
-        self.ib.release(ll);
-        self.tx.release(ll);
-        self.sh.release(ll);
+    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
+        println!("surface lost");
+        self.vb1.reset();
+        self.vb2.reset();
+        self.ib.reset();
+        //self.tx.resete();
+        //self.sh.reset();
     }
 
     fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut GLBackend) {
-        //emulate full surface lost on window resize
-        self.on_surface_lost(ctl, r);
-        self.on_surface_ready(ctl, r);
+        println!("surface changed");
     }
 
     fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
@@ -167,8 +127,8 @@ impl View<PlatformEngine> for SimpleView {
         }
     }
 
-    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
-        use render::lowlevel::*;
+    fn on_render(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
+        /*use render::lowlevel::*;
 
         let ll = r.ll_mut();
 
@@ -201,7 +161,7 @@ impl View<PlatformEngine> for SimpleView {
                     locations[3].set_f32x16(ll, &trsf); //"uTrsf" => 3
                     locations[4].set_f32x3(ll, &col); //"uColor" => 4
                     locations[5].set_texture(ll, &tx); //"uTex" => 5,
-                });
+                });*/
     }
 
     fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
@@ -213,7 +173,7 @@ impl View<PlatformEngine> for SimpleView {
 }
 
 #[test]
-pub fn simple_lowlevel() {
+pub fn render() {
     assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
@@ -223,21 +183,22 @@ pub fn simple_lowlevel() {
         .size((1024, 1024))
         .build(&engine, SimpleView::new()).expect("Could not initialize main window");
 
+    /*
     let mut sub_window = render::PlatformWindowSettings::default()
         .title("sub")
         .size((256, 256))
         //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine, SimpleView::new()).expect("Could not initialize sub window");
-
+*/
     loop {
         if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {
             break;
         }
 
         window.update_view();
-        sub_window.update_view();
+        //sub_window.update_view();
 
         window.render().unwrap();
-        sub_window.render().unwrap();
+//        sub_window.render().unwrap();
     }
 }
