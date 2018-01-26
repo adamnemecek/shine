@@ -129,19 +129,7 @@ impl View<PlatformEngine> for SimpleView {
 
         {
             self.sh.create_program(ll, ShSimple::source_iter());
-            self.sh.parse_parameters(ll,
-                                     |n| match n {
-                                         "vPosition" => 0,
-                                         "vColor" => 1,
-                                         "vTexCoord" => 2,
-                                         _ => panic!("unknown attribute: {}", n)
-                                     },
-                                     |n| match n {
-                                         "uTrsf" => 3,
-                                         "uColor" => 4,
-                                         "uTex" => 5,
-                                         _ => panic!("unknown uniform: {}", n)
-                                     });
+            self.sh.parse_parameters(ll, ShSimpleParameters::get_index_by_name);
         }
     }
 
@@ -196,12 +184,12 @@ impl View<PlatformEngine> for SimpleView {
         sh.draw(ll, gl::TRIANGLES, 0, 6,
                 |ll, locations| {
                     ib.bind(ll);
-                    locations[0].set_attribute(ll, &vb1, VxPosAttribute::Position); // "vPosition" => 0
-                    locations[1].set_attribute(ll, &vb2, VxColorTexAttribute::Color); //"vColor" => 1,
-                    locations[2].set_attribute(ll, &vb2, VxColorTexAttribute::TexCoord); //"vTexCoord" => 2,
-                    locations[3].set_f32x16(ll, &trsf); //"uTrsf" => 3
-                    locations[4].set_f32x3(ll, &col); //"uColor" => 4
-                    locations[5].set_texture(ll, &tx); //"uTex" => 5,
+                    locations[0].set_attribute(ll, &vb2, VxColorTexAttribute::Color);
+                    locations[1].set_attribute(ll, &vb2, VxColorTexAttribute::TexCoord);
+                    locations[2].set_attribute(ll, &vb1, VxPosAttribute::Position);
+                    locations[4].set_f32x3(ll, &col);
+                    locations[5].set_f32x16(ll, &trsf);
+                    locations[6].set_texture(ll, &tx);
                 });
     }
 

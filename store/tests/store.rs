@@ -1,5 +1,6 @@
 extern crate dragorust_store;
 
+use std::env;
 use std::thread;
 use std::sync::Arc;
 
@@ -105,7 +106,7 @@ fn simple_single_threaded() {
 
 #[test]
 fn simple_multi_threaded() {
-    assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(env::var("RUST_TEST_THREADS").unwrap() == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     let store = Store::<TestData>::new();
     let store = Arc::new(store);
@@ -151,7 +152,7 @@ fn simple_multi_threaded() {
 #[test]
 fn check_lock() {
     // single threaded as panic hook is a global resource
-    assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(env::var("RUST_TEST_THREADS").unwrap() == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     use std::mem;
     use std::panic;

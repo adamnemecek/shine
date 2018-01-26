@@ -40,15 +40,15 @@ pub trait ShaderParameters: Clone {
     /// Returns the index by attribute name
     fn get_index_by_name(name: &str) -> Option<usize>;
 
-    /// Visit all the required attributes
-    fn visit<E: Engine, V: ShaderParameterVisitor<E>>(&self, visitor: &mut V);
+    // Visit all the required attributes
+    //fn visit<E: Engine, V: ShaderParameterVisitor<E>>(&self, visitor: &mut V);
 }
 
 
 /// Trait to define shader attribute and uniform names
 pub trait ShaderDeclaration: 'static + Clone {
     /// The structure storing the shader parameters.
-    //type Parameters: ShaderParameters;
+    type Parameters: ShaderParameters;
 
     /// Returns an iterator over the shader sources
     fn source_iter() -> slice::Iter<'static, (ShaderType, &'static str)>;

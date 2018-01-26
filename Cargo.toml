@@ -10,4 +10,3 @@ dragorust-render-gl = {path = "render-gl"}
 
 rayon = "*"
 image = "*"
-

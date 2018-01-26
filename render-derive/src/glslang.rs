@@ -9,6 +9,7 @@ use syn;
 use quote;
 
 const GLSL_VALIDATOR_EXECUTABLE: &'static str = "glslangValidator";
+const GLSL_VALIDATOR_ARGS_TEST: [&'static str; 1] = ["-v"];
 const GLSL_VALIDATOR_ARGS_INFO: [&'static str; 3] = ["-l", "-d", "-q"];
 const GLSL_VALIDATOR_ARGS_PREPROCESS: [&'static str; 1] = ["-E"];
 
@@ -148,9 +149,34 @@ fn parse_attribute(line: &str) -> Attribute {
 
 #[allow(non_snake_case)]
 fn get_glslangValidator_executable() -> String {
-    let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
-    let root = Path::new(&root).join("tools").join(GLSL_VALIDATOR_EXECUTABLE);
-    root.to_str().unwrap().to_string()
+    use std::path::*;
+    let bin_path =
+        Err(env::VarError::NotPresent)
+            .or(
+                env::var("CARGO_MANIFEST_DIR").and_then(|p| {
+                    let path = Path::new(&p).join("tools").join(GLSL_VALIDATOR_EXECUTABLE);
+                    if Command::new(path.clone()).args(&GLSL_VALIDATOR_ARGS_TEST).output().is_ok() { Ok(path) } else { Err(env::VarError::NotPresent) }
+                }))
+            .or(
+                env::var("CARGO_MANIFEST_DIR").and_then(|p| {
+                    let path = Path::new(&p).join("..").join("tools").join(GLSL_VALIDATOR_EXECUTABLE);
+                    if Command::new(path.clone()).args(&GLSL_VALIDATOR_ARGS_TEST).output().is_ok() { Ok(path) } else { Err(env::VarError::NotPresent) }
+                }))
+            .or(
+                env::var("GLSLANG_ROOT").and_then(|p| {
+                    let path = Path::new(&p).join("tools").join(GLSL_VALIDATOR_EXECUTABLE);
+                    if Command::new(path.clone()).args(&GLSL_VALIDATOR_ARGS_TEST).output().is_ok() { Ok(path) } else { Err(env::VarError::NotPresent) }
+                }))
+            .or(
+                env::var("GLSLANG_BIN").and_then(|p| {
+                    let path = PathBuf::from(&p);
+                    if Command::new(path.clone()).args(&GLSL_VALIDATOR_ARGS_TEST).output().is_ok() { Ok(path) } else { Err(env::VarError::NotPresent) }
+                }));
+
+    if bin_path.is_err() {
+        panic!("glslang was not found, try setting GLSLANG_ROOT or GLSLANG_BIN")
+    }
+    bin_path.unwrap().to_str().unwrap().to_string()
 }
 
 
@@ -177,7 +203,6 @@ fn extract_shader_info(shaders: &[String]) -> (Vec<Attribute>, Vec<Uniform>) {
     let mut attributes: Vec<Attribute> = vec!();
 
     for line in stdout.lines() {
-        //println!("{}", line);
         match state {
             State::Ignore => {
                 state = match line {

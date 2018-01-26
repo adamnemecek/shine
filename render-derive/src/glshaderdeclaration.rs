@@ -80,11 +80,14 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
     let source_count = sources.len();
 
 
+    println!("attributes: {:?}", attributes);
+    println!("uniforms: {:?}", uniforms);
+
     let gen_parameters = impl_parameter_declaration(&param_type_ident, attributes, uniforms);
 
     let gen_shader_decl = quote! {
         impl ShaderDeclaration for #declaration_type_name {
-            //type Parameters = #param_type_ident;
+            type Parameters = #param_type_ident;
 
             #[allow(dead_code)]
             fn source_iter() -> slice::Iter<'static, (ShaderType, &'static str)> {
@@ -117,91 +120,87 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
 
 
 fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Attribute>, uniforms: Vec<Uniform>) -> quote::Tokens {
-    /*    let mut param_fields = vec!();
-        let mut match_name_cases: Vec<quote::Tokens> = vec!();
-        let mut visit_fields: Vec<quote::Tokens> = vec!();
+    let mut param_fields = vec!();
+    let mut match_name_cases: Vec<quote::Tokens> = vec!();
+    let mut visit_fields: Vec<quote::Tokens> = vec!();
 
-        let mut index: usize = 0;
+    let mut index: usize = 0;
 
-        // vertex buffers
-        for attr in attributes.iter() {
-            let attr_name = attr.name.clone();
-            let attr_field_ident = {
-                let mut chars = attr_name.chars();
-                if chars.next().unwrap() != 'v' || !chars.next().unwrap().is_uppercase() {
-                    panic!("Invalid attribute name: {}. 'v[CamelCase]' is required", attr_name);
-                };
-                syn::Ident::new(format!("v_{}", convert_camel_to_snake_case(attr_name.trim_left_matches("v"))))
+    // vertex buffers
+    for attr in attributes.iter() {
+        let attr_name = attr.name.clone();
+        let attr_field_ident = {
+            let mut chars = attr_name.chars();
+            if chars.next().unwrap() != 'v' || !chars.next().unwrap().is_uppercase() {
+                panic!("Invalid attribute name: {}. 'v[CamelCase]' is required", attr_name);
             };
+            syn::Ident::new(format!("v_{}", convert_camel_to_snake_case(attr_name.trim_left_matches("v"))))
+        };
 
-            param_fields.push(quote! {
-                #attr_field_ident : _dragorust_render::backend::UnsafeVertexAttributeHandle
-            });
-
-            match_name_cases.push(
-                quote! {
-                    #attr_name => Some(#index)
-                }
-            );
-
-
-            visit_fields.push(
-                quote! {
-                    visitor.process_attribute(#index, &self.#attr_field_ident);
-                }
-            );
-
-            index += 1;
-        }
-
-        // index buffers
         param_fields.push(quote! {
-            indices: _dragorust_render::backend::UnsafeIndexBufferIndex
+            #attr_field_ident: _dragorust_render::backend::UnsafeVertexAttributeHandle
         });
+
+        match_name_cases.push(quote! {
+            #attr_name => Some(#index)
+        });
+
         visit_fields.push(quote! {
-            visitor.process_index(#index, &self.indices);
+            visitor.process_attribute(#index, &self.#attr_field_ident);
         });
+
         index += 1;
+    }
 
-        // uniforms
-        for uniform in uniforms.iter() {
-            let uniform_name = uniform.name.clone();
-            let uniform_field_ident = {
-                let mut chars = uniform_name.chars();
-                if chars.next().unwrap() != 'u' || !chars.next().unwrap().is_uppercase() {
-                    panic!("Invalid uniform naming: {}. u[CamelCase] is required", uniform_name);
-                };
-                syn::Ident::new(format!("u_{}", convert_camel_to_snake_case(uniform_name.trim_left_matches("u"))))
+    println!("{:?}", match_name_cases);
+
+    // index buffers
+    param_fields.push(quote! {
+        indices: _dragorust_render::backend::UnsafeIndexBufferIndex
+    });
+
+    visit_fields.push(quote! {
+        visitor.process_index(#index, &self.indices);
+    });
+
+    index += 1;
+
+    // uniforms
+    for uniform in uniforms.iter() {
+        let uniform_name = uniform.name.clone();
+        let uniform_field_ident = {
+            let mut chars = uniform_name.chars();
+            if chars.next().unwrap() != 'u' || !chars.next().unwrap().is_uppercase() {
+                panic!("Invalid uniform naming: {}. u[CamelCase] is required", uniform_name);
             };
+            syn::Ident::new(format!("u_{}", convert_camel_to_snake_case(uniform_name.trim_left_matches("u"))))
+        };
 
-            let type_token = uniform.get_stored_type_token().unwrap();
-            let type_function_ident = syn::Ident::new(format!("process_{}", uniform.get_process_function_name().unwrap()));
+        let type_token = uniform.get_stored_type_token().unwrap();
+        let type_function_ident = syn::Ident::new(format!("process_{}", uniform.get_process_function_name().unwrap()));
 
-            param_fields.push(quote! {
-                #uniform_field_ident : #type_token
-            });
+        param_fields.push(quote! {
+            #uniform_field_ident: #type_token
+        });
 
-            match_name_cases.push(
-                quote! {
-                    #uniform_name => Some(#index)
-                }
-            );
+        match_name_cases.push(quote! {
+            #uniform_name => Some(#index)
+        });
 
-            visit_fields.push(
-                quote! {
-                    visitor.#type_function_ident(#index, &self.#uniform_field_ident);
-                }
-            );
+        visit_fields.push(quote! {
+            visitor.#type_function_ident( #index, &self.#uniform_field_ident);
+        });
 
-            index += 1;
-        }
+        index += 1;
+    }
+    println!("{:?}", match_name_cases);
 
-        let count = index;
+    let count = index;
 
-        let gen = quote! {
+    let gen = quote! {
             #[derive(Clone)]
             pub struct #param_type_ident {
-                #(pub #param_fields,)*
+                //#(pub #param_fields,)*
             }
 
             impl _dragorust_render::ShaderParameters for #param_type_ident {
@@ -216,14 +215,12 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
                     }
                 }
 
-                fn visit<V: _dragorust_render::ShaderParameterVisitor>(&self, visitor: &mut V) {
-                    #(#visit_fields)*
-                }
+                //fn visit<V: _dragorust_render::ShaderParameterVisitor>(&self, visitor: &mut V) {
+                //    #(#visit_fields)*
+                //}
             }
         };
 
-        //println!("{}", gen);
-
-        gen*/
-    quote!()
+    println!("{}", gen);
+    gen
 }

@@ -129,7 +129,7 @@ impl ParameterLocation {
             &ParameterLocation::Uniform { location, size, type_id, .. } =>
                 if type_id != 0 {
                     // todo: check if texture conforms to the sampler
-                    assert!( type_id == gl::SAMPLER_2D && size == 1);
+                    assert!(type_id == gl::SAMPLER_2D && size == 1);
                     gl_check_error();
                     let slot = tx.bind(ll) as u32;
                     ugl!(Uniform1i(location as i32, slot as i32));
@@ -234,7 +234,7 @@ impl GLShaderProgram {
         gl_check_error();
     }
 
-    fn parse_attributes<F: Fn(&str) -> usize>(&mut self, _ll: &mut LowLevel, name_to_index: F) {
+    fn parse_attributes<F: Fn(&str) -> Option<usize>>(&mut self, _ll: &mut LowLevel, name_to_index: &F) {
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
         let mut name_length: GLsizei = 0;
@@ -260,8 +260,8 @@ impl GLShaderProgram {
             gl_check_error();
 
             let attribute_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let param_idx = name_to_index(&attribute_name);
-            assert!(param_idx <= MAX_USED_PARAMETER_COUNT, "Invalid shader parameters index (attribute), allowed: {}, got: {}", MAX_USED_PARAMETER_COUNT, param_idx);
+            let param_idx = name_to_index(&attribute_name).expect(&format!("Unknown shader (attribute) parameter name: {}", attribute_name));
+            assert!(param_idx <= MAX_USED_PARAMETER_COUNT, "Shader (attribute) parameters index is out of bounds, allowed: {}, but got {} for {}", MAX_USED_PARAMETER_COUNT, param_idx, attribute_name);
             let attribute = &mut self.parameter_locations[param_idx];
 
             assert!(*attribute == ParameterLocation::Empty);
@@ -275,7 +275,7 @@ impl GLShaderProgram {
         }
     }
 
-    fn parse_uniforms<F: Fn(&str) -> usize>(&mut self, _ll: &mut LowLevel, name_to_index: F) {
+    fn parse_uniforms<F: Fn(&str) -> Option<usize>>(&mut self, _ll: &mut LowLevel, name_to_index: &F) {
         let mut count: GLint = 0;
         let name_buffer: [u8; 16] = [0; 16];
         let mut name_length: GLsizei = 0;
@@ -301,8 +301,8 @@ impl GLShaderProgram {
             gl_check_error();
 
             let uniform_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
-            let param_idx = name_to_index(&uniform_name);
-            assert!(param_idx <= MAX_USED_PARAMETER_COUNT, "Invalid many shader parameters index (uniform), allowed: {}, got: {}", MAX_USED_PARAMETER_COUNT, param_idx);
+            let param_idx = name_to_index(&uniform_name).expect(&format!("Unknown shader (uniform) parameter name: {}", uniform_name));
+            assert!(param_idx <= MAX_USED_PARAMETER_COUNT, "Shader (uniform) parameters index is out of bounds, allowed: {}, but got {} for {}", MAX_USED_PARAMETER_COUNT, param_idx, uniform_name);
             let uniform = &mut self.parameter_locations[param_idx];
 
             assert!(*uniform == ParameterLocation::Empty);
@@ -316,11 +316,11 @@ impl GLShaderProgram {
         }
     }
 
-    pub fn parse_parameters<FA: Fn(&str) -> usize, FU: Fn(&str) -> usize>(&mut self, ll: &mut LowLevel, attribute_name_to_index: FA, uniform_name_to_index: FU) {
+    pub fn parse_parameters<F: Fn(&str) -> Option<usize>>(&mut self, ll: &mut LowLevel, name_to_index: F) {
         self.parameter_locations = Default::default();
 
-        self.parse_attributes(ll, attribute_name_to_index);
-        self.parse_uniforms(ll, uniform_name_to_index);
+        self.parse_attributes(ll, &name_to_index);
+        self.parse_uniforms(ll, &name_to_index);
         println!("shader parameters: {:?}", self.parameter_locations);
     }
 
@@ -360,6 +360,6 @@ impl GLShaderProgram {
 
 impl Drop for GLShaderProgram {
     fn drop(&mut self) {
-        assert! ( self.hw_id == 0, "Leaking shader program");
+        assert!(self.hw_id == 0, "Leaking shader program");
     }
 }
