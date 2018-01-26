@@ -5,6 +5,7 @@ authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
 dragorust-store = {path = "../store"}
+dragorust-render-derive = {path = "../render-derive"}
 
 libc = "*"
 image = "*"

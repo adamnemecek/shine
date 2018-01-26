@@ -7,9 +7,16 @@ use resources::*;
 pub struct CommandOrder(pub u8, pub u32);
 
 
-/// User specific command
-pub trait UserCommand : 'static{
+/// Commands using dynamic dispatch
+pub trait DynCommand: 'static {
     fn process(&mut self, ll: &mut LowLevel, flush: &mut GLFrameFlusher);
+}
+
+impl<T: DynCommand> From<T> for Command {
+    #[inline(always)]
+    fn from(value: T) -> Command {
+        Command::DynamicCommand(Box::new(value))
+    }
 }
 
 
@@ -20,8 +27,12 @@ pub enum Command {
     VertexRelease(vertexbuffer::ReleaseCommand),
     IndexCreate(indexbuffer::CreateCommand),
     IndexRelease(indexbuffer::ReleaseCommand),
+    Texture2DCreate(texture2d::CreateCommand),
+    Texture2DRelease(texture2d::ReleaseCommand),
+    //ShaderProgramCreate(shaderprogram::CreateCommand),
+    ShaderProgramRelease(shaderprogram::ReleaseCommand),
 
-    User(Box<UserCommand>),
+    DynamicCommand(Box<DynCommand>),
 }
 
 impl Command {
@@ -33,8 +44,12 @@ impl Command {
             VertexRelease(cmd) => cmd.process(ll, flush),
             IndexCreate(cmd) => cmd.process(ll, flush),
             IndexRelease(cmd) => cmd.process(ll, flush),
+            Texture2DCreate(cmd) => cmd.process(ll, flush),
+            Texture2DRelease(cmd) => cmd.process(ll, flush),
+            //ShaderProgramCreate(cmd) => cmd.process(ll, flush),
+            ShaderProgramRelease(cmd) => cmd.process(ll, flush),
 
-            User(mut cmd) => cmd.process(ll, flush),
+            DynamicCommand(mut cmd) => cmd.process(ll, flush),
         }
     }
 }

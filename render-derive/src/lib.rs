@@ -1,4 +1,4 @@
-//#![feature(proc_macro)]
+#![feature(proc_macro)]
 
 #![allow(unused_imports)]
 #![allow(unused_variables)]
@@ -9,32 +9,36 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 
-use proc_macro::TokenStream;
-
 mod utils;
-mod glslang;
 mod vertexdeclaration;
-mod shaderdeclaration;
 
-use vertexdeclaration::*;
-use shaderdeclaration::*;
-
-
+use proc_macro::TokenStream;
 
 #[proc_macro_derive(VertexDeclaration)]
 pub fn vertex_declaration(input: TokenStream) -> TokenStream {
     let s = input.to_string();
     let ast = syn::parse_derive_input(&s).unwrap();
-    let gen = impl_vertex_declaration(&ast);
+    let gen = vertexdeclaration::impl_vertex_declaration(&ast);
     gen.parse().unwrap()
 }
 
-#[proc_macro_derive(ShaderDeclaration, attributes(vert_path, vert_src, frag_path, frag_src))]
+
+mod glslang;
+mod glshaderdeclaration;
+
+#[proc_macro_derive(GLShaderDeclaration, attributes(vert_path, vert_src, frag_path, frag_src))]
 pub fn shader_declaration(input: TokenStream) -> TokenStream
 {
+    use utils::*;
+
     let s = input.to_string();
     let ast = syn::parse_derive_input(&s).unwrap();
-    let gen = impl_shader_declaration(&ast);
+    let declaration_type_name = &ast.ident;
+
+    let gen = glshaderdeclaration::impl_shader_declaration(&find_source_dir(), &ast);
     gen.parse().unwrap()
 }
+
+
+
 

@@ -32,7 +32,7 @@ fn drop()
 
     // insert some elements than drain them
     {
-        let store = store.produce();
+        let mut store = store.produce();
         store.add(0, Data::new(0, &mut counter));
         store.add(2, Data::new(2, &mut counter));
         store.add(1, Data::new(1, &mut counter));
@@ -51,7 +51,7 @@ fn drop()
     {
         let c0 = counter;
         {
-            let store = store.produce();
+            let mut store = store.produce();
             for i in 0..1024 {
                 store.add(100 + i, Data::new(100 + i as usize, &mut counter));
             }
@@ -69,7 +69,7 @@ fn drop()
     {
         let c0 = counter;
         {
-            let store = store.produce();
+            let mut store = store.produce();
             store.add(0, Data::new(0, &mut counter));
             store.add(2, Data::new(2, &mut counter));
             store.add(1, Data::new(1, &mut counter));
@@ -99,7 +99,7 @@ fn simple()
         let store = store.clone();
         tp.push(
             thread::spawn(move || {
-                let store = store.produce();
+                let mut store = store.produce();
                 store.add(20, (20, tid, 0));
                 store.add(23, (23, tid, 1));
                 store.add(21, (21, tid, 2));

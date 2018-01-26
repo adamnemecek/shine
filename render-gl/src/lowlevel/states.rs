@@ -45,7 +45,6 @@ impl ViewportState {
                                                        (screen.height as f32 * d + 0.5) as i32),
             };
 
-        println!("vp: {:?} {:?} {:?}", self.function, vp, self.current);
         if vp != self.current {
             self.current = vp;
             assert!(vp.2 > 0 || vp.3 > 0, "non-positive width or height parameter for the viewport: {:?}", vp);

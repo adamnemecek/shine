@@ -46,7 +46,7 @@ pub trait ShaderParameters: Clone {
 
 
 /// Trait to define shader attribute and uniform names
-pub trait ShaderDeclaration: 'static {
+pub trait ShaderDeclaration: 'static + Clone {
     /// The structure storing the shader parameters.
     //type Parameters: ShaderParameters;
 
@@ -54,15 +54,21 @@ pub trait ShaderDeclaration: 'static {
     fn source_iter() -> slice::Iter<'static, (ShaderType, &'static str)>;
 }
 
-/// Structure to store the shader abstraction.
-pub trait ShaderProgramBase<E: Engine>: Resource<E> {
-    /// Uploads and compiles the shader.
-    fn compile(&self, queue: &mut <E::Backend as Backend>::FrameCompose);
-}
 
 /// Structure to store the shader abstraction.
-pub trait ShaderProgram<DECL: ShaderDeclaration, E: Engine>: ShaderProgramBase<E> {
-    /// Sends a geometry for rendering
-    fn draw(&self, queue: &mut <E::Backend as Backend>::FrameCompose/*, parameters: DECL::Parameters*/,
-            primitive: Primitive, vertex_start: usize, vertex_count: usize);
+pub trait ShaderProgram<DECL: ShaderDeclaration, E: Engine>: Resource<E> {
+    /// Uploads and compiles the shader.
+    fn compile(&self, queue: &mut E::FrameCompose);
+
+    /// Resets self to a new handle and compiles the shader.
+    /// If handle pointed to an existing resource prior this call, that resource is not modified, Backend will
+    /// garbage collect it depending on the reference count.
+    fn create_and_compile(&mut self, queue: &mut E::FrameCompose) {
+        self.create(queue);
+        self.compile(queue);
+    }
+
+    // Sends a geometry for rendering
+    //fn draw(&self, queue: &mut E::FrameCompose/*, parameters: DECL::Parameters*/,
+    //        primitive: Primitive, vertex_start: usize, vertex_count: usize);
 }

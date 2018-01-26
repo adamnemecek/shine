@@ -113,7 +113,7 @@ pub trait IndexBuffer<DECL: IndexDeclaration, E: Engine>: Resource<E> {
     /// Sets the content of the buffer
     fn set<'a, SRC: IndexSource<DECL>>(&self, queue: &mut E::FrameCompose, source: &SRC);
 
-    /// Reset self to new handle and sets the content of the buffer.
+    /// Resets self to a new handle and sets the content of the buffer.
     /// If handle pointed to an existing resource prior this call, that resource is not modified, Backend will
     /// garbage collect it depending on the reference count.
     fn create_and_set<'a, SRC: IndexSource<DECL>>(&mut self, queue: &mut E::FrameCompose, source: &SRC) {

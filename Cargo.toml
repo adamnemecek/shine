@@ -4,6 +4,7 @@ version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
+dragorust-render-core = {path = "render-core"}
 dragorust-render-gl = {path = "render-gl"}
 #dragorust-world = {path = "world"}
 

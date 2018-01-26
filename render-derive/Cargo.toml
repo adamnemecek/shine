@@ -1,5 +1,5 @@
 [package]
-name = "dragorust-render-gl-derive"
+name = "dragorust-render-derive"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 

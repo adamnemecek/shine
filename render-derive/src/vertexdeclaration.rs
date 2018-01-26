@@ -1,6 +1,5 @@
 use syn;
 use quote;
-
 use utils::*;
 
 pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
@@ -8,14 +7,14 @@ pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 
     let gen_impl = match ast.body {
         syn::Body::Struct(syn::VariantData::Struct(ref fields)) => impl_location_for_struct(&ast.ident, fields),
-        _ => panic!("No implementation for {:?}", format!("{:?}", ast.body).split('(').nth(0).unwrap())
+        _ => panic!("This derive macro cannot handle {:?}", format!("{:?}", ast.body).split('(').nth(0).unwrap())
     };
 
     let dummy_mod = syn::Ident::new(format!("_IMPL_VERTEXDECLARATION_FOR_{}", struct_name));
     let gen = quote! {
         #[allow(unused_imports, non_snake_case)]
         mod #dummy_mod {
-            extern crate dragorust_render_gl as _dragorust_render;
+            extern crate dragorust_render_core as _dragorust_render;
             use std::slice;
             use std::str;
             #gen_impl
@@ -34,8 +33,9 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
 
     let count = fields.len();
     if count == 0 {
-        panic!("Empty struct cannot be used for VertexDeclaration: {}", struct_name);
+        panic!("This derive macro cannot be used on empty struct: {}", struct_name);
     }
+
 
     let mut enum_idents: Vec<quote::Tokens> = vec!();
     let mut qualified_enum_idents: Vec<quote::Tokens> = vec!();

@@ -48,7 +48,7 @@ fn simple_single_threaded() {
 
     //println!("request 0,1");
     {
-        let store = store.read();
+        let mut store = store.read();
         assert!(store.get(&TestDataId(0)).is_null());
 
         r0 = store.get_or_add(TestDataId(0));
@@ -72,7 +72,7 @@ fn simple_single_threaded() {
 
     //println!("check 0,1, request 2");
     {
-        let store = store.read();
+        let mut store = store.read();
         assert!(store[&r0].0 == format!("id: {}", 0));
         assert!(store.get(&TestDataId(0)) == r0);
         assert!(store[&r1].0 == format!("id: {}", 1));
@@ -149,7 +149,7 @@ fn simple_multi_threaded() {
         for i in 0..ITER {
             let store = store.clone();
             tp.push(thread::spawn(move || {
-                let store = store.read();
+                let mut store = store.read();
                 assert!(store.get(&TestDataId(0)).is_null());
 
                 // request 1

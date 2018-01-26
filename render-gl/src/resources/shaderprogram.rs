@@ -1,6 +1,115 @@
-#![allow(dead_code)]
+use std::marker::PhantomData;
+use core::*;
+use lowlevel::*;
+use framework::*;
+use resources::*;
+use store::store::*;
 
-use std::str::from_utf8;
+
+/// Command to create or update index buffer
+pub struct CreateCommand<DECL: ShaderDeclaration> {
+    target: UnsafeIndex<GLShaderProgram>,
+    phantom: PhantomData<DECL>,
+}
+
+impl<DECL: ShaderDeclaration> DynCommand for CreateCommand<DECL> {
+    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+        let target = unsafe { &mut flush.shader_program_store.at_unsafe_mut(&self.target) };
+        target.create_program(ll, DECL::source_iter());
+    }
+}
+
+
+/// Command to release an index buffer
+pub struct ReleaseCommand {
+    target: UnsafeIndex<GLShaderProgram>,
+}
+
+impl ReleaseCommand {
+    pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+        let target = unsafe { &mut flush.shader_program_store.at_unsafe_mut(&self.target) };
+        target.release(ll);
+    }
+}
+
+impl From<ReleaseCommand> for Command {
+    #[inline(always)]
+    fn from(value: ReleaseCommand) -> Command {
+        Command::ShaderProgramRelease(value)
+    }
+}
+
+
+pub type ShaderProgramStore = Store<GLShaderProgram>;
+pub type ReadGuardShaderProgram<'a> = ReadGuard<'a, GLShaderProgram>;
+pub type WriteGuardShaderProgram<'a> = WriteGuard<'a, GLShaderProgram>;
+pub type ShaderProgramIndex = Index<GLShaderProgram>;
+pub type UnsafeShaderProgramIndex = UnsafeIndex<GLShaderProgram>;
+
+
+/// Handle to an index buffer
+#[derive(Clone)]
+pub struct ShaderProgramHandle<DECL: ShaderDeclaration>(ShaderProgramIndex, PhantomData<DECL>);
+
+impl<DECL: ShaderDeclaration> Handle for ShaderProgramHandle<DECL> {
+    fn null() -> ShaderProgramHandle<DECL> {
+        ShaderProgramHandle(ShaderProgramIndex::null(), PhantomData)
+    }
+
+    fn is_null(&self) -> bool {
+        self.0.is_null()
+    }
+}
+
+impl<DECL: ShaderDeclaration> Resource<PlatformEngine> for ShaderProgramHandle<DECL> {
+    fn create(&mut self, compose: &mut GLFrameComposer) {
+        self.0 = compose.add_shader_program(GLShaderProgram::new());
+    }
+
+    fn reset(&mut self) {
+        self.0.reset()
+    }
+
+    fn release(&self, queue: &mut GLFrameComposer) {
+        if self.is_null() {
+            return;
+        }
+
+        println!("ShaderProgram - release");
+        queue.add_command(0,
+                          ReleaseCommand {
+                              target: UnsafeIndex::from_index(&self.0),
+                          });
+    }
+}
+
+impl<DECL: ShaderDeclaration> ShaderProgram<DECL, PlatformEngine> for ShaderProgramHandle<DECL> {
+    fn compile(&self, queue: &mut GLFrameComposer) {
+        println!("ShaderProgram - compile");
+        queue.add_command(0,
+                          CreateCommand::<DECL> {
+                              target: UnsafeIndex::from_index(&self.0),
+                              phantom: PhantomData,
+                          });
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*use std::str::from_utf8;
 use std::marker::PhantomData;
 use std::mem;
 
@@ -206,7 +315,6 @@ impl<DECL: ShaderDeclaration> ShaderProgram<DECL> for ShaderProgramHandle<DECL> 
     }
 }
 
-/*
 use std::marker::PhantomData;
 use backend::*;
 

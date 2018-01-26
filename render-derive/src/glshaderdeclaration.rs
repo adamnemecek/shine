@@ -1,6 +1,5 @@
 use syn;
 use quote;
-use std::env;
 use std::path::Path;
 use std::fs::File;
 use std::io::Read;
@@ -15,7 +14,7 @@ enum SourceKind {
     Path(String),
 }
 
-pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
+pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote::Tokens {
     let declaration_type_name = &ast.ident;
 
     let source_input = ast.attrs.iter()
@@ -54,11 +53,7 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
             &SourceKind::Src(ref source) => Some((sh_type, source.clone())),
 
             &SourceKind::Path(ref path) => {
-                let p = env::current_dir().unwrap();
-
-                let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
-                //todo: find the location of the source file. Span::SourceFile::path()
-                let full_path = Path::new(&root).join("tests").join(&path);
+                let full_path = Path::new(&file_dir).join(&path);
 
                 if full_path.is_file() {
                     let mut buf = String::new();
@@ -67,7 +62,7 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
                         .expect(&format!("Error reading source from {:?}", path));
                     Some((sh_type, buf))
                 } else {
-                    panic!("File {:?} was not found. Path must be relative to your Cargo.toml", full_path);
+                    panic!("File {:?} was not found. Path must be relative to the source file of calling site.", full_path);
                 }
             }
         }

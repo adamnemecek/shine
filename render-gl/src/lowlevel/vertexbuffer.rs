@@ -29,8 +29,6 @@ impl GLVertexBuffer {
         }
         assert!(self.hw_id != 0);
 
-        //println!("upload vertex buffer id: {}, t: {:?}\n  d: {:?}", self.hw_id, self.attributes, data);
-
         ll.vertex_binding.bind_buffer(self.hw_id);
         ugl!(BufferData(gl::ARRAY_BUFFER,
                        data.len() as GLsizeiptr,
@@ -48,8 +46,6 @@ impl GLVertexBuffer {
         if self.hw_id == 0 {
             return;
         }
-
-        println!("Release verte buffer");
 
         ll.vertex_binding.unbind_if_active(self.hw_id);
         ugl!(DeleteBuffers(1, &self.hw_id));

@@ -80,7 +80,11 @@ impl<DECL: VertexDeclaration> Resource<PlatformEngine> for VertexBufferHandle<DE
     }
 
     fn release(&self, queue: &mut GLFrameComposer) {
-        //println!("GLVertexBuffer - release");
+        if self.is_null() {
+            return;
+        }
+
+        println!("VertexBuffer - release");
         queue.add_command(0,
                           ReleaseCommand {
                               target: UnsafeIndex::from_index(&self.0),
@@ -92,14 +96,11 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL, PlatformEngine> for VertexBuffe
     type AttributeRef = (UnsafeVertexBufferIndex, usize);
 
     fn set<'a, SRC: VertexSource<DECL>>(&self, queue: &mut GLFrameComposer, source: &SRC) {
+        assert!(!self.is_null());
+
         match source.to_data() {
             VertexData::Transient(slice) => {
-                //println!("GLVertexBuffer - set_copy");
-                assert!(!self.is_null());
-                /*let attributes = GLVertexBufferAttributeVec::from_iter(
-                    DECL::attribute_layout_iter()
-                        .map(|a| GLVertexBufferAttribute::from_layout(&a)));*/
-
+                println!("VertexBuffer - VertexData::Transient");
                 queue.add_command(0,
                                   CreateCommand {
                                       target: UnsafeIndex::from_index(&self.0),

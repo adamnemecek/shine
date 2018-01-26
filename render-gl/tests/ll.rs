@@ -18,7 +18,8 @@ struct VxColorTex {
     tex_coord: Float32x2,
 }
 
-#[derive(ShaderDeclaration)]
+#[derive(Copy, Clone, Debug)]
+#[derive(GLShaderDeclaration)]
 #[vert_path = "fun.glsl"]
 #[vert_src = "
     attribute vec3 vPosition;

@@ -1,4 +1,3 @@
-use std::marker::PhantomData;
 use core::*;
 use lowlevel::*;
 use framework::*;
@@ -8,34 +7,36 @@ use store::store::*;
 
 /// Command to create or update index buffer
 pub struct CreateCommand {
-    target: UnsafeIndex<GLIndexBuffer>,
-    type_id: GLenum,
+    target: UnsafeIndex<GLTexture>,
+    width: usize,
+    height: usize,
+    format: (GLenum, GLenum, GLenum),
     data: Vec<u8>,
 }
 
 impl CreateCommand {
     pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
-        let target = unsafe { &mut flush.index_store.at_unsafe_mut(&self.target) };
-        target.upload_data(ll, self.type_id, &self.data);
+        let target = unsafe { &mut flush.texture_2d_store.at_unsafe_mut(&self.target) };
+        target.upload_data(ll, gl::TEXTURE_2D, self.width, self.height, self.format, &self.data);
     }
 }
 
 impl From<CreateCommand> for Command {
     #[inline(always)]
     fn from(value: CreateCommand) -> Command {
-        Command::IndexCreate(value)
+        Command::Texture2DCreate(value)
     }
 }
 
 
 /// Command to release an index buffer
 pub struct ReleaseCommand {
-    target: UnsafeIndex<GLIndexBuffer>,
+    target: UnsafeIndex<GLTexture>,
 }
 
 impl ReleaseCommand {
     pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
-        let target = unsafe { &mut flush.index_store.at_unsafe_mut(&self.target) };
+        let target = unsafe { &mut flush.texture_2d_store.at_unsafe_mut(&self.target) };
         target.release(ll);
     }
 }
@@ -43,25 +44,25 @@ impl ReleaseCommand {
 impl From<ReleaseCommand> for Command {
     #[inline(always)]
     fn from(value: ReleaseCommand) -> Command {
-        Command::IndexRelease(value)
+        Command::Texture2DRelease(value)
     }
 }
 
 
-pub type IndexBufferStore = Store<GLIndexBuffer>;
-pub type ReadGuardIndexBuffer<'a> = ReadGuard<'a, GLIndexBuffer>;
-pub type WriteGuardIndexBuffer<'a> = WriteGuard<'a, GLIndexBuffer>;
-pub type IndexBufferIndex = Index<GLIndexBuffer>;
-pub type UnsafeIndexBufferIndex = UnsafeIndex<GLIndexBuffer>;
+pub type Texture2DStore = Store<GLTexture>;
+pub type ReadGuardTexture2D<'a> = ReadGuard<'a, GLTexture>;
+pub type WriteGuardTexture2D<'a> = WriteGuard<'a, GLTexture>;
+pub type Texture2DIndex = Index<GLTexture>;
+pub type UnsafeTexture2DIndex = UnsafeIndex<GLTexture>;
 
 
 /// Handle to an index buffer
 #[derive(Clone)]
-pub struct IndexBufferHandle<DECL: IndexDeclaration>(IndexBufferIndex, PhantomData<DECL>);
+pub struct Texture2DHandle(Texture2DIndex);
 
-impl<DECL: IndexDeclaration> Handle for IndexBufferHandle<DECL> {
-    fn null() -> IndexBufferHandle<DECL> {
-        IndexBufferHandle(IndexBufferIndex::null(), PhantomData)
+impl Handle for Texture2DHandle {
+    fn null() -> Texture2DHandle {
+        Texture2DHandle(Texture2DIndex::null())
     }
 
     fn is_null(&self) -> bool {
@@ -69,9 +70,9 @@ impl<DECL: IndexDeclaration> Handle for IndexBufferHandle<DECL> {
     }
 }
 
-impl<DECL: IndexDeclaration> Resource<PlatformEngine> for IndexBufferHandle<DECL> {
+impl Resource<PlatformEngine> for Texture2DHandle {
     fn create(&mut self, compose: &mut GLFrameComposer) {
-        self.0 = compose.add_index_buffer(GLIndexBuffer::new());
+        self.0 = compose.add_texture_2d(GLTexture::new());
     }
 
     fn reset(&mut self) {
@@ -83,7 +84,7 @@ impl<DECL: IndexDeclaration> Resource<PlatformEngine> for IndexBufferHandle<DECL
             return;
         }
 
-        println!("IndexBuffer - release");
+        println!("Texture2D - release");
         queue.add_command(0,
                           ReleaseCommand {
                               target: UnsafeIndex::from_index(&self.0),
@@ -91,17 +92,19 @@ impl<DECL: IndexDeclaration> Resource<PlatformEngine> for IndexBufferHandle<DECL
     }
 }
 
-impl<DECL: IndexDeclaration> IndexBuffer<DECL, PlatformEngine> for IndexBufferHandle<DECL> {
-    fn set<SRC: IndexSource<DECL>>(&self, queue: &mut GLFrameComposer, source: &SRC) {
+impl Texture2D<PlatformEngine> for Texture2DHandle {
+    fn set<'a, SRC: ImageSource>(&self, queue: &mut GLFrameComposer, source: &SRC) {
         assert!(!self.is_null());
 
         match source.to_data() {
-            IndexData::Transient(slice) => {
-                println!("IndexBuffer - IndexData::Transient");
+            ImageData::Transient(width, height, format, slice) => {
+                println!("Texture2D - ImageData::Transient");
                 queue.add_command(0,
                                   CreateCommand {
                                       target: UnsafeIndex::from_index(&self.0),
-                                      type_id: IndexBinding::glenum_from_index_type(DECL::get_layout()),
+                                      width: width,
+                                      height: height,
+                                      format: TextureBinding::glenum_from_pixel_format(format),
                                       data: slice.to_vec(),
                                   });
             }

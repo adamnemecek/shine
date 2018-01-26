@@ -18,8 +18,8 @@ struct VxColorTex {
     tex_coord: Float32x2,
 }
 
-/*
-#[derive(ShaderDeclaration)]
+#[derive(Copy, Clone, Debug)]
+#[derive(GLShaderDeclaration)]
 #[vert_path = "fun.glsl"]
 #[vert_src = "
     attribute vec3 vPosition;
@@ -31,7 +31,7 @@ struct VxColorTex {
     varying vec2 txCoord;
     void main()
     {
-        color = col_mod(uColor * vColor);
+        color = uColor * vColor;
         txCoord = vTexCoord.xy;
         gl_Position = uTrsf * vec4(vPosition, 1.0);
     }"]
@@ -53,15 +53,15 @@ struct VxColorTex {
 //todo 3:
 //#[unifrom(uTrsf) = engine.trsf]
 struct ShSimple {}
-*/
+
 
 struct SimpleView {
     t: f32,
     vb1: VertexBufferHandle<VxPos>,
     vb2: VertexBufferHandle<VxColorTex>,
     ib: IndexBufferHandle<u8>,
-    //sh: lowlevel::GLShaderProgram,
-    //tx: lowlevel::GLTexture,
+    tx: Texture2DHandle,
+    sh: ShaderProgramHandle<ShSimple>,
 }
 
 impl SimpleView {
@@ -71,8 +71,8 @@ impl SimpleView {
             vb1: Handle::null(),
             vb2: Handle::null(),
             ib: Handle::null(),
-            //sh: lowlevel::GLShaderProgram::new(),
-            //tx: lowlevel::GLTexture::new(),
+            tx: Handle::null(),
+            sh: Handle::null(),
         }
     }
 }
@@ -102,8 +102,10 @@ impl View<PlatformEngine> for SimpleView {
         self.ib.create_and_set(&mut compose, &indices);
 
         let img = include_bytes!("img.jpg");
-        let _img = image::load_from_memory(img).unwrap();
-        //self.tx.create_and_set(&mut compose, &img);
+        let img = image::load_from_memory(img).unwrap();
+        self.tx.create_and_set(&mut compose, &img);
+
+        self.sh.create_and_compile(&mut compose);
     }
 
     fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
@@ -111,12 +113,14 @@ impl View<PlatformEngine> for SimpleView {
         self.vb1.reset();
         self.vb2.reset();
         self.ib.reset();
-        //self.tx.resete();
-        //self.sh.reset();
+        self.tx.reset();
+        self.sh.reset();
     }
 
     fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut GLBackend) {
         println!("surface changed");
+        self.on_surface_lost(ctl, r);
+        self.on_surface_ready(ctl, r);
     }
 
     fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
@@ -134,8 +138,6 @@ impl View<PlatformEngine> for SimpleView {
 
         ugl!(ClearColor(0.0, 0.0, 0.5, 1.0));
         ugl!(Clear(gl::COLOR_BUFFER_BIT));
-
-        //ll.states.set_viewport(lowlevel::Viewport::FullScreen);
         ll.states.set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
 
         let st = self.t.sin();
@@ -145,23 +147,23 @@ impl View<PlatformEngine> for SimpleView {
                 ct, st, 0.0, 0.0,
                 0.0, 0.0, 1.0, 0.0,
                 0.0, 0.0, 0.0, 1.0]);
-        let col = Float32x3::from([0.5, self.t / 6.28, 0.5]);
+        let col = Float32x3::from([0.5, self.t / 6.28, 0.5]);*/
 
-        let sh = &mut self.sh;
-        let vb1 = &mut self.vb1;
-        let vb2 = &mut self.vb2;
-        let ib = &mut self.ib;
-        let tx = &mut self.tx;
-        sh.draw(ll, gl::TRIANGLES, 0, 6,
-                |ll, locations| {
-                    ib.bind(ll);
-                    locations[0].set_attribute(ll, &vb1, VxPosAttribute::Position); // "vPosition" => 0
-                    locations[1].set_attribute(ll, &vb2, VxColorTexAttribute::Color); //"vColor" => 1,
-                    locations[2].set_attribute(ll, &vb2, VxColorTexAttribute::TexCoord); //"vTexCoord" => 2,
-                    locations[3].set_f32x16(ll, &trsf); //"uTrsf" => 3
-                    locations[4].set_f32x3(ll, &col); //"uColor" => 4
-                    locations[5].set_texture(ll, &tx); //"uTex" => 5,
-                });*/
+        /*        let sh = &mut self.sh;
+                let vb1 = &mut self.vb1;
+                let vb2 = &mut self.vb2;
+                let ib = &mut self.ib;
+                let tx = &mut self.tx;
+                sh.draw(ll, gl::TRIANGLES, 0, 6,
+                        |ll, locations| {
+                            ib.bind(ll);
+                            locations[0].set_attribute(ll, &vb1, VxPosAttribute::Position); // "vPosition" => 0
+                            locations[1].set_attribute(ll, &vb2, VxColorTexAttribute::Color); //"vColor" => 1,
+                            locations[2].set_attribute(ll, &vb2, VxColorTexAttribute::TexCoord); //"vTexCoord" => 2,
+                            locations[3].set_f32x16(ll, &trsf); //"uTrsf" => 3
+                            locations[4].set_f32x3(ll, &col); //"uColor" => 4
+                            locations[5].set_texture(ll, &tx); //"uTex" => 5,
+                        });*/
     }
 
     fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {

@@ -18,8 +18,8 @@ extern crate arrayvec;
 
 extern crate dragorust_render_core as core;
 extern crate dragorust_store as store;
-#[macro_reexport(VertexDeclaration, ShaderDeclaration)]
-extern crate dragorust_render_gl_derive;
+//#[macro_reexport(ShaderDeclaration)]
+//extern crate dragorust_render_gl_derive;
 
 #[allow(unused_mut)]
 pub mod gl {

@@ -3,6 +3,9 @@
 #![feature(align_offset)]
 #![feature(crate_visibility_modifier)]
 
+#[macro_reexport(VertexDeclaration, GLShaderDeclaration)]
+extern crate dragorust_render_derive;
+
 #[macro_use]
 mod types;
 mod error;

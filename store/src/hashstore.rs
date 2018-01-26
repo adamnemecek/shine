@@ -291,7 +291,7 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> ReadGuard<'a, K, D> {
         exclusive.get(k)
     }
 
-    pub fn get_or_add(&self, k: K) -> Index<K, D> {
+    pub fn get_or_add(&mut self, k: K) -> Index<K, D> {
         let index = self.shared.get(&k);
         if !index.is_null() {
             return index;
@@ -381,10 +381,14 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
         Self::retain_impl(&mut exclusive.arena, &mut exclusive.requests, &mut filter);
     }
 
-    /// Retains the referenced items only.
-    /// In other words, remove all unreferenced resources.
+    /// Drain all unreferenced items. Only the referenced items are kept in the store.
     pub fn drain_unused(&mut self) {
         self.retain(|_, _| false)
+    }
+
+    /// Drain unreferenced items based on the given predicate.
+    pub fn drain_unused_filtered<F: FnMut(&mut D) -> bool>(&mut self, mut filter: F) {
+        self.retain(|d, _| filter(d))
     }
 
     pub fn at(&self, index: &Index<K, D>) -> &D {

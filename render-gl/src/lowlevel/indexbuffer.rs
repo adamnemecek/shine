@@ -22,8 +22,6 @@ impl GLIndexBuffer {
         assert!(self.hw_id != 0);
         self.type_id = type_id;
 
-        //println!("upload index buffer id: {}, t: {}\n  d: {:?}", self.hw_id, self.type_id, data);
-
         ll.index_binding.bind_buffer(self.hw_id);
         ugl!(BufferData(gl::ELEMENT_ARRAY_BUFFER,
                        data.len() as GLsizeiptr,
@@ -40,8 +38,6 @@ impl GLIndexBuffer {
         if self.hw_id == 0 {
             return;
         }
-
-        println!("Release index buffer");
 
         ll.index_binding.unbind_if_active(self.hw_id);
         ugl!(DeleteBuffers(1, &self.hw_id));
