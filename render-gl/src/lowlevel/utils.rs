@@ -57,7 +57,7 @@ pub fn gl_get_type_name(gl_type: GLenum) -> &'static str {
 
 
 /// Converts a Primitive enum to the corresponding GLenum.
-pub fn gl_get_primitive_enum(primitive: Primitive) -> GLenum {
+pub fn glenum_from_primitive(primitive: Primitive) -> GLenum {
     match primitive {
         Primitive::Point => gl::POINT,
         Primitive::Line => gl::LINE,

@@ -33,22 +33,22 @@ pub trait ShaderParameterVisitor<E: Engine> {
 
 /// Trait to store shader parameters.
 /// It stores both the attributes and other shader parameters.
-pub trait ShaderParameters: Clone {
+pub trait ShaderParameters<E>: Clone {
     /// Returns the number of attributes
     fn get_count() -> usize;
 
     /// Returns the index by attribute name
     fn get_index_by_name(name: &str) -> Option<usize>;
 
-    // Visit all the required attributes
-    //fn visit<E: Engine, V: ShaderParameterVisitor<E>>(&self, visitor: &mut V);
+    /// Bind all the required attributes for the engine
+    fn bind(&self/*, visitor: &mut V*/);
 }
 
 
 /// Trait to define shader attribute and uniform names
-pub trait ShaderDeclaration: 'static + Clone {
+pub trait ShaderDeclaration<E: Engine>: 'static + Clone {
     /// The structure storing the shader parameters.
-    type Parameters: ShaderParameters;
+    type Parameters: ShaderParameters<E>;
 
     /// Returns an iterator over the shader sources
     fn source_iter() -> slice::Iter<'static, (ShaderType, &'static str)>;
@@ -56,7 +56,7 @@ pub trait ShaderDeclaration: 'static + Clone {
 
 
 /// Structure to store the shader abstraction.
-pub trait ShaderProgram<DECL: ShaderDeclaration, E: Engine>: Resource<E> {
+pub trait ShaderProgram<DECL: ShaderDeclaration<E>, E: Engine>: Resource<E> {
     /// Uploads and compiles the shader.
     fn compile(&self, queue: &mut E::FrameCompose);
 
@@ -68,7 +68,7 @@ pub trait ShaderProgram<DECL: ShaderDeclaration, E: Engine>: Resource<E> {
         self.compile(queue);
     }
 
-    // Sends a geometry for rendering
-    //fn draw(&self, queue: &mut E::FrameCompose/*, parameters: DECL::Parameters*/,
-    //        primitive: Primitive, vertex_start: usize, vertex_count: usize);
+    /// Sends a geometry for rendering
+    fn draw(&self, queue: &mut E::FrameCompose, parameters: DECL::Parameters,
+            primitive: Primitive, vertex_start: usize, vertex_count: usize);
 }

@@ -7,23 +7,17 @@ use store::store::*;
 
 
 /// Command to create or update vertex buffer
-pub struct CreateCommand {
+pub struct CreateCommand<DECL: VertexDeclaration> {
     target: UnsafeIndex<GLVertexBuffer>,
-    attributes: GLVertexBufferFormat,
     data: Vec<u8>,
+    phantom: PhantomData<DECL>,
 }
 
-impl CreateCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+impl<DECL: VertexDeclaration> DynCommand for CreateCommand<DECL> {
+    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
         let target = unsafe { &mut flush.vertex_store.at_unsafe_mut(&self.target) };
-        target.upload_data(ll, self.attributes, &self.data);
-    }
-}
-
-impl From<CreateCommand> for Command {
-    #[inline(always)]
-    fn from(value: CreateCommand) -> Command {
-        Command::VertexCreate(value)
+        let layout = DECL::attribute_layout_iter().map(|a| GLVertexBufferAttribute::from_layout(&a));
+        target.upload_data(ll, layout, &self.data);
     }
 }
 
@@ -102,12 +96,10 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL, PlatformEngine> for VertexBuffe
             VertexData::Transient(slice) => {
                 println!("VertexBuffer - VertexData::Transient");
                 queue.add_command(0,
-                                  CreateCommand {
+                                  CreateCommand::<DECL> {
                                       target: UnsafeIndex::from_index(&self.0),
                                       data: slice.to_vec(),
-                                      attributes: DECL::attribute_layout_iter()
-                                          .map(|a| GLVertexBufferAttribute::from_layout(&a))
-                                          .collect(),
+                                      phantom: PhantomData,
                                   });
             }
         }

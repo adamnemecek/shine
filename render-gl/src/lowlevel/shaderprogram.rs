@@ -13,7 +13,7 @@ struct ShaderError(String);
 
 /// Shader parameters info: required type, binding locations.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum ParameterLocation {
+pub enum ShaderParameterLocation {
     Attribute {
         name: String,
         location: GLuint,
@@ -31,94 +31,94 @@ pub enum ParameterLocation {
     Empty,
 }
 
-impl ParameterLocation {
+impl ShaderParameterLocation {
     pub fn is_valid(&self) -> bool {
         match self {
-            &ParameterLocation::Attribute { type_id, .. } => type_id != 0,
-            &ParameterLocation::Uniform { type_id, .. } => type_id != 0,
+            &ShaderParameterLocation::Attribute { type_id, .. } => type_id != 0,
+            &ShaderParameterLocation::Uniform { type_id, .. } => type_id != 0,
             _ => false
         }
     }
 
     pub fn set_attribute<A: Into<usize>>(&self, ll: &mut LowLevel, vb: &GLVertexBuffer, attribute: A) {
         match self {
-            &ParameterLocation::Attribute { location, type_id, .. } =>
+            &ShaderParameterLocation::Attribute { location, type_id, .. } =>
                 if type_id != 0 {
                     gl_check_error();
                     vb.bind(ll, location, attribute.into());
                     gl_check_error();
                 },
-            &ParameterLocation::Empty => {}
+            &ShaderParameterLocation::Empty => {}
             _ => panic!("Invalid Shader location: {:?}", self)
         }
     }
 
     pub fn set_f32(&self, _ll: &mut LowLevel, data: f32) {
         match self {
-            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+            &ShaderParameterLocation::Uniform { location, size, type_id, .. } =>
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT && size == 1);
                     gl_check_error();
                     ugl!(Uniform1fv(location as i32, size, mem::transmute(&data)));
                     gl_check_error();
                 },
-            &ParameterLocation::Empty => {}
+            &ShaderParameterLocation::Empty => {}
             _ => panic!("Invalid Shader location: {:?}", self)
         }
     }
 
     pub fn set_f32x2(&self, _ll: &mut LowLevel, data: &Float32x2) {
         match self {
-            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+            &ShaderParameterLocation::Uniform { location, size, type_id, .. } =>
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT_VEC2 && size == 1);
                     gl_check_error();
                     ugl!(Uniform2fv(location as i32, size, mem::transmute(data)));
                     gl_check_error();
                 },
-            &ParameterLocation::Empty => {}
+            &ShaderParameterLocation::Empty => {}
             _ => panic!("Invalid Shader location: {:?}", self)
         }
     }
 
     pub fn set_f32x3(&self, _ll: &mut LowLevel, data: &Float32x3) {
         match self {
-            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+            &ShaderParameterLocation::Uniform { location, size, type_id, .. } =>
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT_VEC3 && size == 1);
                     gl_check_error();
                     ugl!(Uniform3fv(location as i32, size, mem::transmute(data)));
                     gl_check_error();
                 },
-            &ParameterLocation::Empty => {}
+            &ShaderParameterLocation::Empty => {}
             _ => panic!("Invalid Shader location: {:?}", self)
         }
     }
 
     pub fn set_f32x4(&self, _ll: &mut LowLevel, data: &Float32x4) {
         match self {
-            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+            &ShaderParameterLocation::Uniform { location, size, type_id, .. } =>
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT_VEC4 && size == 1);
                     gl_check_error();
                     ugl!(Uniform4fv(location as i32, size, mem::transmute(data)));
                     gl_check_error();
                 },
-            &ParameterLocation::Empty => {}
+            &ShaderParameterLocation::Empty => {}
             _ => panic!("Invalid Shader location: {:?}", self)
         }
     }
 
     pub fn set_f32x16(&self, _ll: &mut LowLevel, data: &Float32x16) {
         match self {
-            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+            &ShaderParameterLocation::Uniform { location, size, type_id, .. } =>
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT_MAT4 && size == 1);
                     gl_check_error();
                     ugl!(UniformMatrix4fv(location as i32, size, gl::FALSE, mem::transmute(data)));
                     gl_check_error();
                 },
-            &ParameterLocation::Empty => {}
+            &ShaderParameterLocation::Empty => {}
             _ => panic!("Invalid Shader location: {:?}", self)
         }
     }
@@ -126,7 +126,7 @@ impl ParameterLocation {
 
     pub fn set_texture(&self, ll: &mut LowLevel, tx: &GLTexture) {
         match self {
-            &ParameterLocation::Uniform { location, size, type_id, .. } =>
+            &ShaderParameterLocation::Uniform { location, size, type_id, .. } =>
                 if type_id != 0 {
                     // todo: check if texture conforms to the sampler
                     assert!(type_id == gl::SAMPLER_2D && size == 1);
@@ -135,21 +135,21 @@ impl ParameterLocation {
                     ugl!(Uniform1i(location as i32, slot as i32));
                     gl_check_error();
                 },
-            &ParameterLocation::Empty => {}
+            &ShaderParameterLocation::Empty => {}
             _ => panic!("Invalid Shader location: {:?}", self)
         }
     }
 }
 
-impl Default for ParameterLocation {
-    fn default() -> ParameterLocation {
-        ParameterLocation::Empty
+impl Default for ShaderParameterLocation {
+    fn default() -> ShaderParameterLocation {
+        ShaderParameterLocation::Empty
     }
 }
 
 
 /// Type to store the required shader parameter locations.
-pub type ParameterLocations = [ParameterLocation; MAX_USED_PARAMETER_COUNT];
+pub type ParameterLocations = [ShaderParameterLocation; MAX_USED_PARAMETER_COUNT];
 
 
 /// Structure to store hardware data associated to a ShaderProgram.
@@ -264,8 +264,8 @@ impl GLShaderProgram {
             assert!(param_idx <= MAX_USED_PARAMETER_COUNT, "Shader (attribute) parameters index is out of bounds, allowed: {}, but got {} for {}", MAX_USED_PARAMETER_COUNT, param_idx, attribute_name);
             let attribute = &mut self.parameter_locations[param_idx];
 
-            assert!(*attribute == ParameterLocation::Empty);
-            *attribute = ParameterLocation::Attribute {
+            assert!(*attribute == ShaderParameterLocation::Empty);
+            *attribute = ShaderParameterLocation::Attribute {
                 name: attribute_name,
                 location: location,
                 size: attribute_size,
@@ -305,8 +305,8 @@ impl GLShaderProgram {
             assert!(param_idx <= MAX_USED_PARAMETER_COUNT, "Shader (uniform) parameters index is out of bounds, allowed: {}, but got {} for {}", MAX_USED_PARAMETER_COUNT, param_idx, uniform_name);
             let uniform = &mut self.parameter_locations[param_idx];
 
-            assert!(*uniform == ParameterLocation::Empty);
-            *uniform = ParameterLocation::Uniform {
+            assert!(*uniform == ShaderParameterLocation::Empty);
+            *uniform = ShaderParameterLocation::Uniform {
                 name: uniform_name,
                 location: location,
                 size: uniform_size,

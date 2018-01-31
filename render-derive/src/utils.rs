@@ -80,7 +80,7 @@ pub fn impl_offset_of(container: &syn::Ident, field: &syn::Ident) -> quote::Toke
             // compile-time error is generated if $field is accessed through a
             // Deref impl.
             #[allow(unused_variables)]
-            let #container { #field: _, .. };
+            //let #container { #field: _, .. };
 
             // Create an instance of the container and calculate the offset to its
             // field. Although we are creating references to uninitialized data this

@@ -65,6 +65,15 @@ struct SimpleView {
 
 impl SimpleView {
     fn new() -> SimpleView {
+        for a in VxColorTex::attribute_iter() {
+            println!("{:?}", a);
+            println!("{:?}", &str::from(a));
+        }
+        for a in VxPos::attribute_iter() {
+            println!("{:?}", a);
+            println!("{:?}", &str::from(a));
+        }
+        panic!("");
         SimpleView {
             t: 0.0,
             vb1: lowlevel::GLVertexBuffer::new(),
@@ -73,6 +82,8 @@ impl SimpleView {
             sh: lowlevel::GLShaderProgram::new(),
             tx: lowlevel::GLTexture::new(),
         }
+
+
     }
 }
 
@@ -91,9 +102,7 @@ impl View<PlatformEngine> for SimpleView {
             ];
 
             let VertexData::Transient(slice) = pos.to_data();
-            let attributes: GLVertexBufferFormat = VxPos::attribute_layout_iter()
-                .map(|a| GLVertexBufferAttribute::from_layout(&a))
-                .collect();
+            let attributes = VxPos::attribute_layout_iter().map(|a| GLVertexBufferAttribute::from_layout(&a));
             self.vb1.upload_data(ll, attributes, slice);
         }
 
@@ -106,9 +115,8 @@ impl View<PlatformEngine> for SimpleView {
             ];
 
             let VertexData::Transient(slice) = color_tex.to_data();
-            let attributes: GLVertexBufferFormat = VxColorTex::attribute_layout_iter()
-                .map(|a| GLVertexBufferAttribute::from_layout(&a))
-                .collect();
+            let attributes = VxColorTex::attribute_layout_iter().map(|a| GLVertexBufferAttribute::from_layout(&a));
+
             self.vb2.upload_data(ll, attributes, slice);
         }
 

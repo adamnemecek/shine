@@ -84,7 +84,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
             }
         );
 
-        let offset_of = impl_offset_of(struct_name, &field_ident);
+        let offset_of = quote! {unsafe { &(*(0 as *const #struct_name)).#field_ident as *const _ as usize }};
         match_get_desc.push(
             quote! {
                #enum_type_name::#enum_ident => _dragorust_render::VertexBufferLayoutElement::#field_ty{offset: #offset_of, stride:mem::size_of::< #struct_name >()}
@@ -92,7 +92,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         )
     }
 
-    let gen_decl_enum = quote! {
+    let gen_attribute = quote! {
         #[derive(Copy, Clone, Debug)]
         #[repr(u8)]
         #[allow(unused_variables)]
@@ -101,22 +101,20 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         }
     };
 
-    let gen_impl_decl = quote! {
-        impl _dragorust_render::VertexDeclaration for #struct_name {
-            type Attribute = #enum_type_name;
+    let gen_attribute_iter = quote! {
+        #[allow(dead_code)]
+        fn attribute_iter() -> slice::Iter<'static, #enum_type_name> {
+            static IDS : [#enum_type_name; #count] = #qualified_enum_idents;
+            IDS.iter()
+        }
+    };
 
-            #[allow(dead_code)]
-            fn attribute_iter() -> slice::Iter<'static, #enum_type_name> {
-                static IDS : [#enum_type_name; #count] = #qualified_enum_idents;
-                IDS.iter()
-            }
-
-            #[allow(dead_code)]
-            fn get_attribute_layout(idx: #enum_type_name) -> _dragorust_render::VertexBufferLayoutElement {
-                use std::mem;
-                match idx {
-                    #(#match_get_desc,)*
-                }
+    let gen_attribute_layout = quote! {
+        #[allow(dead_code)]
+        fn get_attribute_layout(idx: #enum_type_name) -> _dragorust_render::VertexBufferLayoutElement {
+            use std::mem;
+            match idx {
+                #(#match_get_desc,)*
             }
         }
     };
@@ -154,8 +152,12 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
     };
 
     quote! {
-        #gen_decl_enum
-        #gen_impl_decl
+        #gen_attribute
+        impl _dragorust_render::VertexDeclaration for #struct_name {
+            type Attribute = #enum_type_name;
+            #gen_attribute_iter
+            #gen_attribute_layout
+        }
         #gen_impl_from_usize
         #gen_impl_from_str
     }

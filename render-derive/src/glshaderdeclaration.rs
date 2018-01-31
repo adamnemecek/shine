@@ -80,13 +80,13 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
     let source_count = sources.len();
 
 
-    println!("attributes: {:?}", attributes);
-    println!("uniforms: {:?}", uniforms);
+    //println!("attributes: {:?}", attributes);
+    //println!("uniforms: {:?}", uniforms);
 
     let gen_parameters = impl_parameter_declaration(&param_type_ident, attributes, uniforms);
 
     let gen_shader_decl = quote! {
-        impl ShaderDeclaration for #declaration_type_name {
+        impl ShaderDeclaration<PlatformEngine> for #declaration_type_name {
             type Parameters = #param_type_ident;
 
             #[allow(dead_code)]
@@ -152,8 +152,6 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         index += 1;
     }
 
-    println!("{:?}", match_name_cases);
-
     // index buffers
     param_fields.push(quote! {
         indices: _dragorust_render::backend::UnsafeIndexBufferIndex
@@ -162,7 +160,6 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
     visit_fields.push(quote! {
         visitor.process_index(#index, &self.indices);
     });
-
     index += 1;
 
     // uniforms
@@ -180,7 +177,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         let type_function_ident = syn::Ident::new(format!("process_{}", uniform.get_process_function_name().unwrap()));
 
         param_fields.push(quote! {
-            #uniform_field_ident: #type_token
+            //#uniform_field_ident: #type_token
         });
 
         match_name_cases.push(quote! {
@@ -193,34 +190,31 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
 
         index += 1;
     }
-    println!("{:?}", match_name_cases);
 
     let count = index;
-
     let gen = quote! {
-            #[derive(Clone)]
-            pub struct #param_type_ident {
-                //#(pub #param_fields,)*
+        #[derive(Clone)]
+        pub struct #param_type_ident {
+            //#(pub #param_fields,)*
+        }
+
+        impl _dragorust_render::ShaderParameters<_dragorust_render::PlatformEngine> for #param_type_ident {
+            fn get_count() -> usize {
+                #count
             }
 
-            impl _dragorust_render::ShaderParameters for #param_type_ident {
-                fn get_count() -> usize {
-                    #count
+            fn get_index_by_name(name: &str) -> Option<usize> {
+                match name {
+                    #(#match_name_cases,)*
+                    _ => None
                 }
-
-                fn get_index_by_name(name: &str) -> Option<usize> {
-                    match name {
-                        #(#match_name_cases,)*
-                        _ => None
-                    }
-                }
-
-                //fn visit<V: _dragorust_render::ShaderParameterVisitor>(&self, visitor: &mut V) {
-                //    #(#visit_fields)*
-                //}
             }
-        };
 
-    println!("{}", gen);
+            fn bind(&self/*, visitor: &mut V*/) {
+                println!("hello");
+            }
+        }
+    };
+
     gen
 }

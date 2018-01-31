@@ -131,39 +131,32 @@ impl View<PlatformEngine> for SimpleView {
         }
     }
 
-    fn on_render(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
-        /*use render::lowlevel::*;
+    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
+        let mut compose = r.compose();
 
-        let ll = r.ll_mut();
 
-        ugl!(ClearColor(0.0, 0.0, 0.5, 1.0));
-        ugl!(Clear(gl::COLOR_BUFFER_BIT));
-        ll.states.set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
+        {
+            use render::lowlevel::*;
 
-        let st = self.t.sin();
+            let ll = r.ll_mut();
+
+            ugl!(ClearColor(0.0, 0.0, 0.5, 1.0));
+            ugl!(Clear(gl::COLOR_BUFFER_BIT));
+            ll.states.set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
+        }
+
+        let params = ShSimpleParameters {};
+        /*let st = self.t.sin();
         let ct = self.t.cos();
         let trsf = Float32x16::from(
             [st, -ct, 0.0, 0.0,
                 ct, st, 0.0, 0.0,
                 0.0, 0.0, 1.0, 0.0,
                 0.0, 0.0, 0.0, 1.0]);
-        let col = Float32x3::from([0.5, self.t / 6.28, 0.5]);*/
+        let col = Float32x3::from([0.5, self.t / 6.28, 0.5]);
+        */
 
-        /*        let sh = &mut self.sh;
-                let vb1 = &mut self.vb1;
-                let vb2 = &mut self.vb2;
-                let ib = &mut self.ib;
-                let tx = &mut self.tx;
-                sh.draw(ll, gl::TRIANGLES, 0, 6,
-                        |ll, locations| {
-                            ib.bind(ll);
-                            locations[0].set_attribute(ll, &vb1, VxPosAttribute::Position); // "vPosition" => 0
-                            locations[1].set_attribute(ll, &vb2, VxColorTexAttribute::Color); //"vColor" => 1,
-                            locations[2].set_attribute(ll, &vb2, VxColorTexAttribute::TexCoord); //"vTexCoord" => 2,
-                            locations[3].set_f32x16(ll, &trsf); //"uTrsf" => 3
-                            locations[4].set_f32x3(ll, &col); //"uColor" => 4
-                            locations[5].set_texture(ll, &tx); //"uTex" => 5,
-                        });*/
+        self.sh.draw(&mut compose, params, Primitive::Triangle, 0, 6);
     }
 
     fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
