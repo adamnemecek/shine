@@ -146,8 +146,8 @@ impl Context {
                 return Err(Error::WindowCreationError("WGL: Failed to find a suitable pixel format".to_string()));
             }
 
-            let fb_config = context.get_pixel_format_info(pixel_format).unwrap();
-            println!("selected pixel format: {:?}", fb_config);
+            //let fb_config = context.get_pixel_format_info(pixel_format).unwrap();
+            //println!("selected pixel format: {:?}", fb_config);
 
             // create context
             context.hglrc = try!(context.create_context(pixel_format, &settings.fb_config, &settings.platform_extra));

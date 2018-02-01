@@ -69,7 +69,7 @@ impl<K: PassId, E: Engine> PassManager<K, E> {
     ///
     /// By default passes are activated only for a single frame and whenever a pass is acquired from the
     /// manager, it is activated automatically.
-    pub fn get_pass<'p>(&'p mut self, id: K, command_store: &'p E: FrameCompose) -> Pass<'p, E> {
+    pub fn get_pass<'p>(&'p mut self, id: K, command_store: &'p E: CommandQueue) -> Pass<'p, E> {
         let entry = {
             let passes = &mut self.passes;
             let passes_lookup = &mut self.passes_lookup;

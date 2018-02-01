@@ -9,8 +9,8 @@ pub trait RenderTarget<E: Engine>: Resource<E> {
     type Ref: Clone;
 
     /// Configures for the pass, called when configuration changes
-    fn configure(&self, queue: &mut E::FrameCompose, cfg: RenderTargetConfig);
+    fn configure(&self, queue: &mut E::CommandQueue, cfg: RenderTargetConfig);
 
     /// Prepare for rendering, called in each frame
-    fn prepare(&self, queue: &mut E::FrameCompose);
+    fn prepare(&self, queue: &mut E::CommandQueue);
 }

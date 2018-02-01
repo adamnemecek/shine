@@ -14,7 +14,7 @@ pub struct CreateCommand<DECL: VertexDeclaration> {
 }
 
 impl<DECL: VertexDeclaration> DynCommand for CreateCommand<DECL> {
-    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         let target = unsafe { &mut flush.vertex_store.at_unsafe_mut(&self.target) };
         let layout = DECL::attribute_layout_iter().map(|a| GLVertexBufferAttribute::from_layout(&a));
         target.upload_data(ll, layout, &self.data);
@@ -28,7 +28,7 @@ pub struct ReleaseCommand {
 }
 
 impl ReleaseCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         let target = unsafe { &mut flush.vertex_store.at_unsafe_mut(&self.target) };
         target.release(ll);
     }
@@ -65,7 +65,7 @@ impl<DECL: VertexDeclaration> Handle for VertexBufferHandle<DECL> {
 
 /// VertexBuffer implementation for OpenGL.
 impl<DECL: VertexDeclaration> Resource<PlatformEngine> for VertexBufferHandle<DECL> {
-    fn create(&mut self, compose: &mut GLFrameComposer) {
+    fn create(&mut self, compose: &mut GLCommandQueue) {
         self.0 = compose.add_vertex_buffer(GLVertexBuffer::new());
     }
 
@@ -73,7 +73,7 @@ impl<DECL: VertexDeclaration> Resource<PlatformEngine> for VertexBufferHandle<DE
         self.0.reset()
     }
 
-    fn release(&self, queue: &mut GLFrameComposer) {
+    fn release(&self, queue: &mut GLCommandQueue) {
         if self.is_null() {
             return;
         }
@@ -89,7 +89,7 @@ impl<DECL: VertexDeclaration> Resource<PlatformEngine> for VertexBufferHandle<DE
 impl<DECL: VertexDeclaration> VertexBuffer<DECL, PlatformEngine> for VertexBufferHandle<DECL> {
     type AttributeRef = (UnsafeVertexBufferIndex, usize);
 
-    fn set<'a, SRC: VertexSource<DECL>>(&self, queue: &mut GLFrameComposer, source: &SRC) {
+    fn set<'a, SRC: VertexSource<DECL>>(&self, queue: &mut GLCommandQueue, source: &SRC) {
         assert!(!self.is_null());
 
         match source.to_data() {

@@ -71,7 +71,14 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
     let param_type_name = format!("{}Parameters", declaration_type_name);
     let param_type_ident = syn::Ident::new(param_type_name);
 
-    let (attributes, uniforms, sources) = prepocess_sources(declaration_type_name.to_string(), source_datas.iter());
+
+    let (attributes, uniforms, sources) = {
+        match prepocess_sources(declaration_type_name.to_string(), source_datas.iter()) {
+            Err(err) => panic!(format!("\n{}", err)),
+            Ok(ok) => ok,
+        }
+    };
+
     let sources = sources.iter().map(|shader| {
         let sh_type = shader.0.to_ident();
         let ref source = shader.1;
@@ -82,6 +89,7 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
 
     //println!("attributes: {:?}", attributes);
     //println!("uniforms: {:?}", uniforms);
+    //println!("{:?}", source_refs);
 
     let gen_parameters = impl_parameter_declaration(&param_type_ident, attributes, uniforms);
 

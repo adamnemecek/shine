@@ -29,6 +29,9 @@ struct VxColorTex {
     uniform vec3 uColor;
     varying vec3 color;
     varying vec2 txCoord;
+
+    vec3 col_mod(vec3 c);
+
     void main()
     {
         color = col_mod(uColor * vColor);
@@ -65,15 +68,6 @@ struct SimpleView {
 
 impl SimpleView {
     fn new() -> SimpleView {
-        for a in VxColorTex::attribute_iter() {
-            println!("{:?}", a);
-            println!("{:?}", &str::from(a));
-        }
-        for a in VxPos::attribute_iter() {
-            println!("{:?}", a);
-            println!("{:?}", &str::from(a));
-        }
-        panic!("");
         SimpleView {
             t: 0.0,
             vb1: lowlevel::GLVertexBuffer::new(),
@@ -82,8 +76,6 @@ impl SimpleView {
             sh: lowlevel::GLShaderProgram::new(),
             tx: lowlevel::GLTexture::new(),
         }
-
-
     }
 }
 

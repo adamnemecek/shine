@@ -13,7 +13,7 @@ pub struct CreateCommand<DECL: ShaderDeclaration<PlatformEngine>> {
 }
 
 impl<DECL: ShaderDeclaration<PlatformEngine>> DynCommand for CreateCommand<DECL> {
-    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         let target = unsafe { flush.shader_program_store.at_unsafe_mut(&self.target) };
         target.create_program(ll, DECL::source_iter());
     }
@@ -26,7 +26,7 @@ pub struct ReleaseCommand {
 }
 
 impl ReleaseCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         let target = unsafe { flush.shader_program_store.at_unsafe_mut(&self.target) };
         target.release(ll);
     }
@@ -50,7 +50,7 @@ struct DrawCommand<DECL: ShaderDeclaration<PlatformEngine>> {
 }
 
 impl<DECL: ShaderDeclaration<PlatformEngine>> DynCommand for DrawCommand<DECL> {
-    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         let target = unsafe { flush.shader_program_store.at_unsafe_mut(&self.target) };
         self.parameters.bind();
         //target.draw(resources, ll, &self.parameters, self.primitive, self.vertex_start, self.vertex_count);
@@ -80,7 +80,7 @@ impl<DECL: ShaderDeclaration<PlatformEngine>> Handle for ShaderProgramHandle<DEC
 }
 
 impl<DECL: ShaderDeclaration<PlatformEngine>> Resource<PlatformEngine> for ShaderProgramHandle<DECL> {
-    fn create(&mut self, compose: &mut GLFrameComposer) {
+    fn create(&mut self, compose: &mut GLCommandQueue) {
         self.0 = compose.add_shader_program(GLShaderProgram::new());
     }
 
@@ -88,7 +88,7 @@ impl<DECL: ShaderDeclaration<PlatformEngine>> Resource<PlatformEngine> for Shade
         self.0.reset()
     }
 
-    fn release(&self, queue: &mut GLFrameComposer) {
+    fn release(&self, queue: &mut GLCommandQueue) {
         if self.is_null() {
             return;
         }
@@ -102,7 +102,7 @@ impl<DECL: ShaderDeclaration<PlatformEngine>> Resource<PlatformEngine> for Shade
 }
 
 impl<DECL: ShaderDeclaration<PlatformEngine>> ShaderProgram<DECL, PlatformEngine> for ShaderProgramHandle<DECL> {
-    fn compile(&self, queue: &mut GLFrameComposer) {
+    fn compile(&self, queue: &mut GLCommandQueue) {
         println!("ShaderProgram - compile");
         queue.add_command(0,
                           CreateCommand::<DECL> {
@@ -111,7 +111,7 @@ impl<DECL: ShaderDeclaration<PlatformEngine>> ShaderProgram<DECL, PlatformEngine
                           });
     }
 
-    fn draw(&self, queue: &mut GLFrameComposer, parameters: DECL::Parameters, primitive: Primitive, vertex_start: usize, vertex_count: usize) {
+    fn draw(&self, queue: &mut GLCommandQueue, parameters: DECL::Parameters, primitive: Primitive, vertex_start: usize, vertex_count: usize) {
         println!("ShaderProgram - draw");
         queue.add_command(0,
                           DrawCommand::<DECL> {

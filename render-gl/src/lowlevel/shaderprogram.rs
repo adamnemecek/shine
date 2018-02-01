@@ -321,7 +321,7 @@ impl GLShaderProgram {
 
         self.parse_attributes(ll, &name_to_index);
         self.parse_uniforms(ll, &name_to_index);
-        println!("shader parameters: {:?}", self.parameter_locations);
+        //println!("shader parameters: {:?}", self.parameter_locations);
     }
 
     pub fn release(&mut self, ll: &mut LowLevel) {

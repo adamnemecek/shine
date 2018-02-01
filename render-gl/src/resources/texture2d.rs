@@ -15,7 +15,7 @@ pub struct CreateCommand {
 }
 
 impl CreateCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         let target = unsafe { &mut flush.texture_2d_store.at_unsafe_mut(&self.target) };
         target.upload_data(ll, gl::TEXTURE_2D, self.width, self.height, self.format, &self.data);
     }
@@ -35,7 +35,7 @@ pub struct ReleaseCommand {
 }
 
 impl ReleaseCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         let target = unsafe { &mut flush.texture_2d_store.at_unsafe_mut(&self.target) };
         target.release(ll);
     }
@@ -71,7 +71,7 @@ impl Handle for Texture2DHandle {
 }
 
 impl Resource<PlatformEngine> for Texture2DHandle {
-    fn create(&mut self, compose: &mut GLFrameComposer) {
+    fn create(&mut self, compose: &mut GLCommandQueue) {
         self.0 = compose.add_texture_2d(GLTexture::new());
     }
 
@@ -79,7 +79,7 @@ impl Resource<PlatformEngine> for Texture2DHandle {
         self.0.reset()
     }
 
-    fn release(&self, queue: &mut GLFrameComposer) {
+    fn release(&self, queue: &mut GLCommandQueue) {
         if self.is_null() {
             return;
         }
@@ -93,7 +93,7 @@ impl Resource<PlatformEngine> for Texture2DHandle {
 }
 
 impl Texture2D<PlatformEngine> for Texture2DHandle {
-    fn set<'a, SRC: ImageSource>(&self, queue: &mut GLFrameComposer, source: &SRC) {
+    fn set<'a, SRC: ImageSource>(&self, queue: &mut GLCommandQueue, source: &SRC) {
         assert!(!self.is_null());
 
         match source.to_data() {

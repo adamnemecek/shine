@@ -180,15 +180,12 @@ fn get_glslangValidator_executable() -> String {
 }
 
 
-fn extract_shader_info(shaders: &[String]) -> (Vec<Attribute>, Vec<Uniform>) {
+fn extract_shader_info(shaders: &[String]) -> Result<(Vec<Attribute>, Vec<Uniform>), String> {
     let bin = get_glslangValidator_executable();
 
-    let output =
-        Command::new(bin.clone())
-            .args(shaders)
-            .args(&GLSL_VALIDATOR_ARGS_INFO)
-            .output()
-            .expect(&format!("Failed execute {} {:?} to extract info", bin, GLSL_VALIDATOR_ARGS_INFO));
+    let mut cmd = Command::new(bin);
+    cmd.args(shaders).args(&GLSL_VALIDATOR_ARGS_INFO);
+    let output = cmd.output().expect(&format!("Failed execute '{:?}' {:?} to extract info", cmd, GLSL_VALIDATOR_ARGS_INFO));
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
 
@@ -205,6 +202,10 @@ fn extract_shader_info(shaders: &[String]) -> (Vec<Attribute>, Vec<Uniform>) {
     for line in stdout.lines() {
         match state {
             State::Ignore => {
+                if line.starts_with("ERROR:") {
+                    return Err(format!("{}", stdout));
+                }
+
                 state = match line {
                     "Uniform reflection:" => State::Uniform,
                     "Vertex attribute reflection:" => State::Attribute,
@@ -232,7 +233,7 @@ fn extract_shader_info(shaders: &[String]) -> (Vec<Attribute>, Vec<Uniform>) {
         }
     }
 
-    (attributes, uniforms)
+    Ok((attributes, uniforms))
 }
 
 
@@ -256,7 +257,7 @@ fn prepocess_shader(shaders: &[String]) -> Vec<(ShaderType, String)> {
     res
 }
 
-pub fn prepocess_sources<'a, I: Iterator<Item=&'a (ShaderType, String)>>(name: String, shaders: I) -> (Vec<Attribute>, Vec<Uniform>, Vec<(ShaderType, String)>) {
+pub fn prepocess_sources<'a, I: Iterator<Item=&'a (ShaderType, String)>>(name: String, shaders: I) -> Result<(Vec<Attribute>, Vec<Uniform>, Vec<(ShaderType, String)>), String> {
     // create temp files froom the shader
 
     let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
@@ -272,12 +273,12 @@ pub fn prepocess_sources<'a, I: Iterator<Item=&'a (ShaderType, String)>>(name: S
         file.write_all(shader.1.as_bytes()).expect("Temporary shader files could not be written:");
     }
 
-    let (attributes, uniforms) = extract_shader_info(&source_files);
+    let (attributes, uniforms) = extract_shader_info(&source_files)?;
     let sources = prepocess_shader(&source_files);
 
     //println!("{:?},{:?}", attributes, uniforms);
 
-    (attributes, uniforms, sources)
+    Ok((attributes, uniforms, sources))
 }
 
 /*

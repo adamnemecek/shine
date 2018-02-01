@@ -9,7 +9,7 @@ pub struct CommandOrder(pub u8, pub u32);
 
 /// Commands using dynamic dispatch
 pub trait DynCommand: 'static {
-    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLFrameFlusher);
+    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLCommandFlush);
 }
 
 impl<T: DynCommand> From<T> for Command {
@@ -36,7 +36,7 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         use Command::*;
         match self {
             Hello { time } => ll.hello(time),

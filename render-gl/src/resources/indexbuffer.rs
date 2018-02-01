@@ -14,7 +14,7 @@ pub struct CreateCommand {
 }
 
 impl CreateCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         let target = unsafe { &mut flush.index_store.at_unsafe_mut(&self.target) };
         target.upload_data(ll, self.type_id, &self.data);
     }
@@ -34,7 +34,7 @@ pub struct ReleaseCommand {
 }
 
 impl ReleaseCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLFrameFlusher) {
+    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
         let target = unsafe { &mut flush.index_store.at_unsafe_mut(&self.target) };
         target.release(ll);
     }
@@ -70,7 +70,7 @@ impl<DECL: IndexDeclaration> Handle for IndexBufferHandle<DECL> {
 }
 
 impl<DECL: IndexDeclaration> Resource<PlatformEngine> for IndexBufferHandle<DECL> {
-    fn create(&mut self, compose: &mut GLFrameComposer) {
+    fn create(&mut self, compose: &mut GLCommandQueue) {
         self.0 = compose.add_index_buffer(GLIndexBuffer::new());
     }
 
@@ -78,7 +78,7 @@ impl<DECL: IndexDeclaration> Resource<PlatformEngine> for IndexBufferHandle<DECL
         self.0.reset()
     }
 
-    fn release(&self, queue: &mut GLFrameComposer) {
+    fn release(&self, queue: &mut GLCommandQueue) {
         if self.is_null() {
             return;
         }
@@ -92,7 +92,7 @@ impl<DECL: IndexDeclaration> Resource<PlatformEngine> for IndexBufferHandle<DECL
 }
 
 impl<DECL: IndexDeclaration> IndexBuffer<DECL, PlatformEngine> for IndexBufferHandle<DECL> {
-    fn set<SRC: IndexSource<DECL>>(&self, queue: &mut GLFrameComposer, source: &SRC) {
+    fn set<SRC: IndexSource<DECL>>(&self, queue: &mut GLCommandQueue, source: &SRC) {
         assert!(!self.is_null());
 
         match source.to_data() {

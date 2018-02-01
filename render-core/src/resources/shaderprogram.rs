@@ -58,17 +58,17 @@ pub trait ShaderDeclaration<E: Engine>: 'static + Clone {
 /// Structure to store the shader abstraction.
 pub trait ShaderProgram<DECL: ShaderDeclaration<E>, E: Engine>: Resource<E> {
     /// Uploads and compiles the shader.
-    fn compile(&self, queue: &mut E::FrameCompose);
+    fn compile(&self, queue: &mut E::CommandQueue);
 
     /// Resets self to a new handle and compiles the shader.
     /// If handle pointed to an existing resource prior this call, that resource is not modified, Backend will
     /// garbage collect it depending on the reference count.
-    fn create_and_compile(&mut self, queue: &mut E::FrameCompose) {
+    fn create_and_compile(&mut self, queue: &mut E::CommandQueue) {
         self.create(queue);
         self.compile(queue);
     }
 
     /// Sends a geometry for rendering
-    fn draw(&self, queue: &mut E::FrameCompose, parameters: DECL::Parameters,
+    fn draw(&self, queue: &mut E::CommandQueue, parameters: DECL::Parameters,
             primitive: Primitive, vertex_start: usize, vertex_count: usize);
 }

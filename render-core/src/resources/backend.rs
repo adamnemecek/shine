@@ -1,6 +1,6 @@
 pub trait Backend: 'static {
-    type FrameCompose;
+    type CommandQueue;
 
-    fn compose(&self) -> Self::FrameCompose;
+    fn get_queue(&self) -> Self::CommandQueue;
     fn flush(&mut self);
 }

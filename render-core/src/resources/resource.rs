@@ -22,7 +22,7 @@ pub trait Handle {
 pub trait Resource<E: Engine>: Handle + Clone {
     /// Creates a valid handle without allocating any hw resources.
     /// If self is not null a new handle is created as if a reset would have been called.
-    fn create(&mut self, compose: &mut E::FrameCompose);
+    fn create(&mut self, compose: &mut E::CommandQueue);
 
     /// Reset the handle without releasing the hw resources. If multiple handle point to the same
     /// resources, the other handles won't be effected.
@@ -35,5 +35,5 @@ pub trait Resource<E: Engine>: Handle + Clone {
     /// resource, all the handle will be effected as the common resource is release.
     /// In other word, no handles are invalidated only the hw resources are released.
     /// See also the reset function.
-    fn release(&self, queue: &mut E::FrameCompose);
+    fn release(&self, queue: &mut E::CommandQueue);
 }

@@ -3,7 +3,7 @@ use lowlevel::*;
 use resources::*;
 
 /// Guarded backend connection to collect command messages
-pub struct GLFrameComposer {
+pub struct GLCommandQueue {
     command_queue: CommandProduceGuard<'static>,
     index_store: ReadGuardIndexBuffer<'static>,
     vertex_store: ReadGuardVertexBuffer<'static>,
@@ -11,7 +11,7 @@ pub struct GLFrameComposer {
     shader_program_store: ReadGuardShaderProgram<'static>,
 }
 
-impl GLFrameComposer {
+impl GLCommandQueue {
     pub fn add_command<C: Into<Command>>(&mut self, order: u32, cmd: C) {
         self.command_queue.add(CommandOrder(0, order), cmd.into());
     }
@@ -35,7 +35,7 @@ impl GLFrameComposer {
 
 
 /// Guarded backend connection to process command messages
-pub struct GLFrameFlusher<'a> {
+pub struct GLCommandFlush<'a> {
     pub index_store: WriteGuardIndexBuffer<'a>,
     pub vertex_store: WriteGuardVertexBuffer<'a>,
     pub texture_2d_store: WriteGuardTexture2D<'a>,
@@ -89,15 +89,15 @@ impl GLBackend {
 }
 
 impl Backend for GLBackend {
-    type FrameCompose/*<'a>*/ = GLFrameComposer/*<'a>*/;
+    type CommandQueue/*<'a>*/ = GLCommandQueue/*<'a>*/;
 
-    fn compose<'a>(&'a self) -> GLFrameComposer/*<'a>*/ {
+    fn get_queue<'a>(&'a self) -> GLCommandQueue/*<'a>*/ {
         use std::mem;
         // compose shall not outlive Backend but cannot enforce without generic_associated_types
         // so unsafe code is used with 'static lifetime
 
         unsafe {
-            GLFrameComposer {
+            GLCommandQueue {
                 command_queue: mem::transmute(self.command_store.produce()),
                 index_store: mem::transmute(self.index_store.read()),
                 vertex_store: mem::transmute(self.vertex_store.read()),
@@ -109,7 +109,7 @@ impl Backend for GLBackend {
 
     fn flush(&mut self) {
         let mut consume = self.command_store.consume(|&k| (k.0 as u64) << 32 + k.1 as u64);
-        let mut flush = GLFrameFlusher {
+        let mut flush = GLCommandFlush {
             index_store: self.index_store.write(),
             vertex_store: self.vertex_store.write(),
             texture_2d_store: self.texture_2d_store.write(),
