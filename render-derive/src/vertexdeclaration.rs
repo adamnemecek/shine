@@ -14,7 +14,7 @@ pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
     let gen = quote! {
         #[allow(unused_imports, non_snake_case)]
         mod #dummy_mod {
-            extern crate dragorust_render_core as _dragorust_render;
+            extern crate dragorust_render_core as _dragorust_render_core;
             use std::slice;
             use std::str;
             #gen_impl
@@ -87,7 +87,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         let offset_of = quote! {unsafe { &(*(0 as *const #struct_name)).#field_ident as *const _ as usize }};
         match_get_desc.push(
             quote! {
-               #enum_type_name::#enum_ident => _dragorust_render::VertexBufferLayoutElement::#field_ty{offset: #offset_of, stride:mem::size_of::< #struct_name >()}
+               #enum_type_name::#enum_ident => _dragorust_render_core::VertexBufferLayoutElement::#field_ty{offset: #offset_of, stride:mem::size_of::< #struct_name >()}
             }
         )
     }
@@ -111,7 +111,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
 
     let gen_attribute_layout = quote! {
         #[allow(dead_code)]
-        fn get_attribute_layout(idx: #enum_type_name) -> _dragorust_render::VertexBufferLayoutElement {
+        fn get_attribute_layout(idx: #enum_type_name) -> _dragorust_render_core::VertexBufferLayoutElement {
             use std::mem;
             match idx {
                 #(#match_get_desc,)*
@@ -153,7 +153,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
 
     quote! {
         #gen_attribute
-        impl _dragorust_render::VertexDeclaration for #struct_name {
+        impl _dragorust_render_core::VertexDeclaration for #struct_name {
             type Attribute = #enum_type_name;
             #gen_attribute_iter
             #gen_attribute_layout

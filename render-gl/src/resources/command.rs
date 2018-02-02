@@ -1,4 +1,3 @@
-use lowlevel::*;
 use store::fjsqueue::*;
 use resources::*;
 
@@ -9,7 +8,7 @@ pub struct CommandOrder(pub u8, pub u32);
 
 /// Commands using dynamic dispatch
 pub trait DynCommand: 'static {
-    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLCommandFlush);
+    fn process(&mut self, context: &mut GLCommandProcessContext);
 }
 
 impl<T: DynCommand> From<T> for Command {
@@ -36,20 +35,20 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
+    pub fn process(self, context: &mut GLCommandProcessContext) {
         use Command::*;
         match self {
-            Hello { time } => ll.hello(time),
+            Hello { time } => context.ll.hello(time),
             //VertexCreate(cmd) => cmd.process(ll, flush),
-            VertexRelease(cmd) => cmd.process(ll, flush),
-            IndexCreate(cmd) => cmd.process(ll, flush),
-            IndexRelease(cmd) => cmd.process(ll, flush),
-            Texture2DCreate(cmd) => cmd.process(ll, flush),
-            Texture2DRelease(cmd) => cmd.process(ll, flush),
-            //ShaderProgramCreate(cmd) => cmd.process(ll, flush),
-            ShaderProgramRelease(cmd) => cmd.process(ll, flush),
+            VertexRelease(cmd) => cmd.process(context),
+            IndexCreate(cmd) => cmd.process(context),
+            IndexRelease(cmd) => cmd.process(context),
+            Texture2DCreate(cmd) => cmd.process(context),
+            Texture2DRelease(cmd) => cmd.process(context),
+            //ShaderProgramCreate(cmd) => cmd.process(context),
+            ShaderProgramRelease(cmd) => cmd.process(context),
 
-            DynamicCommand(mut cmd) => cmd.process(ll, flush),
+            DynamicCommand(mut cmd) => cmd.process(context),
         }
     }
 }

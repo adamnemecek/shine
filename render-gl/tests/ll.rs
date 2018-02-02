@@ -181,16 +181,21 @@ impl View<PlatformEngine> for SimpleView {
         let vb2 = &mut self.vb2;
         let ib = &mut self.ib;
         let tx = &mut self.tx;
-        sh.draw(ll, gl::TRIANGLES, 0, 6,
-                |ll, locations| {
-                    ib.bind(ll);
-                    locations[0].set_attribute(ll, &vb2, VxColorTexAttribute::Color);
-                    locations[1].set_attribute(ll, &vb2, VxColorTexAttribute::TexCoord);
-                    locations[2].set_attribute(ll, &vb1, VxPosAttribute::Position);
-                    locations[4].set_f32x3(ll, &col);
-                    locations[5].set_f32x16(ll, &trsf);
-                    locations[6].set_texture(ll, &tx);
-                });
+        if sh.bind(ll) {
+            let locations = sh.get_parameter_locations();
+
+            ib.bind(ll);
+
+            locations[0].set_attribute(ll, &vb2, VxColorTexAttribute::Color);
+            locations[1].set_attribute(ll, &vb2, VxColorTexAttribute::TexCoord);
+            locations[2].set_attribute(ll, &vb1, VxPosAttribute::Position);
+
+            locations[4].set_f32x3(ll, &col);
+            locations[5].set_f32x16(ll, &trsf);
+            locations[6].set_texture(ll, &tx);
+
+            ll.draw(gl::TRIANGLES, 0, 6);
+        }
     }
 
     fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {

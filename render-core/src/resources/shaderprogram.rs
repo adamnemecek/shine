@@ -16,32 +16,17 @@ pub enum ShaderType {
 }
 
 
-/// Trait to visit shader parameters. Mainly used for binding and uploading parameters.
-#[allow(missing_docs)]
-pub trait ShaderParameterVisitor<E: Engine> {
-    fn process_f32x16(&mut self, idx: usize, data: &Float32x16);
-    fn process_f32x4(&mut self, idx: usize, data: &Float32x4);
-    fn process_f32x3(&mut self, idx: usize, data: &Float32x3);
-    fn process_f32x2(&mut self, idx: usize, data: &Float32x2);
-    fn process_f32(&mut self, idx: usize, data: f32);
-
-    //fn process_tex_2d(&mut self, idx: usize, data: &R::Texture2DRef);
-    //fn process_attribute(&mut self, idx: usize, data: &R::VertexAttributeRef);
-    //fn process_index(&mut self, idx: usize, data: &R::IndexRef);
-}
-
-
 /// Trait to store shader parameters.
 /// It stores both the attributes and other shader parameters.
-pub trait ShaderParameters<E>: Clone {
+pub trait ShaderParameters<E: Engine>: Clone {
     /// Returns the number of attributes
     fn get_count() -> usize;
 
     /// Returns the index by attribute name
     fn get_index_by_name(name: &str) -> Option<usize>;
 
-    /// Bind all the required attributes for the engine
-    fn bind(&self/*, visitor: &mut V*/);
+    /// Prepare parameters for rendering.
+    fn bind(&self, context: &mut <E::Backend as Backend>::CommandContext);
 }
 
 

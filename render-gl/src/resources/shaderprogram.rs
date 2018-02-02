@@ -13,9 +13,9 @@ pub struct CreateCommand<DECL: ShaderDeclaration<PlatformEngine>> {
 }
 
 impl<DECL: ShaderDeclaration<PlatformEngine>> DynCommand for CreateCommand<DECL> {
-    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
-        let target = unsafe { flush.shader_program_store.at_unsafe_mut(&self.target) };
-        target.create_program(ll, DECL::source_iter());
+    fn process(&mut self, context: &mut GLCommandProcessContext) {
+        let target = unsafe { context.shader_program_store.at_unsafe_mut(&self.target) };
+        target.create_program(context.ll, DECL::source_iter());
     }
 }
 
@@ -26,9 +26,9 @@ pub struct ReleaseCommand {
 }
 
 impl ReleaseCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
-        let target = unsafe { flush.shader_program_store.at_unsafe_mut(&self.target) };
-        target.release(ll);
+    pub fn process(self, context: &mut GLCommandProcessContext) {
+        let target = unsafe { context.shader_program_store.at_unsafe_mut(&self.target) };
+        target.release(context.ll);
     }
 }
 
@@ -50,9 +50,9 @@ struct DrawCommand<DECL: ShaderDeclaration<PlatformEngine>> {
 }
 
 impl<DECL: ShaderDeclaration<PlatformEngine>> DynCommand for DrawCommand<DECL> {
-    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
-        let target = unsafe { flush.shader_program_store.at_unsafe_mut(&self.target) };
-        self.parameters.bind();
+    fn process(&mut self, context: &mut GLCommandProcessContext) {
+        let target = unsafe { context.shader_program_store.at_unsafe_mut(&self.target) };
+        //self.parameters.bind(context);
         //target.draw(resources, ll, &self.parameters, self.primitive, self.vertex_start, self.vertex_count);
     }
 }

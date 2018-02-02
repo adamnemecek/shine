@@ -339,22 +339,18 @@ impl GLShaderProgram {
         self.parameter_locations = Default::default();
     }
 
-    pub fn draw<F: Fn(&mut LowLevel, &ParameterLocations)>(&mut self, ll: &mut LowLevel,
-                                                           primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint,
-                                                           parameter_update: F) {
-        // bind shader
+    pub fn get_parameter_locations(&self) -> &ParameterLocations {
+        &self.parameter_locations
+    }
+
+    pub fn bind(&self, ll: &mut LowLevel) -> bool {
         if self.hw_id == 0 {
             // no drawing when shader is not valid
-            return;
+            return false;
         }
+
         ll.program_binding.bind(self.hw_id);
-
-        // bind parameters
-        gl_check_error();
-        parameter_update(ll, &self.parameter_locations);
-        gl_check_error();
-
-        ll.draw(primitive, vertex_start, vertex_count);
+        true
     }
 }
 

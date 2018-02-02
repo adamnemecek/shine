@@ -35,11 +35,12 @@ impl GLCommandQueue {
 
 
 /// Guarded backend connection to process command messages
-pub struct GLCommandFlush<'a> {
-    pub index_store: WriteGuardIndexBuffer<'a>,
-    pub vertex_store: WriteGuardVertexBuffer<'a>,
-    pub texture_2d_store: WriteGuardTexture2D<'a>,
-    pub shader_program_store: WriteGuardShaderProgram<'a>,
+pub struct GLCommandProcessContext/*<'a>*/ {
+    pub ll: &'static mut LowLevel,
+    pub index_store: WriteGuardIndexBuffer<'static>,
+    pub vertex_store: WriteGuardVertexBuffer<'static>,
+    pub texture_2d_store: WriteGuardTexture2D<'static>,
+    pub shader_program_store: WriteGuardShaderProgram<'static>,
 }
 
 
@@ -90,6 +91,7 @@ impl GLBackend {
 
 impl Backend for GLBackend {
     type CommandQueue/*<'a>*/ = GLCommandQueue/*<'a>*/;
+    type CommandContext/*<'a>*/ = GLCommandProcessContext/*<'a>*/;
 
     fn get_queue<'a>(&'a self) -> GLCommandQueue/*<'a>*/ {
         use std::mem;
@@ -109,32 +111,41 @@ impl Backend for GLBackend {
 
     fn flush(&mut self) {
         let mut consume = self.command_store.consume(|&k| (k.0 as u64) << 32 + k.1 as u64);
-        let mut flush = GLCommandFlush {
-            index_store: self.index_store.write(),
-            vertex_store: self.vertex_store.write(),
-            texture_2d_store: self.texture_2d_store.write(),
-            shader_program_store: self.shader_program_store.write(),
+        let mut context = {
+            use std::mem;
+            // compose shall not outlive Backend but cannot enforce without generic_associated_types
+            // so unsafe code is used with 'static lifetime
+
+            unsafe {
+                GLCommandProcessContext {
+                    ll: mem::transmute(&mut self.ll),
+                    index_store: mem::transmute(self.index_store.write()),
+                    vertex_store: mem::transmute(self.vertex_store.write()),
+                    texture_2d_store: mem::transmute(self.texture_2d_store.write()),
+                    shader_program_store: mem::transmute(self.shader_program_store.write()),
+                }
+            }
         };
 
         for cmd in consume.drain() {
-            cmd.process(&mut self.ll, &mut flush);
+            cmd.process(&mut context);
         }
 
         // release unreferenced resources
         let ref mut ll = self.ll;
-        flush.index_store.drain_unused_filtered(|data| {
+        context.index_store.drain_unused_filtered(|data| {
             data.release(ll);
             true
         });
-        flush.vertex_store.drain_unused_filtered(|data| {
+        context.vertex_store.drain_unused_filtered(|data| {
             data.release(ll);
             true
         });
-        flush.texture_2d_store.drain_unused_filtered(|data| {
+        context.texture_2d_store.drain_unused_filtered(|data| {
             data.release(ll);
             true
         });
-        flush.shader_program_store.drain_unused_filtered(|data| {
+        context.shader_program_store.drain_unused_filtered(|data| {
             data.release(ll);
             true
         });

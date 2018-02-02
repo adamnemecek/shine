@@ -80,7 +80,7 @@ impl SimpleView {
 impl View<PlatformEngine> for SimpleView {
     fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
         println!("surface ready");
-        let mut compose = r.compose();
+        let mut queue = r.get_queue();
 
         let pos = [
             VxPos { position: f32x3!(1, 0, 0) },
@@ -88,7 +88,7 @@ impl View<PlatformEngine> for SimpleView {
             VxPos { position: f32x3!(0, 1, 0) },
             VxPos { position: f32x3!(0, 0, 0) },
         ];
-        self.vb1.create_and_set(&mut compose, &pos);
+        self.vb1.create_and_set(&mut queue, &pos);
 
         let color_tex = [
             VxColorTex { color: f32x3!(1, 0, 0), tex_coord: f32x2!(1, 0) },
@@ -96,16 +96,16 @@ impl View<PlatformEngine> for SimpleView {
             VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 1) },
             VxColorTex { color: f32x3!(0, 0, 0), tex_coord: f32x2!(0, 0) }
         ];
-        self.vb2.create_and_set(&mut compose, &color_tex);
+        self.vb2.create_and_set(&mut queue, &color_tex);
 
         let indices = [0u8, 1, 2, 0, 2, 3];
-        self.ib.create_and_set(&mut compose, &indices);
+        self.ib.create_and_set(&mut queue, &indices);
 
         let img = include_bytes!("img.jpg");
         let img = image::load_from_memory(img).unwrap();
-        self.tx.create_and_set(&mut compose, &img);
+        self.tx.create_and_set(&mut queue, &img);
 
-        self.sh.create_and_compile(&mut compose);
+        self.sh.create_and_compile(&mut queue);
     }
 
     fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
@@ -132,7 +132,7 @@ impl View<PlatformEngine> for SimpleView {
     }
 
     fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
-        let mut compose = r.compose();
+        let mut queue = r.get_queue();
 
 
         {
@@ -156,7 +156,7 @@ impl View<PlatformEngine> for SimpleView {
         let col = Float32x3::from([0.5, self.t / 6.28, 0.5]);
         */
 
-        self.sh.draw(&mut compose, params, Primitive::Triangle, 0, 6);
+        self.sh.draw(&mut queue, params, Primitive::Triangle, 0, 6);
     }
 
     fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {

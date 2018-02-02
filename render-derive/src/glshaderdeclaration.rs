@@ -82,7 +82,7 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
     let sources = sources.iter().map(|shader| {
         let sh_type = shader.0.to_ident();
         let ref source = shader.1;
-        Some(quote! { (_dragorust_render::ShaderType::#sh_type, #source) })
+        Some(quote! { (_dragorust_render_core::ShaderType::#sh_type, #source) })
     }).collect::<Vec<_>>();
     let source_count = sources.len();
 
@@ -113,7 +113,8 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
     let gen = quote! {
         #[allow(unused_imports, non_snake_case)]
         pub mod #dummy_mod {
-            extern crate dragorust_render_gl as _dragorust_render;
+            extern crate dragorust_render_core as _dragorust_render_core;
+            extern crate dragorust_render_gl as _dragorust_render_gl;
             use std::slice;
             #gen_parameters
             #gen_shader_decl
@@ -146,7 +147,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         };
 
         param_fields.push(quote! {
-            #attr_field_ident: _dragorust_render::backend::UnsafeVertexAttributeHandle
+            #attr_field_ident: _dragorust_render_gl::backend::UnsafeVertexAttributeHandle
         });
 
         match_name_cases.push(quote! {
@@ -162,7 +163,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
 
     // index buffers
     param_fields.push(quote! {
-        indices: _dragorust_render::backend::UnsafeIndexBufferIndex
+        indices: _dragorust_render_gl::backend::UnsafeIndexBufferIndex
     });
 
     visit_fields.push(quote! {
@@ -206,7 +207,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
             //#(pub #param_fields,)*
         }
 
-        impl _dragorust_render::ShaderParameters<_dragorust_render::PlatformEngine> for #param_type_ident {
+        impl _dragorust_render_core::ShaderParameters<_dragorust_render_gl::PlatformEngine> for #param_type_ident {
             fn get_count() -> usize {
                 #count
             }
@@ -218,7 +219,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
                 }
             }
 
-            fn bind(&self/*, visitor: &mut V*/) {
+            fn bind(&self, context: &mut GLCommandProcessContext) {
                 println!("hello");
             }
         }

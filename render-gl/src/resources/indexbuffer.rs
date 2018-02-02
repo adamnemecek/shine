@@ -14,9 +14,9 @@ pub struct CreateCommand {
 }
 
 impl CreateCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
-        let target = unsafe { &mut flush.index_store.at_unsafe_mut(&self.target) };
-        target.upload_data(ll, self.type_id, &self.data);
+    pub fn process(self, context: &mut GLCommandProcessContext) {
+        let target = unsafe { context.index_store.at_unsafe_mut(&self.target) };
+        target.upload_data(context.ll, self.type_id, &self.data);
     }
 }
 
@@ -34,9 +34,9 @@ pub struct ReleaseCommand {
 }
 
 impl ReleaseCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
-        let target = unsafe { &mut flush.index_store.at_unsafe_mut(&self.target) };
-        target.release(ll);
+    pub fn process(self, context: &mut GLCommandProcessContext) {
+        let target = unsafe { context.index_store.at_unsafe_mut(&self.target) };
+        target.release(context.ll);
     }
 }
 

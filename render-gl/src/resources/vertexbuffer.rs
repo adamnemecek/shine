@@ -14,10 +14,10 @@ pub struct CreateCommand<DECL: VertexDeclaration> {
 }
 
 impl<DECL: VertexDeclaration> DynCommand for CreateCommand<DECL> {
-    fn process(&mut self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
-        let target = unsafe { &mut flush.vertex_store.at_unsafe_mut(&self.target) };
+    fn process(&mut self, context: &mut GLCommandProcessContext) {
+        let target = unsafe { context.vertex_store.at_unsafe_mut(&self.target) };
         let layout = DECL::attribute_layout_iter().map(|a| GLVertexBufferAttribute::from_layout(&a));
-        target.upload_data(ll, layout, &self.data);
+        target.upload_data(context.ll, layout, &self.data);
     }
 }
 
@@ -28,9 +28,9 @@ pub struct ReleaseCommand {
 }
 
 impl ReleaseCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
-        let target = unsafe { &mut flush.vertex_store.at_unsafe_mut(&self.target) };
-        target.release(ll);
+    pub fn process(self, context: &mut GLCommandProcessContext) {
+        let target = unsafe { context.vertex_store.at_unsafe_mut(&self.target) };
+        target.release(context.ll);
     }
 }
 

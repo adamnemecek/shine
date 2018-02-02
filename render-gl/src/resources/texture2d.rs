@@ -15,9 +15,9 @@ pub struct CreateCommand {
 }
 
 impl CreateCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
-        let target = unsafe { &mut flush.texture_2d_store.at_unsafe_mut(&self.target) };
-        target.upload_data(ll, gl::TEXTURE_2D, self.width, self.height, self.format, &self.data);
+    pub fn process(self, context: &mut GLCommandProcessContext) {
+        let target = unsafe { context.texture_2d_store.at_unsafe_mut(&self.target) };
+        target.upload_data(context.ll, gl::TEXTURE_2D, self.width, self.height, self.format, &self.data);
     }
 }
 
@@ -35,9 +35,9 @@ pub struct ReleaseCommand {
 }
 
 impl ReleaseCommand {
-    pub fn process(self, ll: &mut LowLevel, flush: &mut GLCommandFlush) {
-        let target = unsafe { &mut flush.texture_2d_store.at_unsafe_mut(&self.target) };
-        target.release(ll);
+    pub fn process(self, context: &mut GLCommandProcessContext) {
+        let target = unsafe { context.texture_2d_store.at_unsafe_mut(&self.target) };
+        target.release(context.ll);
     }
 }
 

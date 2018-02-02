@@ -338,7 +338,7 @@ impl<'a, D: 'a> WriteGuard<'a, D> {
         &entry.value
     }
 
-    pub fn at_mut(&self, index: &Index<D>) -> &mut D {
+    pub fn at_mut(&mut self, index: &Index<D>) -> &mut D {
         assert!(!index.is_null(), "Indexing by a null-index is not allowed");
         let entry = unsafe { &mut (*index.0) };
         &mut entry.value
@@ -350,7 +350,7 @@ impl<'a, D: 'a> WriteGuard<'a, D> {
         &entry.value
     }
 
-    pub unsafe fn at_unsafe_mut(&self, index: &UnsafeIndex<D>) -> &mut D {
+    pub unsafe fn at_unsafe_mut(&mut self, index: &UnsafeIndex<D>) -> &mut D {
         assert!(!index.is_null(), "Indexing by a null-index is not allowed");
         let entry = &mut (*index.0);
         &mut entry.value
