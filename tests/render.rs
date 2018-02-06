@@ -107,7 +107,6 @@ impl View<PlatformEngine> for SimpleView {
         self.tx.create_and_set(&mut queue, &img);
 
         self.sh.create_and_compile(&mut queue);
-        println!("sh1: {:?}", self.sh);
     }
 
     fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
@@ -116,9 +115,7 @@ impl View<PlatformEngine> for SimpleView {
         self.vb2.reset();
         self.ib.reset();
         self.tx.reset();
-        println!("sh2: {:?}", self.sh);
         self.sh.reset();
-        println!("sh3: {:?}", self.sh);
     }
 
     fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut GLBackend) {
@@ -165,9 +162,7 @@ impl View<PlatformEngine> for SimpleView {
             u_tex: (&self.tx).into(),
         };
 
-        println!("sh dr1: {:?}", self.sh);
         self.sh.draw(&mut queue, params, Primitive::Triangle, 0, 6);
-        println!("sh dr2: {:?}", self.sh);
     }
 
     fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {

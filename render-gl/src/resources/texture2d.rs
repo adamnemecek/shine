@@ -84,7 +84,7 @@ impl Resource<PlatformEngine> for Texture2DHandle {
             return;
         }
 
-        println!("Texture2D - release");
+        //println!("Texture2D - release");
         queue.add_command(0,
                           ReleaseCommand {
                               target: UnsafeIndex::from_index(&self.0),
@@ -98,7 +98,7 @@ impl Texture2D<PlatformEngine> for Texture2DHandle {
 
         match source.to_data() {
             ImageData::Transient(width, height, format, slice) => {
-                println!("Texture2D - ImageData::Transient");
+                //println!("Texture2D - ImageData::Transient");
                 queue.add_command(0,
                                   CreateCommand {
                                       target: UnsafeIndex::from_index(&self.0),

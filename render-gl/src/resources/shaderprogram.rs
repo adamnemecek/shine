@@ -16,6 +16,7 @@ impl<DECL: ShaderDeclaration<PlatformEngine>> DynCommand for CreateCommand<DECL>
     fn process(&mut self, context: &mut GLCommandProcessContext) {
         let target = unsafe { context.shader_program_store.at_unsafe_mut(&self.target) };
         target.create_program(context.ll, DECL::source_iter());
+        target.parse_parameters(context.ll, DECL::Parameters::get_index_by_name);
     }
 }
 
@@ -54,7 +55,6 @@ impl<DECL: ShaderDeclaration<PlatformEngine>> DynCommand for DrawCommand<DECL> {
         {
             let target = unsafe { context.shader_program_store.at_unsafe_mut(&self.target) };
             if !target.bind(context.ll) {
-                println!("shader bind failed");
                 return;
             }
         }
@@ -99,7 +99,7 @@ impl<DECL: ShaderDeclaration<PlatformEngine>> Resource<PlatformEngine> for Shade
             return;
         }
 
-        println!("ShaderProgram - release");
+        //println!("ShaderProgram - release");
         queue.add_command(0,
                           ReleaseCommand {
                               target: UnsafeIndex::from_index(&self.0),
@@ -109,7 +109,7 @@ impl<DECL: ShaderDeclaration<PlatformEngine>> Resource<PlatformEngine> for Shade
 
 impl<DECL: ShaderDeclaration<PlatformEngine>> ShaderProgram<DECL, PlatformEngine> for ShaderProgramHandle<DECL> {
     fn compile(&self, queue: &mut GLCommandQueue) {
-        println!("ShaderProgram - compile");
+        //println!("ShaderProgram - compile");
         queue.add_command(0,
                           CreateCommand::<DECL> {
                               target: UnsafeIndex::from_index(&self.0),
@@ -118,7 +118,7 @@ impl<DECL: ShaderDeclaration<PlatformEngine>> ShaderProgram<DECL, PlatformEngine
     }
 
     fn draw(&self, queue: &mut GLCommandQueue, parameters: DECL::Parameters, primitive: Primitive, vertex_start: usize, vertex_count: usize) {
-        println!("ShaderProgram - draw");
+        //println!("ShaderProgram - draw");
         queue.add_command(0,
                           DrawCommand::<DECL> {
                               target: UnsafeIndex::from_index(&self.0),

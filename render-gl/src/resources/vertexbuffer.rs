@@ -78,7 +78,7 @@ impl<DECL: VertexDeclaration> Resource<PlatformEngine> for VertexBufferHandle<DE
             return;
         }
 
-        println!("VertexBuffer - release");
+        //println!("VertexBuffer - release");
         queue.add_command(0,
                           ReleaseCommand {
                               target: UnsafeIndex::from_index(&self.0),
@@ -92,7 +92,7 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL, PlatformEngine> for VertexBuffe
 
         match source.to_data() {
             VertexData::Transient(slice) => {
-                println!("VertexBuffer - VertexData::Transient");
+                //println!("VertexBuffer - VertexData::Transient");
                 queue.add_command(0,
                                   CreateCommand::<DECL> {
                                       target: UnsafeIndex::from_index(&self.0),

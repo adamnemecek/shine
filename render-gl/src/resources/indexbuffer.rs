@@ -83,7 +83,7 @@ impl<DECL: IndexDeclaration> Resource<PlatformEngine> for IndexBufferHandle<DECL
             return;
         }
 
-        println!("IndexBuffer - release");
+        //println!("IndexBuffer - release");
         queue.add_command(0,
                           ReleaseCommand {
                               target: UnsafeIndex::from_index(&self.0),
@@ -97,7 +97,7 @@ impl<DECL: IndexDeclaration> IndexBuffer<DECL, PlatformEngine> for IndexBufferHa
 
         match source.to_data() {
             IndexData::Transient(slice) => {
-                println!("IndexBuffer - IndexData::Transient");
+                //println!("IndexBuffer - IndexData::Transient");
                 queue.add_command(0,
                                   CreateCommand {
                                       target: UnsafeIndex::from_index(&self.0),

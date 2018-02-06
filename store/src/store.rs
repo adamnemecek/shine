@@ -305,36 +305,32 @@ impl<'a, D: 'a> WriteGuard<'a, D> {
         self.shared.resources.append(&mut self.exclusive.requests);
     }
 
-    fn retain_impl<F: FnMut(&mut D, bool) -> bool>(arena: &mut Arena<Entry<D>>, v: &mut Vec<*mut Entry<D>>, filter: &mut F) {
+    fn drain_impl<F: FnMut(&mut D) -> bool>(arena: &mut Arena<Entry<D>>, v: &mut Vec<*mut Entry<D>>, filter: &mut F) {
         v.drain_filter(|&mut e| {
             let e = unsafe { &mut *e };
-            let is_referenced = e.ref_count.load(Ordering::Relaxed) > 0;
-            let is_retain = filter(&mut e.value, is_referenced);
-            if !is_referenced & !is_retain {
-                arena.deallocate(e);
+            if e.ref_count.load(Ordering::Relaxed) == 0 {
+                let drain = filter(&mut e.value);
+                if drain {
+                    arena.deallocate(e);
+                }
+                drain
+            } else {
+                false
             }
-            !is_referenced && !is_retain
         });
     }
 
-    /// Retains the referenced elements and the those specified by the predicate.
-    /// In other words, remove all unreferenced resources such that f(&mut data, is_referenced) returns false.
-    /// The first parameter for the predicate is the item in the store, the second parameter
-    /// indicates if item has any reference.
-    pub fn retain<F: FnMut(&mut D, bool) -> bool>(&mut self, mut filter: F) {
+    /// Drain unreferenced elements those specified by the predicate.
+    /// In other words, remove all unreferenced resources such that f(&mut data) returns true.
+    pub fn drain_unused_filtered<F: FnMut(&mut D) -> bool>(&mut self, mut filter: F) {
         let exclusive = &mut *self.exclusive;
-        Self::retain_impl(&mut exclusive.arena, &mut self.shared.resources, &mut filter);
-        Self::retain_impl(&mut exclusive.arena, &mut exclusive.requests, &mut filter);
+        Self::drain_impl(&mut exclusive.arena, &mut self.shared.resources, &mut filter);
+        Self::drain_impl(&mut exclusive.arena, &mut exclusive.requests, &mut filter);
     }
 
     /// Drain all unreferenced items. Only the referenced items are kept in the store.
     pub fn drain_unused(&mut self) {
-        self.retain(|_, _| false)
-    }
-
-    /// Drain unreferenced items based on the given predicate.
-    pub fn drain_unused_filtered<F: FnMut(&mut D) -> bool>(&mut self, mut filter: F) {
-        self.retain(|d, _| filter(d))
+        self.drain_unused_filtered(|_| true)
     }
 
     pub fn at(&self, index: &Index<D>) -> &D {

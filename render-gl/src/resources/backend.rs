@@ -127,6 +127,11 @@ impl Backend for GLBackend {
             }
         };
 
+        context.index_store.finalize_requests();
+        context.vertex_store.finalize_requests();
+        context.texture_2d_store.finalize_requests();
+        context.shader_program_store.finalize_requests();
+
         for cmd in consume.drain() {
             cmd.process(&mut context);
         }
