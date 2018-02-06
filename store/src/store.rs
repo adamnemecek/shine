@@ -41,7 +41,12 @@ impl<D> Default for Index<D> {
 
 impl<D> fmt::Debug for Index<D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Index({:p})", self.0)
+        if !self.is_null() {
+            let rc = unsafe { &(*self.0).ref_count.load(Ordering::Relaxed) };
+            write!(f, "Index({:p}, rc:{})", self.0, rc)
+        } else {
+            write!(f, "Index({:p})", self.0)
+        }
     }
 }
 

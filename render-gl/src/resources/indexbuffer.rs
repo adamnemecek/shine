@@ -108,3 +108,11 @@ impl<DECL: IndexDeclaration> IndexBuffer<DECL, PlatformEngine> for IndexBufferHa
         }
     }
 }
+
+
+impl<'a, DECL: IndexDeclaration> From<&'a IndexBufferHandle<DECL>> for UnsafeIndexBufferIndex {
+    #[inline(always)]
+    fn from(value: &IndexBufferHandle<DECL>) -> UnsafeIndexBufferIndex {
+        UnsafeIndexBufferIndex::from_index(&value.0)
+    }
+}

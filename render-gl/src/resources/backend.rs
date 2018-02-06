@@ -54,6 +54,8 @@ pub struct GLBackend {
     shader_program_store: ShaderProgramStore,
 }
 
+unsafe impl Sync for LowLevel {}
+
 impl GLBackend {
     pub fn new() -> GLBackend {
         GLBackend {
@@ -94,11 +96,10 @@ impl Backend for GLBackend {
     type CommandContext/*<'a>*/ = GLCommandProcessContext/*<'a>*/;
 
     fn get_queue<'a>(&'a self) -> GLCommandQueue/*<'a>*/ {
-        use std::mem;
-        // compose shall not outlive Backend but cannot enforce without generic_associated_types
-        // so unsafe code is used with 'static lifetime
-
-        unsafe {
+        /*generic_associated_types workaround*/ unsafe {
+            // compose shall not outlive Backend but cannot enforce without generic_associated_types
+            // so this 'static lifetime workaround is used
+            use std::mem;
             GLCommandQueue {
                 command_queue: mem::transmute(self.command_store.produce()),
                 index_store: mem::transmute(self.index_store.read()),
@@ -112,11 +113,10 @@ impl Backend for GLBackend {
     fn flush(&mut self) {
         let mut consume = self.command_store.consume(|&k| (k.0 as u64) << 32 + k.1 as u64);
         let mut context = {
-            use std::mem;
-            // compose shall not outlive Backend but cannot enforce without generic_associated_types
-            // so unsafe code is used with 'static lifetime
-
-            unsafe {
+            /*generic_associated_types workaround*/ unsafe {
+                // compose shall not outlive Backend but cannot enforce without generic_associated_types
+                // so this 'static lifetime workaround is used
+                use std::mem;
                 GLCommandProcessContext {
                     ll: mem::transmute(&mut self.ll),
                     index_store: mem::transmute(self.index_store.write()),

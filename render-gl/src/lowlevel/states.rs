@@ -49,7 +49,7 @@ impl ViewportState {
             self.current = vp;
             assert!(vp.2 > 0 || vp.3 > 0, "non-positive width or height parameter for the viewport: {:?}", vp);
             gl_check_error();
-            ugl!(Viewport(vp.0, vp.1, vp.2, vp.3));
+            ffi!(gl::Viewport(vp.0, vp.1, vp.2, vp.3));
             gl_check_error();
         }
     }
@@ -74,35 +74,35 @@ impl DepthFunction {
         gl_check_error();
         match self {
             &DepthFunction::Disable => {
-                ugl!(Disable(gl::DEPTH_TEST));
+                ffi!(gl::Disable(gl::DEPTH_TEST));
             }
             &DepthFunction::Always => {
-                ugl!(Enable(gl::DEPTH_TEST));
-                ugl!(DepthFunc(gl::ALWAYS));
+                ffi!(gl::Enable(gl::DEPTH_TEST));
+                ffi!(gl::DepthFunc(gl::ALWAYS));
             }
             &DepthFunction::Never => {
-                ugl!(Enable(gl::DEPTH_TEST));
-                ugl!(DepthFunc(gl::NEVER));
+                ffi!(gl::Enable(gl::DEPTH_TEST));
+                ffi!(gl::DepthFunc(gl::NEVER));
             }
             &DepthFunction::Less => {
-                ugl!(Enable(gl::DEPTH_TEST));
-                ugl!(DepthFunc(gl::LESS));
+                ffi!(gl::Enable(gl::DEPTH_TEST));
+                ffi!(gl::DepthFunc(gl::LESS));
             }
             &DepthFunction::LessEqual => {
-                ugl!(Enable(gl::DEPTH_TEST));
-                ugl!(DepthFunc(gl::LEQUAL));
+                ffi!(gl::Enable(gl::DEPTH_TEST));
+                ffi!(gl::DepthFunc(gl::LEQUAL));
             }
             &DepthFunction::Greater => {
-                ugl!(Enable(gl::DEPTH_TEST));
-                ugl!(DepthFunc(gl::GREATER));
+                ffi!(gl::Enable(gl::DEPTH_TEST));
+                ffi!(gl::DepthFunc(gl::GREATER));
             }
             &DepthFunction::GreaterEqual => {
-                ugl!(Enable(gl::DEPTH_TEST));
-                ugl!(DepthFunc(gl::GEQUAL));
+                ffi!(gl::Enable(gl::DEPTH_TEST));
+                ffi!(gl::DepthFunc(gl::GEQUAL));
             }
             &DepthFunction::Equal => {
-                ugl!(Enable(gl::DEPTH_TEST));
-                ugl!(DepthFunc(gl::EQUAL));
+                ffi!(gl::Enable(gl::DEPTH_TEST));
+                ffi!(gl::DepthFunc(gl::EQUAL));
             }
         }
         gl_check_error();
@@ -127,7 +127,7 @@ impl BlendFunction {
         gl_check_error();
         match self {
             &BlendFunction::Disable => {
-                ugl!(Disable(gl::BLEND));
+                ffi!(gl::Disable(gl::BLEND));
             }
         }
         gl_check_error();
@@ -160,39 +160,39 @@ impl StencilFunction {
         gl_check_error();
         match self {
             &StencilFunction::Disable => {
-                ugl!(Disable(gl::STENCIL_TEST));
+                ffi!(gl::Disable(gl::STENCIL_TEST));
             }
             &StencilFunction::Always(ref_value, mask_value) => {
-                ugl!(Enable(gl::STENCIL_TEST));
-                ugl!(StencilFunc(gl::ALWAYS, ref_value, mask_value));
+                ffi!(gl::Enable(gl::STENCIL_TEST));
+                ffi!(gl::StencilFunc(gl::ALWAYS, ref_value, mask_value));
             }
             &StencilFunction::Never(ref_value, mask_value) => {
-                ugl!(Enable(gl::STENCIL_TEST));
-                ugl!(StencilFunc(gl::NEVER, ref_value, mask_value));
+                ffi!(gl::Enable(gl::STENCIL_TEST));
+                ffi!(gl::StencilFunc(gl::NEVER, ref_value, mask_value));
             }
             &StencilFunction::Less(ref_value, mask_value) => {
-                ugl!(Enable(gl::STENCIL_TEST));
-                ugl!(StencilFunc(gl::LESS, ref_value, mask_value));
+                ffi!(gl::Enable(gl::STENCIL_TEST));
+                ffi!(gl::StencilFunc(gl::LESS, ref_value, mask_value));
             }
             &StencilFunction::LessEqual(ref_value, mask_value) => {
-                ugl!(Enable(gl::STENCIL_TEST));
-                ugl!(StencilFunc(gl::LEQUAL, ref_value, mask_value));
+                ffi!(gl::Enable(gl::STENCIL_TEST));
+                ffi!(gl::StencilFunc(gl::LEQUAL, ref_value, mask_value));
             }
             &StencilFunction::Greater(ref_value, mask_value) => {
-                ugl!(Enable(gl::STENCIL_TEST));
-                ugl!(StencilFunc(gl::GREATER, ref_value, mask_value));
+                ffi!(gl::Enable(gl::STENCIL_TEST));
+                ffi!(gl::StencilFunc(gl::GREATER, ref_value, mask_value));
             }
             &StencilFunction::GreaterEqual(ref_value, mask_value) => {
-                ugl!(Enable(gl::STENCIL_TEST));
-                ugl!(StencilFunc(gl::GEQUAL, ref_value, mask_value));
+                ffi!(gl::Enable(gl::STENCIL_TEST));
+                ffi!(gl::StencilFunc(gl::GEQUAL, ref_value, mask_value));
             }
             &StencilFunction::Equal(ref_value, mask_value) => {
-                ugl!(Enable(gl::STENCIL_TEST));
-                ugl!(StencilFunc(gl::EQUAL, ref_value, mask_value));
+                ffi!(gl::Enable(gl::STENCIL_TEST));
+                ffi!(gl::StencilFunc(gl::EQUAL, ref_value, mask_value));
             }
             &StencilFunction::NotEqual(ref_value, mask_value) => {
-                ugl!(Enable(gl::STENCIL_TEST));
-                ugl!(StencilFunc(gl::NOTEQUAL, ref_value, mask_value));
+                ffi!(gl::Enable(gl::STENCIL_TEST));
+                ffi!(gl::StencilFunc(gl::NOTEQUAL, ref_value, mask_value));
             }
         }
         gl_check_error();

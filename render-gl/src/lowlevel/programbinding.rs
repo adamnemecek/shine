@@ -7,6 +7,7 @@ use lowlevel::*;
 pub struct ProgramBinding {
     force: bool,
     bound_id: GLuint,
+    params: Option<ProgramParameters>,
 }
 
 impl ProgramBinding {
@@ -14,6 +15,7 @@ impl ProgramBinding {
         ProgramBinding {
             force: false,
             bound_id: 0,
+            params: None,
         }
     }
 
@@ -36,22 +38,28 @@ impl ProgramBinding {
         self.bound_id
     }
 
+    /// Returns the id of the current program.
+    pub fn get_parameters(&self) -> Option<ProgramParameters> {
+        self.params.clone()
+    }
+
     /// Binds program.
-    pub fn bind(&mut self, program_id: GLuint) {
+    pub fn bind(&mut self, program_id: GLuint, params: Option<ProgramParameters>) {
         if !self.force && self.bound_id == program_id {
             return;
         }
 
         gl_check_error();
-        ugl!(UseProgram(program_id));
+        ffi!(gl::UseProgram(program_id));
         gl_check_error();
         self.bound_id = program_id;
+        self.params = params;
     }
 
     /// Unbinds the program if it is active. This function is mainly used during release.
     pub fn unbind_if_active(&mut self, program_id: GLuint) {
         if self.bound_id == program_id {
-            self.bind(0);
+            self.bind(0, None);
         }
     }
 

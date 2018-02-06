@@ -111,3 +111,11 @@ impl Texture2D<PlatformEngine> for Texture2DHandle {
         }
     }
 }
+
+
+impl<'a> From<&'a Texture2DHandle> for UnsafeTexture2DIndex {
+    #[inline(always)]
+    fn from(value: &Texture2DHandle) -> UnsafeTexture2DIndex {
+        UnsafeTexture2DIndex::from_index(&value.0)
+    }
+}

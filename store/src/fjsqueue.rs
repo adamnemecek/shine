@@ -137,7 +137,7 @@ impl<'a, K: 'a + fmt::Debug, C: 'a> ConsumeGuard<'a, K, C> {
         // command buffer is cleared by setting the length to 0. As self is moved out,
         // it's safe to set length prior. Borrow checker prohibit any
         // modification on the queue while drain has not completed (dropped) and
-        // queue items are consumed ony-by-one using raw unsafe pointers in the iteration.
+        // queue items are consumed/dropped ony-by-one using raw pointers during iteration.
         // Keys are not used after sorting, so those container can be cleared in the safe way.
 
         self.shared.buffers.drain_filter(|buffer| {
@@ -180,8 +180,7 @@ impl<'d, 'a: 'd, K: 'a + fmt::Debug, C: 'a> Iterator for Drain<'d, 'a, K, C> {
         if self.idx < shared.order.len() {
             let (_, (bid, cid)) = shared.order[self.idx];
             self.idx += 1;
-            Some(unsafe {
-                // move ot the item manually
+            Some(unsafe { // move out the item manually
                 let mut c: C = mem::uninitialized();
                 let src = shared.buffers[bid as usize].commands.as_ptr().offset(cid as isize);
                 ptr::copy_nonoverlapping(src, &mut c, 1);

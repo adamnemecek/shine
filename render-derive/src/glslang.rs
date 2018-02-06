@@ -43,7 +43,7 @@ pub struct Uniform {
 }
 
 impl Uniform {
-    pub fn get_stored_type_token(&self) -> Result<quote::Tokens, String> {
+    pub fn get_parameter_type_token(&self) -> Result<quote::Tokens, String> {
         let type_id =
             match self.type_id {
                 5126 => quote!(f32), // GLenum(GL_FLOAT)
@@ -65,8 +65,8 @@ impl Uniform {
                 35675 => quote!(_dragorust_render_core::Float32x9),// GLenum(GL_FLOAT_MAT3)
                 35676 => quote!(_dragorust_render_core::Float32x16),// GLenum(GL_FLOAT_MAT4)
 
-                35678 => quote!(_dragorust_render_gl::backend::UnsafeTexture2DIndex),// GLenum(GL_SAMPLER_2D)
-                35680 => quote!(_dragorust_render_gl::backend::TextureCubeHandle),// GLenum(GL_SAMPLER_CUBE)
+                35678 => quote!(_dragorust_render_gl::UnsafeTexture2DIndex),// GLenum(GL_SAMPLER_2D)
+                35680 => quote!(_dragorust_render_gl::UnsafeTextureCubeIndex),// GLenum(GL_SAMPLER_CUBE)
 
                 _ => return Err(format!("Could not find built-in type for uniform {}, type id:{}", self.name, self.type_id))
             };
@@ -79,7 +79,7 @@ impl Uniform {
         }
     }
 
-    pub fn get_process_function_name(&self) -> Result<String, String> {
+    pub fn get_function_postfix(&self) -> Result<String, String> {
         let type_id =
             match self.type_id {
                 5126 => "f32", // GLenum(GL_FLOAT)
@@ -101,8 +101,8 @@ impl Uniform {
                 35675 => "f32x9",// GLenum(GL_FLOAT_MAT3)
                 35676 => "f32x16",// GLenum(GL_FLOAT_MAT4)
 
-                35678 => "tex_2d",// GLenum(GL_SAMPLER_2D)
-                35680 => "tex_cube",// GLenum(GL_SAMPLER_CUBE)
+                35678 => "texture_2d",// GLenum(GL_SAMPLER_2D)
+                35680 => "texture_cube",// GLenum(GL_SAMPLER_CUBE)
 
                 _ => return Err(format!("Could not find built-in type for uniform {}, type id:{}", self.name, self.type_id))
             };

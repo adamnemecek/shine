@@ -2,6 +2,7 @@
 extern crate dragorust_render_gl as render;
 extern crate image;
 
+use std::env;
 use std::time::Duration;
 use render::*;
 
@@ -106,6 +107,7 @@ impl View<PlatformEngine> for SimpleView {
         self.tx.create_and_set(&mut queue, &img);
 
         self.sh.create_and_compile(&mut queue);
+        println!("sh1: {:?}", self.sh);
     }
 
     fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
@@ -114,7 +116,9 @@ impl View<PlatformEngine> for SimpleView {
         self.vb2.reset();
         self.ib.reset();
         self.tx.reset();
+        println!("sh2: {:?}", self.sh);
         self.sh.reset();
+        println!("sh3: {:?}", self.sh);
     }
 
     fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut GLBackend) {
@@ -134,29 +138,36 @@ impl View<PlatformEngine> for SimpleView {
     fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
         let mut queue = r.get_queue();
 
-
         {
             use render::lowlevel::*;
 
             let ll = r.ll_mut();
 
-            ugl!(ClearColor(0.0, 0.0, 0.5, 1.0));
-            ugl!(Clear(gl::COLOR_BUFFER_BIT));
+            ffi!(gl::ClearColor(0.0, 0.0, 0.0, 1.0));
+            ffi!(gl::Clear(gl::COLOR_BUFFER_BIT));
             ll.states.set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
         }
 
-        let params = ShSimpleParameters {};
-        /*let st = self.t.sin();
+        let st = self.t.sin();
         let ct = self.t.cos();
-        let trsf = Float32x16::from(
-            [st, -ct, 0.0, 0.0,
-                ct, st, 0.0, 0.0,
-                0.0, 0.0, 1.0, 0.0,
-                0.0, 0.0, 0.0, 1.0]);
-        let col = Float32x3::from([0.5, self.t / 6.28, 0.5]);
-        */
 
+        let params = ShSimpleParameters {
+            v_color: (&self.vb2, VxColorTex::COLOR).into(),
+            v_tex_coord: (&self.vb2, VxColorTex::TEXCOORD).into(),
+            v_position: (&self.vb1, VxPos::POSITION).into(),
+            indices: (&self.ib).into(),
+            u_color: Float32x3::from([0.5, self.t / 6.28, 0.5]),
+            u_trsf: Float32x16::from(
+                [st, -ct, 0.0, 0.0,
+                    ct, st, 0.0, 0.0,
+                    0.0, 0.0, 1.0, 0.0,
+                    0.0, 0.0, 0.0, 1.0]),
+            u_tex: (&self.tx).into(),
+        };
+
+        println!("sh dr1: {:?}", self.sh);
         self.sh.draw(&mut queue, params, Primitive::Triangle, 0, 6);
+        println!("sh dr2: {:?}", self.sh);
     }
 
     fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
@@ -169,7 +180,7 @@ impl View<PlatformEngine> for SimpleView {
 
 #[test]
 pub fn render() {
-    assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(env::var("RUST_TEST_THREADS").unwrap() == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
 

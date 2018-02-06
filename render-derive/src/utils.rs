@@ -52,6 +52,25 @@ pub fn convert_snake_to_camel_case(intput: &str) -> String {
 }
 
 
+pub fn convert_snake_to_capital_case(intput: &str) -> String {
+    let mut result = String::new();
+    result.reserve(intput.len());
+
+    for c in intput.chars() {
+        match c {
+            '_' => { /*consume*/ }
+
+            c => {
+                for u in c.to_uppercase() {
+                    result.push(u);
+                }
+            }
+        }
+    }
+    result
+}
+
+
 pub fn convert_camel_to_snake_case(intput: &str) -> String {
     let mut result = String::new();
     result.reserve(intput.len());
@@ -69,27 +88,4 @@ pub fn convert_camel_to_snake_case(intput: &str) -> String {
         }
     }
     result
-}
-
-
-pub fn impl_offset_of(container: &syn::Ident, field: &syn::Ident) -> quote::Tokens {
-    quote! {
-        unsafe {
-            use std::mem;
-            // Make sure the field actually exists. This line ensures that a
-            // compile-time error is generated if $field is accessed through a
-            // Deref impl.
-            #[allow(unused_variables)]
-            //let #container { #field: _, .. };
-
-            // Create an instance of the container and calculate the offset to its
-            // field. Although we are creating references to uninitialized data this
-            // is fine since we are not dereferencing them.
-            let val: #container = mem::uninitialized();
-            let result = &val.#field as *const _ as usize - &val as *const _ as usize;
-            mem::forget(val);
-
-            result as usize
-        }
-    }
 }

@@ -87,8 +87,6 @@ impl<DECL: VertexDeclaration> Resource<PlatformEngine> for VertexBufferHandle<DE
 }
 
 impl<DECL: VertexDeclaration> VertexBuffer<DECL, PlatformEngine> for VertexBufferHandle<DECL> {
-    type AttributeRef = (UnsafeVertexBufferIndex, usize);
-
     fn set<'a, SRC: VertexSource<DECL>>(&self, queue: &mut GLCommandQueue, source: &SRC) {
         assert!(!self.is_null());
 
@@ -104,8 +102,16 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL, PlatformEngine> for VertexBuffe
             }
         }
     }
+}
 
-    fn get_attribute(&self, attr: DECL::Attribute) -> Self::AttributeRef {
-        (UnsafeVertexBufferIndex::from_index(&self.0), attr.into())
+
+/// Vertex attribute reference.
+#[derive(Clone, Debug)]
+pub struct UnsafeVertexAttributeIndex(pub UnsafeVertexBufferIndex, pub usize);
+
+impl<'a, DECL: VertexDeclaration> From<(&'a VertexBufferHandle<DECL>, DECL::Attribute)> for UnsafeVertexAttributeIndex {
+    #[inline(always)]
+    fn from(value: (&VertexBufferHandle<DECL>, DECL::Attribute)) -> UnsafeVertexAttributeIndex {
+        UnsafeVertexAttributeIndex(UnsafeVertexBufferIndex::from_index(&(value.0).0), value.1.into())
     }
 }

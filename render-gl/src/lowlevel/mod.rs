@@ -2,6 +2,7 @@ mod utils;
 pub mod vertexbinding;
 pub mod indexbinding;
 pub mod texturebinding;
+pub mod programparameter;
 pub mod programbinding;
 pub mod states;
 
@@ -17,6 +18,7 @@ pub use gl::types::*;
 pub use self::utils::*;
 pub use self::vertexbinding::*;
 pub use self::indexbinding::*;
+pub use self::programparameter::*;
 pub use self::programbinding::*;
 pub use self::texturebinding::*;
 pub use self::states::*;
@@ -96,13 +98,13 @@ impl LowLevel {
 
         gl_check_error();
         if !self.index_binding.is_indexed() {
-            ugl!(DrawArrays(primitive,
+            ffi!(gl::DrawArrays(primitive,
                            vertex_start as GLint,
                            vertex_count as GLsizei));
         } else {
             let offset = self.index_binding.get_offset(vertex_start);
             let index_type = self.index_binding.get_index_type();
-            ugl!(DrawElements(primitive,
+            ffi!(gl::DrawElements(primitive,
                              vertex_count as GLsizei,
                              index_type,
                              offset as *const GLvoid));
@@ -113,7 +115,7 @@ impl LowLevel {
 
     /// A simple test function to check if ll is alive
     pub fn hello(&mut self, time: f32) {
-        ugl!(ClearColor(0.0, 0.0, time, 1.0));
-        ugl!(Clear(gl::COLOR_BUFFER_BIT));
+        ffi!(gl::ClearColor(time, 0.0, 0.0, 1.0));
+        ffi!(gl::Clear(gl::COLOR_BUFFER_BIT));
     }
 }

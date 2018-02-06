@@ -2,6 +2,7 @@
 extern crate dragorust_render_gl as render;
 extern crate image;
 
+use std::env;
 use std::time::Duration;
 use render::*;
 
@@ -161,8 +162,8 @@ impl View<PlatformEngine> for SimpleView {
 
         let ll = r.ll_mut();
 
-        ugl!(ClearColor(0.0, 0.0, 0.5, 1.0));
-        ugl!(Clear(gl::COLOR_BUFFER_BIT));
+        ffi!(gl::ClearColor(0.0, 0.0, 0.5, 1.0));
+        ffi!(gl::Clear(gl::COLOR_BUFFER_BIT));
 
         //ll.states.set_viewport(lowlevel::Viewport::FullScreen);
         ll.states.set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
@@ -182,17 +183,19 @@ impl View<PlatformEngine> for SimpleView {
         let ib = &mut self.ib;
         let tx = &mut self.tx;
         if sh.bind(ll) {
-            let locations = sh.get_parameter_locations();
+            if let Some(locations) = ll.program_binding.get_parameters() {
+                let locations = &mut *locations.borrow_mut();
 
-            ib.bind(ll);
+                locations[0].set_attribute(ll, &vb2, VxColorTex::COLOR);
+                locations[1].set_attribute(ll, &vb2, VxColorTex::TEXCOORD);
+                locations[2].set_attribute(ll, &vb1, VxPos::POSITION);
 
-            locations[0].set_attribute(ll, &vb2, VxColorTexAttribute::Color);
-            locations[1].set_attribute(ll, &vb2, VxColorTexAttribute::TexCoord);
-            locations[2].set_attribute(ll, &vb1, VxPosAttribute::Position);
+                locations[3].set_index(ll, &ib);
 
-            locations[4].set_f32x3(ll, &col);
-            locations[5].set_f32x16(ll, &trsf);
-            locations[6].set_texture(ll, &tx);
+                locations[4].set_f32x3(ll, &col);
+                locations[5].set_f32x16(ll, &trsf);
+                locations[6].set_texture_2d(ll, &tx);
+            }
 
             ll.draw(gl::TRIANGLES, 0, 6);
         }
@@ -208,7 +211,7 @@ impl View<PlatformEngine> for SimpleView {
 
 #[test]
 pub fn simple_lowlevel() {
-    assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(env::var("RUST_TEST_THREADS").unwrap() == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
 

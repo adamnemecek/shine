@@ -52,12 +52,12 @@ pub fn hello_world() {
 
     let mut window = render::PlatformWindowSettings::default()
         .title("main")
-        .size((1024, 1024))
+        .size((512, 512))
         .build(&engine, SimpleView { time: 0.0 }).expect("Could not initialize main window");
 
     let mut sub_window = render::PlatformWindowSettings::default()
         .title("sub")
-        .size((256, 256))
+        .size((512, 512))
         //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine, SimpleView { time: 0.0 }).expect("Could not initialize sub window");
 

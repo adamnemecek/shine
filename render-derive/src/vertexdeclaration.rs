@@ -39,6 +39,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
 
     let mut enum_idents: Vec<quote::Tokens> = vec!();
     let mut qualified_enum_idents: Vec<quote::Tokens> = vec!();
+    let mut consts: Vec<quote::Tokens> = vec!();
     let mut match_name_cases: Vec<quote::Tokens> = vec!();
     let mut match_from_usize_cases: Vec<quote::Tokens> = vec!();
     let mut match_to_usize_cases: Vec<quote::Tokens> = vec!();
@@ -48,6 +49,8 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         let field_ident = field.ident.as_ref().unwrap();
         let field_name = field_ident.to_string();
         let field_ty = &field.ty;
+        let const_name = convert_snake_to_capital_case(&field_name);
+        let const_ident = syn::Ident::new(const_name.clone());
         let enum_name = convert_snake_to_camel_case(&field_name);
         let enum_ident = syn::Ident::new(enum_name.clone());
         let match_name = format!("v{}", enum_name);
@@ -55,6 +58,12 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         enum_idents.push(
             quote! {
                 #enum_ident
+            }
+        );
+
+        consts.push(
+            quote! {
+                pub const #const_ident: #enum_type_name = #enum_type_name::#enum_ident
             }
         );
 
@@ -66,8 +75,8 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
 
         match_name_cases.push(
             quote! {
-                #field_name => Ok(#enum_type_name::#enum_ident),
-                #enum_name => Ok(#enum_type_name::#enum_ident),
+                //#field_name => Ok(#enum_type_name::#enum_ident),
+                //#enum_name => Ok(#enum_type_name::#enum_ident),
                 #match_name => Ok(#enum_type_name::#enum_ident)
             }
         );
@@ -119,6 +128,12 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         }
     };
 
+    let gen_impl_consts = quote! {
+        impl #struct_name {
+            #(#consts;)*
+        }
+    };
+
     let gen_impl_from_usize = quote! {
         impl From<usize> for #enum_type_name {
             fn from(index: usize) -> #enum_type_name {
@@ -158,6 +173,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
             #gen_attribute_iter
             #gen_attribute_layout
         }
+        #gen_impl_consts
         #gen_impl_from_usize
         #gen_impl_from_str
     }

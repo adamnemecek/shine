@@ -1,7 +1,3 @@
-#![deny(missing_docs)]
-#![deny(missing_copy_implementations)]
-
-
 /// Structure to store a window size.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Size {
@@ -110,8 +106,8 @@ impl From<[i32; 4]> for Rectangle {
 
             size: Size {
                 width: value[2],
-                height: value[3]
-            }
+                height: value[3],
+            },
         }
     }
 }

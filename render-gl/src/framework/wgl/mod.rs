@@ -35,11 +35,11 @@ use lowlevel::*;
 use self::dummywindow::DummyWindow;
 
 // Loads the gl library
-unsafe fn load_gl_library() -> Result<winapi::HMODULE, Error> {
+fn load_gl_library() -> Result<winapi::HMODULE, Error> {
     let dll_name = "opengl32.dll";
     let name = OsStr::new(dll_name).encode_wide().chain(Some(0).into_iter()).collect::<Vec<_>>();
 
-    let lib = kernel32::LoadLibraryW(name.as_ptr());
+    let lib = ffi!(kernel32::LoadLibraryW(name.as_ptr()));
     if lib.is_null() {
         return Err(Error::WindowCreationError(format!("WGL: LoadLibrary function failed for {}: {}", dll_name, io::Error::last_os_error())));
     }
@@ -48,53 +48,53 @@ unsafe fn load_gl_library() -> Result<winapi::HMODULE, Error> {
 }
 
 // Loads the wgl extensions
-unsafe fn load_wgl_extension(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND) -> Result<(wgl_ext::Wgl, String), Error> {
+fn load_wgl_extension(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND) -> Result<(wgl_ext::Wgl, String), Error> {
     let dummy_window = try!(DummyWindow::new(app_instance, hwnd));
     let hdc = dummy_window.hdc;
 
-    let mut pfd: winapi::PIXELFORMATDESCRIPTOR = mem::zeroed();
+    let mut pfd: winapi::PIXELFORMATDESCRIPTOR = unsafe { mem::zeroed() };
     pfd.nVersion = 1;
     pfd.dwFlags = winapi::PFD_DRAW_TO_WINDOW | winapi::PFD_SUPPORT_OPENGL | winapi::PFD_DOUBLEBUFFER;
     pfd.iPixelType = winapi::PFD_TYPE_RGBA;
     pfd.cColorBits = 24;
 
-    let pixel_format = gdi32::ChoosePixelFormat(hdc, &pfd);
-    if gdi32::SetPixelFormat(hdc, pixel_format, &pfd) != winapi::TRUE {
+    let pixel_format = ffi!(gdi32::ChoosePixelFormat(hdc, &pfd));
+    if ffi!(gdi32::SetPixelFormat(hdc, pixel_format, &pfd)) != winapi::TRUE {
         return Err(Error::WindowCreationError(format!("WGL: Failed to set pixel format for dummy context: {}", io::Error::last_os_error())));
     }
 
-    let rc = wgl::CreateContext(hdc as *const c_void);
+    let rc = ffi!(wgl::CreateContext(hdc as *const c_void));
     if rc.is_null() {
         return Err(Error::WindowCreationError(format!("WGL: Failed to create dummy context: {}", io::Error::last_os_error())));
     }
 
-    if wgl::MakeCurrent(hdc as *const c_void, rc) != winapi::TRUE {
-        wgl::DeleteContext(rc);
+    if ffi!(wgl::MakeCurrent(hdc as *const c_void, rc)) != winapi::TRUE {
+        ffi!(wgl::DeleteContext(rc));
         return Err(Error::WindowCreationError(format!("WGL: Failed to make dummy context current: {}", io::Error::last_os_error())));
     }
 
-    let wgl_ext = wgl_ext::Wgl::load_with(|addr| {
+    let wgl_ext = ffi!(wgl_ext::Wgl::load_with(|addr| {
         let addr = CString::new(addr.as_bytes()).unwrap();
         let addr = addr.as_ptr();
         wgl::GetProcAddress(addr) as *const c_void
-    });
+    }));
 
     let wgl_extensions = get_wgl_extension_string(&wgl_ext, hdc);
 
-    wgl::MakeCurrent(hdc as *const c_void, ptr::null_mut());
-    wgl::DeleteContext(rc);
+    ffi!(wgl::MakeCurrent(hdc as *const c_void, ptr::null_mut()));
+    ffi!(wgl::DeleteContext(rc));
     Ok((wgl_ext, wgl_extensions))
 }
 
 // Gets the list of the supported extensions
-unsafe fn get_wgl_extension_string(wgl_ext: &wgl_ext::Wgl, hdc: winapi::HDC) -> String {
+fn get_wgl_extension_string(wgl_ext: &wgl_ext::Wgl, hdc: winapi::HDC) -> String {
     if wgl_ext.GetExtensionsStringARB.is_loaded() {
-        let data = wgl_ext.GetExtensionsStringARB(hdc as *const _);
-        let data = CStr::from_ptr(data).to_bytes().to_vec();
+        let data = ffi!(wgl_ext.GetExtensionsStringARB(hdc as *const _));
+        let data = unsafe { CStr::from_ptr(data) }.to_bytes().to_vec();
         String::from_utf8(data).unwrap()
     } else if wgl_ext.GetExtensionsStringEXT.is_loaded() {
-        let data = wgl_ext.GetExtensionsStringEXT();
-        let data = CStr::from_ptr(data).to_bytes().to_vec();
+        let data = ffi!(wgl_ext.GetExtensionsStringEXT());
+        let data = unsafe { CStr::from_ptr(data) }.to_bytes().to_vec();
         String::from_utf8(data).unwrap()
     } else {
         "".to_string()
@@ -104,6 +104,7 @@ unsafe fn get_wgl_extension_string(wgl_ext: &wgl_ext::Wgl, hdc: winapi::HDC) -> 
 
 /// Structure to handle WGL context
 pub struct Context {
+    pixel_format_id: u32,
     hwnd: winapi::HWND,
     hdc: winapi::HDC,
     hglrc: winapi::HGLRC,
@@ -119,51 +120,47 @@ impl Context {
     /// # Error
     /// If context connat be created an error is returned describing the reason.
     pub fn new(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &PlatformWindowSettings) -> Result<Context, Error> {
-        unsafe {
-            let gl_library = try!(load_gl_library());
-            let (wgl_ext, wgl_extensions) = try!(load_wgl_extension(app_instance, hwnd));
+        let gl_library = try!(load_gl_library());
+        let (wgl_ext, wgl_extensions) = try!(load_wgl_extension(app_instance, hwnd));
 
-            //println!("wgl extensions: {}", wgl_extensions);
-            let mut context = Context {
-                hwnd: hwnd,
-                hdc: 0 as winapi::HDC,
-                hglrc: 0 as winapi::HGLRC,
+        //println!("wgl extensions: {}", wgl_extensions);
+        let mut context = Context {
+            pixel_format_id: 0,
+            hwnd: hwnd,
+            hdc: 0 as winapi::HDC,
+            hglrc: 0 as winapi::HGLRC,
 
-                gl_library: gl_library,
-                wgl_ext: wgl_ext,
-                wgl_extensions: wgl_extensions,
-            };
+            gl_library: gl_library,
+            wgl_ext: wgl_ext,
+            wgl_extensions: wgl_extensions,
+        };
 
-            // create dc
-            context.hdc = user32::GetDC(hwnd);
-            if context.hdc.is_null() {
-                return Err(Error::WindowCreationError(format!("WGL: Failed to get dc: {}", io::Error::last_os_error())));
-            }
-
-            // find a matching pixel foramt
-            let pixel_format = try!(context.choose_pixel_format(&settings.fb_config));
-            if pixel_format == 0 {
-                return Err(Error::WindowCreationError("WGL: Failed to find a suitable pixel format".to_string()));
-            }
-
-            //let fb_config = context.get_pixel_format_info(pixel_format).unwrap();
-            //println!("selected pixel format: {:?}", fb_config);
-
-            // create context
-            context.hglrc = try!(context.create_context(pixel_format, &settings.fb_config, &settings.platform_extra));
-
-            try!(context.make_current());
-            try!(context.load_gl_functions());
-
-            Ok(context)
+        // create dc
+        context.hdc = ffi!(user32::GetDC(hwnd));
+        if context.hdc.is_null() {
+            return Err(Error::WindowCreationError(format!("WGL: Failed to get dc: {}", io::Error::last_os_error())));
         }
+
+        // find a matching pixel foramt
+        context.pixel_format_id = try!(context.choose_pixel_format(&settings.fb_config));
+        if context.pixel_format_id == 0 {
+            return Err(Error::WindowCreationError("WGL: Failed to find a suitable pixel format".to_string()));
+        }
+
+        // create context
+        context.hglrc = try!(context.create_context(context.pixel_format_id, &settings.fb_config, &settings.platform_extra));
+
+        try!(context.make_current());
+        try!(context.load_gl_functions());
+
+        Ok(context)
     }
 
     /// Makes this context active.
     #[inline]
     pub fn make_current(&self) -> Result<(), Error> {
         assert!(!self.hglrc.is_null());
-        if unsafe { wgl::MakeCurrent(self.hdc as *const _, self.hglrc as *const _) } != 0 {
+        if ffi!( wgl::MakeCurrent(self.hdc as *const _, self.hglrc as *const _)) != 0 {
             Ok(())
         } else {
             Err(Error::ContextError(format!("Make current failed: {}", io::Error::last_os_error())))
@@ -173,7 +170,7 @@ impl Context {
     /// Swaps the back and front buffers
     #[inline]
     pub fn swap_buffers(&self) -> Result<(), Error> {
-        if unsafe { gdi32::SwapBuffers(self.hdc) } != 0 {
+        if ffi!(gdi32::SwapBuffers(self.hdc)) != 0 {
             Ok(())
         } else {
             Err(Error::ContextError(format!("Swap buffers failed: {}", io::Error::last_os_error())))
@@ -189,20 +186,22 @@ impl Context {
         let addr = CString::new(addr.as_bytes()).unwrap();
         let addr = addr.as_ptr();
 
-        unsafe {
-            let p = wgl::GetProcAddress(addr) as *const ();
-            if !p.is_null() { return p; }
-            //let p = gl::GetProcAddress(addr) as *const ();
-            //if !p.is_null() { return p; }
-            kernel32::GetProcAddress(self.gl_library, addr) as *const ()
-        }
+        let p = ffi!(wgl::GetProcAddress(addr) as *const ());
+        if !p.is_null() { return p; }
+        //let p = gl::GetProcAddress(addr) as *const ();
+        //if !p.is_null() { return p; }
+        ffi!(kernel32::GetProcAddress(self.gl_library, addr)) as *const ()
+    }
+
+    pub fn get_pixel_format_config(&self) -> Result<FBConfig, Error> {
+        self.get_pixel_format_info(self.pixel_format_id)
     }
 
     /// Gets an attribute of a pixel format using the "modern" extension
-    unsafe fn get_pixel_format_attrib(&self, pixel_format_id: u32, attrib: u32) -> Result<u32, Error> {
+    fn get_pixel_format_attrib(&self, pixel_format_id: u32, attrib: u32) -> Result<u32, Error> {
         let mut value: c_int = 0;
         assert!(self.has_wgl_extension("WGL_ARB_pixel_format"));
-        if self.wgl_ext.GetPixelFormatAttribivARB(self.hdc as *const _, pixel_format_id as c_int, 0, 1, [attrib as c_int].as_ptr(), &mut value) == 0 {
+        if ffi!(self.wgl_ext.GetPixelFormatAttribivARB(self.hdc as *const _, pixel_format_id as c_int, 0, 1, [attrib as c_int].as_ptr(), &mut value)) == 0 {
             return Err(Error::WindowCreationError(format!("WGL: Failed to retrieve pixel format attribute n:{}, attrib:{}", pixel_format_id, attrib)));
         }
 
@@ -213,7 +212,7 @@ impl Context {
     ///
     /// # Error
     /// If some attribute is not matching or cannot be queried, an error is returned.
-    unsafe fn get_pixel_format_info_ext(&self, n: u32) -> Result<FBConfig, Error> {
+    fn get_pixel_format_info_ext(&self, n: u32) -> Result<FBConfig, Error> {
         // Get pixel format attributes through "modern" extension
         if try!(self.get_pixel_format_attrib(n, wgl_ext::SUPPORT_OPENGL_ARB)) != 1 ||
             try!(self.get_pixel_format_attrib(n, wgl_ext::DRAW_TO_WINDOW_ARB)) != 1 {
@@ -262,10 +261,10 @@ impl Context {
     ///
     /// # Error
     /// If some attribute is not matching or cannot be queried, an error is returned.
-    unsafe fn get_pixel_format_info_pfd(&self, n: u32) -> Result<FBConfig, Error> {
-        let mut pfd: winapi::PIXELFORMATDESCRIPTOR = mem::zeroed();
+    fn get_pixel_format_info_pfd(&self, n: u32) -> Result<FBConfig, Error> {
+        let mut pfd: winapi::PIXELFORMATDESCRIPTOR = unsafe { mem::zeroed() };
 
-        if gdi32::DescribePixelFormat(self.hdc, n as c_int, mem::size_of::<winapi::PIXELFORMATDESCRIPTOR>() as u32, &mut pfd) == 0 {
+        if ffi!(gdi32::DescribePixelFormat(self.hdc, n as c_int, mem::size_of::<winapi::PIXELFORMATDESCRIPTOR>() as u32, &mut pfd)) == 0 {
             return Err(Error::WindowCreationError(format!("WGL: query pixel format for {}: DescribePixelFormat failed", n)));
         }
 
@@ -307,7 +306,7 @@ impl Context {
         })
     }
 
-    unsafe fn get_pixel_format_info(&self, n: u32) -> Result<FBConfig, Error> {
+    fn get_pixel_format_info(&self, n: u32) -> Result<FBConfig, Error> {
         if self.has_wgl_extension("WGL_ARB_pixel_format") {
             self.get_pixel_format_info_ext(n)
         } else {
@@ -316,7 +315,7 @@ impl Context {
     }
 
     /// Gets tha available pixel formats using the "modern" extension
-    unsafe fn get_pixel_formats_ext(&self) -> Result<Vec<FBConfig>, Error> {
+    fn get_pixel_formats_ext(&self) -> Result<Vec<FBConfig>, Error> {
         assert!(self.has_wgl_extension("WGL_ARB_pixel_format"));
 
         let native_count = try!(self.get_pixel_format_attrib(1, wgl_ext::NUMBER_PIXEL_FORMATS_ARB));
@@ -336,8 +335,8 @@ impl Context {
     }
 
     /// Gets tha available pixel formats using the legacy PFDs
-    unsafe fn get_pixel_formats_pfd(&self) -> Result<Vec<FBConfig>, Error> {
-        let native_count = gdi32::DescribePixelFormat(self.hdc, 1, mem::size_of::<winapi::PIXELFORMATDESCRIPTOR>() as u32, ptr::null_mut()) as u32;
+    fn get_pixel_formats_pfd(&self) -> Result<Vec<FBConfig>, Error> {
+        let native_count = ffi!(gdi32::DescribePixelFormat(self.hdc, 1, mem::size_of::<winapi::PIXELFORMATDESCRIPTOR>() as u32, ptr::null_mut())) as u32;
         let mut formats: Vec<FBConfig> = vec!();
         formats.reserve(native_count as usize);
 
@@ -353,7 +352,7 @@ impl Context {
         Ok(formats)
     }
 
-    unsafe fn get_pixel_formats(&self) -> Result<Vec<FBConfig>, Error> {
+    fn get_pixel_formats(&self) -> Result<Vec<FBConfig>, Error> {
         if self.has_wgl_extension("WGL_ARB_pixel_format") {
             self.get_pixel_formats_ext()
         } else {
@@ -362,7 +361,7 @@ impl Context {
     }
 
     /// Finds a best matching pixel form for the given config
-    unsafe fn choose_pixel_format(&self, desired: &FBConfig) -> Result<u32, Error> {
+    fn choose_pixel_format(&self, desired: &FBConfig) -> Result<u32, Error> {
         let configs = try!(self.get_pixel_formats());
 
         if configs.is_empty() {
@@ -486,16 +485,16 @@ impl Context {
         Ok(closest_handle)
     }
 
-    unsafe fn create_context(&self, pixel_format: u32, config: &FBConfig, extra: &GLExtraWindowSettings) -> Result<(winapi::HGLRC), Error> {
+    fn create_context(&self, pixel_format: u32, config: &FBConfig, extra: &GLExtraWindowSettings) -> Result<(winapi::HGLRC), Error> {
         let share: winapi::HGLRC = ptr::null_mut(); // no sharing is implemented yet
 
-        let mut pfd: winapi::PIXELFORMATDESCRIPTOR = mem::zeroed();
+        let mut pfd: winapi::PIXELFORMATDESCRIPTOR = unsafe { mem::zeroed() };
 
-        if gdi32::DescribePixelFormat(self.hdc, pixel_format as c_int, mem::size_of::<winapi::PIXELFORMATDESCRIPTOR>() as u32, &mut pfd) == 0 {
+        if ffi!(gdi32::DescribePixelFormat(self.hdc, pixel_format as c_int, mem::size_of::<winapi::PIXELFORMATDESCRIPTOR>() as u32, &mut pfd)) == 0 {
             return Err(Error::WindowCreationError(format!("WGL: Failed to retrieve PFD for selected pixel format ({}): {}", pixel_format, io::Error::last_os_error())));
         }
 
-        if gdi32::SetPixelFormat(self.hdc, pixel_format as c_int, &pfd) == 0 {
+        if ffi!(gdi32::SetPixelFormat(self.hdc, pixel_format as c_int, &pfd)) == 0 {
             return Err(Error::WindowCreationError(format!("WGL: Failed to set selected pixel format ({}): {}", pixel_format, io::Error::last_os_error())));
         }
 
@@ -584,22 +583,22 @@ impl Context {
             attribs.push(0);
             attribs.push(0);
 
-            let hglrc = self.wgl_ext.CreateContextAttribsARB(self.hdc as *const c_void,
-                                                             share as *const c_void,
-                                                             attribs.as_ptr() as *const i32);
+            let hglrc = ffi!(self.wgl_ext.CreateContextAttribsARB(self.hdc as *const c_void,
+                                                                  share as *const c_void,
+                                                                  attribs.as_ptr() as *const i32));
             if hglrc.is_null() {
                 return Err(Error::WindowCreationError(format!("WGL: Context creation failed: {}", io::Error::last_os_error())));
             }
 
             Ok(hglrc as winapi::HGLRC)
         } else {
-            let hglrc = wgl::CreateContext(self.hdc as *const c_void);
+            let hglrc = ffi!(wgl::CreateContext(self.hdc as *const c_void));
             if hglrc.is_null() {
                 return Err(Error::WindowCreationError(format!("WGL: Context creation failed: {}", io::Error::last_os_error())));
             }
 
             if share.is_null() {
-                if wgl::ShareLists(share as *const c_void, self.hglrc as *const c_void) == 0 {
+                if ffi!(wgl::ShareLists(share as *const c_void, self.hglrc as *const c_void)) == 0 {
                     return Err(Error::WindowCreationError(format!("WGL: Failed to enable sharing with specified OpenGL context")));
                 }
             }
@@ -607,21 +606,21 @@ impl Context {
         }
     }
 
-    unsafe fn release_context(&mut self) {
+    fn release_context(&mut self) {
         if !self.hglrc.is_null() {
             assert!(!self.hdc.is_null());
-            wgl::MakeCurrent(self.hdc as *const c_void, ptr::null_mut());
-            wgl::DeleteContext(self.hglrc as *const c_void);
+            ffi!(wgl::MakeCurrent(self.hdc as *const c_void, ptr::null_mut()));
+            ffi!(wgl::DeleteContext(self.hglrc as *const c_void));
             self.hglrc = 0 as winapi::HGLRC;
         }
 
         if !self.hdc.is_null() {
-            user32::ReleaseDC(self.hwnd, self.hdc);
+            ffi!(user32::ReleaseDC(self.hwnd, self.hdc));
             self.hdc = 0 as winapi::HDC;
         }
     }
 
-    unsafe fn load_gl_functions(&mut self) -> Result<(), Error> {
+    fn load_gl_functions(&mut self) -> Result<(), Error> {
         gl::load_with(|symbol| self.get_proc_address(symbol) as *const _);
         Ok(())
     }
@@ -630,9 +629,7 @@ impl Context {
 impl Drop for Context {
     fn drop(&mut self) {
         //println!("Context dropped");
-        unsafe {
-            self.release_context();
-            kernel32::FreeLibrary(self.gl_library);
-        }
+        self.release_context();
+        ffi!(kernel32::FreeLibrary(self.gl_library));
     }
 }

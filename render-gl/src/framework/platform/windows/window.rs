@@ -74,7 +74,7 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
     };
 
     //todo: error handling
-    unsafe { AdjustWindowRectEx(&mut rect, style, winapi::FALSE, exstyle); }
+    ffi!(AdjustWindowRectEx(&mut rect, style, winapi::FALSE, exstyle));
 
     Size {
         width: rect.right - rect.left,
@@ -90,7 +90,7 @@ fn vkeycode_to_element(wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> (ScanC
     let scancode = ((lparam >> 16) & 0xff) as u32;
     let extended = (lparam & 0x01000000) != 0;
     let vk = match wparam as i32 {
-        winapi::VK_SHIFT => { unsafe { user32::MapVirtualKeyA(scancode, MAPVK_VSC_TO_VK_EX) as i32 } }
+        winapi::VK_SHIFT => { ffi!(user32::MapVirtualKeyA(scancode, MAPVK_VSC_TO_VK_EX) as i32) }
         winapi::VK_CONTROL => { if extended { winapi::VK_RCONTROL } else { winapi::VK_LCONTROL } }
         winapi::VK_MENU => { if extended { winapi::VK_RMENU } else { winapi::VK_LMENU } }
         other => other
@@ -287,9 +287,7 @@ pub struct GLWindowControl {
 
 impl WindowControl for GLWindowControl {
     fn close(&mut self) {
-        unsafe {
-            user32::PostMessageW(self.hwnd, winapi::WM_CLOSE, 0, 0);
-        }
+        ffi!(user32::PostMessageW(self.hwnd, winapi::WM_CLOSE, 0, 0));
     }
 }
 
@@ -315,18 +313,16 @@ impl GLWindow {
         let (xpos, ypos) = (winapi::CW_USEDEFAULT, winapi::CW_USEDEFAULT);
         let full_size = get_full_window_size(style, exstyle, settings.size);
         let title = OsStr::new(&settings.title).encode_wide().chain(Some(0).into_iter()).collect::<Vec<_>>();
-        let hwnd = unsafe {
-            user32::CreateWindowExW(exstyle,
-                                    engine.get_window_class_name().as_ptr(),
-                                    title.as_ptr() as winapi::LPCWSTR,
-                                    style,
-                                    xpos, ypos,
-                                    full_size.width as winapi::LONG, full_size.height as winapi::LONG,
-                                    ptr::null_mut(), // No parent window
-                                    ptr::null_mut(), // No window menu
-                                    app_instance,
-                                    ptr::null_mut())
-        };
+        let hwnd = ffi!(user32::CreateWindowExW(exstyle,
+                                                engine.get_window_class_name().as_ptr(),
+                                                title.as_ptr() as winapi::LPCWSTR,
+                                                style,
+                                                xpos, ypos,
+                                                full_size.width as winapi::LONG, full_size.height as winapi::LONG,
+                                                ptr::null_mut(), // No parent window
+                                                ptr::null_mut(), // No window menu
+                                                app_instance,
+                                                ptr::null_mut()));
         //println!("Os window created, hwnd: {:?}", hwnd);
         if hwnd.is_null() {
             return Err(Error::WindowCreationError(format!("Window: CreateWindowEx function failed: {}", io::Error::last_os_error())));
@@ -335,9 +331,7 @@ impl GLWindow {
         //create context
         let context = match GLContext::new(app_instance, hwnd, settings) {
             Err(err) => {
-                unsafe {
-                    user32::DestroyWindow(hwnd);
-                }
+                ffi!(user32::DestroyWindow(hwnd));
                 return Err(err);
             }
 
@@ -356,20 +350,18 @@ impl GLWindow {
         });
 
         //connect the OS and rust window
-        unsafe {
+        {
             let win_ptr = data.as_ref() as *const GLWindow;
-            user32::SetWindowLongPtrW(hwnd, 0, win_ptr as i64);
+            ffi!(user32::SetWindowLongPtrW(hwnd, 0, win_ptr as i64));
         }
 
         // ready to show the window
-        unsafe {
-            user32::ShowWindow(hwnd, winapi::SW_SHOW);
+        ffi!(user32::ShowWindow(hwnd, winapi::SW_SHOW));
 
-            // The native window creation completes before our callback is injected into the system,
-            // thus  a delayed message is sent, that is delivered only when the message loop
-            // has started. (engine.dispatch_events)
-            user32::PostMessageW(hwnd, win_messages::WM_DR_WINDOW_CREATED, 0, 0);
-        }
+        // The native window creation completes before our callback is injected into the system,
+        // thus  a delayed message is sent, that is delivered only when the message loop
+        // has started. (engine.dispatch_events)
+        ffi!(user32::PostMessageW(hwnd, win_messages::WM_DR_WINDOW_CREATED, 0, 0));
 
         Ok(data)
     }
@@ -450,13 +442,14 @@ impl GLWindow {
     ///
     /// It converts the raw pointer associated to the OS window back into a safe rust structure.
     pub fn handle_os_message(win_ptr: winapi::LONG_PTR, hwnd: winapi::HWND,
-                             msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM)
-                             -> winapi::LRESULT {
-        let mut win = unsafe {
-            assert!(win_ptr != 0);
-            let win_ptr = win_ptr as *mut GLWindow;
-            Box::from_raw(win_ptr)
-        };
+                             msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> winapi::LRESULT {
+        assert!(win_ptr != 0);
+
+        // It's an OS callback that requires some dark magic to find the rust window associated to the
+        // OS window and hence we are not owning the window.
+        // We just pretend that we have an owned window and leak it at the and
+        let mut win = unsafe { Box::from_raw(win_ptr as *mut GLWindow) };
+
         let mut result: Option<winapi::LRESULT> = None;
         match msg {
             win_messages::WM_DR_WINDOW_CREATED => {
@@ -471,9 +464,7 @@ impl GLWindow {
 
             winapi::WM_DESTROY => {
                 win.state = WindowState::Closed;
-                unsafe {
-                    user32::PostMessageW(ptr::null_mut(), win_messages::WM_DR_WINDOW_DESTROYED, 0, 0);
-                }
+                ffi!(user32::PostMessageW(ptr::null_mut(), win_messages::WM_DR_WINDOW_DESTROYED, 0, 0));
             }
 
             winapi::WM_SIZE => {
@@ -482,15 +473,13 @@ impl GLWindow {
 
                 let size = Size { width: w, height: h };
 
-                unsafe {
-                    let mut rect = mem::zeroed();
-                    user32::GetWindowRect(win.hwnd, &mut rect);
+                let mut rect = winapi::RECT { left: 0, top: 0, right: 0, bottom: 0 };
+                ffi!(user32::GetWindowRect(win.hwnd, &mut rect));
 
-                    win.size = Size {
-                        width: rect.right - rect.left,
-                        height: rect.bottom - rect.top,
-                    };
-                }
+                win.size = Size {
+                    width: rect.right - rect.left,
+                    height: rect.bottom - rect.top,
+                };
                 win.backend.set_screen_size(size);
                 win.handle_surface_changed();
 
@@ -533,20 +522,17 @@ impl GLWindow {
         if let Some(res) = result {
             return res;
         }
-        unsafe { user32::DefWindowProcW(hwnd, msg, wparam, lparam) }
+        ffi!(user32::DefWindowProcW(hwnd, msg, wparam, lparam))
     }
 }
 
 impl Drop for GLWindow {
     fn drop(&mut self) {
         //println!("GLWindow dropped");
-
-        unsafe {
-            if self.hwnd != ptr::null_mut() {
-                // the box is released, thus we remove any dangling pointers
-                user32::SetWindowLongPtrW(self.hwnd, 0, 0i64);
-                user32::DestroyWindow(self.hwnd);
-            }
+        if self.hwnd != ptr::null_mut() {
+            // the box is released, thus we remove any dangling pointers
+            ffi!(user32::SetWindowLongPtrW(self.hwnd, 0, 0i64));
+            ffi!(user32::DestroyWindow(self.hwnd));
         }
     }
 }

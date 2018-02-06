@@ -40,12 +40,6 @@ pub mod libconfig {
     pub const MAX_USED_TEXTURE_COUNT: usize = 16;
 }
 
-/// Helper macro to hide unsafe blocks for API calls
-#[macro_export]
-macro_rules! ugl {
-    ( $cmd:ident($( $arg:expr ),*) ) => { unsafe { /*println!("{}", stringify!(gl::$cmd($($arg,)*)));*/ gl::$cmd($($arg,)*) } };
-}
-
 pub mod lowlevel;
 pub mod framework;
 pub mod resources;
