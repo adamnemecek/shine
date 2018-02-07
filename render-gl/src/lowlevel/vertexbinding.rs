@@ -10,7 +10,7 @@ pub struct GLVertexBufferAttribute {
     pub components: GLint,
     pub normalize: GLboolean,
     pub stride: GLsizei,
-    pub offset: GLintptr
+    pub offset: GLintptr,
 }
 
 impl GLVertexBufferAttribute {
@@ -20,7 +20,7 @@ impl GLVertexBufferAttribute {
             components: 0,
             normalize: 0,
             stride: 0,
-            offset: 0
+            offset: 0,
         }
     }
 
@@ -75,13 +75,19 @@ impl PartialEq for GLVertexBufferAttribute {
     }
 }
 
+#[derive(Copy, Clone, PartialEq)]
+enum BindState {
+    Set,
+    Unset,
+    Dirty,
+}
 
 /// The current attribute bound for the GL
 #[derive(Clone, Copy)]
 struct BoundVertexAttribute {
     hw_id: GLuint,
     attribute: GLVertexBufferAttribute,
-    is_used: bool,
+    state: BindState,
 }
 
 impl BoundVertexAttribute {
@@ -89,7 +95,7 @@ impl BoundVertexAttribute {
         BoundVertexAttribute {
             hw_id: 0,
             attribute: GLVertexBufferAttribute::new(),
-            is_used: false,
+            state: BindState::Unset,
         }
     }
 }
@@ -134,11 +140,10 @@ impl VertexBinding {
         assert!(hw_id != 0);
 
         let attr = &mut self.bound_attributes[location as usize];
-        assert!(!attr.is_used, "Vertex location ({}) already bound for the draw call", location);
-        attr.is_used = true;
+        assert!(attr.state != BindState::Set, "Vertex location ({}) already bound for the draw call", location);
 
         gl_check_error();
-        if self.force || attr.hw_id != hw_id || attr.attribute != *attribute {
+        if self.force || attr.hw_id != hw_id || attr.state == BindState::Dirty || attr.attribute != *attribute {
             // bind changed attributes
             if self.force || self.bound_id != hw_id {
                 ffi!(gl::BindBuffer(gl::ARRAY_BUFFER, hw_id));
@@ -153,12 +158,20 @@ impl VertexBinding {
             attr.attribute = *attribute;
             gl_check_error();
         }
+        attr.state = BindState::Set;
     }
 
     /// Unbinds a vertex buffer if it is active. This function is mainly used during release.
     pub fn unbind_if_active(&mut self, hw_id: GLuint) {
         if self.bound_id == hw_id {
             self.bind_buffer(0);
+        }
+
+        for attr in self.bound_attributes.iter_mut() {
+            if attr.hw_id == hw_id {
+                // also reset attributes (issue #1)
+                attr.state = BindState::Dirty;
+            }
         }
     }
 
@@ -167,14 +180,14 @@ impl VertexBinding {
     pub fn commit(&mut self) {
         gl_check_error();
         for (location, attr) in self.bound_attributes.iter_mut().enumerate() {
-            if !attr.is_used && attr.hw_id != 0 {
+            if attr.state != BindState::Set && attr.hw_id != 0 {
                 // active attributes not bound for this call are disabled automatically
                 attr.attribute = GLVertexBufferAttribute::new();
                 attr.hw_id = 0;
                 ffi!(gl::DisableVertexAttribArray(location as GLuint));
                 gl_check_error();
             }
-            attr.is_used = false;
+            attr.state = BindState::Unset;
         }
     }
 }

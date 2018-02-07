@@ -3,6 +3,7 @@ extern crate dragorust_render_gl as render;
 extern crate rayon;
 
 use std::time::Duration;
+use std::env;
 use render::*;
 use rayon::prelude::*;
 
@@ -41,7 +42,7 @@ impl View<PlatformEngine> for SimpleView {
 
 #[test]
 pub fn hello_world() {
-    assert!(env!("RUST_TEST_THREADS") == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(env::var("RUST_TEST_THREADS").unwrap() == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     use store::threadid;
     rayon::initialize(rayon::Configuration::new()
