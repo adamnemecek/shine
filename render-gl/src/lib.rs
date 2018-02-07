@@ -16,10 +16,10 @@ extern crate user32;
 extern crate image;
 extern crate arrayvec;
 
-extern crate dragorust_render_core as core;
-extern crate dragorust_store as store;
+extern crate shine_render_core as core;
+extern crate shine_store as store;
 //#[macro_reexport(ShaderDeclaration)]
-//extern crate dragorust_render_gl_derive;
+//extern crate shine_render_gl_derive;
 
 #[allow(unused_mut)]
 pub mod gl {

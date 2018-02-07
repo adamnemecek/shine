@@ -1,10 +1,10 @@
-extern crate dragorust_store;
+extern crate shine_store;
 
 use std::thread;
 use std::sync::Arc;
 
-use self::dragorust_store::fjsqueue::*;
-use self::dragorust_store::threadid;
+use self::shine_store::fjsqueue::*;
+use self::shine_store::threadid;
 
 
 #[test]

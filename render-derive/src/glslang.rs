@@ -47,26 +47,26 @@ impl Uniform {
         let type_id =
             match self.type_id {
                 5126 => quote!(f32), // GLenum(GL_FLOAT)
-                35664 => quote!(_dragorust_render_core::Float32x2), // GLenum(GL_FLOAT_VEC2)
-                35665 => quote!(_dragorust_render_core::Float32x3),// GLenum(GL_FLOAT_VEC3)
-                35666 => quote!(_dragorust_render_core::Float32x4),// GLenum(GL_FLOAT_VEC4)
+                35664 => quote!(_shine_render_core::Float32x2), // GLenum(GL_FLOAT_VEC2)
+                35665 => quote!(_shine_render_core::Float32x3),// GLenum(GL_FLOAT_VEC3)
+                35666 => quote!(_shine_render_core::Float32x4),// GLenum(GL_FLOAT_VEC4)
 
                 5124 => quote!(i32),// GLenum(GL_INT)
-                35667 => quote!(_dragorust_render_core::Int32x2),// GLenum(GL_INT_VEC2)
-                35668 => quote!(_dragorust_render_core::Int32x3),// GLenum(GL_INT_VEC3)
-                35669 => quote!(_dragorust_render_core::Int32x4),// GLenum(GL_INT_VEC4)
+                35667 => quote!(_shine_render_core::Int32x2),// GLenum(GL_INT_VEC2)
+                35668 => quote!(_shine_render_core::Int32x3),// GLenum(GL_INT_VEC3)
+                35669 => quote!(_shine_render_core::Int32x4),// GLenum(GL_INT_VEC4)
 
                 35670 => quote!(bool),// GLenum(GL_BOOL)
-                35671 => quote!(_dragorust_render_core::Boolx2),// GLenum(GL_BOOL_VEC2)
-                35672 => quote!(_dragorust_render_core::Boolx3),// GLenum(GL_BOOL_VEC3)
-                35673 => quote!(_dragorust_render_core::Boolx4),// GLenum(GL_BOOL_VEC4)
+                35671 => quote!(_shine_render_core::Boolx2),// GLenum(GL_BOOL_VEC2)
+                35672 => quote!(_shine_render_core::Boolx3),// GLenum(GL_BOOL_VEC3)
+                35673 => quote!(_shine_render_core::Boolx4),// GLenum(GL_BOOL_VEC4)
 
-                35674 => quote!(_dragorust_render_core::Float32x4),// GLenum(GL_FLOAT_MAT2)
-                35675 => quote!(_dragorust_render_core::Float32x9),// GLenum(GL_FLOAT_MAT3)
-                35676 => quote!(_dragorust_render_core::Float32x16),// GLenum(GL_FLOAT_MAT4)
+                35674 => quote!(_shine_render_core::Float32x4),// GLenum(GL_FLOAT_MAT2)
+                35675 => quote!(_shine_render_core::Float32x9),// GLenum(GL_FLOAT_MAT3)
+                35676 => quote!(_shine_render_core::Float32x16),// GLenum(GL_FLOAT_MAT4)
 
-                35678 => quote!(_dragorust_render_gl::UnsafeTexture2DIndex),// GLenum(GL_SAMPLER_2D)
-                35680 => quote!(_dragorust_render_gl::UnsafeTextureCubeIndex),// GLenum(GL_SAMPLER_CUBE)
+                35678 => quote!(_shine_render_gl::UnsafeTexture2DIndex),// GLenum(GL_SAMPLER_2D)
+                35680 => quote!(_shines_render_gl::UnsafeTextureCubeIndex),// GLenum(GL_SAMPLER_CUBE)
 
                 _ => return Err(format!("Could not find built-in type for uniform {}, type id:{}", self.name, self.type_id))
             };

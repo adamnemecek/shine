@@ -37,7 +37,7 @@ pub struct GLEngine {
 
 impl GLEngine {
     pub fn new() -> Result<Box<GLEngine>, Error> {
-        let window_class_name = OsStr::new("Dragorust")
+        let window_class_name = OsStr::new("shine")
             .encode_wide()
             .chain(Some(0).into_iter())
             .collect::<Vec<_>>();

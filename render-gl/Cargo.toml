@@ -1,5 +1,5 @@
 [package]
-name = "dragorust-render-gl"
+name = "shine-render-gl"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 build = "build.rs"
@@ -8,8 +8,8 @@ build = "build.rs"
 gl_generator = "0.5"
 
 [dependencies]
-dragorust-store = {path = "../store"}
-dragorust-render-core = {path = "../render-core"}
+shine-store = {path = "../store"}
+shine-render-core = {path = "../render-core"}
 
 libc = "*"
 arrayvec = "*"

@@ -1,8 +1,8 @@
-extern crate dragorust_store;
+extern crate shine_store;
 
 use std::env;
 use std::thread;
-use self::dragorust_store::spscstate::*;
+use self::shine_store::spscstate::*;
 
 const ITER_COUNT: i32 = 0x2ffff;
 
@@ -45,7 +45,7 @@ fn single_threaded_stress_small_buffer() {
 
 #[test]
 fn multi_threaded_stress_small_buffer() {
-    assert!(env::var("RUST_TEST_THREADS").unwrap() == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     let (p, c) = state_channel();
 
@@ -143,7 +143,7 @@ fn single_threaded_stress_big_buffer() {
 
 #[test]
 fn multi_threaded_stress_big_buffer() {
-    assert!(env::var("RUST_TEST_THREADS").unwrap() == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     let (p, c) = state_channel::<BigData>();
 

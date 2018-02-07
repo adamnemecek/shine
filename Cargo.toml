@@ -1,12 +1,12 @@
 [package]
-name = "dragorust"
+name = "shine"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
-dragorust-render-core = {path = "render-core"}
-dragorust-render-gl = {path = "render-gl"}
-#dragorust-world = {path = "world"}
+shine-render-core = {path = "render-core"}
+shine-render-gl = {path = "render-gl"}
+#shine-world = {path = "world"}
 
 rayon = "*"
 image = "*"

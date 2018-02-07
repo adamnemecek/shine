@@ -2,8 +2,8 @@
 #![feature(iterator_for_each)]
 #![feature(align_offset)]
 
-extern crate dragorust_render as render;
-extern crate dragorust_store as store;
+extern crate shine_render as render;
+extern crate shine_store as store;
 extern crate image;
 
 pub mod imagestore;

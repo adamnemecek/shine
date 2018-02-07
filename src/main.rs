@@ -1,6 +1,6 @@
 //#[macro_use]
-//extern crate dragorust_render_gl as render;
-//extern crate dragorust_world as world;
+//extern crate shine_render_gl as render;
+//extern crate shine_world as world;
 
 
 //use std::time::Duration;

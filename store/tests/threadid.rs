@@ -1,11 +1,11 @@
-extern crate dragorust_store;
+extern crate shine_store;
 
 use std::env;
 use std::thread;
 use std::sync::*;
 use std::time::*;
 
-use self::dragorust_store::threadid;
+use self::shine_store::threadid;
 
 
 #[test]
@@ -16,7 +16,7 @@ fn thread_count() {
 
 #[test]
 fn alloc_free() {
-    assert!(env::var("RUST_TEST_THREADS").unwrap() == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     let max_thread_count = threadid::get_max_thread_count();
     //println!("number of threads: {}", max_thread_count);

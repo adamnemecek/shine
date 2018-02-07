@@ -82,7 +82,7 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
     let sources = sources.iter().map(|shader| {
         let sh_type = shader.0.to_ident();
         let ref source = shader.1;
-        Some(quote! { (_dragorust_render_core::ShaderType::#sh_type, #source) })
+        Some(quote! { (_shine_render_core::ShaderType::#sh_type, #source) })
     }).collect::<Vec<_>>();
     let source_count = sources.len();
 
@@ -113,8 +113,8 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
     let gen = quote! {
         #[allow(unused_imports, non_snake_case)]
         pub mod #dummy_mod {
-            extern crate dragorust_render_core as _dragorust_render_core;
-            extern crate dragorust_render_gl as _dragorust_render_gl;
+            extern crate shine_render_core as _shine_render_core;
+            extern crate shine_render_gl as _shine_render_gl;
             use std::slice;
             #gen_parameters
             #gen_shader_decl
@@ -148,7 +148,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
             };
 
             param_fields.push(quote! {
-                #attr_field_ident: _dragorust_render_gl::UnsafeVertexAttributeIndex
+                #attr_field_ident: _shine_render_gl::UnsafeVertexAttributeIndex
             });
 
             match_name_cases.push(quote! {
@@ -169,7 +169,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
     // index buffers
     {
         param_fields.push(quote! {
-            indices: _dragorust_render_gl::UnsafeIndexBufferIndex
+            indices: _shine_render_gl::UnsafeIndexBufferIndex
         });
 
         match_name_cases.push(quote! {
@@ -257,7 +257,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         }
 
         #[allow(unused_variables)]
-        impl _dragorust_render_core::ShaderParameters<_dragorust_render_gl::PlatformEngine> for #param_type_ident {
+        impl _shine_render_core::ShaderParameters<_shine_render_gl::PlatformEngine> for #param_type_ident {
             fn get_count() -> usize {
                 #count
             }

@@ -4,7 +4,7 @@
 #![feature(crate_visibility_modifier)]
 
 #[macro_reexport(VertexDeclaration, GLShaderDeclaration)]
-extern crate dragorust_render_derive;
+extern crate shine_render_derive;
 
 /// Helper macro to hide unsafe ffi API calls to distinct rust-unsafe and ffi-unsafe codes
 #[macro_export]

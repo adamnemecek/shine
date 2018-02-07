@@ -1,11 +1,11 @@
 [package]
-name = "dragorust-render-core"
+name = "shine-render-core"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
-dragorust-store = {path = "../store"}
-dragorust-render-derive = {path = "../render-derive"}
+shine-store = {path = "../store"}
+shine-render-derive = {path = "../render-derive"}
 
 libc = "*"
 image = "*"
