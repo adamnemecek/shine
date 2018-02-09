@@ -3,6 +3,7 @@ use quote;
 use std::path::Path;
 use std::fs::File;
 use std::io::Read;
+use proc_macro2::Span;
 
 
 use glslang::*;
@@ -19,30 +20,30 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
 
     let source_input = ast.attrs.iter()
         .filter_map(|attr| {
-            match attr.value {
-                syn::MetaItem::NameValue(ref i, syn::Lit::Str(ref val, _)) if i == "vert_src" => {
-                    Some((ShaderType::VertexShader, SourceKind::Src(val.clone())))
+            if let Some(ref meta) = attr.interpret_meta() {
+                match meta {
+                    &syn::Meta::NameValue(syn::MetaNameValue { ref ident, lit: syn::Lit::Str(ref value), .. }) if ident == "vert_src" => {
+                        Some((ShaderType::VertexShader, SourceKind::Src(value.value())))
+                    }
+                    &syn::Meta::NameValue(syn::MetaNameValue { ref ident, lit: syn::Lit::Str(ref value), .. }) if ident == "vert_path" => {
+                        Some((ShaderType::VertexShader, SourceKind::Path(value.value())))
+                    }
+                    &syn::Meta::NameValue(syn::MetaNameValue { ref ident, lit: syn::Lit::Str(ref value), .. }) if ident == "vert_src" => {
+                        Some((ShaderType::FragmentShader, SourceKind::Src(value.value())))
+                    }
+                    &syn::Meta::NameValue(syn::MetaNameValue { ref ident, lit: syn::Lit::Str(ref value), .. }) if ident == "vert_path" => {
+                        Some((ShaderType::FragmentShader, SourceKind::Path(value.value())))
+                    }
+                    _ => None
                 }
-
-                syn::MetaItem::NameValue(ref i, syn::Lit::Str(ref val, _)) if i == "vert_path" => {
-                    Some((ShaderType::VertexShader, SourceKind::Path(val.clone())))
-                }
-
-                syn::MetaItem::NameValue(ref i, syn::Lit::Str(ref val, _)) if i == "frag_src" => {
-                    Some((ShaderType::FragmentShader, SourceKind::Src(val.clone())))
-                }
-
-                syn::MetaItem::NameValue(ref i, syn::Lit::Str(ref val, _)) if i == "frag_path" => {
-                    Some((ShaderType::FragmentShader, SourceKind::Path(val.clone())))
-                }
-
-                _ => None
+            } else {
+                None
             }
         }).collect::<Vec<_>>();
 
     let source_refs = source_input.iter().filter_map(|&(_, ref source)| {
         match source {
-            &SourceKind::Path(ref path) => Some(quote! { include_str!(#path) }),
+            &SourceKind::Path(ref path) => Some(quote_call_site! { include_str!(#path) }),
             _ => None,
         }
     }).collect::<Vec<_>>();
@@ -69,7 +70,7 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
     }).collect::<Vec<_>>();
 
     let param_type_name = format!("{}Parameters", declaration_type_name);
-    let param_type_ident = syn::Ident::new(param_type_name);
+    let param_type_ident = syn::Ident::new(&param_type_name, Span::call_site());
 
 
     let (attributes, uniforms, sources) = {
@@ -82,7 +83,7 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
     let sources = sources.iter().map(|shader| {
         let sh_type = shader.0.to_ident();
         let ref source = shader.1;
-        Some(quote! { (_shine_render_core::ShaderType::#sh_type, #source) })
+        Some(quote_call_site! { (_shine_render_core::ShaderType::#sh_type, #source) })
     }).collect::<Vec<_>>();
     let source_count = sources.len();
 
@@ -93,15 +94,15 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
 
     let gen_parameters = impl_parameter_declaration(&param_type_ident, attributes, uniforms);
 
-    let gen_shader_decl = quote! {
-        impl ShaderDeclaration<PlatformEngine> for #declaration_type_name {
+    let gen_shader_decl = quote_call_site! {
+        impl ShaderDeclaration<_shine_render_gl::PlatformEngine> for #declaration_type_name {
             type Parameters = #param_type_ident;
 
             #[allow(dead_code)]
             fn source_iter() -> slice::Iter<'static, (ShaderType, &'static str)> {
                 // workaround to make the compilation depend on the input files
-                const _SOURCE_REF : [&str; #source_ref_count] = #source_refs;
-                const SOURCES : [(ShaderType,&str); #source_count] = #sources;
+                const _SOURCE_REF : [&str; #source_ref_count] = [#(#source_refs,)*];
+                const SOURCES : [(ShaderType,&str); #source_count] = [#(#sources,)*];
                 SOURCES.iter()
             }
         }
@@ -109,8 +110,8 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
 
     //println!("{}", gen_uniforms);
 
-    let dummy_mod = syn::Ident::new(format!("_IMPL_SHADERDECLARATION_FOR_{}", declaration_type_name));
-    let gen = quote! {
+    let dummy_mod = syn::Ident::new(&format!("_IMPL_SHADERDECLARATION_FOR_{}", declaration_type_name), Span::call_site());
+    let gen = quote_call_site! {
         #[allow(unused_imports, non_snake_case)]
         pub mod #dummy_mod {
             extern crate shine_render_core as _shine_render_core;
@@ -144,18 +145,18 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
                 if chars.next().unwrap() != 'v' || !chars.next().unwrap().is_uppercase() {
                     panic!("Invalid attribute name: {}. 'v[CamelCase]' is required", attr_name);
                 };
-                syn::Ident::new(format!("v_{}", convert_camel_to_snake_case(attr_name.trim_left_matches("v"))))
+                syn::Ident::new(&format!("v_{}", convert_camel_to_snake_case(attr_name.trim_left_matches("v"))), Span::call_site())
             };
 
-            param_fields.push(quote! {
+            param_fields.push(quote_call_site! {
                 #attr_field_ident: _shine_render_gl::UnsafeVertexAttributeIndex
             });
 
-            match_name_cases.push(quote! {
+            match_name_cases.push(quote_call_site! {
                 #attr_name => Some(#index)
             });
 
-            bind_fields.push(quote! {
+            bind_fields.push(quote_call_site! {
                 {
                     let target = unsafe { context.vertex_store.at_unsafe_mut(&self.#attr_field_ident.0) };
                     locations[#index].set_attribute(context.ll, &target, self.#attr_field_ident.1);
@@ -168,15 +169,15 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
 
     // index buffers
     {
-        param_fields.push(quote! {
+        param_fields.push(quote_call_site! {
             indices: _shine_render_gl::UnsafeIndexBufferIndex
         });
 
-        match_name_cases.push(quote! {
+        match_name_cases.push(quote_call_site! {
             "indices" => Some(#index)
         });
 
-        bind_fields.push(quote! {
+        bind_fields.push(quote_call_site! {
             {
                 let target = unsafe { context.index_store.at_unsafe_mut(&self.indices) };
                 locations[#index].set_index(context.ll, &target);
@@ -194,31 +195,31 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
                 if chars.next().unwrap() != 'u' || !chars.next().unwrap().is_uppercase() {
                     panic!("Invalid uniform naming: {}. u[CamelCase] is required", uniform_name);
                 };
-                syn::Ident::new(format!("u_{}", convert_camel_to_snake_case(uniform_name.trim_left_matches("u"))))
+                syn::Ident::new(&format!("u_{}", convert_camel_to_snake_case(uniform_name.trim_left_matches("u"))), Span::call_site())
             };
 
             let type_token = uniform.get_parameter_type_token().unwrap();
             let bind_postfix = uniform.get_function_postfix().unwrap();
-            let bind_function_ident = syn::Ident::new(format!("set_{}", bind_postfix));
+            let bind_function_ident = syn::Ident::new(&format!("set_{}", bind_postfix), Span::call_site());
 
-            param_fields.push(quote! {
+            param_fields.push(quote_call_site! {
                 #uniform_field_ident: #type_token
             });
 
-            match_name_cases.push(quote! {
+            match_name_cases.push(quote_call_site! {
                 #uniform_name => Some(#index)
             });
 
             bind_fields.push(
                 if bind_postfix == "texture_2d" {
-                    quote! {
+                    quote_call_site! {
                         {
                             let target = unsafe { context.texture_2d_store.at_unsafe_mut(&self.#uniform_field_ident) };
                             locations[#index].set_texture_2d(context.ll, &target);
                         }
                     }
                 } else {
-                    quote! {
+                    quote_call_site! {
                        locations[#index].#bind_function_ident(context.ll, &self.#uniform_field_ident);
                     }
                 }
@@ -230,7 +231,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
 
     let count = index;
 
-    let gen_index_by_name = quote! {
+    let gen_index_by_name = quote_call_site! {
         fn get_index_by_name(name: &str) -> Option<usize> {
             match name {
                     #(#match_name_cases,)*
@@ -239,8 +240,8 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         }
     };
 
-    let gen_bind = quote! {
-        fn bind(&self, context: &mut GLCommandProcessContext) {
+    let gen_bind = quote_call_site! {
+        fn bind(&self, context: &mut _shine_render_gl::GLCommandProcessContext) {
             let params = context.ll.program_binding.get_parameters();
             assert!(params.is_some(), "missing program parameters");
             if let Some(locations) = params {
@@ -250,7 +251,7 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         }
     };
 
-    let gen = quote! {
+    let gen = quote_call_site! {
         #[derive(Clone)]
         pub struct #param_type_ident {
             #(pub #param_fields,)*

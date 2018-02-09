@@ -22,8 +22,8 @@ pub enum ShaderType {
 impl ShaderType {
     pub fn to_ident(&self) -> syn::Ident {
         match self {
-            &ShaderType::VertexShader => syn::Ident::new("VertexShader"),
-            &ShaderType::FragmentShader => syn::Ident::new("FragmentShader"),
+            &ShaderType::VertexShader => syn::Ident::from("VertexShader"),
+            &ShaderType::FragmentShader => syn::Ident::from("FragmentShader"),
         }
     }
 
@@ -185,6 +185,8 @@ fn extract_shader_info(shaders: &[String]) -> Result<(Vec<Attribute>, Vec<Unifor
 
     let mut cmd = Command::new(bin);
     cmd.args(shaders).args(&GLSL_VALIDATOR_ARGS_INFO);
+    println!("{:?}", cmd);
+    println!("{:?}", shaders);
     let output = cmd.output().expect(&format!("Failed execute '{:?}' {:?} to extract info", cmd, GLSL_VALIDATOR_ARGS_INFO));
 
     let stdout = str::from_utf8(&output.stdout).unwrap();

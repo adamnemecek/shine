@@ -1,12 +1,13 @@
 [package]
-name = "shine-render-core"
+name = "shine-render"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 
 [dependencies]
 shine-store = {path = "../store"}
+shine-render-core = {path = "../render-core"}
 shine-render-derive = {path = "../render-derive"}
+shine-render-gl = {path = "../render-gl"}
 
 libc = "*"
 image = "*"
-

@@ -50,7 +50,7 @@ struct VxColorTex {
         gl_FragColor = vec4(col, 1.0);
     }"]
 //todo 1:
-//#[state(depth) = on]
+//#[state2("done" = "on")]
 //#[state(clamp) = ccw]
 //todo 2:
 //#[state(point_size) = ?]
@@ -177,11 +177,11 @@ impl View<PlatformEngine> for SimpleView {
                 0.0, 0.0, 0.0, 1.0]);
         let col = Float32x3::from([0.5, self.t / 6.28, 0.5]);
 
-        let sh = &mut self.sh;
         let vb1 = &mut self.vb1;
         let vb2 = &mut self.vb2;
         let ib = &mut self.ib;
         let tx = &mut self.tx;
+        let sh = &mut self.sh;
         if sh.bind(ll) {
             if let Some(locations) = ll.program_binding.get_parameters() {
                 let locations = &mut *locations.borrow_mut();

@@ -6,6 +6,7 @@ authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 [dependencies]
 shine-render-core = {path = "render-core"}
 shine-render-gl = {path = "render-gl"}
+shine-render = {path = "render"}
 #shine-world = {path = "world"}
 
 rayon = "*"

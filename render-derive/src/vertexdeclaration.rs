@@ -1,35 +1,36 @@
 use syn;
+use syn::punctuated::Punctuated;
+use syn::token::Comma;
+use proc_macro2::Span;
 use quote;
 use utils::*;
 
 pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
     let struct_name = &ast.ident;
 
-    let gen_impl = match ast.body {
-        syn::Body::Struct(syn::VariantData::Struct(ref fields)) => impl_location_for_struct(&ast.ident, fields),
-        _ => panic!("This derive macro cannot handle {:?}", format!("{:?}", ast.body).split('(').nth(0).unwrap())
+    let gen_impl = match ast.data {
+        syn::Data::Struct(syn::DataStruct { fields: syn::Fields::Named(syn::FieldsNamed { ref named, .. }), .. }) => impl_location_for_struct(&ast.ident, named),
+        _ => panic!("Derive macro error")
     };
 
-    let dummy_mod = syn::Ident::new(format!("_IMPL_VERTEXDECLARATION_FOR_{}", struct_name));
-    let gen = quote! {
+    let dummy_mod = syn::Ident::new(&format!("_IMPL_VERTEXDECLARATION_FOR_{}", struct_name), Span::call_site());
+    quote_call_site! {
         #[allow(unused_imports, non_snake_case)]
         mod #dummy_mod {
             extern crate shine_render_core as _shine_render_core;
+
             use std::slice;
             use std::str;
+            use std::mem;
             #gen_impl
         }
-        pub use self::#dummy_mod::*;
-    };
-
-    //println!("{}", gen);
-
-    gen
+        pub use #dummy_mod::*;
+    }
 }
 
 
-fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) -> quote::Tokens {
-    let enum_type_name = syn::Ident::new(format!("{}Attribute", struct_name));
+fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Punctuated<syn::Field, Comma>) -> quote::Tokens {
+    let enum_type_name = syn::Ident::new(&format!("{}Attribute", struct_name), Span::call_site());
 
     let count = fields.len();
     if count == 0 {
@@ -50,31 +51,31 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         let field_name = field_ident.to_string();
         let field_ty = &field.ty;
         let const_name = convert_snake_to_capital_case(&field_name);
-        let const_ident = syn::Ident::new(const_name.clone());
+        let const_ident = syn::Ident::new(&const_name, Span::call_site());
         let enum_name = convert_snake_to_camel_case(&field_name);
-        let enum_ident = syn::Ident::new(enum_name.clone());
+        let enum_ident = syn::Ident::new(&enum_name, Span::call_site());
         let match_name = format!("v{}", enum_name);
 
         enum_idents.push(
-            quote! {
+            quote_call_site! {
                 #enum_ident
             }
         );
 
         consts.push(
-            quote! {
+            quote_call_site! {
                 pub const #const_ident: #enum_type_name = #enum_type_name::#enum_ident
             }
         );
 
         qualified_enum_idents.push(
-            quote! {
+            quote_call_site! {
                 #enum_type_name::#enum_ident
             }
         );
 
         match_name_cases.push(
-            quote! {
+            quote_call_site! {
                 //#field_name => Ok(#enum_type_name::#enum_ident),
                 //#enum_name => Ok(#enum_type_name::#enum_ident),
                 #match_name => Ok(#enum_type_name::#enum_ident)
@@ -82,26 +83,26 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         );
 
         match_from_usize_cases.push(
-            quote! {
+            quote_call_site! {
                 #index => #enum_type_name::#enum_ident
             }
         );
 
         match_to_usize_cases.push(
-            quote! {
+            quote_call_site! {
                 #enum_type_name::#enum_ident => #index
             }
         );
 
-        let offset_of = quote! {unsafe { &(*(0 as *const #struct_name)).#field_ident as *const _ as usize }};
+        let offset_of = quote_call_site! {unsafe { &(*(0 as *const #struct_name)).#field_ident as *const _ as usize }};
         match_get_desc.push(
-            quote! {
+            quote_call_site! {
                #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::#field_ty{offset: #offset_of, stride:mem::size_of::< #struct_name >()}
             }
         )
     }
 
-    let gen_attribute = quote! {
+    let gen_attribute = quote_call_site! {
         #[derive(Copy, Clone, Debug)]
         #[repr(u8)]
         #[allow(unused_variables)]
@@ -110,31 +111,31 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         }
     };
 
-    let gen_attribute_iter = quote! {
+    let gen_attribute_iter = quote_call_site! {
         #[allow(dead_code)]
         fn attribute_iter() -> slice::Iter<'static, #enum_type_name> {
-            static IDS : [#enum_type_name; #count] = #qualified_enum_idents;
+            static IDS : [#enum_type_name; #count] = [#(#qualified_enum_idents),*];
             IDS.iter()
         }
     };
 
-    let gen_attribute_layout = quote! {
+    let gen_get_attribute_layout = quote_call_site! {
         #[allow(dead_code)]
         fn get_attribute_layout(idx: #enum_type_name) -> _shine_render_core::VertexBufferLayoutElement {
-            use std::mem;
             match idx {
                 #(#match_get_desc,)*
             }
         }
     };
 
-    let gen_impl_consts = quote! {
+    let gen_impl_consts = quote_call_site! {
+        #[allow(dead_code)]
         impl #struct_name {
             #(#consts;)*
         }
     };
 
-    let gen_impl_from_usize = quote! {
+    let gen_impl_from_usize = quote_call_site! {
         impl From<usize> for #enum_type_name {
             fn from(index: usize) -> #enum_type_name {
                 match index {
@@ -153,7 +154,7 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         }
     };
 
-    let gen_impl_from_str = quote! {
+    let gen_impl_from_str = quote_call_site! {
         impl str::FromStr for #enum_type_name {
             type Err = String;
 
@@ -166,12 +167,12 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Vec<syn::Field>) 
         }
     };
 
-    quote! {
+    quote_call_site! {
         #gen_attribute
         impl _shine_render_core::VertexDeclaration for #struct_name {
             type Attribute = #enum_type_name;
             #gen_attribute_iter
-            #gen_attribute_layout
+            #gen_get_attribute_layout
         }
         #gen_impl_consts
         #gen_impl_from_usize
