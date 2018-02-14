@@ -13,7 +13,7 @@ const GLSL_VALIDATOR_ARGS_TEST: [&'static str; 1] = ["-v"];
 const GLSL_VALIDATOR_ARGS_INFO: [&'static str; 3] = ["-l", "-d", "-q"];
 const GLSL_VALIDATOR_ARGS_PREPROCESS: [&'static str; 1] = ["-E"];
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ShaderType {
     VertexShader,
     FragmentShader,
@@ -46,34 +46,34 @@ impl Uniform {
     pub fn get_parameter_type_token(&self) -> Result<quote::Tokens, String> {
         let type_id =
             match self.type_id {
-                5126 => quote!(f32), // GLenum(GL_FLOAT)
-                35664 => quote!(_shine_render_core::Float32x2), // GLenum(GL_FLOAT_VEC2)
-                35665 => quote!(_shine_render_core::Float32x3),// GLenum(GL_FLOAT_VEC3)
-                35666 => quote!(_shine_render_core::Float32x4),// GLenum(GL_FLOAT_VEC4)
+                5126 => quote_call_site!(f32), // GLenum(GL_FLOAT)
+                35664 => quote_call_site!(_shine_render_core::Float32x2), // GLenum(GL_FLOAT_VEC2)
+                35665 => quote_call_site!(_shine_render_core::Float32x3),// GLenum(GL_FLOAT_VEC3)
+                35666 => quote_call_site!(_shine_render_core::Float32x4),// GLenum(GL_FLOAT_VEC4)
 
-                5124 => quote!(i32),// GLenum(GL_INT)
-                35667 => quote!(_shine_render_core::Int32x2),// GLenum(GL_INT_VEC2)
-                35668 => quote!(_shine_render_core::Int32x3),// GLenum(GL_INT_VEC3)
-                35669 => quote!(_shine_render_core::Int32x4),// GLenum(GL_INT_VEC4)
+                5124 => quote_call_site!(i32),// GLenum(GL_INT)
+                35667 => quote_call_site!(_shine_render_core::Int32x2),// GLenum(GL_INT_VEC2)
+                35668 => quote_call_site!(_shine_render_core::Int32x3),// GLenum(GL_INT_VEC3)
+                35669 => quote_call_site!(_shine_render_core::Int32x4),// GLenum(GL_INT_VEC4)
 
-                35670 => quote!(bool),// GLenum(GL_BOOL)
-                35671 => quote!(_shine_render_core::Boolx2),// GLenum(GL_BOOL_VEC2)
-                35672 => quote!(_shine_render_core::Boolx3),// GLenum(GL_BOOL_VEC3)
-                35673 => quote!(_shine_render_core::Boolx4),// GLenum(GL_BOOL_VEC4)
+                35670 => quote_call_site!(bool),// GLenum(GL_BOOL)
+                35671 => quote_call_site!(_shine_render_core::Boolx2),// GLenum(GL_BOOL_VEC2)
+                35672 => quote_call_site!(_shine_render_core::Boolx3),// GLenum(GL_BOOL_VEC3)
+                35673 => quote_call_site!(_shine_render_core::Boolx4),// GLenum(GL_BOOL_VEC4)
 
-                35674 => quote!(_shine_render_core::Float32x4),// GLenum(GL_FLOAT_MAT2)
-                35675 => quote!(_shine_render_core::Float32x9),// GLenum(GL_FLOAT_MAT3)
-                35676 => quote!(_shine_render_core::Float32x16),// GLenum(GL_FLOAT_MAT4)
+                35674 => quote_call_site!(_shine_render_core::Float32x4),// GLenum(GL_FLOAT_MAT2)
+                35675 => quote_call_site!(_shine_render_core::Float32x9),// GLenum(GL_FLOAT_MAT3)
+                35676 => quote_call_site!(_shine_render_core::Float32x16),// GLenum(GL_FLOAT_MAT4)
 
-                35678 => quote!(_shine_render_gl::UnsafeTexture2DIndex),// GLenum(GL_SAMPLER_2D)
-                35680 => quote!(_shines_render_gl::UnsafeTextureCubeIndex),// GLenum(GL_SAMPLER_CUBE)
+                35678 => quote_call_site!(_shine_render_gl::UnsafeTexture2DIndex),// GLenum(GL_SAMPLER_2D)
+                35680 => quote_call_site!(_shines_render_gl::UnsafeTextureCubeIndex),// GLenum(GL_SAMPLER_CUBE)
 
                 _ => return Err(format!("Could not find built-in type for uniform {}, type id:{}", self.name, self.type_id))
             };
 
         let size = self.size;
         if size > 1 {
-            Ok(quote!([#type_id; #size]))
+            Ok(quote_call_site!([#type_id; #size]))
         } else {
             Ok(type_id)
         }
@@ -184,12 +184,12 @@ fn extract_shader_info(shaders: &[String]) -> Result<(Vec<Attribute>, Vec<Unifor
     let bin = get_glslangValidator_executable();
 
     let mut cmd = Command::new(bin);
-    cmd.args(shaders).args(&GLSL_VALIDATOR_ARGS_INFO);
-    println!("{:?}", cmd);
-    println!("{:?}", shaders);
+    let cmd = cmd.args(&GLSL_VALIDATOR_ARGS_INFO).args(shaders);
     let output = cmd.output().expect(&format!("Failed execute '{:?}' {:?} to extract info", cmd, GLSL_VALIDATOR_ARGS_INFO));
+    //println!("shader info: {:?}", cmd);
 
     let stdout = str::from_utf8(&output.stdout).unwrap();
+    //println!("shader info result: {}", stdout);
 
     enum State {
         Attribute,
@@ -244,30 +244,35 @@ fn prepocess_shader(shaders: &[String]) -> Vec<(ShaderType, String)> {
     let mut res = vec!();
 
     for sh_type in vec!(ShaderType::VertexShader, ShaderType::FragmentShader).into_iter() {
+        //println!("shader source ext: {}", sh_type.to_extension());
+        //println!("shader sources in: {:?}", shaders);
         let shaders: Vec<_> = shaders.iter().filter(|e| e.ends_with(sh_type.to_extension())).collect();
-        let output =
-            Command::new(bin.clone())
-                .args(&shaders)
-                .args(&GLSL_VALIDATOR_ARGS_PREPROCESS)
-                .output()
-                .expect(&format!("Failed execute {} {:?} to prerocess shader", bin, GLSL_VALIDATOR_ARGS_PREPROCESS));
+        //println!("shader sources out: {:?}", shaders);
+        if shaders.is_empty() && (sh_type == ShaderType::VertexShader || sh_type == ShaderType::FragmentShader) {
+            panic!("Mandatory shader is missing: {}", sh_type.to_extension());
+        }
+        if !shaders.is_empty() {
+            let mut cmd = Command::new(bin.clone());
+            let cmd = cmd.args(&GLSL_VALIDATOR_ARGS_PREPROCESS).args(shaders);
+            let output = cmd.output().expect(&format!("Failed to execute '{:?}' {:?} to process shaders", cmd, GLSL_VALIDATOR_ARGS_INFO));
+            //println!("shader source: {:?}", cmd);
 
-        let stdout = str::from_utf8(&output.stdout).unwrap();
-        res.push((sh_type, stdout.to_string()))
+            let stdout = str::from_utf8(&output.stdout).unwrap();
+            //println!("shader source result: {}", stdout);
+
+            res.push((sh_type, stdout.to_string()))
+        }
     }
 
     res
 }
 
 pub fn prepocess_sources<'a, I: Iterator<Item=&'a (ShaderType, String)>>(name: String, shaders: I) -> Result<(Vec<Attribute>, Vec<Uniform>, Vec<(ShaderType, String)>), String> {
-    // create temp files froom the shader
-
+    // create temp files for each shader chunk
     let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
     let root = Path::new(&root).join("target").join("shaders").join(name.to_string());
-
     let mut source_files: Vec<String> = vec!();
     fs::DirBuilder::new().recursive(true).create(root.clone()).expect("Temporary target directory could not be created:");
-
     for (idx, ref shader) in shaders.enumerate() {
         let file = root.join(format!("{}{}", idx, shader.0.to_extension()));
         source_files.push(file.to_str().unwrap().to_string());
@@ -275,11 +280,11 @@ pub fn prepocess_sources<'a, I: Iterator<Item=&'a (ShaderType, String)>>(name: S
         file.write_all(shader.1.as_bytes()).expect("Temporary shader files could not be written:");
     }
 
+    // process shaders
     let (attributes, uniforms) = extract_shader_info(&source_files)?;
     let sources = prepocess_shader(&source_files);
 
     //println!("{:?},{:?}", attributes, uniforms);
-
     Ok((attributes, uniforms, sources))
 }
 

@@ -1,26 +1,23 @@
+extern crate image;
 #[macro_use]
 extern crate shine_render_gl as render;
-extern crate image;
 
 use std::env;
 use std::time::Duration;
 use render::*;
 
-#[derive(Copy, Clone, Debug)]
-#[derive(VertexDeclaration)]
+#[derive(Copy, Clone, Debug, VertexDeclaration)]
 struct VxPos {
     position: Float32x3,
 }
 
-#[derive(Copy, Clone, Debug)]
-#[derive(VertexDeclaration)]
+#[derive(Copy, Clone, Debug, VertexDeclaration)]
 struct VxColorTex {
     color: Float32x3,
     tex_coord: Float32x2,
 }
 
-#[derive(Copy, Clone, Debug)]
-#[derive(GLShaderDeclaration)]
+#[derive(Copy, Clone, Debug, GLShaderDeclaration)]
 #[vert_path = "fun.glsl"]
 #[vert_src = "
     attribute vec3 vPosition;
@@ -55,7 +52,6 @@ struct VxColorTex {
 //#[unifrom(uTrsf) = engine.trsf]
 struct ShSimple {}
 
-
 struct SimpleView {
     t: f32,
     vb1: VertexBufferHandle<VxPos>,
@@ -84,18 +80,38 @@ impl View<PlatformEngine> for SimpleView {
         let mut queue = r.get_queue();
 
         let pos = [
-            VxPos { position: f32x3!(1, 0, 0) },
-            VxPos { position: f32x3!(1, 1, 0) },
-            VxPos { position: f32x3!(0, 1, 0) },
-            VxPos { position: f32x3!(0, 0, 0) },
+            VxPos {
+                position: f32x3!(1, 0, 0),
+            },
+            VxPos {
+                position: f32x3!(1, 1, 0),
+            },
+            VxPos {
+                position: f32x3!(0, 1, 0),
+            },
+            VxPos {
+                position: f32x3!(0, 0, 0),
+            },
         ];
         self.vb1.create_and_set(&mut queue, &pos);
 
         let color_tex = [
-            VxColorTex { color: f32x3!(1, 0, 0), tex_coord: f32x2!(1, 0) },
-            VxColorTex { color: f32x3!(1, 1, 0), tex_coord: f32x2!(1, 1) },
-            VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 1) },
-            VxColorTex { color: f32x3!(0, 0, 0), tex_coord: f32x2!(0, 0) }
+            VxColorTex {
+                color: f32x3!(1, 0, 0),
+                tex_coord: f32x2!(1, 0),
+            },
+            VxColorTex {
+                color: f32x3!(1, 1, 0),
+                tex_coord: f32x2!(1, 1),
+            },
+            VxColorTex {
+                color: f32x3!(0, 1, 0),
+                tex_coord: f32x2!(0, 1),
+            },
+            VxColorTex {
+                color: f32x3!(0, 0, 0),
+                tex_coord: f32x2!(0, 0),
+            },
         ];
         self.vb2.create_and_set(&mut queue, &color_tex);
 
@@ -142,7 +158,8 @@ impl View<PlatformEngine> for SimpleView {
 
             ffi!(gl::ClearColor(0.0, 0.0, 0.0, 1.0));
             ffi!(gl::Clear(gl::COLOR_BUFFER_BIT));
-            ll.states.set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
+            ll.states
+                .set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
         }
 
         let st = self.t.sin();
@@ -154,20 +171,26 @@ impl View<PlatformEngine> for SimpleView {
             v_position: (&self.vb1, VxPos::POSITION).into(),
             indices: (&self.ib).into(),
             u_color: Float32x3::from([0.5, self.t / 6.28, 0.5]),
-            u_trsf: Float32x16::from(
-                [st, -ct, 0.0, 0.0,
-                    ct, st, 0.0, 0.0,
-                    0.0, 0.0, 1.0, 0.0,
-                    0.0, 0.0, 0.0, 1.0]),
+            u_trsf: Float32x16::from([
+                st, -ct, 0.0, 0.0, ct, st, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0
+            ]),
             u_tex: (&self.tx).into(),
         };
 
         self.sh.draw(&mut queue, params, Primitive::Triangle, 0, 6);
     }
 
-    fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
+    fn on_key(
+        &mut self,
+        ctl: &mut WindowControl,
+        _scan_code: ScanCode,
+        virtual_key: Option<VirtualKeyCode>,
+        is_down: bool,
+    ) {
         match virtual_key {
-            Some(VirtualKeyCode::Escape) if !is_down => { ctl.close(); }
+            Some(VirtualKeyCode::Escape) if !is_down => {
+                ctl.close();
+            }
             _ => {}
         }
     }
@@ -175,31 +198,35 @@ impl View<PlatformEngine> for SimpleView {
 
 #[test]
 pub fn render() {
-    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(
+        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
+        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
+    );
 
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
 
     let mut window = render::PlatformWindowSettings::default()
         .title("main")
         .size((1024, 1024))
-        .build(&engine, SimpleView::new()).expect("Could not initialize main window");
+        .build(&engine, SimpleView::new())
+        .expect("Could not initialize main window");
 
-    /*
+
     let mut sub_window = render::PlatformWindowSettings::default()
         .title("sub")
         .size((256, 256))
         //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine, SimpleView::new()).expect("Could not initialize sub window");
-*/
+
     loop {
         if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {
             break;
         }
 
         window.update_view();
-        //sub_window.update_view();
+        sub_window.update_view();
 
         window.render().unwrap();
-//        sub_window.render().unwrap();
+        sub_window.render().unwrap();
     }
 }

@@ -35,10 +35,7 @@ mod glshaderdeclaration;
 pub fn shader_declaration(input: TokenStream) -> TokenStream
 {
     use utils::*;
-
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
-    let declaration_type_name = &ast.ident;
-
     let gen = glshaderdeclaration::impl_shader_declaration(&find_source_dir(), &ast);
     gen.into()
 }

@@ -28,10 +28,10 @@ pub fn impl_shader_declaration(file_dir: &Path, ast: &syn::DeriveInput) -> quote
                     &syn::Meta::NameValue(syn::MetaNameValue { ref ident, lit: syn::Lit::Str(ref value), .. }) if ident == "vert_path" => {
                         Some((ShaderType::VertexShader, SourceKind::Path(value.value())))
                     }
-                    &syn::Meta::NameValue(syn::MetaNameValue { ref ident, lit: syn::Lit::Str(ref value), .. }) if ident == "vert_src" => {
+                    &syn::Meta::NameValue(syn::MetaNameValue { ref ident, lit: syn::Lit::Str(ref value), .. }) if ident == "frag_src" => {
                         Some((ShaderType::FragmentShader, SourceKind::Src(value.value())))
                     }
-                    &syn::Meta::NameValue(syn::MetaNameValue { ref ident, lit: syn::Lit::Str(ref value), .. }) if ident == "vert_path" => {
+                    &syn::Meta::NameValue(syn::MetaNameValue { ref ident, lit: syn::Lit::Str(ref value), .. }) if ident == "frag_path" => {
                         Some((ShaderType::FragmentShader, SourceKind::Path(value.value())))
                     }
                     _ => None
