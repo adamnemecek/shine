@@ -402,7 +402,7 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         let (attributes, uniforms) = extract_shader_info(source_files).unwrap();
         //println!("attributes: {:?}", attributes);
         //println!("uniforms: {:?}", uniforms);
-        println!("states: {:?}", states);
+        //println!("states: {:?}", states);
         impl_parameter_declaration(&parameters_ident, attributes, uniforms, states)
     };
 

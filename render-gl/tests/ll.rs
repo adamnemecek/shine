@@ -166,7 +166,7 @@ impl View<PlatformEngine> for SimpleView {
         ffi!(gl::Clear(gl::COLOR_BUFFER_BIT));
 
         //ll.states.set_viewport(lowlevel::Viewport::FullScreen);
-        ll.states.set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
+        ll.states.set_viewport(Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
 
         let st = self.t.sin();
         let ct = self.t.cos();
