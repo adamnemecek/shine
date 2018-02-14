@@ -3,10 +3,6 @@ extern crate shine_render_gl;
 
 use core::*;
 
-enum aa {
-    a,b
-}
-
 # [derive(Copy, Clone, Debug)]
 # [derive(GLShaderDeclaration)]
 # [vert_path = "fun.glsl"]
@@ -38,7 +34,7 @@ enum aa {
         gl_FragColor = vec4(col, 1.0);
     }"]
 //todo 1:
-//#[state(depth = "on")]
+#[state(depth = "on")]
 //#[state(clamp = ccw)]
 //todo 2:
 //#[state(point_size = "?")]
