@@ -1,24 +1,12 @@
 #![allow(dead_code, unused_variables)]
 
+use core::*;
 use lowlevel::*;
 
-/// Viewport
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum Viewport {
-    FullScreen,
-    /// Bottom, Left, Width, Height. Width Height must be positive
-    Fixed(i32, i32, i32, i32),
-    /// Bottom, Left, Width, Height in percent. Width Height must be positive
-    Proportional(f32, f32, f32, f32),
-}
 
-impl Default for Viewport {
-    fn default() -> Viewport {
-        Viewport::FullScreen
-    }
-}
-
-pub struct ViewportState {
+/// Viewport state
+#[derive(Debug)]
+struct ViewportState {
     render_size: Size,
     function: Viewport,
     current: (i32, i32, i32, i32),
@@ -56,51 +44,44 @@ impl ViewportState {
 }
 
 
-/// Depth function
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum DepthFunction {
-    Disable,
-    Always,
-    Never,
-    Less,
-    LessEqual,
-    Greater,
-    GreaterEqual,
-    Equal,
+/// Depth function state
+#[derive(Debug)]
+struct DepthState {
+    value: DepthFunction,
 }
 
-impl DepthFunction {
+impl DepthState {
     fn commit(&self) {
         gl_check_error();
-        match self {
-            &DepthFunction::Disable => {
+        match self.value {
+            DepthFunction::Disable => {
                 ffi!(gl::Disable(gl::DEPTH_TEST));
             }
-            &DepthFunction::Always => {
+            DepthFunction::Always => {
                 ffi!(gl::Enable(gl::DEPTH_TEST));
                 ffi!(gl::DepthFunc(gl::ALWAYS));
             }
-            &DepthFunction::Never => {
+            DepthFunction::Never => {
                 ffi!(gl::Enable(gl::DEPTH_TEST));
                 ffi!(gl::DepthFunc(gl::NEVER));
             }
-            &DepthFunction::Less => {
+            DepthFunction::Less => {
                 ffi!(gl::Enable(gl::DEPTH_TEST));
                 ffi!(gl::DepthFunc(gl::LESS));
             }
-            &DepthFunction::LessEqual => {
+            DepthFunction::LessEqual => {
                 ffi!(gl::Enable(gl::DEPTH_TEST));
                 ffi!(gl::DepthFunc(gl::LEQUAL));
             }
-            &DepthFunction::Greater => {
+            DepthFunction::Greater => {
                 ffi!(gl::Enable(gl::DEPTH_TEST));
                 ffi!(gl::DepthFunc(gl::GREATER));
             }
-            &DepthFunction::GreaterEqual => {
+            DepthFunction::GreaterEqual => {
                 ffi!(gl::Enable(gl::DEPTH_TEST));
                 ffi!(gl::DepthFunc(gl::GEQUAL));
             }
-            &DepthFunction::Equal => {
+            DepthFunction::Equal => {
                 ffi!(gl::Enable(gl::DEPTH_TEST));
                 ffi!(gl::DepthFunc(gl::EQUAL));
             }
@@ -109,24 +90,45 @@ impl DepthFunction {
     }
 }
 
-impl Default for DepthFunction {
-    fn default() -> DepthFunction {
-        DepthFunction::Disable
+
+/// Cull function state
+#[derive(Debug)]
+struct CullState {
+    value: CullFunction,
+}
+
+impl CullState {
+    fn commit(&self) {
+        gl_check_error();
+        match self.value {
+            CullFunction::Disable => {
+                ffi!(gl::Disable(gl::CULL_FACE));
+            }
+            CullFunction::Clockwise => {
+                ffi!(gl::Enable(gl::CULL_FACE));
+                ffi!(gl::CullFace(gl::BACK));
+            }
+            CullFunction::CounterClockwise => {
+                ffi!(gl::Enable(gl::CULL_FACE));
+                ffi!(gl::CullFace(gl::FRONT));
+            }
+        }
+        gl_check_error();
     }
 }
 
 
 /// Blend function
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum BlendFunction {
-    Disable,
+#[derive(Debug)]
+struct BlendState {
+    value: BlendFunction,
 }
 
-impl BlendFunction {
+impl BlendState {
     fn commit(&self) {
         gl_check_error();
-        match self {
-            &BlendFunction::Disable => {
+        match self.value {
+            BlendFunction::Disable => {
                 ffi!(gl::Disable(gl::BLEND));
             }
         }
@@ -134,74 +136,54 @@ impl BlendFunction {
     }
 }
 
-impl Default for BlendFunction {
-    fn default() -> BlendFunction {
-        BlendFunction::Disable
-    }
-}
-
 
 /// Stencil function
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum StencilFunction {
-    Disable,
-    Always(GLint, GLuint),
-    Never(GLint, GLuint),
-    Less(GLint, GLuint),
-    LessEqual(GLint, GLuint),
-    Greater(GLint, GLuint),
-    GreaterEqual(GLint, GLuint),
-    Equal(GLint, GLuint),
-    NotEqual(GLint, GLuint),
+#[derive(Debug)]
+pub struct StencilState {
+    value: StencilFunction,
 }
 
-impl StencilFunction {
+impl StencilState {
     fn commit(&self) {
         gl_check_error();
-        match self {
-            &StencilFunction::Disable => {
+        match self.value {
+            StencilFunction::Disable => {
                 ffi!(gl::Disable(gl::STENCIL_TEST));
             }
-            &StencilFunction::Always(ref_value, mask_value) => {
+            StencilFunction::Always { ref_value, mask_value } => {
                 ffi!(gl::Enable(gl::STENCIL_TEST));
-                ffi!(gl::StencilFunc(gl::ALWAYS, ref_value, mask_value));
+                ffi!(gl::StencilFunc(gl::ALWAYS, ref_value as GLint, mask_value as GLuint));
             }
-            &StencilFunction::Never(ref_value, mask_value) => {
+            StencilFunction::Never { ref_value, mask_value } => {
                 ffi!(gl::Enable(gl::STENCIL_TEST));
-                ffi!(gl::StencilFunc(gl::NEVER, ref_value, mask_value));
+                ffi!(gl::StencilFunc(gl::NEVER, ref_value as GLint, mask_value as GLuint));
             }
-            &StencilFunction::Less(ref_value, mask_value) => {
+            StencilFunction::Less { ref_value, mask_value } => {
                 ffi!(gl::Enable(gl::STENCIL_TEST));
-                ffi!(gl::StencilFunc(gl::LESS, ref_value, mask_value));
+                ffi!(gl::StencilFunc(gl::LESS, ref_value as GLint, mask_value as GLuint));
             }
-            &StencilFunction::LessEqual(ref_value, mask_value) => {
+            StencilFunction::LessEqual { ref_value, mask_value } => {
                 ffi!(gl::Enable(gl::STENCIL_TEST));
-                ffi!(gl::StencilFunc(gl::LEQUAL, ref_value, mask_value));
+                ffi!(gl::StencilFunc(gl::LEQUAL, ref_value as GLint, mask_value as GLuint));
             }
-            &StencilFunction::Greater(ref_value, mask_value) => {
+            StencilFunction::Greater { ref_value, mask_value } => {
                 ffi!(gl::Enable(gl::STENCIL_TEST));
-                ffi!(gl::StencilFunc(gl::GREATER, ref_value, mask_value));
+                ffi!(gl::StencilFunc(gl::GREATER, ref_value as GLint, mask_value as GLuint));
             }
-            &StencilFunction::GreaterEqual(ref_value, mask_value) => {
+            StencilFunction::GreaterEqual { ref_value, mask_value } => {
                 ffi!(gl::Enable(gl::STENCIL_TEST));
-                ffi!(gl::StencilFunc(gl::GEQUAL, ref_value, mask_value));
+                ffi!(gl::StencilFunc(gl::GEQUAL, ref_value as GLint, mask_value as GLuint));
             }
-            &StencilFunction::Equal(ref_value, mask_value) => {
+            StencilFunction::Equal { ref_value, mask_value } => {
                 ffi!(gl::Enable(gl::STENCIL_TEST));
-                ffi!(gl::StencilFunc(gl::EQUAL, ref_value, mask_value));
+                ffi!(gl::StencilFunc(gl::EQUAL, ref_value as GLint, mask_value as GLuint));
             }
-            &StencilFunction::NotEqual(ref_value, mask_value) => {
+            StencilFunction::NotEqual { ref_value, mask_value } => {
                 ffi!(gl::Enable(gl::STENCIL_TEST));
-                ffi!(gl::StencilFunc(gl::NOTEQUAL, ref_value, mask_value));
+                ffi!(gl::StencilFunc(gl::NOTEQUAL, ref_value as GLint, mask_value as GLuint));
             }
         }
         gl_check_error();
-    }
-}
-
-impl Default for StencilFunction {
-    fn default() -> StencilFunction {
-        StencilFunction::Disable
     }
 }
 
@@ -210,22 +192,25 @@ const MASK_VIEWPORT: u64 = 0x1;
 const MASK_DEPTH: u64 = 0x2;
 const MASK_STENCIL: u64 = 0x4;
 const MASK_BLEND: u64 = 0x8;
+const MASK_CULL: u64 = 0x10;
 //const MASK_SCISOR : u64 = ;
 //const MASK_BUFFERWRITE : u64 = ; // color and depth
 //const MASK_ : u64 = ; // color and depth
-const MASK_ALL: u64 = 0xF;
+const MASK_ALL: u64 = 0x1F;
 
 
 /// Structure to handle gl states
+#[derive(Debug)]
 pub struct StateManager {
     forced: bool,
     prev_used_mask: u64,
     used_mask: u64,
     dirty_mask: u64,
     viewport: ViewportState,
-    depth: DepthFunction,
-    stencil: StencilFunction,
-    blend: BlendFunction,
+    depth: DepthState,
+    stencil: StencilState,
+    blend: BlendState,
+    cull: CullState,
 }
 
 impl StateManager {
@@ -236,9 +221,10 @@ impl StateManager {
             used_mask: 0,
             dirty_mask: MASK_ALL,
             viewport: ViewportState::new(),
-            depth: Default::default(),
-            stencil: Default::default(),
-            blend: Default::default(),
+            depth: DepthState { value: Default::default() },
+            stencil: StencilState { value: Default::default() },
+            blend: BlendState { value: Default::default() },
+            cull: CullState { value: Default::default() },
         }
     }
 
@@ -260,6 +246,7 @@ impl StateManager {
         if (reset & MASK_DEPTH) != 0 { self.set_depth(Default::default()); }
         if (reset & MASK_STENCIL) != 0 { self.set_stencil(Default::default()); }
         if (reset & MASK_BLEND) != 0 { self.set_blend(Default::default()); }
+        if (reset & MASK_CULL) != 0 { self.set_cull(Default::default()); }
 
         // apply state changes
         if self.forced { self.dirty_mask = MASK_ALL; }
@@ -268,6 +255,7 @@ impl StateManager {
         if (self.dirty_mask & MASK_DEPTH) != 0 { self.depth.commit(); }
         if (self.dirty_mask & MASK_STENCIL) != 0 { self.stencil.commit(); }
         if (self.dirty_mask & MASK_BLEND) != 0 { self.blend.commit(); }
+        if (self.dirty_mask & MASK_CULL) != 0 { self.cull.commit(); }
 
         self.dirty_mask = 0;
         self.used_mask = 0;
@@ -289,22 +277,29 @@ impl StateManager {
 
     pub fn set_depth(&mut self, fun: DepthFunction) {
         self.used_mask |= MASK_DEPTH;
-        if self.depth == fun { return; }
+        if self.depth.value == fun { return; }
         self.dirty_mask |= MASK_DEPTH;
-        self.depth = fun;
+        self.depth.value = fun;
     }
 
     pub fn set_stencil(&mut self, fun: StencilFunction) {
         self.used_mask |= MASK_STENCIL;
-        if self.stencil == fun { return; }
+        if self.stencil.value == fun { return; }
         self.dirty_mask |= MASK_STENCIL;
-        self.stencil = fun;
+        self.stencil.value = fun;
     }
 
     pub fn set_blend(&mut self, fun: BlendFunction) {
         self.used_mask |= MASK_BLEND;
-        if self.blend == fun { return; }
+        if self.blend.value == fun { return; }
         self.dirty_mask |= MASK_BLEND;
-        self.blend = fun;
+        self.blend.value = fun;
+    }
+
+    pub fn set_cull(&mut self, fun: CullFunction) {
+        self.used_mask |= MASK_CULL;
+        if self.cull.value == fun { return; }
+        self.dirty_mask |= MASK_CULL;
+        self.cull.value = fun;
     }
 }

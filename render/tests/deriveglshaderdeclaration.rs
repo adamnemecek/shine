@@ -3,10 +3,10 @@ extern crate shine_render_gl;
 
 use core::*;
 
-# [derive(Copy, Clone, Debug)]
-# [derive(GLShaderDeclaration)]
-# [vert_path = "fun.glsl"]
-# [vert_src = "
+#[derive(Copy, Clone, Debug)]
+#[derive(GLShaderDeclaration)]
+#[vert_path = "fun.glsl"]
+#[vert_src = "
     attribute vec3 vPosition;
     attribute vec3 vColor;
     attribute vec2 vTexCoord;
@@ -23,7 +23,7 @@ use core::*;
         txCoord = vTexCoord.xy;
         gl_Position = uTrsf * vec4(vPosition, 1.0);
     }"]
-# [frag_src = "
+#[frag_src = "
     varying vec3 color;
     varying vec2 txCoord;
     uniform sampler2D uTex;
@@ -33,11 +33,8 @@ use core::*;
         vec3 col =  color * intensity;
         gl_FragColor = vec4(col, 1.0);
     }"]
-//todo 1:
-#[state(depth = "on")]
-//#[state(clamp = ccw)]
-//todo 2:
-//#[state(point_size = "?")]
-//todo 3:
-//#[unifrom(uTrsf) = "engine.trsf"]
+#[depth = "disable"]
+#[cull = "ccw"]
+//todo
+//#[unifrom(uTrsf = "engine.trsf")]
 struct ShSimple {}

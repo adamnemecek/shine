@@ -30,8 +30,12 @@ pub fn vertex_declaration(input: TokenStream) -> TokenStream {
 
 mod glslang;
 mod glshaderdeclaration;
+mod glshaderstates;
 
-#[proc_macro_derive(GLShaderDeclaration, attributes(vert_path, vert_src, frag_path, frag_src, state))]
+#[proc_macro_derive(GLShaderDeclaration, attributes(
+vert_path, vert_src, geom_path, geom_src, frag_path, frag_src,
+depth, cull, /*viewport, stencil, blend*/
+))]
 pub fn shader_declaration(input: TokenStream) -> TokenStream
 {
     use utils::*;

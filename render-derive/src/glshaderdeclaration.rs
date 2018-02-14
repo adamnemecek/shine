@@ -7,6 +7,7 @@ use proc_macro;
 use proc_macro2::Span;
 use glslang::*;
 use utils::*;
+use glshaderstates::*;
 
 
 impl ShaderType {
@@ -14,6 +15,7 @@ impl ShaderType {
         match self {
             &ShaderType::VertexShader => quote_call_site! {ShaderType::VertexShader},
             &ShaderType::FragmentShader => quote_call_site! {ShaderType::FragmentShader},
+            &ShaderType::GeometryShader => quote_call_site! {ShaderType::GeometryShader},
         }
     }
 }
@@ -152,6 +154,18 @@ fn parse_source_inputs(attrs: &Vec<syn::Attribute>, src_path: &Path, out_path: &
                         source: read_file_as_string(&src_path.join(value.value())),
                         temp_file: out_path.join(format!("{}.vert", id)),
                     }),
+                    "geom_src" => Some(Source {
+                        sh_type: ShaderType::GeometryShader,
+                        source_kind: SourceKind::Inline,
+                        source: value.value(),
+                        temp_file: out_path.join(format!("{}.geom", id)),
+                    }),
+                    "geom_path" => Some(Source {
+                        sh_type: ShaderType::GeometryShader,
+                        source_kind: SourceKind::External(value.value()),
+                        source: read_file_as_string(&src_path.join(value.value())),
+                        temp_file: out_path.join(format!("{}.geom", id)),
+                    }),
                     "frag_src" => Some(Source {
                         sh_type: ShaderType::FragmentShader,
                         source_kind: SourceKind::Inline,
@@ -173,7 +187,16 @@ fn parse_source_inputs(attrs: &Vec<syn::Attribute>, src_path: &Path, out_path: &
 }
 
 
-fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Attribute>, uniforms: Vec<Uniform>) -> quote::Tokens {
+fn parse_state_inputs(attrs: &Vec<syn::Attribute>) -> Vec<State>
+{
+    attrs.iter()
+        .filter_map(|attr| {
+            attr.interpret_meta().and_then(|ref meta| State::from_meta(meta))
+        }).collect::<Vec<_>>()
+}
+
+
+fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Attribute>, uniforms: Vec<Uniform>, states: Vec<State>) -> quote::Tokens {
     let mut param_fields = vec!();
     let mut match_name_cases: Vec<quote::Tokens> = vec!();
     let mut bind_fields: Vec<quote::Tokens> = vec!();
@@ -273,6 +296,16 @@ fn impl_parameter_declaration(param_type_ident: &syn::Ident, attributes: Vec<Att
         }
     }
 
+    // states
+    {
+        for state in states.iter() {
+            if let Some(/* name, */ref tokens) = state.field_tokens {
+                param_fields.push(tokens.clone());
+            }
+            bind_fields.push(state.apply_tokens.clone());
+        }
+    }
+
     let count = index;
 
     let gen_index_by_name = quote_call_site! {
@@ -365,10 +398,12 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 
     let gen_parameters = {
         let source_files = sources.iter().filter_map(|src| Some(src.temp_file.as_path()));
+        let states = parse_state_inputs(&ast.attrs);
         let (attributes, uniforms) = extract_shader_info(source_files).unwrap();
         //println!("attributes: {:?}", attributes);
         //println!("uniforms: {:?}", uniforms);
-        impl_parameter_declaration(&parameters_ident, attributes, uniforms)
+        println!("states: {:?}", states);
+        impl_parameter_declaration(&parameters_ident, attributes, uniforms, states)
     };
 
     let gen_shader_decl = quote_call_site! {

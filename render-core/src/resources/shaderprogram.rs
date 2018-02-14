@@ -11,6 +11,8 @@ use resources::*;
 pub enum ShaderType {
     /// Vertex shader
     VertexShader,
+    /// Geometry shader
+    GeometryShader,
     /// Fragment (pixel) shader
     FragmentShader,
 }

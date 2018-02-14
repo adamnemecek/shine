@@ -23,7 +23,8 @@ impl ProgramBinding {
     pub fn glenum_from_shader_type(shader_type: ShaderType) -> GLenum {
         match shader_type {
             ShaderType::VertexShader => gl::VERTEX_SHADER,
-            ShaderType::FragmentShader => gl::FRAGMENT_SHADER
+            ShaderType::FragmentShader => gl::FRAGMENT_SHADER,
+            ShaderType::GeometryShader => gl::GEOMETRY_SHADER,
         }
     }
 

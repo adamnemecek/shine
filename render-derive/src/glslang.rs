@@ -13,6 +13,7 @@ const GLSL_VALIDATOR_ARGS_PREPROCESS: [&'static str; 1] = ["-E"];
 pub enum ShaderType {
     VertexShader,
     FragmentShader,
+    GeometryShader,
 }
 
 impl ShaderType {
@@ -20,6 +21,7 @@ impl ShaderType {
         match self {
             &ShaderType::VertexShader => ".vert",
             &ShaderType::FragmentShader => ".frag",
+            &ShaderType::GeometryShader => ".geom",
         }
     }
 }

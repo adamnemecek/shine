@@ -43,13 +43,8 @@ struct VxColorTex {
         vec3 col =  color * intensity;
         gl_FragColor = vec4(col, 1.0);
     }"]
-//todo 1:
-//#[state(depth) = on]
-//#[state(clamp) = ccw]
-//todo 2:
-//#[state(point_size) = ?]
-//todo 3:
-//#[unifrom(uTrsf) = engine.trsf]
+#[depth = "?"]
+#[cull = "cw"]
 struct ShSimple {}
 
 struct SimpleView {
@@ -80,38 +75,18 @@ impl View<PlatformEngine> for SimpleView {
         let mut queue = r.get_queue();
 
         let pos = [
-            VxPos {
-                position: f32x3!(1, 0, 0),
-            },
-            VxPos {
-                position: f32x3!(1, 1, 0),
-            },
-            VxPos {
-                position: f32x3!(0, 1, 0),
-            },
-            VxPos {
-                position: f32x3!(0, 0, 0),
-            },
+            VxPos { position: f32x3!(1, 0, 0) },
+            VxPos { position: f32x3!(1, 1, 0) },
+            VxPos { position: f32x3!(0, 1, 0) },
+            VxPos { position: f32x3!(0, 0, 0) },
         ];
         self.vb1.create_and_set(&mut queue, &pos);
 
         let color_tex = [
-            VxColorTex {
-                color: f32x3!(1, 0, 0),
-                tex_coord: f32x2!(1, 0),
-            },
-            VxColorTex {
-                color: f32x3!(1, 1, 0),
-                tex_coord: f32x2!(1, 1),
-            },
-            VxColorTex {
-                color: f32x3!(0, 1, 0),
-                tex_coord: f32x2!(0, 1),
-            },
-            VxColorTex {
-                color: f32x3!(0, 0, 0),
-                tex_coord: f32x2!(0, 0),
-            },
+            VxColorTex { color: f32x3!(1, 0, 0), tex_coord: f32x2!(1, 0) },
+            VxColorTex { color: f32x3!(1, 1, 0), tex_coord: f32x2!(1, 1) },
+            VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 1) },
+            VxColorTex { color: f32x3!(0, 0, 0), tex_coord: f32x2!(0, 0) },
         ];
         self.vb2.create_and_set(&mut queue, &color_tex);
 
@@ -159,7 +134,7 @@ impl View<PlatformEngine> for SimpleView {
             ffi!(gl::ClearColor(0.0, 0.0, 0.0, 1.0));
             ffi!(gl::Clear(gl::COLOR_BUFFER_BIT));
             ll.states
-                .set_viewport(lowlevel::Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
+                .set_viewport(Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
         }
 
         let st = self.t.sin();
@@ -175,6 +150,7 @@ impl View<PlatformEngine> for SimpleView {
                 st, -ct, 0.0, 0.0, ct, st, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0
             ]),
             u_tex: (&self.tx).into(),
+            depth: DepthFunction::Disable,
         };
 
         self.sh.draw(&mut queue, params, Primitive::Triangle, 0, 6);
