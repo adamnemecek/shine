@@ -80,6 +80,25 @@ impl LowLevel {
 
     pub fn end_render(&mut self) {}
 
+    pub fn init_view(&mut self, viewport: Option<Viewport>, color: Option<Float32x4>, depth: Option<f32>) {
+        let mut clear_flags: GLenum = 0;
+        if let Some(color) = color {
+            ffi!(gl::ClearColor(color.0, color.1, color.2, color.3));
+            clear_flags |= gl::COLOR_BUFFER_BIT;
+        }
+        if let Some(depth) = depth {
+            ffi!(gl::ClearDepth(depth as f64));
+            clear_flags |= gl::DEPTH_BUFFER_BIT;
+        }
+        if clear_flags != 0 {
+            ffi!(gl::Clear(clear_flags));
+        }
+
+        if let Some(viewport) = viewport {
+            self.states.set_viewport(viewport);
+        }
+    }
+
     /// Draws a geometry using the current states.
     pub fn draw(&mut self, primitive: GLenum, vertex_start: GLuint, vertex_count: GLuint) {
         assert!(self.program_binding.get_bound_id() != 0, "shaderless (fixed function pipeline) rendering is not supported");

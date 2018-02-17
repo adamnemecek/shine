@@ -1,34 +1,32 @@
 extern crate shine_store as store;
-extern crate shine_render_gl as render;
+extern crate shine_render as render;
 extern crate rayon;
 
 use std::time::Duration;
-use std::env;
 use render::*;
 use rayon::prelude::*;
 
-struct SimpleView {
+struct HelloView {
     time: f32,
 }
 
 
-impl View<PlatformEngine> for SimpleView {
-    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {}
+impl View<PlatformEngine> for HelloView {
+    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {}
 
-    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {}
+    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {}
 
-    fn on_surface_changed(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {}
+    fn on_surface_changed(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {}
 
-    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
+    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {
         //use std::f32;
         self.time = (self.time + 0.01).fract();
     }
 
-    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
+    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
         (0..300).into_par_iter()
             .for_each(|tid| {
-                let mut queue = r.get_queue();
-                queue.add_command(0, Command::Hello { time: (self.time * tid as f32).sin() });
+                r.init_view(None, Some(Float32x4((self.time * tid as f32).sin(), 0., 0., 1.)), None);
             });
     }
 
@@ -40,10 +38,8 @@ impl View<PlatformEngine> for SimpleView {
     }
 }
 
-#[test]
-pub fn hello_world() {
-    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
+fn main() {
     use store::threadid;
     rayon::initialize(rayon::Configuration::new()
         .num_threads(threadid::get_preferred_thread_count())
@@ -54,13 +50,13 @@ pub fn hello_world() {
     let mut window = render::PlatformWindowSettings::default()
         .title("main")
         .size((512, 512))
-        .build(&engine, SimpleView { time: 0.0 }).expect("Could not initialize main window");
+        .build(&engine, HelloView { time: 0.0 }).expect("Could not initialize main window");
 
     let mut sub_window = render::PlatformWindowSettings::default()
         .title("sub")
         .size((512, 512))
         //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
-        .build(&engine, SimpleView { time: 0.0 }).expect("Could not initialize sub window");
+        .build(&engine, HelloView { time: 0.0 }).expect("Could not initialize sub window");
 
     loop {
         if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {

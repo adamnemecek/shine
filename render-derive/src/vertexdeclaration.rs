@@ -28,6 +28,10 @@ pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
     }
 }
 
+fn check_path(path: &syn::Path, name: &str) -> bool {
+    quote_call_site!(#path).to_string() == name
+}
+
 
 fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Punctuated<syn::Field, Comma>) -> quote::Tokens {
     let enum_type_name = syn::Ident::new(&format!("{}Attribute", struct_name), Span::call_site());
@@ -96,10 +100,36 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Punctuated<syn::F
 
         let offset_of = quote_call_site! {unsafe { &(*(0 as *const #struct_name)).#field_ident as *const _ as usize }};
         match_get_desc.push(
-            quote_call_site! {
-               #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::#field_ty{offset: #offset_of, stride:mem::size_of::< #struct_name >()}
+            match field_ty {
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Float32x16") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Float32{components: 16, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Float32x4") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Float32{components: 4, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Float32x3") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Float32{components: 3, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Float32x2") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Float32{components: 2, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Float32") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Float32{components: 1, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "UInt8x4") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::UInt8{components: 4, fixp: false, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "UInt8x3") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::UInt8{components: 3, fixp: false, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "UInt8x2") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::UInt8{components: 2, fixp: false, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "UInt8") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::UInt8{components: 1, fixp: false, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "NUInt8x4") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::UInt8{components: 4, fixp: true, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "NUInt8x3") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::UInt8{components: 3, fixp: true, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "NUInt8x2") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::UInt8{components: 2, fixp: true, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "NUInt8") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::UInt8{components: 1, fixp: true, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Int8x4") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Int8{components: 4, fixp: false, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Int8x3") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Int8{components: 3, fixp: false, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Int8x2") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Int8{components: 2, fixp: false, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Int8") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Int8{components: 1, fixp: false, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "NInt8x4") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Int8{components: 4, fixp: true, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "NInt8x3") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Int8{components: 3, fixp: true, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "NInt8x2") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Int8{components: 2, fixp: true, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+                &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "NInt8") => quote_call_site! { #enum_type_name::#enum_ident => _shine_render_core::VertexBufferLayoutElement::Int8{components: 1, fixp: true, offset: #offset_of, stride:mem::size_of::< #struct_name >()} },
+
+                _ => panic!("Unknown vertex layout type: {}", quote_call_site! {#field_ty})
             }
-        )
+        );
     }
 
     let gen_attribute = quote_call_site! {

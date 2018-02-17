@@ -1,7 +1,7 @@
-extern crate shine_render_core as core;
-extern crate shine_render_gl;
+//extern crate shine_render_core as core;
+extern crate shine_render;
+use shine_render::*;
 
-use core::*;
 
 #[derive(Copy, Clone, Debug)]
 #[derive(GLShaderDeclaration)]

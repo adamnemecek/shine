@@ -44,6 +44,28 @@ pub struct GLCommandProcessContext/*<'a>*/ {
 }
 
 
+/// Clear command to set up view for rendering
+pub struct ClearCommand {
+    color: Option<Float32x4>,
+    depth: Option<f32>,
+    //stencil: Option<u32>
+    viewport: Option<Viewport>,
+}
+
+impl ClearCommand {
+    pub fn process(self, context: &mut GLCommandProcessContext) {
+        context.ll.init_view(self.viewport, self.color, self.depth);
+    }
+}
+
+impl From<ClearCommand> for Command {
+    #[inline(always)]
+    fn from(value: ClearCommand) -> Command {
+        Command::Clear(value)
+    }
+}
+
+
 /// Render backend implementation using opengl
 pub struct GLBackend {
     ll: LowLevel,
@@ -94,6 +116,16 @@ impl GLBackend {
 impl Backend for GLBackend {
     type CommandQueue/*<'a>*/ = GLCommandQueue/*<'a>*/;
     type CommandContext/*<'a>*/ = GLCommandProcessContext/*<'a>*/;
+
+    fn init_view(&self, viewport: Option<Viewport>, color: Option<Float32x4>, depth: Option<f32>)
+    {
+        self.get_queue().add_command(0,
+                                     ClearCommand {
+                                         color: color,
+                                         depth: depth,
+                                         viewport: viewport,
+                                     });
+    }
 
     fn get_queue<'a>(&'a self) -> GLCommandQueue/*<'a>*/ {
         /*generic_associated_types workaround*/ unsafe {

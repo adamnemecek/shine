@@ -88,10 +88,10 @@ impl View<PlatformEngine> for SimpleView {
 
         {
             let pos = [
-                VxPos { position: f32x3!(1, 0, 0) },
-                VxPos { position: f32x3!(1, 1, 0) },
-                VxPos { position: f32x3!(0, 1, 0) },
-                VxPos { position: f32x3!(0, 0, 0) },
+                VxPos { position: (1., 0., 0.).into() },
+                VxPos { position: (1., 1., 0.).into() },
+                VxPos { position: (0., 1., 0.).into() },
+                VxPos { position: (0., 0., 0.).into() },
             ];
 
             let VertexData::Transient(slice) = pos.to_data();
@@ -101,10 +101,10 @@ impl View<PlatformEngine> for SimpleView {
 
         {
             let color_tex = [
-                VxColorTex { color: f32x3!(1, 0, 0), tex_coord: f32x2!(1, 0) },
-                VxColorTex { color: f32x3!(1, 1, 0), tex_coord: f32x2!(1, 1) },
-                VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 1) },
-                VxColorTex { color: f32x3!(0, 0, 0), tex_coord: f32x2!(0, 0) }
+                VxColorTex { color: (1., 0., 0.).into(), tex_coord: (1., 0.).into() },
+                VxColorTex { color: (1., 1., 0.).into(), tex_coord: (1., 1.).into() },
+                VxColorTex { color: (0., 1., 0.).into(), tex_coord: (0., 1.).into() },
+                VxColorTex { color: (0., 0., 0.).into(), tex_coord: (0., 0.).into() }
             ];
 
             let VertexData::Transient(slice) = color_tex.to_data();

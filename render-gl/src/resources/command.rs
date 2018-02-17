@@ -23,6 +23,7 @@ impl<T: DynCommand> From<T> for Command {
 pub enum Command {
     Hello { time: f32 },
     //VertexCreate(vertexbuffer::CreateCommand),
+    Clear(backend::ClearCommand),
     VertexRelease(vertexbuffer::ReleaseCommand),
     IndexCreate(indexbuffer::CreateCommand),
     IndexRelease(indexbuffer::ReleaseCommand),
@@ -39,6 +40,7 @@ impl Command {
         use Command::*;
         match self {
             Hello { time } => context.ll.hello(time),
+            Clear(cmd) => cmd.process(context),
             //VertexCreate(cmd) => cmd.process(ll, flush),
             VertexRelease(cmd) => cmd.process(context),
             IndexCreate(cmd) => cmd.process(context),

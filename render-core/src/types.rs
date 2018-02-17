@@ -218,30 +218,6 @@ impl From<(Float32x4,
     }
 }
 
-#[macro_export]
-macro_rules! f32x16 {
-    ($_a0:expr,  $_a1:expr,  $_a2:expr,  $_a3:expr,
-     $_a4:expr,  $_a5:expr,  $_a6:expr,  $_a7:expr,
-     $_a8:expr,  $_a9:expr,  $_a10:expr, $_a11:expr,
-     $_a12:expr, $_a13:expr, $_a14:expr, $_a15:expr) => {
-      $crate::Float32x16(
-        $_a0 as f32,$_a1 as f32,$_a2 as f32,$_a3 as f32,
-        $_a4 as f32,$_a5 as f32,$_a6 as f32,$_a7 as f32,
-        $_a8 as f32,$_a9 as f32,$_a10 as f32,$_a11 as f32,
-        $_a12 as f32,$_a13 as f32,$_a14 as f32,$_a15 as f32)
-      };
-
-    ($_x:expr) => {
-      $crate::Float32x16(
-        $_x as f32, $_x as f32, $_x as f32, $_x as f32,
-        $_x as f32, $_x as f32, $_x as f32, $_x as f32,
-        $_x as f32, $_x as f32, $_x as f32, $_x as f32,
-        $_x as f32, $_x as f32, $_x as f32, $_x as f32)
-      };
-
-    () => { {let f : $crate::Float32x16 = Default::default(); f} };
-}
-
 
 /// Float array with 4 components
 #[repr(C)]
@@ -267,13 +243,6 @@ impl From<(f32, f32, f32, f32)> for Float32x4 {
     fn from(value: (f32, f32, f32, f32)) -> Float32x4 {
         Float32x4(value.0, value.1, value.2, value.3)
     }
-}
-
-#[macro_export]
-macro_rules! f32x4 {
-    ($_x:expr, $_y:expr, $_z:expr, $_w:expr) => { $crate::Float32x4($_x as f32, $_y as f32, $_z as f32, $_w as f32) };
-    ($_x:expr) => { $crate::Float32x4($_x as f32, $_x as f32, $_x as f32, $_x as f32) };
-    () => { {let f : $crate::Float32x4 = Default::default(); f} };
 }
 
 
@@ -302,13 +271,6 @@ impl From<(f32, f32, f32)> for Float32x3 {
     }
 }
 
-#[macro_export]
-macro_rules! f32x3 {
-    ($_x:expr, $_y:expr, $_z:expr) => { $crate::Float32x3($_x as f32, $_y as f32, $_z as f32) };
-    ($_x:expr) => { $crate::Float32x3::new($_x as f32, $_x as f32, $_x as f32) };
-    () => { {let f : $crate::Float32x3 = Default::default(); f} };
-}
-
 
 /// Float array with 2 components
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -335,9 +297,182 @@ impl From<(f32, f32)> for Float32x2 {
     }
 }
 
-#[macro_export]
-macro_rules! f32x2 {
-    ($_x:expr, $_y:expr) => { $crate::Float32x2($_x as f32, $_y as f32) };
-    ($_x:expr) => { $crate::Float32x2::new($_x as f32, $_x as f32) };
-    () => { {let f : $crate::Float32x2 = Default::default(); f} };
+
+/// Unsigned u8 array with 4 components
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(C)]
+pub struct UInt8x4(pub u8, pub u8, pub u8, pub u8);
+
+impl Default for UInt8x4 {
+    fn default() -> UInt8x4 {
+        UInt8x4(0, 0, 0, 0)
+    }
+}
+
+impl From<[u8; 4]> for UInt8x4 {
+    #[inline(always)]
+    fn from(value: [u8; 4]) -> UInt8x4 {
+        UInt8x4(value[0], value[1], value[2], value[3])
+    }
+}
+
+impl From<(u8, u8, u8, u8)> for UInt8x4 {
+    #[inline(always)]
+    fn from(value: (u8, u8, u8, u8)) -> UInt8x4 {
+        UInt8x4(value.0, value.1, value.2, value.3)
+    }
+}
+
+impl From<u32> for UInt8x4 {
+    #[inline(always)]
+    fn from(value: u32) -> UInt8x4 {
+        UInt8x4(((value >> 24) & 0xff) as u8, ((value >> 16) & 0xff) as u8, ((value >> 8) & 0xff) as u8, (value & 0xff) as u8)
+    }
+}
+
+
+/// Unsigned u8 array with 3 components
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(C)]
+pub struct UInt8x3(pub u8, pub u8, pub u8);
+
+impl Default for UInt8x3 {
+    fn default() -> UInt8x3 {
+        UInt8x3(0, 0, 0)
+    }
+}
+
+impl From<[u8; 3]> for UInt8x3 {
+    #[inline(always)]
+    fn from(value: [u8; 3]) -> UInt8x3 {
+        UInt8x3(value[0], value[1], value[2])
+    }
+}
+
+impl From<(u8, u8, u8)> for UInt8x3 {
+    #[inline(always)]
+    fn from(value: (u8, u8, u8)) -> UInt8x3 {
+        UInt8x3(value.0, value.1, value.2)
+    }
+}
+
+
+/// Unsigned u8 array with 2 components
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(C)]
+pub struct UInt8x2(pub u8, pub u8);
+
+impl Default for UInt8x2 {
+    fn default() -> UInt8x2 {
+        UInt8x2(0, 0)
+    }
+}
+
+impl From<[u8; 2]> for UInt8x2 {
+    #[inline(always)]
+    fn from(value: [u8; 2]) -> UInt8x2 {
+        UInt8x2(value[0], value[1])
+    }
+}
+
+impl From<(u8, u8)> for UInt8x2 {
+    #[inline(always)]
+    fn from(value: (u8, u8)) -> UInt8x2 {
+        UInt8x2(value.0, value.1)
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+/// Unsigned normalized (fixed point array) u8 array with 4 components
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(C)]
+pub struct NUInt8x4(pub u8, pub u8, pub u8, pub u8);
+
+impl Default for NUInt8x4 {
+    fn default() -> NUInt8x4 {
+        NUInt8x4(0, 0, 0, 0)
+    }
+}
+
+impl From<[u8; 4]> for NUInt8x4 {
+    #[inline(always)]
+    fn from(value: [u8; 4]) -> NUInt8x4 {
+        NUInt8x4(value[0], value[1], value[2], value[3])
+    }
+}
+
+impl From<(u8, u8, u8, u8)> for NUInt8x4 {
+    #[inline(always)]
+    fn from(value: (u8, u8, u8, u8)) -> NUInt8x4 {
+        NUInt8x4(value.0, value.1, value.2, value.3)
+    }
+}
+
+impl From<u32> for NUInt8x4 {
+    #[inline(always)]
+    fn from(value: u32) -> NUInt8x4 {
+        NUInt8x4(((value >> 24) & 0xff) as u8, ((value >> 16) & 0xff) as u8, ((value >> 8) & 0xff) as u8, (value & 0xff) as u8)
+    }
+}
+
+
+/// Unsigned normalized (fixed point array) u8 array with 3 components
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(C)]
+pub struct NUInt8x3(pub u8, pub u8, pub u8);
+
+impl Default for NUInt8x3 {
+    fn default() -> NUInt8x3 {
+        NUInt8x3(0, 0, 0)
+    }
+}
+
+impl From<[u8; 3]> for NUInt8x3 {
+    #[inline(always)]
+    fn from(value: [u8; 3]) -> NUInt8x3 {
+        NUInt8x3(value[0], value[1], value[2])
+    }
+}
+
+impl From<(u8, u8, u8)> for NUInt8x3 {
+    #[inline(always)]
+    fn from(value: (u8, u8, u8)) -> NUInt8x3 {
+        NUInt8x3(value.0, value.1, value.2)
+    }
+}
+
+
+/// Unsigned normalized (fixed point array) u8 array with 2 components
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(C)]
+pub struct NUInt8x2(pub u8, pub u8);
+
+impl Default for NUInt8x2 {
+    fn default() -> NUInt8x2 {
+        NUInt8x2(0, 0)
+    }
+}
+
+impl From<[u8; 2]> for NUInt8x2 {
+    #[inline(always)]
+    fn from(value: [u8; 2]) -> NUInt8x2 {
+        NUInt8x2(value[0], value[1])
+    }
+}
+
+impl From<(u8, u8)> for NUInt8x2 {
+    #[inline(always)]
+    fn from(value: (u8, u8)) -> NUInt8x2 {
+        NUInt8x2(value.0, value.1)
+    }
 }

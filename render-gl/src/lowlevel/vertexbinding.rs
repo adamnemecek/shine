@@ -26,34 +26,26 @@ impl GLVertexBufferAttribute {
 
     pub fn from_layout(layout: &VertexBufferLayoutElement) -> GLVertexBufferAttribute {
         match layout {
-            &VertexBufferLayoutElement::Float32 { stride, offset } => GLVertexBufferAttribute {
+            &VertexBufferLayoutElement::Float32 { components, stride, offset } => GLVertexBufferAttribute {
                 component_type: gl::FLOAT,
-                components: 1,
+                components: components as GLint,
                 normalize: gl::FALSE,
                 stride: stride as GLsizei,
                 offset: offset as GLintptr,
             },
 
-            &VertexBufferLayoutElement::Float32x2 { stride, offset } => GLVertexBufferAttribute {
-                component_type: gl::FLOAT,
-                components: 2,
-                normalize: gl::FALSE,
+            &VertexBufferLayoutElement::Int8 { components, fixp, stride, offset } => GLVertexBufferAttribute {
+                component_type: gl::BYTE,
+                components: components as GLint,
+                normalize: if fixp { gl::TRUE } else { gl::FALSE },
                 stride: stride as GLsizei,
                 offset: offset as GLintptr,
             },
 
-            &VertexBufferLayoutElement::Float32x3 { stride, offset } => GLVertexBufferAttribute {
-                component_type: gl::FLOAT,
-                components: 3,
-                normalize: gl::FALSE,
-                stride: stride as GLsizei,
-                offset: offset as GLintptr,
-            },
-
-            &VertexBufferLayoutElement::Float32x4 { stride, offset } => GLVertexBufferAttribute {
-                component_type: gl::FLOAT,
-                components: 4,
-                normalize: gl::FALSE,
+            &VertexBufferLayoutElement::UInt8 { components, fixp, stride, offset } => GLVertexBufferAttribute {
+                component_type: gl::UNSIGNED_BYTE,
+                components: components as GLint,
+                normalize: if fixp { gl::TRUE } else { gl::FALSE },
                 stride: stride as GLsizei,
                 offset: offset as GLintptr,
             },

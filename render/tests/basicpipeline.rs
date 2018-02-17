@@ -1,6 +1,6 @@
 extern crate image;
 #[macro_use]
-extern crate shine_render_gl as render;
+extern crate shine_render as render;
 
 use std::env;
 use std::time::Duration;
@@ -70,23 +70,23 @@ impl SimpleView {
 }
 
 impl View<PlatformEngine> for SimpleView {
-    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
+    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
         println!("surface ready");
         let mut queue = r.get_queue();
 
         let pos = [
-            VxPos { position: f32x3!(1, 0, 0) },
-            VxPos { position: f32x3!(1, 1, 0) },
-            VxPos { position: f32x3!(0, 1, 0) },
-            VxPos { position: f32x3!(0, 0, 0) },
+            VxPos { position: (1., 0., 0.).into() },
+            VxPos { position: (1., 1., 0.).into() },
+            VxPos { position: (0., 1., 0.).into() },
+            VxPos { position: (0., 0., 0.).into() },
         ];
         self.vb1.create_and_set(&mut queue, &pos);
 
         let color_tex = [
-            VxColorTex { color: f32x3!(1, 0, 0), tex_coord: f32x2!(1, 0) },
-            VxColorTex { color: f32x3!(1, 1, 0), tex_coord: f32x2!(1, 1) },
-            VxColorTex { color: f32x3!(0, 1, 0), tex_coord: f32x2!(0, 1) },
-            VxColorTex { color: f32x3!(0, 0, 0), tex_coord: f32x2!(0, 0) },
+            VxColorTex { color: (1., 0., 0.).into(), tex_coord: (1., 0.).into() },
+            VxColorTex { color: (1., 1., 0.).into(), tex_coord: (1., 1.).into() },
+            VxColorTex { color: (0., 1., 0.).into(), tex_coord: (0., 1.).into() },
+            VxColorTex { color: (0., 0., 0.).into(), tex_coord: (0., 0.).into() },
         ];
         self.vb2.create_and_set(&mut queue, &color_tex);
 
@@ -100,7 +100,7 @@ impl View<PlatformEngine> for SimpleView {
         self.sh.create_and_compile(&mut queue);
     }
 
-    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
+    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {
         println!("surface lost");
         self.vb1.reset();
         self.vb2.reset();
@@ -109,13 +109,13 @@ impl View<PlatformEngine> for SimpleView {
         self.sh.reset();
     }
 
-    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut GLBackend) {
+    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut PlatformBackend) {
         println!("surface changed");
         self.on_surface_lost(ctl, r);
         self.on_surface_ready(ctl, r);
     }
 
-    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut GLBackend) {
+    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {
         use std::f32;
         self.t += 0.05f32;
         if self.t > 2. * f32::consts::PI {
@@ -123,19 +123,12 @@ impl View<PlatformEngine> for SimpleView {
         }
     }
 
-    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut GLBackend) {
+    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
         let mut queue = r.get_queue();
 
-        {
-            use render::lowlevel::*;
-
-            let ll = r.ll_mut();
-
-            ffi!(gl::ClearColor(0.0, 0.0, 0.0, 1.0));
-            ffi!(gl::Clear(gl::COLOR_BUFFER_BIT));
-            ll.states
-                .set_viewport(Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
-        }
+        r.init_view(Some(Viewport::Proportional(0.5, 0.5, 0.25, 0.25)),
+                    Some(Float32x4(0., 0., 0., 1.)),
+                    None);
 
         let st = self.t.sin();
         let ct = self.t.cos();

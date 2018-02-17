@@ -13,9 +13,9 @@ use glshaderstates::*;
 impl ShaderType {
     fn to_tokens(&self) -> quote::Tokens {
         match self {
-            &ShaderType::VertexShader => quote_call_site! {ShaderType::VertexShader},
-            &ShaderType::FragmentShader => quote_call_site! {ShaderType::FragmentShader},
-            &ShaderType::GeometryShader => quote_call_site! {ShaderType::GeometryShader},
+            &ShaderType::VertexShader => quote_call_site! {_shine_render_core::ShaderType::VertexShader},
+            &ShaderType::FragmentShader => quote_call_site! {_shine_render_core::ShaderType::FragmentShader},
+            &ShaderType::GeometryShader => quote_call_site! {_shine_render_core::ShaderType::GeometryShader},
         }
     }
 }
@@ -399,7 +399,12 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
     let gen_parameters = {
         let source_files = sources.iter().filter_map(|src| Some(src.temp_file.as_path()));
         let states = parse_state_inputs(&ast.attrs);
-        let (attributes, uniforms) = extract_shader_info(source_files).unwrap();
+        let (attributes, uniforms) = {
+            match extract_shader_info(source_files) {
+                Err(err) => panic!(err),
+                Ok((a, u)) => (a, u),
+            }
+        };
         //println!("attributes: {:?}", attributes);
         //println!("uniforms: {:?}", uniforms);
         //println!("states: {:?}", states);
@@ -407,14 +412,14 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
     };
 
     let gen_shader_decl = quote_call_site! {
-        impl ShaderDeclaration<_shine_render_gl::PlatformEngine> for #declaration_ident {
+        impl _shine_render_core::ShaderDeclaration<_shine_render_gl::PlatformEngine> for #declaration_ident {
             type Parameters = #parameters_ident;
 
             #[allow(dead_code)]
-            fn source_iter() -> slice::Iter<'static, (ShaderType, &'static str)> {
+            fn source_iter() -> slice::Iter<'static, (_shine_render_core::ShaderType, &'static str)> {
                 // workaround to make the compilation depend on the input files
                 const _EXTERNAL_SOURCES : [&str; #external_source_count] = [#(#external_source_files,)*];
-                const SOURCES : [(ShaderType,&str); #preprocessed_source_count] = [#(#preprocessed_sources,)*];
+                const SOURCES : [(_shine_render_core::ShaderType,&str); #preprocessed_source_count] = [#(#preprocessed_sources,)*];
                 SOURCES.iter()
             }
         }
