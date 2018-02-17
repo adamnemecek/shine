@@ -1,5 +1,6 @@
-//extern crate shine_render_core as core;
 extern crate shine_render;
+
+#[allow(unused_imports)] // incorrect warning, required to have the GLShaderDeclaration proc-macro
 use shine_render::*;
 
 

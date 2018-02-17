@@ -5,6 +5,7 @@ use syn;
 #[derive(Debug)]
 pub enum StateKey {
     Depth,
+    WriteMask,
     Cull,
 }
 
@@ -67,6 +68,19 @@ impl State {
         }
     }
 
+    fn new_write_mask(value: &syn::LitStr) -> Option<State> {
+        let value = value.value().to_string();
+        if value == "?" {
+            Some(State {
+                key: StateKey::WriteMask,
+                field_tokens: Some(quote_call_site! {write_mask: _shine_render_core::WriteMask}),
+                apply_tokens: quote_call_site! {context.ll.states.set_write_mask(self.write_mask);},
+            })
+        } else {
+            panic!("un-implemented write mask: {:?}", value);
+        }
+    }
+
     fn new_cull(value: &syn::LitStr) -> Option<State> {
         match value.value().to_string().as_ref() {
             "disable" => Some(State {
@@ -98,6 +112,7 @@ impl State {
             match ident.to_string().as_ref() {
                 //"viewport" => Self::new_viewport(value),
                 "depth" => Self::new_depth(value),
+                "write_mask" => Self::new_write_mask(value),
                 //"blend" => Self::new_blend(value),
                 "cull" => Self::new_cull(value),
                 _ => None,

@@ -12,4 +12,6 @@ pub trait Backend: 'static {
     fn flush(&mut self);
 
     fn init_view(&self, viewport: Option<Viewport>, color: Option<Float32x4>, depth: Option<f32>);
+    fn get_view_size(&self) -> Size;
+    fn get_view_aspect(&self) -> f32;
 }

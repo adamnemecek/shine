@@ -1,6 +1,5 @@
 #[macro_use]
 extern crate shine_render_gl as render;
-extern crate image;
 
 use std::env;
 use render::*;
@@ -112,10 +111,11 @@ impl View<PlatformEngine> for SimpleView {
         }
 
         {
-            let img = include_bytes!("img.jpg");
-            let img = image::load_from_memory(img).unwrap();
-            let ImageData::Transient(width, height, format, slice) = img.to_data();
-            self.tx.upload_data(ll, gl::TEXTURE_2D, width, height, TextureBinding::glenum_from_pixel_format(format), slice);
+            let img = include_bytes!("img.raw");
+            let width = 1024;
+            let height = 768;
+            let format = PixelFormat::Rgb8;
+            self.tx.upload_data(ll, gl::TEXTURE_2D, width, height, TextureBinding::glenum_from_pixel_format(format), img);
         }
 
         {

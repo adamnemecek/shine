@@ -13,7 +13,6 @@ extern crate gdi32;
 #[cfg(target_os = "windows")]
 extern crate user32;
 
-extern crate image;
 extern crate arrayvec;
 
 extern crate shine_render_core as core;

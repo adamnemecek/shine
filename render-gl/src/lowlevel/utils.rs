@@ -60,8 +60,9 @@ pub fn gl_get_type_name(gl_type: GLenum) -> &'static str {
 pub fn glenum_from_primitive(primitive: Primitive) -> GLenum {
     match primitive {
         Primitive::Point => gl::POINT,
-        Primitive::Line => gl::LINE,
-        Primitive::Triangle => gl::TRIANGLES,
+        Primitive::Lines => gl::LINE,
+        Primitive::Triangles => gl::TRIANGLES,
+        Primitive::TriangleStrip => gl::TRIANGLE_STRIP,
     }
 }
 

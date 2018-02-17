@@ -9,8 +9,11 @@ shine-render-core = {path = "render-core"}
 shine-render-gl = {path = "render-gl"}
 shine-render = {path = "render"}
 
+
+# for examples
 rayon = "*"
 image = "*"
+nalgebra = "*"
 
 
 [[example]]

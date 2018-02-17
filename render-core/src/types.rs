@@ -155,9 +155,11 @@ pub enum Primitive {
     /// Point primitive (1 vertex per primitive)
     Point,
     /// Line primitive (2 vertex per primitive)
-    Line,
+    Lines,
     /// Triangle primitive (3 vertex per primitive)
-    Triangle,
+    Triangles,
+    /// Triangle strip
+    TriangleStrip,
 }
 
 
@@ -383,16 +385,6 @@ impl From<(u8, u8)> for UInt8x2 {
 }
 
 
-
-
-
-
-
-
-
-
-
-
 /// Unsigned normalized (fixed point array) u8 array with 4 components
 #[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
@@ -474,5 +466,45 @@ impl From<(u8, u8)> for NUInt8x2 {
     #[inline(always)]
     fn from(value: (u8, u8)) -> NUInt8x2 {
         NUInt8x2(value.0, value.1)
+    }
+}
+
+
+#[cfg(feature = "nalgebra")]
+mod from_nalgebra {
+    extern crate nalgebra;
+
+    use self::nalgebra::*;
+    use super::*;
+
+    impl From<Matrix4<f32>> for Float32x16 {
+        #[inline(always)]
+        fn from(value: Matrix4<f32>) -> Float32x16 {
+            Float32x16(value[0], value[1], value[2], value[3],
+                       value[4], value[5], value[6], value[7],
+                       value[8], value[9], value[10], value[11],
+                       value[12], value[13], value[14], value[15])
+        }
+    }
+
+    impl From<Vector4<f32>> for Float32x4 {
+        #[inline(always)]
+        fn from(value: Vector4<f32>) -> Float32x4 {
+            Float32x4(value[0], value[1], value[2], value[3])
+        }
+    }
+
+    impl From<Vector3<f32>> for Float32x3 {
+        #[inline(always)]
+        fn from(value: Vector3<f32>) -> Float32x3 {
+            Float32x3(value[0], value[1], value[2])
+        }
+    }
+
+    impl From<Vector2<f32>> for Float32x2 {
+        #[inline(always)]
+        fn from(value: Vector2<f32>) -> Float32x2 {
+            Float32x2(value[0], value[1])
+        }
     }
 }

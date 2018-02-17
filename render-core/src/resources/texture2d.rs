@@ -18,6 +18,7 @@ pub trait ImageSource {
 }
 
 
+#[cfg(feature = "image")]
 mod image_source {
     extern crate image;
 
@@ -60,8 +61,6 @@ mod image_source {
         }
     }
 }
-
-pub use self::image_source::*;
 
 
 /// Trait that defined a 2d texture

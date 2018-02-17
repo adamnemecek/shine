@@ -91,6 +91,25 @@ impl DepthState {
 }
 
 
+/// Depth write state
+#[derive(Debug)]
+struct WriteState {
+    value: WriteMask,
+}
+
+impl WriteState {
+    fn commit(&self) {
+        gl_check_error();
+        ffi!(gl::DepthMask(if self.value.depth { gl::TRUE } else { gl::FALSE }));
+        ffi!(gl::ColorMask(if self.value.red { gl::TRUE } else { gl::FALSE },
+                           if self.value.green { gl::TRUE } else { gl::FALSE },
+                           if self.value.blue { gl::TRUE } else { gl::FALSE },
+                           if self.value.alpha { gl::TRUE } else { gl::FALSE }));
+        gl_check_error();
+    }
+}
+
+
 /// Cull function state
 #[derive(Debug)]
 struct CullState {
@@ -193,10 +212,11 @@ const MASK_DEPTH: u64 = 0x2;
 const MASK_STENCIL: u64 = 0x4;
 const MASK_BLEND: u64 = 0x8;
 const MASK_CULL: u64 = 0x10;
+const MASK_WRITE_MASK: u64 = 0x20;
 //const MASK_SCISOR : u64 = ;
 //const MASK_BUFFERWRITE : u64 = ; // color and depth
 //const MASK_ : u64 = ; // color and depth
-const MASK_ALL: u64 = 0x1F;
+const MASK_ALL: u64 = 0x3F;
 
 
 /// Structure to handle gl states
@@ -208,6 +228,7 @@ pub struct StateManager {
     dirty_mask: u64,
     viewport: ViewportState,
     depth: DepthState,
+    write_mask: WriteState,
     stencil: StencilState,
     blend: BlendState,
     cull: CullState,
@@ -222,6 +243,7 @@ impl StateManager {
             dirty_mask: MASK_ALL,
             viewport: ViewportState::new(),
             depth: DepthState { value: Default::default() },
+            write_mask: WriteState { value: Default::default() },
             stencil: StencilState { value: Default::default() },
             blend: BlendState { value: Default::default() },
             cull: CullState { value: Default::default() },
@@ -247,6 +269,7 @@ impl StateManager {
         if (reset & MASK_STENCIL) != 0 { self.set_stencil(Default::default()); }
         if (reset & MASK_BLEND) != 0 { self.set_blend(Default::default()); }
         if (reset & MASK_CULL) != 0 { self.set_cull(Default::default()); }
+        if (reset & MASK_WRITE_MASK) != 0 { self.set_write_mask(Default::default()); }
 
         // apply state changes
         if self.forced { self.dirty_mask = MASK_ALL; }
@@ -256,6 +279,7 @@ impl StateManager {
         if (self.dirty_mask & MASK_STENCIL) != 0 { self.stencil.commit(); }
         if (self.dirty_mask & MASK_BLEND) != 0 { self.blend.commit(); }
         if (self.dirty_mask & MASK_CULL) != 0 { self.cull.commit(); }
+        if (self.dirty_mask & MASK_WRITE_MASK) != 0 { self.write_mask.commit(); }
 
         self.dirty_mask = 0;
         self.used_mask = 0;
@@ -280,6 +304,13 @@ impl StateManager {
         if self.depth.value == fun { return; }
         self.dirty_mask |= MASK_DEPTH;
         self.depth.value = fun;
+    }
+
+    pub fn set_write_mask(&mut self, fun: WriteMask) {
+        self.used_mask |= MASK_WRITE_MASK;
+        if self.write_mask.value == fun { return; }
+        self.dirty_mask |= MASK_WRITE_MASK;
+        self.write_mask.value = fun;
     }
 
     pub fn set_stencil(&mut self, fun: StencilFunction) {

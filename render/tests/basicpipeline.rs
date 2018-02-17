@@ -3,7 +3,6 @@ extern crate image;
 extern crate shine_render as render;
 
 use std::env;
-use std::time::Duration;
 use render::*;
 
 #[derive(Copy, Clone, Debug, VertexDeclaration)]
@@ -146,7 +145,7 @@ impl View<PlatformEngine> for SimpleView {
             depth: DepthFunction::Disable,
         };
 
-        self.sh.draw(&mut queue, params, Primitive::Triangle, 0, 6);
+        self.sh.draw(&mut queue, params, Primitive::Triangles, 0, 6);
     }
 
     fn on_key(
@@ -188,7 +187,7 @@ pub fn render() {
         .build(&engine, SimpleView::new()).expect("Could not initialize sub window");
 
     loop {
-        if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {
+        if !engine.dispatch_event(render::DispatchTimeout::Immediate) {
             break;
         }
 

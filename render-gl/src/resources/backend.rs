@@ -117,16 +117,6 @@ impl Backend for GLBackend {
     type CommandQueue/*<'a>*/ = GLCommandQueue/*<'a>*/;
     type CommandContext/*<'a>*/ = GLCommandProcessContext/*<'a>*/;
 
-    fn init_view(&self, viewport: Option<Viewport>, color: Option<Float32x4>, depth: Option<f32>)
-    {
-        self.get_queue().add_command(0,
-                                     ClearCommand {
-                                         color: color,
-                                         depth: depth,
-                                         viewport: viewport,
-                                     });
-    }
-
     fn get_queue<'a>(&'a self) -> GLCommandQueue/*<'a>*/ {
         /*generic_associated_types workaround*/ unsafe {
             // compose shall not outlive Backend but cannot enforce without generic_associated_types
@@ -186,6 +176,25 @@ impl Backend for GLBackend {
             data.release(ll);
             true
         });
+    }
+
+    fn init_view(&self, viewport: Option<Viewport>, color: Option<Float32x4>, depth: Option<f32>)
+    {
+        self.get_queue().add_command(0,
+                                     ClearCommand {
+                                         color: color,
+                                         depth: depth,
+                                         viewport: viewport,
+                                     });
+    }
+
+    fn get_view_size(&self) -> Size {
+        self.get_screen_size()
+    }
+
+    fn get_view_aspect(&self) -> f32 {
+        let size = self.get_screen_size();
+        (size.width as f32) / (size.height as f32)
     }
 }
 

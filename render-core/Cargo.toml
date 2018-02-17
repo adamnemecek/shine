@@ -8,5 +8,9 @@ shine-store = {path = "../store"}
 shine-render-derive = {path = "../render-derive"}
 
 libc = "*"
-image = "*"
+image = { version = "*", optional = true }
+nalgebra = { version = "*", optional = true }
+
+[features]
+default = ["image", "nalgebra"]
 

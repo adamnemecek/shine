@@ -14,10 +14,6 @@ shine-render-core = {path = "../render-core"}
 libc = "*"
 arrayvec = "*"
 
-#todo: make these optional or dev-dependency
-rayon = "*"
-image = "*"
-
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = "0.2"
 shell32-sys = "0.1"

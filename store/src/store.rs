@@ -11,6 +11,11 @@ use arena::*;
 /// Reference counted indexing of the store items in O(1).
 pub struct Index<D>(*mut Entry<D>);
 
+unsafe impl<D> Send for Index<D> {}
+
+//todo: is it sync, or just send ????
+unsafe impl<D> Sync for Index<D> {}
+
 impl<D> Index<D> {
     pub fn null() -> Index<D> {
         Index(ptr::null_mut())

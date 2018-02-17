@@ -35,7 +35,30 @@ impl Default for DepthFunction {
 }
 
 
-/// Depth function
+/// Depth write
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct WriteMask {
+    pub depth: bool,
+    pub red: bool,
+    pub green: bool,
+    pub blue: bool,
+    pub alpha: bool,
+}
+
+impl Default for WriteMask {
+    fn default() -> WriteMask {
+        WriteMask {
+            depth: true,
+            red: true,
+            green: true,
+            blue: true,
+            alpha: true,
+        }
+    }
+}
+
+
+/// Cull function
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum CullFunction {
     Disable,
@@ -82,3 +105,5 @@ impl Default for StencilFunction {
         StencilFunction::Disable
     }
 }
+
+
