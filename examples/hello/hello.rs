@@ -2,7 +2,6 @@ extern crate shine_store as store;
 extern crate shine_render as render;
 extern crate rayon;
 
-use std::time::Duration;
 use render::*;
 use rayon::prelude::*;
 
@@ -26,7 +25,7 @@ impl View<PlatformEngine> for HelloView {
     fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
         (0..300).into_par_iter()
             .for_each(|tid| {
-                r.init_view(None, Some(Float32x4((self.time * tid as f32).sin(), 0., 0., 1.)), None);
+                r.init_view(None, Some(Float32x4((self.time * tid as f32).sin(), self.time, 0., 1.)), None);
             });
     }
 
@@ -52,21 +51,12 @@ fn main() {
         .size((512, 512))
         .build(&engine, HelloView { time: 0.0 }).expect("Could not initialize main window");
 
-    let mut sub_window = render::PlatformWindowSettings::default()
-        .title("sub")
-        .size((512, 512))
-        //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
-        .build(&engine, HelloView { time: 0.0 }).expect("Could not initialize sub window");
-
     loop {
-        if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {
+        if !engine.dispatch_event(render::DispatchTimeout::Immediate) {
             break;
         }
 
         window.update_view();
-        sub_window.update_view();
-
         window.render().unwrap();
-        sub_window.render().unwrap();
     }
 }

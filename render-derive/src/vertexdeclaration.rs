@@ -29,7 +29,8 @@ pub fn impl_vertex_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 }
 
 fn check_path(path: &syn::Path, name: &str) -> bool {
-    quote_call_site!(#path).to_string() == name
+    let type_str = quote_call_site!(#path).to_string();
+    type_str == name
 }
 
 

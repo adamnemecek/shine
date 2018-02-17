@@ -3,7 +3,6 @@ extern crate shine_render_gl as render;
 extern crate image;
 
 use std::env;
-use std::time::Duration;
 use render::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -49,13 +48,6 @@ struct VxColorTex {
         vec3 col =  color * intensity;
         gl_FragColor = vec4(col, 1.0);
     }"]
-//todo 1:
-//#[state2("done" = "on")]
-//#[state(clamp) = ccw]
-//todo 2:
-//#[state(point_size) = ?]
-//todo 3:
-//#[unifrom(uTrsf) = engine.trsf]
 struct ShSimple {}
 
 struct SimpleView {
@@ -109,7 +101,6 @@ impl View<PlatformEngine> for SimpleView {
 
             let VertexData::Transient(slice) = color_tex.to_data();
             let attributes = VxColorTex::attribute_layout_iter().map(|a| GLVertexBufferAttribute::from_layout(&a));
-
             self.vb2.upload_data(ll, attributes, slice);
         }
 
@@ -123,7 +114,6 @@ impl View<PlatformEngine> for SimpleView {
         {
             let img = include_bytes!("img.jpg");
             let img = image::load_from_memory(img).unwrap();
-
             let ImageData::Transient(width, height, format, slice) = img.to_data();
             self.tx.upload_data(ll, gl::TEXTURE_2D, width, height, TextureBinding::glenum_from_pixel_format(format), slice);
         }
@@ -162,11 +152,9 @@ impl View<PlatformEngine> for SimpleView {
 
         let ll = r.ll_mut();
 
-        ffi!(gl::ClearColor(0.0, 0.0, 0.5, 1.0));
-        ffi!(gl::Clear(gl::COLOR_BUFFER_BIT));
-
-        //ll.states.set_viewport(lowlevel::Viewport::FullScreen);
-        ll.states.set_viewport(Viewport::Proportional(0.5, 0.5, 0.25, 0.25));
+        ll.init_view(Some(Viewport::Proportional(0.5, 0.5, 0.25, 0.25)),
+                     Some(Float32x4(0.0, 0.0, 0.5, 1.0)),
+                     Some(0.));
 
         let st = self.t.sin();
         let ct = self.t.cos();
@@ -227,7 +215,7 @@ pub fn simple_lowlevel() {
         .build(&engine, SimpleView::new()).expect("Could not initialize sub window");
 
     loop {
-        if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {
+        if !engine.dispatch_event(render::DispatchTimeout::Immediate) {
             break;
         }
 

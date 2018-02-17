@@ -2,11 +2,9 @@ extern crate image;
 #[macro_use]
 extern crate shine_render as render;
 
-use std::time::Duration;
-use render::*;
-
 mod cubeshader;
 
+use render::*;
 use cubeshader::*;
 
 
@@ -165,7 +163,7 @@ pub fn main() {
         .expect("Could not initialize main window");
 
     loop {
-        if !engine.dispatch_event(render::DispatchTimeout::Time(Duration::from_millis(17))) {
+        if !engine.dispatch_event(render::DispatchTimeout::Immediate) {
             break;
         }
 
