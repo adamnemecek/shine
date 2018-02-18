@@ -4,9 +4,9 @@ use std::cell::Cell;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 
+use winapi;
 use kernel32;
 use user32;
-use winapi;
 
 use core::*;
 use framework::*;
@@ -81,7 +81,6 @@ impl GLEngine {
     pub fn dispatch_event(&self, timeout: DispatchTimeout) -> bool {
         let mut new_window_count = self.window_count.get();
 
-
         let mut msg: winapi::MSG = unsafe { mem::zeroed() };
 
         match timeout {
@@ -94,7 +93,7 @@ impl GLEngine {
             DispatchTimeout::Infinite => {
                 if ffi!(user32::GetMessageW(&mut msg, ptr::null_mut(), 0, 0)) == 0 {
                     // Only happens if the message is `WM_QUIT`.
-                    //debug_assert_eq!(msg.message, winapi::WM_QUIT);
+                    //debug_assert_eq!(msg.message, user32::WM_QUIT);
                     return false;
                 }
             }

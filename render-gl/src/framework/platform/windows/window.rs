@@ -5,10 +5,8 @@ use std::io;
 use std::mem;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
-
-use user32;
 use winapi;
-
+use user32;
 use core::*;
 use framework::*;
 use resources::*;
@@ -63,10 +61,7 @@ fn get_window_exstyle(settings: &PlatformWindowSettings) -> u32 {
 }
 
 fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
-    use winapi::*;
-    use user32::*;
-
-    let mut rect = RECT {
+    let mut rect = winapi::RECT {
         top: 0,
         left: 0,
         bottom: client_size.height as winapi::LONG,
@@ -74,7 +69,7 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
     };
 
     //todo: error handling
-    ffi!(AdjustWindowRectEx(&mut rect, style, winapi::FALSE, exstyle));
+    ffi!(user32::AdjustWindowRectEx(&mut rect, style, winapi::FALSE, exstyle));
 
     Size {
         width: rect.right - rect.left,

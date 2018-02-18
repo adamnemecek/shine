@@ -44,7 +44,7 @@ struct VxColorTex {
     }"]
 #[depth = "?"]
 #[cull = "cw"]
-struct ShSimple {}
+struct SimpleShader {}
 
 struct SimpleView {
     t: f32,
@@ -52,7 +52,7 @@ struct SimpleView {
     vb2: VertexBufferHandle<VxColorTex>,
     ib: IndexBufferHandle<u8>,
     tx: Texture2DHandle,
-    sh: ShaderProgramHandle<ShSimple>,
+    sh: ShaderProgramHandle<SimpleShader>,
 }
 
 impl SimpleView {
@@ -132,7 +132,7 @@ impl View<PlatformEngine> for SimpleView {
         let st = self.t.sin();
         let ct = self.t.cos();
 
-        let params = ShSimpleParameters {
+        let params = SimpleShaderParameters {
             v_color: (&self.vb2, VxColorTex::COLOR).into(),
             v_tex_coord: (&self.vb2, VxColorTex::TEXCOORD).into(),
             v_position: (&self.vb1, VxPos::POSITION).into(),

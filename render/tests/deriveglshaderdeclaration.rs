@@ -38,4 +38,4 @@ use shine_render::*;
 #[cull = "ccw"]
 //todo
 //#[unifrom(uTrsf = "engine.trsf")]
-struct ShSimple {}
+struct ShaderSample {}

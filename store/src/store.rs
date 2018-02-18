@@ -13,7 +13,6 @@ pub struct Index<D>(*mut Entry<D>);
 
 unsafe impl<D> Send for Index<D> {}
 
-//todo: is it sync, or just send ????
 unsafe impl<D> Sync for Index<D> {}
 
 impl<D> Index<D> {

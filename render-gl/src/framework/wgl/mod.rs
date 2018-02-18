@@ -118,7 +118,7 @@ impl Context {
     /// Creates a Wgl context with the given config.
     ///
     /// # Error
-    /// If context connat be created an error is returned describing the reason.
+    /// If context cannot be created an error is returned describing the reason.
     pub fn new(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &PlatformWindowSettings) -> Result<Context, Error> {
         let gl_library = try!(load_gl_library());
         let (wgl_ext, wgl_extensions) = try!(load_wgl_extension(app_instance, hwnd));
@@ -182,15 +182,15 @@ impl Context {
         self.wgl_extensions.split(' ').find(|&i| i == extension).is_some()
     }
 
-    pub fn get_proc_address(&self, addr: &str) -> *const () {
+    pub fn get_proc_address(&self, addr: &str) -> *const winapi::c_void {
         let addr = CString::new(addr.as_bytes()).unwrap();
         let addr = addr.as_ptr();
 
-        let p = ffi!(wgl::GetProcAddress(addr) as *const ());
+        let p = ffi!(wgl::GetProcAddress(addr) as *const winapi::c_void);
         if !p.is_null() { return p; }
-        //let p = gl::GetProcAddress(addr) as *const ();
+        //let p = ffi!(gl::GetProcAddress(addr) as *const winapi::c_void);
         //if !p.is_null() { return p; }
-        ffi!(kernel32::GetProcAddress(self.gl_library, addr)) as *const ()
+        ffi!(kernel32::GetProcAddress(self.gl_library, addr)) as *const winapi::c_void
     }
 
     pub fn get_pixel_format_config(&self) -> Result<FBConfig, Error> {
@@ -621,7 +621,11 @@ impl Context {
     }
 
     fn load_gl_functions(&mut self) -> Result<(), Error> {
-        gl::load_with(|symbol| self.get_proc_address(symbol) as *const _);
+        gl::load_with(|symbol| {
+            let addr = self.get_proc_address(symbol) as *const winapi::c_void;
+            //println!("loading {:?}= {:p}", symbol, addr);
+            addr
+        });
         Ok(())
     }
 }

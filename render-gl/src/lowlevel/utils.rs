@@ -7,7 +7,6 @@ use lowlevel::*;
 
 /// Checks the last gl error code
 pub fn gl_check_error() {
-    //match ffi!(gl::GetError()) {
     match ffi!(gl::GetError()) {
         gl::NO_ERROR => {}
 

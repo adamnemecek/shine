@@ -21,6 +21,11 @@ pub trait Data<K: Key>: From<K> {}
 /// Reference counted indexing of the store items in O(1).
 pub struct Index<K: Key, D: From<K>>(*mut Entry<K, D>);
 
+unsafe impl<K: Key, D: From<K>> Send for Index<K, D> {}
+
+unsafe impl<K: Key, D: From<K>> Sync for Index<K, D> {}
+
+
 impl<K: Key, D: From<K>> Index<K, D> {
     pub fn null() -> Index<K, D> {
         Index(ptr::null_mut())

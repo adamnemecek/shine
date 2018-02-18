@@ -40,9 +40,10 @@ impl View<PlatformEngine> for HelloView {
 
 fn main() {
     use store::threadid;
-    rayon::initialize(rayon::Configuration::new()
+    rayon::ThreadPoolBuilder::new()
         .num_threads(threadid::get_preferred_thread_count())
-    ).unwrap();
+        .build_global()
+        .unwrap();
 
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
 

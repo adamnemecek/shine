@@ -2,6 +2,7 @@
 extern crate shine_render as render;
 extern crate nalgebra;
 extern crate rayon;
+extern crate time;
 
 mod cubeshader;
 
@@ -21,7 +22,8 @@ struct VxPos {
 struct CubeView {
     time: f32,
     vb: VertexBufferHandle<VxPos>,
-    ib: IndexBufferHandle<u8>,
+    ib1: IndexBufferHandle<u8>,
+    ib2: IndexBufferHandle<u8>,
     sh: ShaderProgramHandle<CubeShader>,
 }
 
@@ -30,7 +32,8 @@ impl CubeView {
         CubeView {
             time: 0.,
             vb: Handle::null(),
-            ib: Handle::null(),
+            ib1: Handle::null(),
+            ib2: Handle::null(),
             sh: Handle::null(),
         }
     }
@@ -53,7 +56,7 @@ impl View<PlatformEngine> for CubeView {
         ];
         self.vb.create_and_set(&mut queue, &pos);
 
-        /*let indices_tri_list = [
+        let indices_tri_list = [
             0u8, 1, 2, // 0
             1, 3, 2,
             4, 6, 5, // 2
@@ -67,7 +70,7 @@ impl View<PlatformEngine> for CubeView {
             2, 3, 6, // 10
             6, 3, 7,
         ];
-        self.ib.create_and_set(&mut queue, &indices_tri_list);*/
+        self.ib1.create_and_set(&mut queue, &indices_tri_list);
 
         let indices_tri_strip = [
             0u8, 1, 2,
@@ -83,7 +86,7 @@ impl View<PlatformEngine> for CubeView {
             4,
             5,
         ];
-        self.ib.create_and_set(&mut queue, &indices_tri_strip);
+        self.ib2.create_and_set(&mut queue, &indices_tri_strip);
 
         self.sh.create_and_compile(&mut queue);
     }
@@ -91,7 +94,8 @@ impl View<PlatformEngine> for CubeView {
     fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {
         println!("surface lost");
         self.vb.reset();
-        self.ib.reset();
+        self.ib1.reset();
+        self.ib2.reset();
         self.sh.reset();
     }
 
@@ -111,29 +115,43 @@ impl View<PlatformEngine> for CubeView {
                     Some(1f32));
         let aspect = r.get_view_aspect();
 
-        let eye = Point3::new(0.0, 0.0, -35.0);
+        let eye = Point3::new(0.0, 0.0, -350.0);
         let target = Point3::new(0.0, 0.0, 0.0);
         let view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
-        let proj = Perspective3::new(aspect, (60f32).to_radians(), 0.1, 100.).unwrap();
+        let proj = Perspective3::new(aspect, (60f32).to_radians(), 0.1, 1000.).unwrap();
 
-        (0..121).into_par_iter()
+        const ROWS: usize = 100;
+        const COLS: usize = 120;
+        const COUNT:usize  = ROWS*COLS;
+
+        (0..COUNT).into_par_iter()
             .for_each(|idx| {
                 let mut queue = r.get_queue();
 
-                let y = (idx / 11) as f32;
-                let x = (idx % 11) as f32;
+                let y = (idx / COLS) as f32;
+                let x = (idx % COLS) as f32;
                 let model = Isometry3::new(Vector3::new(-15.0 + x * 3.0, -15.0 + y * 3.0, 0.),
                                            Vector3::new(self.time + x * 0.21, self.time + y * 0.37, 0.));
 
-                let params = CubeShaderParameters {
-                    v_position: (&self.vb, VxPos::POSITION).into(),
-                    v_color: (&self.vb, VxPos::COLOR).into(),
-                    indices: (&self.ib).into(),
-                    u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
-                };
-
-                //self.sh.draw(&mut queue, params, Primitive::Triangles, 0, 36);
-                self.sh.draw(&mut queue, params, Primitive::TriangleStrip, 0, 14);
+                if idx % 2 == 0 {
+                    self.sh.draw(&mut queue,
+                                 CubeShaderParameters {
+                                     v_position: (&self.vb, VxPos::POSITION).into(),
+                                     v_color: (&self.vb, VxPos::COLOR).into(),
+                                     indices: (&self.ib1).into(),
+                                     u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
+                                 },
+                                 Primitive::Triangles, 0, 36);
+                } else {
+                    self.sh.draw(&mut queue,
+                                 CubeShaderParameters {
+                                     v_position: (&self.vb, VxPos::POSITION).into(),
+                                     v_color: (&self.vb, VxPos::COLOR).into(),
+                                     indices: (&self.ib2).into(),
+                                     u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
+                                 },
+                                 Primitive::TriangleStrip, 0, 14);
+                }
             });
     }
 
@@ -155,6 +173,8 @@ pub fn main() {
         .build(&engine, CubeView::new())
         .expect("Could not initialize main window");
 
+    let mut frame_count = 0;
+    let mut start_time = time::precise_time_s();
     loop {
         if !engine.dispatch_event(render::DispatchTimeout::Immediate) {
             break;
@@ -162,5 +182,13 @@ pub fn main() {
 
         window.update_view();
         window.render().unwrap();
+        frame_count += 1;
+        let end_time = time::precise_time_s();
+        if end_time - start_time > 10f64 {
+            let fps = frame_count as f64 / (end_time - start_time);
+            start_time = end_time;
+            frame_count = 0;
+            println!("fps: {}", fps);
+        }
     }
 }
