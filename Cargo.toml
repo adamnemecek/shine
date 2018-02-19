@@ -2,12 +2,16 @@
 name = "shine"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "General purpose multi-threaded rendering engine."
+repository = "https://github.com/zpgaal/shine"
+keywords = ["render", "opengl", "game"]
 
 [dependencies]
-shine-store = {path = "store"}
-shine-render-core = {path = "render-core"}
-shine-render-gl = {path = "render-gl"}
-shine-render = {path = "render"}
+shine-store = {path = "store", version = "0.1"}
+shine-render-core = {path = "render-core", version = "0.1"}
+shine-render-gl = {path = "render-gl", version = "0.1"}
+shine-render = {path = "render", version = "0.1"}
 
 
 # for examples

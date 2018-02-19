@@ -2,6 +2,7 @@
 name = "embed_image"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal@gmail.com>"]
+license = "MIT/Apache-2.0"
 
 [dependencies]
 image = "*"
