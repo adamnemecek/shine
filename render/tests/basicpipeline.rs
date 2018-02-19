@@ -123,11 +123,9 @@ impl View<PlatformEngine> for SimpleView {
     }
 
     fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
-        let mut queue = r.get_queue();
-
         r.init_view(Some(Viewport::Proportional(0.5, 0.5, 0.25, 0.25)),
                     Some(Float32x4(0., 0., 0., 1.)),
-                    None);
+                    Some(1.));
 
         let st = self.t.sin();
         let ct = self.t.cos();
@@ -145,6 +143,7 @@ impl View<PlatformEngine> for SimpleView {
             depth: DepthFunction::Disable,
         };
 
+        let mut queue = r.get_queue();
         self.sh.draw(&mut queue, params, Primitive::Triangles, 0, 6);
     }
 
@@ -183,6 +182,8 @@ pub fn render() {
     let mut sub_window = render::PlatformWindowSettings::default()
         .title("sub")
         .size((256, 256))
+        .fb_depth_bits(16, 8)
+        .fb_vsync(false)
         //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine, SimpleView::new()).expect("Could not initialize sub window");
 

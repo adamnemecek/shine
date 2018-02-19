@@ -112,7 +112,7 @@ impl View<PlatformEngine> for CubeView {
     fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
         r.init_view(Some(Viewport::FullScreen),
                     Some(Float32x4(0., 0.2, 0., 1.)),
-                    Some(1f32));
+                    Some(1.));
         let aspect = r.get_view_aspect();
 
         let eye = Point3::new(0.0, 0.0, -35.0);

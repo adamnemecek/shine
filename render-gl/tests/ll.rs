@@ -154,7 +154,7 @@ impl View<PlatformEngine> for SimpleView {
 
         ll.init_view(Some(Viewport::Proportional(0.5, 0.5, 0.25, 0.25)),
                      Some(Float32x4(0.0, 0.0, 0.5, 1.0)),
-                     Some(0.));
+                     Some(1.));
 
         let st = self.t.sin();
         let ct = self.t.cos();
@@ -206,11 +206,15 @@ pub fn simple_lowlevel() {
     let mut window = render::PlatformWindowSettings::default()
         .title("main")
         .size((1024, 1024))
+        .fb_depth_bits(16, 8)
+        .fb_vsync(false)
         .build(&engine, SimpleView::new()).expect("Could not initialize main window");
 
     let mut sub_window = render::PlatformWindowSettings::default()
         .title("sub")
         .size((256, 256))
+        .fb_depth_bits(16, 8)
+        .fb_vsync(false)
         //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine, SimpleView::new()).expect("Could not initialize sub window");
 
