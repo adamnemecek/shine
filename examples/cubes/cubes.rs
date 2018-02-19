@@ -45,14 +45,14 @@ impl View<PlatformEngine> for CubeView {
         let mut queue = r.get_queue();
 
         let pos = [
-            VxPos { position: (-1.0, 1.0, 1.0).into(), color: (0, 0, 0, 255).into() },
-            VxPos { position: (1.0, 1.0, 1.0).into(), color: (0, 0, 255, 255).into() },
-            VxPos { position: (-1.0, -1.0, 1.0).into(), color: (0, 255, 0, 255).into() },
-            VxPos { position: (1.0, -1.0, 1.0).into(), color: (0, 255, 255, 255).into() },
-            VxPos { position: (-1.0, 1.0, -1.0).into(), color: (255, 0, 0, 255).into() },
-            VxPos { position: (1.0, 1.0, -1.0).into(), color: (255, 0, 255, 255).into() },
-            VxPos { position: (-1.0, -1.0, -1.0).into(), color: (255, 255, 0, 255).into() },
-            VxPos { position: (1.0, -1.0, -1.0).into(), color: (255, 255, 255, 255).into() },
+            VxPos { position: (-1.0, 1.0, -1.0).into(), color: (0, 0, 0, 255).into() },
+            VxPos { position: (1.0, 1.0, -1.0).into(), color: (0, 0, 255, 255).into() },
+            VxPos { position: (-1.0, -1.0, -1.0).into(), color: (0, 255, 0, 255).into() },
+            VxPos { position: (1.0, -1.0, -1.0).into(), color: (0, 255, 255, 255).into() },
+            VxPos { position: (-1.0, 1.0, 1.0).into(), color: (255, 0, 0, 255).into() },
+            VxPos { position: (1.0, 1.0, 1.0).into(), color: (255, 0, 255, 255).into() },
+            VxPos { position: (-1.0, -1.0, 1.0).into(), color: (255, 255, 0, 255).into() },
+            VxPos { position: (1.0, -1.0, 1.0).into(), color: (255, 255, 255, 255).into() },
         ];
         self.vb.create_and_set(&mut queue, &pos);
 
@@ -118,34 +118,34 @@ impl View<PlatformEngine> for CubeView {
         let eye = Point3::new(0.0, 0.0, -35.0);
         let target = Point3::new(0.0, 0.0, 0.0);
         let view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
-        let proj = Perspective3::new(aspect, (60f32).to_radians(), 0.1, 100.).unwrap();
+        let proj = Perspective3::new(aspect, (60f32).to_radians(), 30., 60.).unwrap();
 
-        (0..256).into_par_iter()
+        (0..121).into_par_iter()
             .for_each(|idx| {
                 let mut queue = r.get_queue();
 
-                let y = (idx / 16) as f32;
-                let x = (idx % 16) as f32;
-                let model = Isometry3::new(Vector3::new(-15.0 + x * 2.0, -15.0 + y * 2.0, 0.),
+                let y = (idx / 11) as f32;
+                let x = (idx % 11) as f32;
+                let model = Isometry3::new(Vector3::new(-15.0 + x * 3.0, -15.0 + y * 3.0, 0.),
                                            Vector3::new(self.time + x * 0.21, self.time + y * 0.37, 0.));
 
                 if idx % 2 == 0 {
-                    self.sh.draw(&mut queue,
-                                 CubeShaderParameters {
-                                     v_position: (&self.vb, VxPos::POSITION).into(),
-                                     v_color: (&self.vb, VxPos::COLOR).into(),
-                                     indices: (&self.ib1).into(),
-                                     u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
-                                 },
+                    let params = CubeShaderParameters {
+                        v_position: (&self.vb, VxPos::POSITION).into(),
+                        v_color: (&self.vb, VxPos::COLOR).into(),
+                        indices: (&self.ib1).into(),
+                        u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
+                    };
+                    self.sh.draw(&mut queue, params,
                                  Primitive::Triangles, 0, 36);
                 } else {
-                    self.sh.draw(&mut queue,
-                                 CubeShaderParameters {
-                                     v_position: (&self.vb, VxPos::POSITION).into(),
-                                     v_color: (&self.vb, VxPos::COLOR).into(),
-                                     indices: (&self.ib2).into(),
-                                     u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
-                                 },
+                    let params = CubeShaderParameters {
+                        v_position: (&self.vb, VxPos::POSITION).into(),
+                        v_color: (&self.vb, VxPos::COLOR).into(),
+                        indices: (&self.ib2).into(),
+                        u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
+                    };
+                    self.sh.draw(&mut queue, params,
                                  Primitive::TriangleStrip, 0, 14);
                 }
             });
@@ -165,8 +165,9 @@ pub fn main() {
 
     let mut window = render::PlatformWindowSettings::default()
         .title("main")
-        .size((1024, 1024))
+        .size((512, 512))
         .fb_vsync(false)
+        .fb_depth_bits(24, 8)
         .build(&engine, CubeView::new())
         .expect("Could not initialize main window");
 

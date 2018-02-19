@@ -153,6 +153,8 @@ impl Context {
         try!(context.load_gl_functions());
         try!(context.set_context_attributes(&settings.fb_config, &settings.platform_extra));
 
+        //println!("{:?}", context.get_pixel_format_config());
+
         Ok(context)
     }
 

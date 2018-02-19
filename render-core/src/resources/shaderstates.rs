@@ -30,7 +30,7 @@ pub enum DepthFunction {
 
 impl Default for DepthFunction {
     fn default() -> DepthFunction {
-        DepthFunction::Disable
+        DepthFunction::Less
     }
 }
 
@@ -68,7 +68,7 @@ pub enum CullFunction {
 
 impl Default for CullFunction {
     fn default() -> CullFunction {
-        CullFunction::Disable
+        CullFunction::Clockwise
     }
 }
 
