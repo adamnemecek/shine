@@ -5,43 +5,46 @@ use std::io;
 use std::mem;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
-use winapi;
-use user32;
+use winapi::shared::ntdef::{LONG, LPCWSTR};
+use winapi::shared::basetsd::*;
+use winapi::shared::minwindef::*;
+use winapi::shared::windef::*;
+use winapi::um::winuser::*;
 use core::*;
 use framework::*;
 use resources::*;
 
 pub mod win_messages {
-    use winapi;
+    use super::*;
 
     /// User window message indicating the window creating has completed and surface ready
     /// callback can be called.
-    pub const WM_DR_WINDOW_CREATED: winapi::UINT = winapi::WM_USER + 1;
-    pub const WM_DR_WINDOW_DESTROYED: winapi::UINT = winapi::WM_USER + 2;
+    pub const WM_DR_WINDOW_CREATED: UINT = WM_USER + 1;
+    pub const WM_DR_WINDOW_DESTROYED: UINT = WM_USER + 2;
 }
 
 
 /// Returns the window style for the specified settings
 fn get_window_style(settings: &PlatformWindowSettings) -> u32 {
-    let mut style = winapi::WS_CLIPSIBLINGS | winapi::WS_CLIPCHILDREN;
+    let mut style = WS_CLIPSIBLINGS | WS_CLIPCHILDREN;
 
     //if settings.monitor {
     //   style |= WS_POPUP;
     //} else {
-    style |= winapi::WS_SYSMENU | winapi::WS_MINIMIZEBOX;
+    style |= WS_SYSMENU | WS_MINIMIZEBOX;
 
     if settings.decorated {
-        style |= winapi::WS_CAPTION;
+        style |= WS_CAPTION;
     }
 
     if settings.resizable {
-        style |= winapi::WS_MAXIMIZEBOX | winapi::WS_THICKFRAME;
+        style |= WS_MAXIMIZEBOX | WS_THICKFRAME;
     } else {
-        style |= winapi::WS_POPUP;
+        style |= WS_POPUP;
     }
 
     /*if settings.maximized {
-        style |= winapi::WS_MAXIMIZE;
+        style |= WS_MAXIMIZE;
     }*/
 
     style
@@ -51,25 +54,25 @@ fn get_window_style(settings: &PlatformWindowSettings) -> u32 {
 /// Returns the extended window style for the specified settings
 #[allow(unused_variables)]
 fn get_window_exstyle(settings: &PlatformWindowSettings) -> u32 {
-    let style = winapi::WS_EX_APPWINDOW;
+    let style = WS_EX_APPWINDOW;
 
     //if settings.monitor  {
-    //    style |= winapi::WS_EX_TOPMOST;
+    //    style |= WS_EX_TOPMOST;
     //}
 
     style
 }
 
 fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
-    let mut rect = winapi::RECT {
+    let mut rect = RECT {
         top: 0,
         left: 0,
-        bottom: client_size.height as winapi::LONG,
-        right: client_size.width as winapi::LONG,
+        bottom: client_size.height as LONG,
+        right: client_size.width as LONG,
     };
 
     //todo: error handling
-    ffi!(user32::AdjustWindowRectEx(&mut rect, style, winapi::FALSE, exstyle));
+    ffi!(AdjustWindowRectEx(&mut rect, style, FALSE, exstyle));
 
     Size {
         width: rect.right - rect.left,
@@ -79,66 +82,66 @@ fn get_full_window_size(style: u32, exstyle: u32, client_size: Size) -> Size {
 
 
 /// Maps from windows key code to our virtual key codes
-fn vkeycode_to_element(wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> (ScanCode, Option<VirtualKeyCode>) {
+fn vkeycode_to_element(wparam: WPARAM, lparam: LPARAM) -> (ScanCode, Option<VirtualKeyCode>) {
     const MAPVK_VSC_TO_VK_EX: u32 = 3;
 
     let scancode = ((lparam >> 16) & 0xff) as u32;
     let extended = (lparam & 0x01000000) != 0;
     let vk = match wparam as i32 {
-        winapi::VK_SHIFT => { ffi!(user32::MapVirtualKeyA(scancode, MAPVK_VSC_TO_VK_EX) as i32) }
-        winapi::VK_CONTROL => { if extended { winapi::VK_RCONTROL } else { winapi::VK_LCONTROL } }
-        winapi::VK_MENU => { if extended { winapi::VK_RMENU } else { winapi::VK_LMENU } }
+        VK_SHIFT => { ffi!(MapVirtualKeyA(scancode, MAPVK_VSC_TO_VK_EX) as i32) }
+        VK_CONTROL => { if extended { VK_RCONTROL } else { VK_LCONTROL } }
+        VK_MENU => { if extended { VK_RMENU } else { VK_LMENU } }
         other => other
     };
 
     // VK_* codes are documented here https://msdn.microsoft.com/en-us/library/windows/desktop/dd375731(v=vs.85).aspx
     (scancode, match vk {
-        //winapi::VK_LBUTTON => Some(VirtualKeyCode::Lbutton),
-        //winapi::VK_RBUTTON => Some(VirtualKeyCode::Rbutton),
-        //winapi::VK_CANCEL => Some(VirtualKeyCode::Cancel),
-        //winapi::VK_MBUTTON => Some(VirtualKeyCode::Mbutton),
-        //winapi::VK_XBUTTON1 => Some(VirtualKeyCode::Xbutton1),
-        //winapi::VK_XBUTTON2 => Some(VirtualKeyCode::Xbutton2),
-        winapi::VK_BACK => Some(VirtualKeyCode::Backspace),
-        winapi::VK_TAB => Some(VirtualKeyCode::Tab),
-        //winapi::VK_CLEAR => Some(VirtualKeyCode::Clear),
-        winapi::VK_RETURN => if extended { Some(VirtualKeyCode::NumpadEnter) } else { Some(VirtualKeyCode::Enter) },
-        winapi::VK_LSHIFT => Some(VirtualKeyCode::LShift),
-        winapi::VK_RSHIFT => Some(VirtualKeyCode::RShift),
-        winapi::VK_LCONTROL => Some(VirtualKeyCode::LControl),
-        winapi::VK_RCONTROL => Some(VirtualKeyCode::RControl),
-        winapi::VK_LMENU => Some(VirtualKeyCode::LMenu),
-        winapi::VK_RMENU => Some(VirtualKeyCode::RMenu),
-        winapi::VK_PAUSE => Some(VirtualKeyCode::Pause),
-        winapi::VK_CAPITAL => Some(VirtualKeyCode::CapsLock),
-        //winapi::VK_KANA => Some(VirtualKeyCode::Kana),
-        //winapi::VK_HANGUEL => Some(VirtualKeyCode::Hanguel),
-        //winapi::VK_HANGUL => Some(VirtualKeyCode::Hangul),
-        //winapi::VK_JUNJA => Some(VirtualKeyCode::Junja),
-        //winapi::VK_FINAL => Some(VirtualKeyCode::Final),
-        //winapi::VK_HANJA => Some(VirtualKeyCode::Hanja),
-        //winapi::VK_KANJI => Some(VirtualKeyCode::Kanji),
-        winapi::VK_ESCAPE => Some(VirtualKeyCode::Escape),
-        //winapi::VK_CONVERT => Some(VirtualKeyCode::Convert),
-        //winapi::VK_NONCONVERT => Some(VirtualKeyCode::NoConvert),
-        //winapi::VK_ACCEPT => Some(VirtualKeyCode::Accept),
-        //winapi::VK_MODECHANGE => Some(VirtualKeyCode::Modechange),
-        winapi::VK_SPACE => Some(VirtualKeyCode::Space),
-        winapi::VK_PRIOR => Some(VirtualKeyCode::PageUp),
-        winapi::VK_NEXT => Some(VirtualKeyCode::PageDown),
-        winapi::VK_END => Some(VirtualKeyCode::End),
-        winapi::VK_HOME => Some(VirtualKeyCode::Home),
-        winapi::VK_LEFT => Some(VirtualKeyCode::Left),
-        winapi::VK_UP => Some(VirtualKeyCode::Up),
-        winapi::VK_RIGHT => Some(VirtualKeyCode::Right),
-        winapi::VK_DOWN => Some(VirtualKeyCode::Down),
-        //winapi::VK_SELECT => Some(VirtualKeyCode::Select),
-        //winapi::VK_PRINT => Some(VirtualKeyCode::Print),
-        //winapi::VK_EXECUTE => Some(VirtualKeyCode::Execute),
-        winapi::VK_SNAPSHOT => Some(VirtualKeyCode::PrintScreen),
-        winapi::VK_INSERT => Some(VirtualKeyCode::Insert),
-        winapi::VK_DELETE => Some(VirtualKeyCode::Delete),
-        //winapi::VK_HELP => Some(VirtualKeyCode::Help),
+        //VK_LBUTTON => Some(VirtualKeyCode::Lbutton),
+        //VK_RBUTTON => Some(VirtualKeyCode::Rbutton),
+        //VK_CANCEL => Some(VirtualKeyCode::Cancel),
+        //VK_MBUTTON => Some(VirtualKeyCode::Mbutton),
+        //VK_XBUTTON1 => Some(VirtualKeyCode::Xbutton1),
+        //VK_XBUTTON2 => Some(VirtualKeyCode::Xbutton2),
+        VK_BACK => Some(VirtualKeyCode::Backspace),
+        VK_TAB => Some(VirtualKeyCode::Tab),
+        //VK_CLEAR => Some(VirtualKeyCode::Clear),
+        VK_RETURN => if extended { Some(VirtualKeyCode::NumpadEnter) } else { Some(VirtualKeyCode::Enter) },
+        VK_LSHIFT => Some(VirtualKeyCode::LShift),
+        VK_RSHIFT => Some(VirtualKeyCode::RShift),
+        VK_LCONTROL => Some(VirtualKeyCode::LControl),
+        VK_RCONTROL => Some(VirtualKeyCode::RControl),
+        VK_LMENU => Some(VirtualKeyCode::LMenu),
+        VK_RMENU => Some(VirtualKeyCode::RMenu),
+        VK_PAUSE => Some(VirtualKeyCode::Pause),
+        VK_CAPITAL => Some(VirtualKeyCode::CapsLock),
+        //VK_KANA => Some(VirtualKeyCode::Kana),
+        //VK_HANGUEL => Some(VirtualKeyCode::Hanguel),
+        //VK_HANGUL => Some(VirtualKeyCode::Hangul),
+        //VK_JUNJA => Some(VirtualKeyCode::Junja),
+        //VK_FINAL => Some(VirtualKeyCode::Final),
+        //VK_HANJA => Some(VirtualKeyCode::Hanja),
+        //VK_KANJI => Some(VirtualKeyCode::Kanji),
+        VK_ESCAPE => Some(VirtualKeyCode::Escape),
+        //VK_CONVERT => Some(VirtualKeyCode::Convert),
+        //VK_NONCONVERT => Some(VirtualKeyCode::NoConvert),
+        //VK_ACCEPT => Some(VirtualKeyCode::Accept),
+        //VK_MODECHANGE => Some(VirtualKeyCode::Modechange),
+        VK_SPACE => Some(VirtualKeyCode::Space),
+        VK_PRIOR => Some(VirtualKeyCode::PageUp),
+        VK_NEXT => Some(VirtualKeyCode::PageDown),
+        VK_END => Some(VirtualKeyCode::End),
+        VK_HOME => Some(VirtualKeyCode::Home),
+        VK_LEFT => Some(VirtualKeyCode::Left),
+        VK_UP => Some(VirtualKeyCode::Up),
+        VK_RIGHT => Some(VirtualKeyCode::Right),
+        VK_DOWN => Some(VirtualKeyCode::Down),
+        //VK_SELECT => Some(VirtualKeyCode::Select),
+        //VK_PRINT => Some(VirtualKeyCode::Print),
+        //VK_EXECUTE => Some(VirtualKeyCode::Execute),
+        VK_SNAPSHOT => Some(VirtualKeyCode::PrintScreen),
+        VK_INSERT => Some(VirtualKeyCode::Insert),
+        VK_DELETE => Some(VirtualKeyCode::Delete),
+        //VK_HELP => Some(VirtualKeyCode::Help),
         0x30 => Some(VirtualKeyCode::Key0),
         0x31 => Some(VirtualKeyCode::Key1),
         0x32 => Some(VirtualKeyCode::Key2),
@@ -175,94 +178,94 @@ fn vkeycode_to_element(wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> (ScanC
         0x58 => Some(VirtualKeyCode::X),
         0x59 => Some(VirtualKeyCode::Y),
         0x5A => Some(VirtualKeyCode::Z),
-        //winapi::VK_LWIN => Some(VirtualKeyCode::Lwin),
-        //winapi::VK_RWIN => Some(VirtualKeyCode::Rwin),
-        winapi::VK_APPS => Some(VirtualKeyCode::Apps),
-        winapi::VK_SLEEP => Some(VirtualKeyCode::Sleep),
-        winapi::VK_NUMPAD0 => Some(VirtualKeyCode::Numpad0),
-        winapi::VK_NUMPAD1 => Some(VirtualKeyCode::Numpad1),
-        winapi::VK_NUMPAD2 => Some(VirtualKeyCode::Numpad2),
-        winapi::VK_NUMPAD3 => Some(VirtualKeyCode::Numpad3),
-        winapi::VK_NUMPAD4 => Some(VirtualKeyCode::Numpad4),
-        winapi::VK_NUMPAD5 => Some(VirtualKeyCode::Numpad5),
-        winapi::VK_NUMPAD6 => Some(VirtualKeyCode::Numpad6),
-        winapi::VK_NUMPAD7 => Some(VirtualKeyCode::Numpad7),
-        winapi::VK_NUMPAD8 => Some(VirtualKeyCode::Numpad8),
-        winapi::VK_NUMPAD9 => Some(VirtualKeyCode::Numpad9),
-        winapi::VK_MULTIPLY => Some(VirtualKeyCode::NumpadMultiply),
-        winapi::VK_ADD => Some(VirtualKeyCode::NumpadPlus),
-        //winapi::VK_SEPARATOR => Some(VirtualKeyCode::Separator),
-        winapi::VK_SUBTRACT => Some(VirtualKeyCode::NumpadMinus),
-        winapi::VK_DECIMAL => Some(VirtualKeyCode::NumpadDecimal),
-        winapi::VK_DIVIDE => Some(VirtualKeyCode::NumpadDivide),
-        winapi::VK_F1 => Some(VirtualKeyCode::F1),
-        winapi::VK_F2 => Some(VirtualKeyCode::F2),
-        winapi::VK_F3 => Some(VirtualKeyCode::F3),
-        winapi::VK_F4 => Some(VirtualKeyCode::F4),
-        winapi::VK_F5 => Some(VirtualKeyCode::F5),
-        winapi::VK_F6 => Some(VirtualKeyCode::F6),
-        winapi::VK_F7 => Some(VirtualKeyCode::F7),
-        winapi::VK_F8 => Some(VirtualKeyCode::F8),
-        winapi::VK_F9 => Some(VirtualKeyCode::F9),
-        winapi::VK_F10 => Some(VirtualKeyCode::F10),
-        winapi::VK_F11 => Some(VirtualKeyCode::F11),
-        winapi::VK_F12 => Some(VirtualKeyCode::F12),
-        winapi::VK_F13 => Some(VirtualKeyCode::F13),
-        winapi::VK_F14 => Some(VirtualKeyCode::F14),
-        winapi::VK_F15 => Some(VirtualKeyCode::F15),
-        //winapi::VK_F16 => Some(VirtualKeyCode::F16),
-        //winapi::VK_F17 => Some(VirtualKeyCode::F17),
-        //winapi::VK_F18 => Some(VirtualKeyCode::F18),
-        //winapi::VK_F19 => Some(VirtualKeyCode::F19),
-        //winapi::VK_F20 => Some(VirtualKeyCode::F20),
-        //winapi::VK_F21 => Some(VirtualKeyCode::F21),
-        //winapi::VK_F22 => Some(VirtualKeyCode::F22),
-        //winapi::VK_F23 => Some(VirtualKeyCode::F23),
-        //winapi::VK_F24 => Some(VirtualKeyCode::F24),
-        winapi::VK_NUMLOCK => Some(VirtualKeyCode::NumLock),
-        winapi::VK_SCROLL => Some(VirtualKeyCode::ScrollLock),
-        winapi::VK_BROWSER_BACK => Some(VirtualKeyCode::NavigateBackward),
-        winapi::VK_BROWSER_FORWARD => Some(VirtualKeyCode::NavigateForward),
-        winapi::VK_BROWSER_REFRESH => Some(VirtualKeyCode::WebRefresh),
-        winapi::VK_BROWSER_STOP => Some(VirtualKeyCode::WebStop),
-        winapi::VK_BROWSER_SEARCH => Some(VirtualKeyCode::WebSearch),
-        winapi::VK_BROWSER_FAVORITES => Some(VirtualKeyCode::WebFavorites),
-        winapi::VK_BROWSER_HOME => Some(VirtualKeyCode::WebHome),
-        winapi::VK_VOLUME_MUTE => Some(VirtualKeyCode::Mute),
-        winapi::VK_VOLUME_DOWN => Some(VirtualKeyCode::VolumeDown),
-        winapi::VK_VOLUME_UP => Some(VirtualKeyCode::VolumeUp),
-        winapi::VK_MEDIA_NEXT_TRACK => Some(VirtualKeyCode::NextTrack),
-        winapi::VK_MEDIA_PREV_TRACK => Some(VirtualKeyCode::PrevTrack),
-        winapi::VK_MEDIA_STOP => Some(VirtualKeyCode::MediaStop),
-        winapi::VK_MEDIA_PLAY_PAUSE => Some(VirtualKeyCode::PlayPause),
-        winapi::VK_LAUNCH_MAIL => Some(VirtualKeyCode::Mail),
-        winapi::VK_LAUNCH_MEDIA_SELECT => Some(VirtualKeyCode::MediaSelect),
-        //winapi::VK_LAUNCH_APP1 => Some(VirtualKeyCode::Launch_app1),
-        //winapi::VK_LAUNCH_APP2 => Some(VirtualKeyCode::Launch_app2),
-        //winapi::VK_OEM_PLUS => Some(VirtualKeyCode::Equals),
-        //winapi::VK_OEM_COMMA => Some(VirtualKeyCode::Comma),
-        //winapi::VK_OEM_MINUS => Some(VirtualKeyCode::Minus),
-        //winapi::VK_OEM_PERIOD => Some(VirtualKeyCode::Period),
-        //winapi::VK_OEM_1 => map_text_keys(vk),
-        //winapi::VK_OEM_2 => map_text_keys(vk),
-        //winapi::VK_OEM_3 => map_text_keys(vk),
-        //winapi::VK_OEM_4 => map_text_keys(vk),
-        //winapi::VK_OEM_5 => map_text_keys(vk),
-        //winapi::VK_OEM_6 => map_text_keys(vk),
-        //winapi::VK_OEM_7 => map_text_keys(vk),
-        //winapi::VK_OEM_8 => Some(VirtualKeyCode::Oem_8),
-        //winapi::VK_OEM_102 => Some(VirtualKeyCode::OEM102),
-        //winapi::VK_PROCESSKEY => Some(VirtualKeyCode::Processkey),
-        //winapi::VK_PACKET => Some(VirtualKeyCode::Packet),
-        //winapi::VK_ATTN => Some(VirtualKeyCode::Attn),
-        //winapi::VK_CRSEL => Some(VirtualKeyCode::Crsel),
-        //winapi::VK_EXSEL => Some(VirtualKeyCode::Exsel),
-        //winapi::VK_EREOF => Some(VirtualKeyCode::Ereof),
-        //winapi::VK_PLAY => Some(VirtualKeyCode::Play),
-        //winapi::VK_ZOOM => Some(VirtualKeyCode::Zoom),
-        //winapi::VK_NONAME => Some(VirtualKeyCode::Noname),
-        //winapi::VK_PA1 => Some(VirtualKeyCode::Pa1),
-        //winapi::VK_OEM_CLEAR => Some(VirtualKeyCode::Oem_clear),
+        //VK_LWIN => Some(VirtualKeyCode::Lwin),
+        //VK_RWIN => Some(VirtualKeyCode::Rwin),
+        VK_APPS => Some(VirtualKeyCode::Apps),
+        VK_SLEEP => Some(VirtualKeyCode::Sleep),
+        VK_NUMPAD0 => Some(VirtualKeyCode::Numpad0),
+        VK_NUMPAD1 => Some(VirtualKeyCode::Numpad1),
+        VK_NUMPAD2 => Some(VirtualKeyCode::Numpad2),
+        VK_NUMPAD3 => Some(VirtualKeyCode::Numpad3),
+        VK_NUMPAD4 => Some(VirtualKeyCode::Numpad4),
+        VK_NUMPAD5 => Some(VirtualKeyCode::Numpad5),
+        VK_NUMPAD6 => Some(VirtualKeyCode::Numpad6),
+        VK_NUMPAD7 => Some(VirtualKeyCode::Numpad7),
+        VK_NUMPAD8 => Some(VirtualKeyCode::Numpad8),
+        VK_NUMPAD9 => Some(VirtualKeyCode::Numpad9),
+        VK_MULTIPLY => Some(VirtualKeyCode::NumpadMultiply),
+        VK_ADD => Some(VirtualKeyCode::NumpadPlus),
+        //VK_SEPARATOR => Some(VirtualKeyCode::Separator),
+        VK_SUBTRACT => Some(VirtualKeyCode::NumpadMinus),
+        VK_DECIMAL => Some(VirtualKeyCode::NumpadDecimal),
+        VK_DIVIDE => Some(VirtualKeyCode::NumpadDivide),
+        VK_F1 => Some(VirtualKeyCode::F1),
+        VK_F2 => Some(VirtualKeyCode::F2),
+        VK_F3 => Some(VirtualKeyCode::F3),
+        VK_F4 => Some(VirtualKeyCode::F4),
+        VK_F5 => Some(VirtualKeyCode::F5),
+        VK_F6 => Some(VirtualKeyCode::F6),
+        VK_F7 => Some(VirtualKeyCode::F7),
+        VK_F8 => Some(VirtualKeyCode::F8),
+        VK_F9 => Some(VirtualKeyCode::F9),
+        VK_F10 => Some(VirtualKeyCode::F10),
+        VK_F11 => Some(VirtualKeyCode::F11),
+        VK_F12 => Some(VirtualKeyCode::F12),
+        VK_F13 => Some(VirtualKeyCode::F13),
+        VK_F14 => Some(VirtualKeyCode::F14),
+        VK_F15 => Some(VirtualKeyCode::F15),
+        //VK_F16 => Some(VirtualKeyCode::F16),
+        //VK_F17 => Some(VirtualKeyCode::F17),
+        //VK_F18 => Some(VirtualKeyCode::F18),
+        //VK_F19 => Some(VirtualKeyCode::F19),
+        //VK_F20 => Some(VirtualKeyCode::F20),
+        //VK_F21 => Some(VirtualKeyCode::F21),
+        //VK_F22 => Some(VirtualKeyCode::F22),
+        //VK_F23 => Some(VirtualKeyCode::F23),
+        //VK_F24 => Some(VirtualKeyCode::F24),
+        VK_NUMLOCK => Some(VirtualKeyCode::NumLock),
+        VK_SCROLL => Some(VirtualKeyCode::ScrollLock),
+        VK_BROWSER_BACK => Some(VirtualKeyCode::NavigateBackward),
+        VK_BROWSER_FORWARD => Some(VirtualKeyCode::NavigateForward),
+        VK_BROWSER_REFRESH => Some(VirtualKeyCode::WebRefresh),
+        VK_BROWSER_STOP => Some(VirtualKeyCode::WebStop),
+        VK_BROWSER_SEARCH => Some(VirtualKeyCode::WebSearch),
+        VK_BROWSER_FAVORITES => Some(VirtualKeyCode::WebFavorites),
+        VK_BROWSER_HOME => Some(VirtualKeyCode::WebHome),
+        VK_VOLUME_MUTE => Some(VirtualKeyCode::Mute),
+        VK_VOLUME_DOWN => Some(VirtualKeyCode::VolumeDown),
+        VK_VOLUME_UP => Some(VirtualKeyCode::VolumeUp),
+        VK_MEDIA_NEXT_TRACK => Some(VirtualKeyCode::NextTrack),
+        VK_MEDIA_PREV_TRACK => Some(VirtualKeyCode::PrevTrack),
+        VK_MEDIA_STOP => Some(VirtualKeyCode::MediaStop),
+        VK_MEDIA_PLAY_PAUSE => Some(VirtualKeyCode::PlayPause),
+        VK_LAUNCH_MAIL => Some(VirtualKeyCode::Mail),
+        VK_LAUNCH_MEDIA_SELECT => Some(VirtualKeyCode::MediaSelect),
+        //VK_LAUNCH_APP1 => Some(VirtualKeyCode::Launch_app1),
+        //VK_LAUNCH_APP2 => Some(VirtualKeyCode::Launch_app2),
+        //VK_OEM_PLUS => Some(VirtualKeyCode::Equals),
+        //VK_OEM_COMMA => Some(VirtualKeyCode::Comma),
+        //VK_OEM_MINUS => Some(VirtualKeyCode::Minus),
+        //VK_OEM_PERIOD => Some(VirtualKeyCode::Period),
+        //VK_OEM_1 => map_text_keys(vk),
+        //VK_OEM_2 => map_text_keys(vk),
+        //VK_OEM_3 => map_text_keys(vk),
+        //VK_OEM_4 => map_text_keys(vk),
+        //VK_OEM_5 => map_text_keys(vk),
+        //VK_OEM_6 => map_text_keys(vk),
+        //VK_OEM_7 => map_text_keys(vk),
+        //VK_OEM_8 => Some(VirtualKeyCode::Oem_8),
+        //VK_OEM_102 => Some(VirtualKeyCode::OEM102),
+        //VK_PROCESSKEY => Some(VirtualKeyCode::Processkey),
+        //VK_PACKET => Some(VirtualKeyCode::Packet),
+        //VK_ATTN => Some(VirtualKeyCode::Attn),
+        //VK_CRSEL => Some(VirtualKeyCode::Crsel),
+        //VK_EXSEL => Some(VirtualKeyCode::Exsel),
+        //VK_EREOF => Some(VirtualKeyCode::Ereof),
+        //VK_PLAY => Some(VirtualKeyCode::Play),
+        //VK_ZOOM => Some(VirtualKeyCode::Zoom),
+        //VK_NONAME => Some(VirtualKeyCode::Noname),
+        //VK_PA1 => Some(VirtualKeyCode::Pa1),
+        //VK_OEM_CLEAR => Some(VirtualKeyCode::Oem_clear),
         _ => None
     })
 }
@@ -277,18 +280,18 @@ enum WindowState {
 }
 
 pub struct GLWindowControl {
-    hwnd: winapi::HWND,
+    hwnd: HWND,
 }
 
 impl WindowControl for GLWindowControl {
     fn close(&mut self) {
-        ffi!(user32::PostMessageW(self.hwnd, winapi::WM_CLOSE, 0, 0));
+        ffi!(PostMessageW(self.hwnd, WM_CLOSE, 0, 0));
     }
 }
 
 /// Structure to store platform dependent data associated to a Window.
 pub struct GLWindow {
-    hwnd: winapi::HWND,
+    hwnd: HWND,
     state: WindowState,
     size: Size,
     position: Position,
@@ -305,19 +308,19 @@ impl GLWindow {
         let app_instance = engine.get_instance();
 
         let (style, exstyle) = (get_window_style(settings), get_window_exstyle(settings));
-        let (xpos, ypos) = (winapi::CW_USEDEFAULT, winapi::CW_USEDEFAULT);
+        let (xpos, ypos) = (CW_USEDEFAULT, CW_USEDEFAULT);
         let full_size = get_full_window_size(style, exstyle, settings.size);
         let title = OsStr::new(&settings.title).encode_wide().chain(Some(0).into_iter()).collect::<Vec<_>>();
-        let hwnd = ffi!(user32::CreateWindowExW(exstyle,
-                                                engine.get_window_class_name().as_ptr(),
-                                                title.as_ptr() as winapi::LPCWSTR,
-                                                style,
-                                                xpos, ypos,
-                                                full_size.width as winapi::LONG, full_size.height as winapi::LONG,
-                                                ptr::null_mut(), // No parent window
-                                                ptr::null_mut(), // No window menu
-                                                app_instance,
-                                                ptr::null_mut()));
+        let hwnd = ffi!(CreateWindowExW(exstyle,
+                                        engine.get_window_class_name().as_ptr(),
+                                        title.as_ptr() as LPCWSTR,
+                                        style,
+                                        xpos, ypos,
+                                        full_size.width as LONG, full_size.height as LONG,
+                                        ptr::null_mut(), // No parent window
+                                        ptr::null_mut(), // No window menu
+                                        app_instance,
+                                        ptr::null_mut()));
         //println!("Os window created, hwnd: {:?}", hwnd);
         if hwnd.is_null() {
             return Err(Error::WindowCreationError(format!("Window: CreateWindowEx function failed: {}", io::Error::last_os_error())));
@@ -326,7 +329,7 @@ impl GLWindow {
         //create context
         let context = match GLContext::new(app_instance, hwnd, settings) {
             Err(err) => {
-                ffi!(user32::DestroyWindow(hwnd));
+                ffi!(DestroyWindow(hwnd));
                 return Err(err);
             }
 
@@ -347,16 +350,16 @@ impl GLWindow {
         //connect the OS and rust window
         {
             let win_ptr = data.as_ref() as *const GLWindow;
-            ffi!(user32::SetWindowLongPtrW(hwnd, 0, win_ptr as i64));
+            ffi!(SetWindowLongPtrW(hwnd, 0, win_ptr as isize));
         }
 
         // ready to show the window
-        ffi!(user32::ShowWindow(hwnd, winapi::SW_SHOW));
+        ffi!(ShowWindow(hwnd, SW_SHOW));
 
         // The native window creation completes before our callback is injected into the system,
         // thus  a delayed message is sent, that is delivered only when the message loop
         // has started. (engine.dispatch_events)
-        ffi!(user32::PostMessageW(hwnd, win_messages::WM_DR_WINDOW_CREATED, 0, 0));
+        ffi!(PostMessageW(hwnd, win_messages::WM_DR_WINDOW_CREATED, 0, 0));
 
         Ok(data)
     }
@@ -404,7 +407,7 @@ impl GLWindow {
         Ok(())
     }
 
-    pub fn get_hwnd(&self) -> winapi::HWND {
+    pub fn get_hwnd(&self) -> HWND {
         self.hwnd
     }
 
@@ -436,8 +439,8 @@ impl GLWindow {
     /// Static function to handle os messages.
     ///
     /// It converts the raw pointer associated to the OS window back into a safe rust structure.
-    pub fn handle_os_message(win_ptr: winapi::LONG_PTR, hwnd: winapi::HWND,
-                             msg: winapi::UINT, wparam: winapi::WPARAM, lparam: winapi::LPARAM) -> winapi::LRESULT {
+    pub fn handle_os_message(win_ptr: LONG_PTR, hwnd: HWND,
+                             msg: UINT, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
         assert!(win_ptr != 0);
 
         // It's an OS callback that requires some dark magic to find the rust window associated to the
@@ -445,31 +448,31 @@ impl GLWindow {
         // We just pretend that we have an owned window and leak it at the and
         let mut win = unsafe { Box::from_raw(win_ptr as *mut GLWindow) };
 
-        let mut result: Option<winapi::LRESULT> = None;
+        let mut result: Option<LRESULT> = None;
         match msg {
             win_messages::WM_DR_WINDOW_CREATED => {
                 win.state = WindowState::Open;
                 win.handle_surface_ready();
             }
 
-            winapi::WM_CLOSE => {
+            WM_CLOSE => {
                 win.state = WindowState::WaitingClose;
                 win.handle_surface_lost();
             }
 
-            winapi::WM_DESTROY => {
+            WM_DESTROY => {
                 win.state = WindowState::Closed;
-                ffi!(user32::PostMessageW(ptr::null_mut(), win_messages::WM_DR_WINDOW_DESTROYED, 0, 0));
+                ffi!(PostMessageW(ptr::null_mut(), win_messages::WM_DR_WINDOW_DESTROYED, 0, 0));
             }
 
-            winapi::WM_SIZE => {
-                let w = winapi::LOWORD(lparam as winapi::DWORD) as i32;
-                let h = winapi::HIWORD(lparam as winapi::DWORD) as i32;
+            WM_SIZE => {
+                let w = LOWORD(lparam as DWORD) as i32;
+                let h = HIWORD(lparam as DWORD) as i32;
 
                 let size = Size { width: w, height: h };
 
-                let mut rect = winapi::RECT { left: 0, top: 0, right: 0, bottom: 0 };
-                ffi!(user32::GetWindowRect(win.hwnd, &mut rect));
+                let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+                ffi!(GetWindowRect(win.hwnd, &mut rect));
 
                 win.size = Size {
                     width: rect.right - rect.left,
@@ -481,15 +484,15 @@ impl GLWindow {
                 result = Some(0);
             }
 
-            winapi::WM_MOVE => {
-                let x = winapi::LOWORD(lparam as winapi::DWORD) as i32;
-                let y = winapi::HIWORD(lparam as winapi::DWORD) as i32;
+            WM_MOVE => {
+                let x = LOWORD(lparam as DWORD) as i32;
+                let y = HIWORD(lparam as DWORD) as i32;
                 win.position = Position { x: x, y: y };
                 result = Some(0);
             }
 
-            winapi::WM_KEYDOWN | winapi::WM_SYSKEYDOWN => {
-                if msg == winapi::WM_SYSKEYDOWN && wparam as i32 == winapi::VK_F4 {
+            WM_KEYDOWN | WM_SYSKEYDOWN => {
+                if msg == WM_SYSKEYDOWN && wparam as i32 == VK_F4 {
                     // pass close by F4 key to windows
                     result = None;
                 } else {
@@ -499,8 +502,8 @@ impl GLWindow {
                 }
             }
 
-            winapi::WM_KEYUP | winapi::WM_SYSKEYUP => {
-                if msg == winapi::WM_SYSKEYUP && wparam as i32 == winapi::VK_F4 {
+            WM_KEYUP | WM_SYSKEYUP => {
+                if msg == WM_SYSKEYUP && wparam as i32 == VK_F4 {
                     // pass close by F4 key
                     result = None;
                 } else {
@@ -517,7 +520,7 @@ impl GLWindow {
         if let Some(res) = result {
             return res;
         }
-        ffi!(user32::DefWindowProcW(hwnd, msg, wparam, lparam))
+        ffi!(DefWindowProcW(hwnd, msg, wparam, lparam))
     }
 }
 
@@ -526,8 +529,8 @@ impl Drop for GLWindow {
         //println!("GLWindow dropped");
         if self.hwnd != ptr::null_mut() {
             // the box is released, thus we remove any dangling pointers
-            ffi!(user32::SetWindowLongPtrW(self.hwnd, 0, 0i64));
-            ffi!(user32::DestroyWindow(self.hwnd));
+            ffi!(SetWindowLongPtrW(self.hwnd, 0, 0));
+            ffi!(DestroyWindow(self.hwnd));
         }
     }
 }

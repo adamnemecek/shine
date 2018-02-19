@@ -1,6 +1,7 @@
 #![cfg(any(target_os = "windows"))]
 
-use winapi;
+use winapi::shared::windef::*;
+use winapi::shared::minwindef::*;
 use core::*;
 use framework::*;
 
@@ -13,7 +14,7 @@ impl Context {
     ///
     /// # Error
     /// If context connat be created an error is returned describing the reason.
-    pub fn new(_: winapi::HINSTANCE, _: winapi::HWND, _: &PlatformWindowSettings) -> Result<Context, Error> {
+    pub fn new(_: HINSTANCE, _: HWND, _: &PlatformWindowSettings) -> Result<Context, Error> {
         Err(Error::WindowCreationError(format!("EGL context is not supported yet")))
     }
 

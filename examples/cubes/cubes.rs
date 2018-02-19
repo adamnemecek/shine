@@ -115,22 +115,18 @@ impl View<PlatformEngine> for CubeView {
                     Some(1f32));
         let aspect = r.get_view_aspect();
 
-        let eye = Point3::new(0.0, 0.0, -350.0);
+        let eye = Point3::new(0.0, 0.0, -35.0);
         let target = Point3::new(0.0, 0.0, 0.0);
         let view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
-        let proj = Perspective3::new(aspect, (60f32).to_radians(), 0.1, 1000.).unwrap();
+        let proj = Perspective3::new(aspect, (60f32).to_radians(), 0.1, 100.).unwrap();
 
-        const ROWS: usize = 100;
-        const COLS: usize = 120;
-        const COUNT:usize  = ROWS*COLS;
-
-        (0..COUNT).into_par_iter()
+        (0..256).into_par_iter()
             .for_each(|idx| {
                 let mut queue = r.get_queue();
 
-                let y = (idx / COLS) as f32;
-                let x = (idx % COLS) as f32;
-                let model = Isometry3::new(Vector3::new(-15.0 + x * 3.0, -15.0 + y * 3.0, 0.),
+                let y = (idx / 16) as f32;
+                let x = (idx % 16) as f32;
+                let model = Isometry3::new(Vector3::new(-15.0 + x * 2.0, -15.0 + y * 2.0, 0.),
                                            Vector3::new(self.time + x * 0.21, self.time + y * 0.37, 0.));
 
                 if idx % 2 == 0 {
@@ -170,6 +166,7 @@ pub fn main() {
     let mut window = render::PlatformWindowSettings::default()
         .title("main")
         .size((1024, 1024))
+        .fb_vsync(false)
         .build(&engine, CubeView::new())
         .expect("Could not initialize main window");
 
@@ -184,7 +181,7 @@ pub fn main() {
         window.render().unwrap();
         frame_count += 1;
         let end_time = time::precise_time_s();
-        if end_time - start_time > 10f64 {
+        if end_time - start_time > 3f64 {
             let fps = frame_count as f64 / (end_time - start_time);
             start_time = end_time;
             frame_count = 0;

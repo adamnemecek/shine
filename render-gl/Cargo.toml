@@ -14,10 +14,5 @@ shine-render-core = {path = "../render-core"}
 libc = "*"
 arrayvec = "*"
 
-[target.'cfg(target_os = "windows")'.dependencies]
-winapi = "*"
-shell32-sys = "*"
-gdi32-sys = "*"
-user32-sys = "*"
-kernel32-sys = "*"
-dwmapi-sys = "*"
+[target.'cfg(target_os = "windows")'.dependencies.winapi]
+features = ["winuser", "libloaderapi", "winbase"]

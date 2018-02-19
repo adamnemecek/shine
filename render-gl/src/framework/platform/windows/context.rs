@@ -1,4 +1,5 @@
-use winapi;
+use winapi::shared::minwindef::*;
+use winapi::shared::windef::*;
 
 use core::*;
 use framework::*;
@@ -15,7 +16,7 @@ pub enum GLContext {
 /// It support the EGL and WGL API interfaces. The implementation can be selected
 /// through WindowSettings.
 impl GLContext {
-    pub fn new(app_instance: winapi::HINSTANCE, hwnd: winapi::HWND, settings: &PlatformWindowSettings) -> Result<GLContext, Error> {
+    pub fn new(app_instance: HINSTANCE, hwnd: HWND, settings: &PlatformWindowSettings) -> Result<GLContext, Error> {
         match settings.platform_extra.gl_profile {
             OpenGLProfile::ES2 => {
                 // for opengl es2 we are using egl context
