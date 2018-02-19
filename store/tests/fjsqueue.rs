@@ -2,13 +2,14 @@ extern crate shine_store;
 
 use std::thread;
 use std::sync::Arc;
+use std::env;
 
 use self::shine_store::fjsqueue::*;
 use self::shine_store::threadid;
 
 
 #[test]
-fn drop()
+fn consume()
 {
     #[derive(Debug)]
     struct Data(String, *mut usize);
@@ -129,4 +130,65 @@ fn simple()
             prev = d;
         }
     }
+}
+
+#[test]
+fn check_lock() {
+    // single threaded as panic hook is a global resource
+    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+
+    use std::mem;
+    use std::panic;
+
+    // create a newtype to have RefUnwindSafe property for the queue
+    struct Queue(FJSQueue<u16, (u16, usize, usize)>);
+    impl panic::RefUnwindSafe for Queue {}
+
+    panic::set_hook(Box::new(|_info| { /*println!("panic: {:?}", _info);*/ }));
+
+    {
+        let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
+        assert!(panic::catch_unwind(|| {
+            let p0 = store.0.produce();
+            let p1 = store.0.produce();
+            drop(p1);
+            drop(p0);
+        }).is_err());
+        mem::forget(store);
+    }
+
+    {
+        let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
+        assert!(panic::catch_unwind(|| {
+            let p0 = store.0.produce();
+            let p1 = store.0.consume(|&k| k as u64);
+            drop(p1);
+            drop(p0);
+        }).is_err());
+        mem::forget(store);
+    }
+
+    {
+        let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
+        assert!(panic::catch_unwind(|| {
+            let p0 = store.0.consume(|&k| k as u64);
+            let p1 = store.0.produce();
+            drop(p1);
+            drop(p0);
+        }).is_err());
+        mem::forget(store);
+    }
+
+    {
+        let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
+        assert!(panic::catch_unwind(|| {
+            let p0 = store.0.consume(|&k| k as u64);
+            let p1 = store.0.consume(|&k| k as u64);
+            drop(p1);
+            drop(p0);
+        }).is_err());
+        mem::forget(store);
+    }
+
+    panic::take_hook();
 }
