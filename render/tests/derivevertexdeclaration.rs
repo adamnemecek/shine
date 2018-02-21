@@ -1,6 +1,6 @@
-extern crate shine_render_core as core;
+extern crate shine_render as render;
 
-use core::*;
+use render::*;
 
 #[derive(Copy, Clone, Debug)]
 #[derive(VertexDeclaration)]
