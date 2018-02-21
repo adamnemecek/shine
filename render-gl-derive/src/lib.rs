@@ -32,7 +32,7 @@ mod glslang;
 mod glshaderdeclaration;
 mod glshaderstates;
 
-#[proc_macro_derive(GLShaderDeclaration, attributes(
+#[proc_macro_derive(ShaderDeclaration, attributes(
 vert_path, vert_src, geom_path, geom_src, frag_path, frag_src,
 depth, writemask, cull, /*viewport, stencil, blend*/
 ))]

@@ -1,5 +1,4 @@
 use arrayvec::ArrayVec;
-use std::iter::FromIterator;
 use lowlevel::*;
 use libconfig::*;
 
@@ -21,8 +20,11 @@ impl GLVertexBuffer {
         }
     }
 
-    pub fn upload_data<A: Iterator<Item=GLVertexBufferAttribute>>(&mut self, ll: &mut LowLevel, attributes: A, data: &[u8]) {
-        self.attributes = GLVertexBufferFormat::from_iter(attributes);
+    pub fn upload_data(&mut self, ll: &mut LowLevel, attributes: &[GLVertexBufferAttribute], data: &[u8]) {
+        self.attributes.clear();
+        for a in attributes {
+            self.attributes.push(a.clone());
+        }
 
         gl_check_error();
         if self.hw_id == 0 {

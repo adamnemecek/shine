@@ -18,7 +18,7 @@ struct VxColorTex {
 }
 
 #[derive(Copy, Clone, Debug)]
-#[derive(GLShaderDeclaration)]
+#[derive(ShaderDeclaration)]
 #[vert_path = "fun.glsl"]
 #[vert_src = "
     attribute vec3 vPosition;
@@ -86,8 +86,7 @@ impl View<PlatformEngine> for SimpleView {
             ];
 
             let VertexData::Transient(slice) = pos.to_data();
-            let attributes = VxPos::attribute_layout_iter().map(|a| GLVertexBufferAttribute::from_layout(&a));
-            self.vb1.upload_data(ll, attributes, slice);
+            self.vb1.upload_data(ll, VxPos::get_attribute_layout(), slice);
         }
 
         {
@@ -99,8 +98,7 @@ impl View<PlatformEngine> for SimpleView {
             ];
 
             let VertexData::Transient(slice) = color_tex.to_data();
-            let attributes = VxColorTex::attribute_layout_iter().map(|a| GLVertexBufferAttribute::from_layout(&a));
-            self.vb2.upload_data(ll, attributes, slice);
+            self.vb2.upload_data(ll, VxPos::get_attribute_layout(), slice);
         }
 
         {

@@ -1,5 +1,5 @@
 [package]
-name = "shine-render-derive"
+name = "shine-render-gl-derive"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
@@ -8,6 +8,6 @@ license = "MIT/Apache-2.0"
 proc-macro = true
 
 [dependencies]
-syn = "0.12"
-proc-macro2 = { version = "0.2", features = ["nightly"] }
-quote = "0.4"
+syn = "*"
+proc-macro2 = { version = "*", features = ["nightly"] }
+quote = "*"

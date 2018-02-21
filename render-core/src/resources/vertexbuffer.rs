@@ -6,31 +6,17 @@ use std::str::FromStr;
 use framework::*;
 use resources::*;
 
-/// Memory layout, location of a vertex attribute
-#[allow(missing_docs)]
-#[derive(Copy, Clone, Debug)]
-pub enum VertexBufferLayoutElement {
-    Float32 { components: usize, stride: usize, offset: usize },
-    Int8 { components: usize, fixp: bool, stride: usize, offset: usize },
-    UInt8 { components: usize, fixp: bool, stride: usize, offset: usize },
-}
-
 
 /// Trait to define vertex declaration.
-pub trait VertexDeclaration: 'static + Clone {
+pub trait VertexDeclaration<E: Engine>: 'static + Clone {
     /// The type used for the attribute indexing.
     type Attribute: 'static + Copy + From<usize> + Into<usize> + FromStr;
 
     /// Returns an iterator over the possible attribute values.
     fn attribute_iter() -> slice::Iter<'static, Self::Attribute>;
 
-    /// Returns the platform dependent vertex attribute description.
-    fn get_attribute_layout(index: Self::Attribute) -> VertexBufferLayoutElement;
-
-    /// Returns an iterator over the layout elements
-    fn attribute_layout_iter() -> Box<Iterator<Item=VertexBufferLayoutElement>> {
-        Box::new(Self::attribute_iter().map(move |&idx| Self::get_attribute_layout(idx)))
-    }
+    /// Returns the platform dependent vertex buffer layout.
+    fn get_attribute_layout() -> &'static [<E::Backend as Backend>::VertexBufferLayoutElement];
 }
 
 
@@ -42,7 +28,7 @@ pub enum VertexData<'a> {
 
 
 /// Trait to define vertex source.
-pub trait VertexSource<DECL: VertexDeclaration> {
+pub trait VertexSource<E: Engine, DECL: VertexDeclaration<E>> {
     /// Returns the reference to the raw vertex data.
     fn to_data<'a>(&self) -> VertexData<'a>;
 }
@@ -58,7 +44,7 @@ macro_rules! __impl_array_VertexSource {
     ( $($N: expr) + ) => {
         $(
             /// VertexSource implementation for array.
-            impl <DECL: VertexDeclaration + Sized> VertexSource<DECL> for [DECL; $N] {
+            impl <E:Engine, DECL: VertexDeclaration<E> + Sized> VertexSource<E, DECL> for [DECL; $N] {
                 fn to_data < 'a > ( & self ) -> VertexData < 'a > {
                     let slice = unsafe { slice::from_raw_parts( self.as_ptr() as * const u8, self.len() * mem::size_of::< DECL > ()) };
                     VertexData::Transient(slice)
@@ -80,7 +66,7 @@ __impl_array_VertexSource! {
 
 
 /// VertexSource implementation for slice.
-impl<'a, DECL: 'a + VertexDeclaration + Sized> VertexSource<DECL> for &'a [DECL] {
+impl<'a, E: Engine, DECL: 'a + VertexDeclaration<E> + Sized> VertexSource<E, DECL> for &'a [DECL] {
     fn to_data<'b>(&self) -> VertexData<'b>
     {
         let slice = unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<DECL>()) };
@@ -90,7 +76,7 @@ impl<'a, DECL: 'a + VertexDeclaration + Sized> VertexSource<DECL> for &'a [DECL]
 
 
 /// VertexSource implementation for Vec.
-impl<DECL: VertexDeclaration + Sized> VertexSource<DECL> for Vec<DECL> {
+impl<E: Engine, DECL: VertexDeclaration<E> + Sized> VertexSource<E, DECL> for Vec<DECL> {
     fn to_data<'a>(&self) -> VertexData<'a>
     {
         let slice = unsafe { slice::from_raw_parts(self.as_ptr() as *const u8, self.len() * mem::size_of::<DECL>()) };
@@ -100,14 +86,14 @@ impl<DECL: VertexDeclaration + Sized> VertexSource<DECL> for Vec<DECL> {
 
 
 /// Trait that defines a vertex buffer with vertex format declaration.
-pub trait VertexBuffer<DECL: VertexDeclaration, E: Engine>: Resource<E> {
+pub trait VertexBuffer<E: Engine, DECL: VertexDeclaration<E>>: Resource<E> {
     /// Sets the content of the buffer.
-    fn set<'a, SRC: VertexSource<DECL>>(&self, queue: &mut E::CommandQueue, source: &SRC);
+    fn set<'a, SRC: VertexSource<E, DECL>>(&self, queue: &mut E::CommandQueue, source: &SRC);
 
     /// Resets self to a new handle and sets the content of the buffer.
     /// If handle pointed to an existing resource prior this call, that resource is not modified, Backend will
     /// garbage collect it depending on the reference count.
-    fn create_and_set<'a, SRC: VertexSource<DECL>>(&mut self, queue: &mut E::CommandQueue, source: &SRC) {
+    fn create_and_set<'a, SRC: VertexSource<E, DECL>>(&mut self, queue: &mut E::CommandQueue, source: &SRC) {
         self.create(queue);
         self.set(queue, source);
     }

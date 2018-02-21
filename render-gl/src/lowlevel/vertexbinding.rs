@@ -1,4 +1,3 @@
-use core::*;
 use libconfig::*;
 use lowlevel::*;
 
@@ -21,34 +20,6 @@ impl GLVertexBufferAttribute {
             normalize: 0,
             stride: 0,
             offset: 0,
-        }
-    }
-
-    pub fn from_layout(layout: &VertexBufferLayoutElement) -> GLVertexBufferAttribute {
-        match layout {
-            &VertexBufferLayoutElement::Float32 { components, stride, offset } => GLVertexBufferAttribute {
-                component_type: gl::FLOAT,
-                components: components as GLint,
-                normalize: gl::FALSE,
-                stride: stride as GLsizei,
-                offset: offset as GLintptr,
-            },
-
-            &VertexBufferLayoutElement::Int8 { components, fixp, stride, offset } => GLVertexBufferAttribute {
-                component_type: gl::BYTE,
-                components: components as GLint,
-                normalize: if fixp { gl::TRUE } else { gl::FALSE },
-                stride: stride as GLsizei,
-                offset: offset as GLintptr,
-            },
-
-            &VertexBufferLayoutElement::UInt8 { components, fixp, stride, offset } => GLVertexBufferAttribute {
-                component_type: gl::UNSIGNED_BYTE,
-                components: components as GLint,
-                normalize: if fixp { gl::TRUE } else { gl::FALSE },
-                stride: stride as GLsizei,
-                offset: offset as GLintptr,
-            },
         }
     }
 

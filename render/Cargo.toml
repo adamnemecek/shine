@@ -5,10 +5,9 @@ authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 
 [dependencies]
-shine-store = {path = "../store", version = "0.1"}
-shine-render-core = {path = "../render-core", version = "0.1"}
-shine-render-derive = {path = "../render-derive", version = "0.1"}
-shine-render-gl = {path = "../render-gl", version = "0.1"}
+shine-store = {path = "../store"}
+shine-render-core = {path = "../render-core"}
+shine-render-gl = {path = "../render-gl"}
 
 libc = "*"
 image = "*"

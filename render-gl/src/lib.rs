@@ -11,8 +11,8 @@ extern crate arrayvec;
 
 extern crate shine_render_core as core;
 extern crate shine_store as store;
-//#[macro_reexport(ShaderDeclaration)]
-//extern crate shine_render_gl_derive;
+#[macro_reexport(VertexDeclaration, ShaderDeclaration)]
+extern crate shine_render_gl_derive;
 
 #[allow(unused_mut)]
 pub mod gl {

@@ -8,6 +8,6 @@ repository = "https://github.com/zpgaal/shine"
 keywords = ["shine", "render", "opengl", "game"]
 
 [dependencies]
-libc = "0.2.36"
-lazy_static = "1.0.0"
-num_cpus="1.8.0"
+libc = "*"
+lazy_static = "*"
+num_cpus="*"

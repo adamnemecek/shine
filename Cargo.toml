@@ -8,10 +8,10 @@ repository = "https://github.com/zpgaal/shine"
 keywords = ["render", "opengl", "game"]
 
 [dependencies]
-shine-store = {path = "store", version = "0.1"}
-shine-render-core = {path = "render-core", version = "0.1"}
-shine-render-gl = {path = "render-gl", version = "0.1"}
-shine-render = {path = "render", version = "0.1"}
+shine-store = {path = "store"}
+shine-render-core = {path = "render-core"}
+shine-render-gl = {path = "render-gl"}
+shine-render = {path = "render"}
 
 
 # for examples

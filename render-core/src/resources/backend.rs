@@ -4,9 +4,8 @@ use types::*;
 pub trait Backend: 'static {
     ///Trait to abstract the command queue.
     type CommandQueue;
-
-    ///Trait to abstract low-level platform state changes.
     type CommandContext;
+    type VertexBufferLayoutElement;
 
     fn get_queue(&self) -> Self::CommandQueue;
     fn flush(&mut self);

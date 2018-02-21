@@ -9,8 +9,9 @@ license = "MIT/Apache-2.0"
 gl_generator = "*"
 
 [dependencies]
-shine-store = {path = "../store", version = "0.1"}
-shine-render-core = {path = "../render-core", version = "0.1"}
+shine-store = {path = "../store"}
+shine-render-core = {path = "../render-core"}
+shine-render-gl-derive = {path = "../render-gl-derive"}
 
 libc = "*"
 arrayvec = "*"

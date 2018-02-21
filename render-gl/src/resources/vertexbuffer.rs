@@ -6,17 +6,20 @@ use resources::*;
 use store::store::*;
 
 
+pub type GLVertexBufferLayoutElement = GLVertexBufferAttribute;
+
+
 /// Command to create or update vertex buffer
-pub struct CreateCommand<DECL: VertexDeclaration> {
+pub struct CreateCommand<DECL: VertexDeclaration<PlatformEngine>> {
     target: UnsafeIndex<GLVertexBuffer>,
     data: Vec<u8>,
     phantom: PhantomData<DECL>,
 }
 
-impl<DECL: VertexDeclaration> DynCommand for CreateCommand<DECL> {
+impl<DECL: VertexDeclaration<PlatformEngine>> DynCommand for CreateCommand<DECL> {
     fn process(&mut self, context: &mut GLCommandProcessContext) {
         let target = unsafe { context.vertex_store.at_unsafe_mut(&self.target) };
-        let layout = DECL::attribute_layout_iter().map(|a| GLVertexBufferAttribute::from_layout(&a));
+        let layout = DECL::get_attribute_layout();
         target.upload_data(context.ll, layout, &self.data);
     }
 }
@@ -51,9 +54,9 @@ pub type UnsafeVertexBufferIndex = UnsafeIndex<GLVertexBuffer>;
 
 /// Handle to a vertex buffer
 #[derive(Clone)]
-pub struct VertexBufferHandle<DECL: VertexDeclaration>(VertexBufferIndex, PhantomData<DECL>);
+pub struct VertexBufferHandle<DECL: VertexDeclaration<PlatformEngine>>(VertexBufferIndex, PhantomData<DECL>);
 
-impl<DECL: VertexDeclaration> Handle for VertexBufferHandle<DECL> {
+impl<DECL: VertexDeclaration<PlatformEngine>> Handle for VertexBufferHandle<DECL> {
     fn null() -> VertexBufferHandle<DECL> {
         VertexBufferHandle(VertexBufferIndex::null(), PhantomData)
     }
@@ -64,7 +67,7 @@ impl<DECL: VertexDeclaration> Handle for VertexBufferHandle<DECL> {
 }
 
 /// VertexBuffer implementation for OpenGL.
-impl<DECL: VertexDeclaration> Resource<PlatformEngine> for VertexBufferHandle<DECL> {
+impl<DECL: VertexDeclaration<PlatformEngine>> Resource<PlatformEngine> for VertexBufferHandle<DECL> {
     fn create(&mut self, compose: &mut GLCommandQueue) {
         self.0 = compose.add_vertex_buffer(GLVertexBuffer::new());
     }
@@ -86,8 +89,8 @@ impl<DECL: VertexDeclaration> Resource<PlatformEngine> for VertexBufferHandle<DE
     }
 }
 
-impl<DECL: VertexDeclaration> VertexBuffer<DECL, PlatformEngine> for VertexBufferHandle<DECL> {
-    fn set<'a, SRC: VertexSource<DECL>>(&self, queue: &mut GLCommandQueue, source: &SRC) {
+impl<DECL: VertexDeclaration<PlatformEngine>> VertexBuffer<PlatformEngine, DECL> for VertexBufferHandle<DECL> {
+    fn set<'a, SRC: VertexSource<PlatformEngine, DECL>>(&self, queue: &mut GLCommandQueue, source: &SRC) {
         assert!(!self.is_null());
 
         match source.to_data() {
@@ -109,7 +112,7 @@ impl<DECL: VertexDeclaration> VertexBuffer<DECL, PlatformEngine> for VertexBuffe
 #[derive(Clone, Debug)]
 pub struct UnsafeVertexAttributeIndex(pub UnsafeVertexBufferIndex, pub usize);
 
-impl<'a, DECL: VertexDeclaration> From<(&'a VertexBufferHandle<DECL>, DECL::Attribute)> for UnsafeVertexAttributeIndex {
+impl<'a, DECL: VertexDeclaration<PlatformEngine>> From<(&'a VertexBufferHandle<DECL>, DECL::Attribute)> for UnsafeVertexAttributeIndex {
     #[inline(always)]
     fn from(value: (&VertexBufferHandle<DECL>, DECL::Attribute)) -> UnsafeVertexAttributeIndex {
         UnsafeVertexAttributeIndex(UnsafeVertexBufferIndex::from_index(&(value.0).0), value.1.into())
