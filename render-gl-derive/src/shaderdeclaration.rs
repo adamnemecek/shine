@@ -7,7 +7,7 @@ use proc_macro;
 use proc_macro2::Span;
 use glslang::*;
 use utils::*;
-use glshaderstates::*;
+use shaderstates::*;
 
 
 impl ShaderType {

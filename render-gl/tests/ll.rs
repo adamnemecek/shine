@@ -98,7 +98,7 @@ impl View<PlatformEngine> for SimpleView {
             ];
 
             let VertexData::Transient(slice) = color_tex.to_data();
-            self.vb2.upload_data(ll, VxPos::get_attribute_layout(), slice);
+            self.vb2.upload_data(ll, VxColorTex::get_attribute_layout(), slice);
         }
 
         {

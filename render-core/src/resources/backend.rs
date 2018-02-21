@@ -5,7 +5,7 @@ pub trait Backend: 'static {
     ///Trait to abstract the command queue.
     type CommandQueue;
     type CommandContext;
-    type VertexBufferLayoutElement;
+    type VertexBufferLayout;
 
     fn get_queue(&self) -> Self::CommandQueue;
     fn flush(&mut self);

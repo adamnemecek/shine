@@ -20,11 +20,8 @@ impl GLVertexBuffer {
         }
     }
 
-    pub fn upload_data(&mut self, ll: &mut LowLevel, attributes: &[GLVertexBufferAttribute], data: &[u8]) {
-        self.attributes.clear();
-        for a in attributes {
-            self.attributes.push(a.clone());
-        }
+    pub fn upload_data(&mut self, ll: &mut LowLevel, attributes: GLVertexBufferFormat, data: &[u8]) {
+        self.attributes = attributes;
 
         gl_check_error();
         if self.hw_id == 0 {

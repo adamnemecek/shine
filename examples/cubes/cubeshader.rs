@@ -1,6 +1,6 @@
 
 
-#[derive(Copy, Clone, Debug, GLShaderDeclaration)]
+#[derive(Copy, Clone, Debug, ShaderDeclaration)]
 #[vert_src = "
     attribute vec3 vPosition;
     attribute vec3 vColor;

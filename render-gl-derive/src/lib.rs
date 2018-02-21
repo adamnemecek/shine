@@ -29,8 +29,8 @@ pub fn vertex_declaration(input: TokenStream) -> TokenStream {
 
 
 mod glslang;
-mod glshaderdeclaration;
-mod glshaderstates;
+mod shaderdeclaration;
+mod shaderstates;
 
 #[proc_macro_derive(ShaderDeclaration, attributes(
 vert_path, vert_src, geom_path, geom_src, frag_path, frag_src,
@@ -40,7 +40,7 @@ pub fn shader_declaration(input: TokenStream) -> TokenStream
 {
     use utils::*;
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
-    let gen = glshaderdeclaration::impl_shader_declaration(&ast);
+    let gen = shaderdeclaration::impl_shader_declaration(&ast);
     gen.into()
 }
 

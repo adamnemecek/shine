@@ -108,7 +108,11 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Punctuated<syn::F
             }
         );
 
-        let offset_of = quote_call_site! {unsafe { &(*(0 as *const #struct_name)).#field_ident as *const _ as usize }};
+        let offset_of = quote_call_site! {
+            let base = &dummy as *const _ as isize;
+            let off = &dummy.#field_ident as *const _ as isize;
+            off - base
+        };
         let (component_type, components, normalize) =
             match field_ty {
                 &syn::Type::Path(syn::TypePath { ref path, .. }) if check_path(path, "Float32x16") => (&gl_float, 16, &gl_false),
@@ -142,12 +146,14 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Punctuated<syn::F
 
         layout_element.push(
             quote_call_site! {
-                _shine_render_gl::GLVertexBufferLayoutElement{
-                    component_type: #component_type as GLenum,
-                    components: #components as GLint,
-                    normalize: #normalize as GLboolean,
-                    offset: 0,//#offset_of as isize,
-                    stride: /*mem::size_of::< #struct_name >()*/ 0 /*as GLintptr*/}
+                buffer_format.push(
+                    _shine_render_gl::GLVertexBufferLayoutElement{
+                        component_type: #component_type as GLenum,
+                        components: #components as GLint,
+                        normalize: #normalize as GLboolean,
+                        offset: {#offset_of} as isize /*GLsizei*/,
+                        stride: mem::size_of::< #struct_name >() as i32 /*GLintptr*/
+                    })
             }
         );
     }
@@ -169,12 +175,14 @@ fn impl_location_for_struct(struct_name: &syn::Ident, fields: &Punctuated<syn::F
         }
     };
 
-    let layout_count = layout_element.len();
     let gen_get_attribute_layout = quote_call_site! {
         #[allow(dead_code)]
-        fn get_attribute_layout() -> &'static [_shine_render_gl::GLVertexBufferLayoutElement] {
-            static FORMAT: [_shine_render_gl::GLVertexBufferLayoutElement; #layout_count] = [#(#layout_element,)*];
-            &FORMAT
+        fn get_attribute_layout() -> _shine_render_gl::GLVertexBufferLayout {
+            let dummy: #struct_name = unsafe{mem::uninitialized()};
+            let mut buffer_format = _shine_render_gl::GLVertexBufferLayout::new();
+            #(#layout_element;)*
+            mem::forget(dummy);
+            buffer_format
         }
     };
 

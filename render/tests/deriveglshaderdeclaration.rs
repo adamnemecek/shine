@@ -5,7 +5,7 @@ use shine_render::*;
 
 
 #[derive(Copy, Clone, Debug)]
-#[derive(GLShaderDeclaration)]
+#[derive(ShaderDeclaration)]
 #[vert_path = "fun.glsl"]
 #[vert_src = "
     attribute vec3 vPosition;

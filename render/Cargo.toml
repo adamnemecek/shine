@@ -8,6 +8,7 @@ license = "MIT/Apache-2.0"
 shine-store = {path = "../store"}
 shine-render-core = {path = "../render-core"}
 shine-render-gl = {path = "../render-gl"}
+shine-render-gl-derive = {path = "../render-gl-derive"}
 
 libc = "*"
 image = "*"

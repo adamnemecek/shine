@@ -16,7 +16,7 @@ pub trait VertexDeclaration<E: Engine>: 'static + Clone {
     fn attribute_iter() -> slice::Iter<'static, Self::Attribute>;
 
     /// Returns the platform dependent vertex buffer layout.
-    fn get_attribute_layout() -> &'static [<E::Backend as Backend>::VertexBufferLayoutElement];
+    fn get_attribute_layout() -> <E::Backend as Backend>::VertexBufferLayout;
 }
 
 

@@ -116,7 +116,7 @@ impl GLBackend {
 impl Backend for GLBackend {
     type CommandQueue/*<'a>*/ = GLCommandQueue/*<'a>*/;
     type CommandContext/*<'a>*/ = GLCommandProcessContext/*<'a>*/;
-    type VertexBufferLayoutElement = GLVertexBufferLayoutElement;
+    type VertexBufferLayout = GLVertexBufferLayout;
 
     fn get_queue<'a>(&'a self) -> GLCommandQueue/*<'a>*/ {
         /*generic_associated_types workaround*/ unsafe {

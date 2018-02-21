@@ -1,23 +1,23 @@
 #![feature(macro_reexport)]
 
-//#[macro_reexport(VertexDeclaration, GLShaderDeclaration)]
-//extern crate shine_render_derive;
 extern crate shine_render_core;
-
 pub use shine_render_core::*;
 
-
+#[macro_reexport(VertexDeclaration, ShaderDeclaration)]
+extern crate shine_render_gl_derive;
+extern crate shine_render_gl;
 mod backend_impl {
-    extern crate shine_render_gl;
+    pub use super::shine_render_gl::PlatformEngine;
+    pub use super::shine_render_gl::PlatformWindowSettings;
+    pub use super::shine_render_gl::PlatformWindowBuilder;
 
-    pub use self::shine_render_gl::PlatformEngine;
-    pub use self::shine_render_gl::PlatformWindowSettings;
-    pub use self::shine_render_gl::PlatformWindowBuilder;
+    pub use super::shine_render_gl::VertexBufferHandle;
+    pub use super::shine_render_gl::IndexBufferHandle;
+    pub use super::shine_render_gl::Texture2DHandle;
+    pub use super::shine_render_gl::ShaderProgramHandle;
 
-    pub use self::shine_render_gl::VertexBufferHandle;
-    pub use self::shine_render_gl::IndexBufferHandle;
-    pub use self::shine_render_gl::Texture2DHandle;
-    pub use self::shine_render_gl::ShaderProgramHandle;
+    pub use super::shine_render_gl::VertexDeclaration;
+    pub use super::shine_render_gl::ShaderDeclaration;
 }
 
 

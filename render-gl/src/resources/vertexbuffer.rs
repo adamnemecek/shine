@@ -7,6 +7,7 @@ use store::store::*;
 
 
 pub type GLVertexBufferLayoutElement = GLVertexBufferAttribute;
+pub type GLVertexBufferLayout = GLVertexBufferFormat;
 
 
 /// Command to create or update vertex buffer
