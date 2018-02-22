@@ -1,5 +1,10 @@
+use std::mem;
+use std::ptr;
+use std::raw;
+use std::ops::{Deref, DerefMut};
 use store::fjsqueue::*;
 use resources::*;
+use libconfig::*;
 
 
 #[derive(Copy, Clone, Debug)]
@@ -14,9 +19,80 @@ pub trait DynCommand: 'static {
 impl<T: DynCommand> From<T> for Command {
     #[inline(always)]
     fn from(value: T) -> Command {
-        Command::DynamicCommand(Box::new(value))
+        Command::DynamicCommand(MiniCommandBox::new(value))
+        //Command::DynamicCommand(Box::new(value))
     }
 }
+
+
+/// Helper to omit some heap allocations
+pub struct MiniCommandBox {
+    data: [u8; MINICOMMANDBOX_SIZE],
+    vtable: *mut (),
+}
+
+#[allow(dead_code)]
+impl MiniCommandBox {
+    fn new<T: DynCommand>(t: T) -> MiniCommandBox {
+        assert!(mem::size_of::<T>() <= MINICOMMANDBOX_SIZE, format!("increase MINICOMMANDBOX_SIZE to at least {}", mem::size_of::<T>()));
+
+        unsafe {
+            let mut bx = MiniCommandBox {
+                data: mem::uninitialized(),
+                vtable: {
+                    let obj: &DynCommand = &t;
+                    let obj: raw::TraitObject = mem::transmute(obj);
+                    obj.vtable
+                },
+            };
+
+            ptr::write(&mut bx.data as *mut _ as *mut u8 as *mut T, t);
+            bx
+        }
+    }
+
+    fn as_ref(&self) -> &DynCommand {
+        unsafe {
+            mem::transmute(raw::TraitObject {
+                data: mem::transmute(self.data.as_ptr()),
+                vtable: self.vtable,
+            })
+        }
+    }
+
+    fn as_mut(&mut self) -> &mut DynCommand {
+        unsafe {
+            mem::transmute(raw::TraitObject {
+                data: mem::transmute(self.data.as_ptr()),
+                vtable: self.vtable,
+            })
+        }
+    }
+}
+
+impl Deref for MiniCommandBox {
+    type Target = DynCommand;
+
+    fn deref(&self) -> &DynCommand {
+        self.as_ref()
+    }
+}
+
+impl DerefMut for MiniCommandBox {
+    fn deref_mut(&mut self) -> &mut DynCommand {
+        self.as_mut()
+    }
+}
+/*
+impl Drop for MiniCommandBox {
+    fn drop(&mut self) {
+        let obj = raw::TraitObject {
+            data: mem::transmute(self.data.as_ptr()),
+            vtable: self.vtable,
+        };
+        (obj.vtable.destructor)(self.data.as_ptr());
+    }
+}*/
 
 
 /// Enum for render commands.
@@ -32,7 +108,8 @@ pub enum Command {
     //ShaderProgramCreate(shaderprogram::CreateCommand),
     ShaderProgramRelease(shaderprogram::ReleaseCommand),
 
-    DynamicCommand(Box<DynCommand>),
+    DynamicCommand(MiniCommandBox),
+    //DynamicCommand(Box<DynCommand>),
 }
 
 impl Command {

@@ -1,6 +1,7 @@
 #![feature(macro_reexport)]
 #![feature(iterator_for_each)]
 #![feature(align_offset)]
+#![feature(raw)]
 #![feature(crate_visibility_modifier)]
 //#![feature(generic_associated_types)]
 
@@ -31,6 +32,10 @@ pub mod libconfig {
     pub const MAX_USED_PARAMETER_COUNT: usize = MAX_USED_ATTRIBUTE_COUNT + MAX_USED_UNIFORM_COUNT;
     /// Maximum number of texture units
     pub const MAX_USED_TEXTURE_COUNT: usize = 16;
+
+    pub const CHECK_RENDER_ERRORS: bool = cfg!(debug_assertions = "true");
+
+    pub const MINICOMMANDBOX_SIZE: usize = 128;
 }
 
 pub mod lowlevel;

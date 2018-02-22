@@ -3,10 +3,15 @@
 use std::mem;
 use core::*;
 use lowlevel::*;
+use libconfig::*;
 
 
 /// Checks the last gl error code
 pub fn gl_check_error() {
+    if !CHECK_RENDER_ERRORS {
+        return;
+    }
+
     match ffi!(gl::GetError()) {
         gl::NO_ERROR => {}
 

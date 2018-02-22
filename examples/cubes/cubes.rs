@@ -120,7 +120,7 @@ impl View<PlatformEngine> for CubeView {
         let view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
         let proj = Perspective3::new(aspect, (60f32).to_radians(), 30., 60.).unwrap();
 
-        (0..121).into_par_iter()
+        (0..121)/*.into_par_iter()*/
             .for_each(|idx| {
                 let mut queue = r.get_queue();
 
@@ -152,6 +152,7 @@ impl View<PlatformEngine> for CubeView {
     }
 
     fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
+        println!("on_key");
         match virtual_key {
             Some(VirtualKeyCode::Escape) if !is_down => { ctl.close(); }
             _ => {}
