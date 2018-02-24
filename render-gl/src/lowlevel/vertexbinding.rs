@@ -99,7 +99,7 @@ impl VertexBinding {
     }
 
     /// Binds a vertex attribute to the given location.
-    pub fn bind_attribute(&mut self, location: GLuint, hw_id: GLuint, attribute: &GLVertexBufferAttribute) {
+    pub fn bind_attribute(&mut self, location: GLint, hw_id: GLuint, attribute: &GLVertexBufferAttribute) {
         assert!(hw_id != 0);
 
         let attr = &mut self.bound_attributes[location as usize];
@@ -113,10 +113,10 @@ impl VertexBinding {
                 self.bound_id = hw_id;
             }
 
-            ffi!(gl::VertexAttribPointer(location,
+            ffi!(gl::VertexAttribPointer(location as GLuint,
                                      attribute.components, attribute.component_type, attribute.normalize,
                                      attribute.stride, attribute.offset as *const GLvoid));
-            ffi!(gl::EnableVertexAttribArray(location));
+            ffi!(gl::EnableVertexAttribArray(location as GLuint));
             attr.hw_id = hw_id;
             attr.attribute = *attribute;
             gl_check_error();

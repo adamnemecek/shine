@@ -11,14 +11,14 @@ pub enum ProgramParameter {
 
     Attribute {
         name: String,
-        location: GLuint,
+        location: GLint,
         size: GLint,
         type_id: GLenum,
     },
 
     Uniform {
         name: String,
-        location: GLuint,
+        location: GLint,
         size: GLint,
         type_id: GLenum,
     },
@@ -66,7 +66,7 @@ impl ProgramParameter {
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT && size == 1);
                     gl_check_error();
-                    ffi!(gl::Uniform1fv(location as i32, size, mem::transmute(&data)));
+                    ffi!(gl::Uniform1fv(location, size, mem::transmute(&data)));
                     gl_check_error();
                 },
             &ProgramParameter::Empty => {}
@@ -80,7 +80,7 @@ impl ProgramParameter {
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT_VEC2 && size == 1);
                     gl_check_error();
-                    ffi!(gl::Uniform2fv(location as i32, size, mem::transmute(data)));
+                    ffi!(gl::Uniform2fv(location, size, mem::transmute(data)));
                     gl_check_error();
                 },
             &ProgramParameter::Empty => {}
@@ -94,7 +94,7 @@ impl ProgramParameter {
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT_VEC3 && size == 1);
                     gl_check_error();
-                    ffi!(gl::Uniform3fv(location as i32, size, mem::transmute(data)));
+                    ffi!(gl::Uniform3fv(location, size, mem::transmute(data)));
                     gl_check_error();
                 },
             &ProgramParameter::Empty => {}
@@ -108,7 +108,7 @@ impl ProgramParameter {
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT_VEC4 && size == 1);
                     gl_check_error();
-                    ffi!(gl::Uniform4fv(location as i32, size, mem::transmute(data)));
+                    ffi!(gl::Uniform4fv(location, size, mem::transmute(data)));
                     gl_check_error();
                 },
             &ProgramParameter::Empty => {}
@@ -122,7 +122,7 @@ impl ProgramParameter {
                 if type_id != 0 {
                     assert!(type_id == gl::FLOAT_MAT4 && size == 1);
                     gl_check_error();
-                    ffi!(gl::UniformMatrix4fv(location as i32, size, gl::FALSE, mem::transmute(data)));
+                    ffi!(gl::UniformMatrix4fv(location, size, gl::FALSE, mem::transmute(data)));
                     gl_check_error();
                 },
             &ProgramParameter::Empty => {}
@@ -139,7 +139,7 @@ impl ProgramParameter {
                     assert!(type_id == gl::SAMPLER_2D && size == 1);
                     gl_check_error();
                     let slot = tx.bind(ll) as u32;
-                    ffi!(gl::Uniform1i(location as i32, slot as i32));
+                    ffi!(gl::Uniform1i(location, slot as i32));
                     gl_check_error();
                 },
             &ProgramParameter::Empty => {}

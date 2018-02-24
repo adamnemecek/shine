@@ -38,7 +38,7 @@ impl GLVertexBuffer {
         gl_check_error();
     }
 
-    pub fn bind(&self, ll: &mut LowLevel, location: GLuint, attribute: usize) {
+    pub fn bind(&self, ll: &mut LowLevel, location: GLint, attribute: usize) {
         ll.vertex_binding.bind_attribute(location, self.hw_id, &self.attributes[attribute as usize]);
     }
 

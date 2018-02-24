@@ -119,15 +119,16 @@ impl GLShaderProgram {
 
         let parameter_locations = &mut *self.parameter_locations.borrow_mut();
 
-        for location in 0..count {
+        for index in 0..count {
             gl_check_error();
             ffi!(gl::GetActiveAttrib(self.hw_id,
-                                location,
+                                index,
                                 name_buffer.len() as GLint,
                                 &mut name_length,
                                 &mut attribute_size,
                                 &mut attribute_type,
                                 name_buffer.as_ptr() as *mut GLchar));
+            let location = ffi!(gl::GetAttribLocation(self.hw_id, name_buffer.as_ptr() as *const GLchar));
             gl_check_error();
 
             let attribute_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
@@ -162,15 +163,16 @@ impl GLShaderProgram {
 
         let parameter_locations = &mut *self.parameter_locations.borrow_mut();
 
-        for location in 0..count {
+        for index in 0..count {
             gl_check_error();
             ffi!(gl::GetActiveUniform(self.hw_id,
-                                 location,
+                                 index,
                                  name_buffer.len() as GLint,
                                  &mut name_length,
                                  &mut uniform_size,
                                  &mut uniform_type,
                                  name_buffer.as_ptr() as *mut GLchar));
+            let location = ffi!(gl::GetUniformLocation(self.hw_id, name_buffer.as_ptr() as *const GLchar));
             gl_check_error();
 
             let uniform_name = from_utf8(&name_buffer[0..name_length as usize]).unwrap().to_string();
