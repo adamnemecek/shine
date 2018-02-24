@@ -20,7 +20,7 @@ pub extern "system" fn wnd_proc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: L
         return ffi!(DefWindowProcW(hwnd, msg, wparam, lparam));
     }
 
-    return GLWindow::handle_os_message(win_ptr, hwnd, msg, wparam, lparam);
+    return GLWindow::handle_os_message(win_ptr as isize, hwnd, msg, wparam, lparam);
 }
 
 

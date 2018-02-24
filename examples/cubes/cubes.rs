@@ -120,33 +120,35 @@ impl View<PlatformEngine> for CubeView {
         let view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
         let proj = Perspective3::new(aspect, (60f32).to_radians(), 30., 60.).unwrap();
 
-        (0..121)/*.into_par_iter()*/
-            .for_each(|idx| {
+        (0..11).into_par_iter()
+            .for_each(|yy| {
                 let mut queue = r.get_queue();
 
-                let y = (idx / 11) as f32;
-                let x = (idx % 11) as f32;
-                let model = Isometry3::new(Vector3::new(-15.0 + x * 3.0, -15.0 + y * 3.0, 0.),
-                                           Vector3::new(self.time + x * 0.21, self.time + y * 0.37, 0.));
+                let y = yy as f32;
+                for xx in (0..11) {
+                    let x = xx as f32;
+                    let model = Isometry3::new(Vector3::new(-15.0 + x * 3.0, -15.0 + y * 3.0, 0.),
+                                               Vector3::new(self.time + x * 0.21, self.time + y * 0.37, 0.));
 
-                if idx % 2 == 0 {
-                    let params = CubeShaderParameters {
-                        v_position: (&self.vb, VxPos::POSITION).into(),
-                        v_color: (&self.vb, VxPos::COLOR).into(),
-                        indices: (&self.ib1).into(),
-                        u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
-                    };
-                    self.sh.draw(&mut queue, params,
-                                 Primitive::Triangles, 0, 36);
-                } else {
-                    let params = CubeShaderParameters {
-                        v_position: (&self.vb, VxPos::POSITION).into(),
-                        v_color: (&self.vb, VxPos::COLOR).into(),
-                        indices: (&self.ib2).into(),
-                        u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
-                    };
-                    self.sh.draw(&mut queue, params,
-                                 Primitive::TriangleStrip, 0, 14);
+                    if xx % 2 == 0 {
+                        let params = CubeShaderParameters {
+                            v_position: (&self.vb, VxPos::POSITION).into(),
+                            v_color: (&self.vb, VxPos::COLOR).into(),
+                            indices: (&self.ib1).into(),
+                            u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
+                        };
+                        self.sh.draw(&mut queue, params,
+                                     Primitive::Triangles, 0, 36);
+                    } else {
+                        let params = CubeShaderParameters {
+                            v_position: (&self.vb, VxPos::POSITION).into(),
+                            v_color: (&self.vb, VxPos::COLOR).into(),
+                            indices: (&self.ib2).into(),
+                            u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
+                        };
+                        self.sh.draw(&mut queue, params,
+                                     Primitive::TriangleStrip, 0, 14);
+                    }
                 }
             });
     }

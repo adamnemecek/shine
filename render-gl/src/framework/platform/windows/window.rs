@@ -6,7 +6,6 @@ use std::mem;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use winapi::shared::ntdef::{LONG, LPCWSTR};
-use winapi::shared::basetsd::*;
 use winapi::shared::minwindef::*;
 use winapi::shared::windef::*;
 use winapi::um::winuser::*;
@@ -350,7 +349,7 @@ impl GLWindow {
         //connect the OS and rust window
         {
             let win_ptr = data.as_ref() as *const GLWindow;
-            ffi!(SetWindowLongPtrW(hwnd, 0, win_ptr as isize));
+            ffi!(SetWindowLongPtrW(hwnd, 0, mem::transmute(win_ptr)));
         }
 
         // ready to show the window
@@ -443,7 +442,7 @@ impl GLWindow {
     /// Static function to handle os messages.
     ///
     /// It converts the raw pointer associated to the OS window back into a safe rust structure.
-    pub fn handle_os_message(win_ptr: LONG_PTR, hwnd: HWND,
+    pub fn handle_os_message(win_ptr: isize, hwnd: HWND,
                              msg: UINT, wparam: WPARAM, lparam: LPARAM) -> LRESULT {
         assert!(win_ptr != 0);
 

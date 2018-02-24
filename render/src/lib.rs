@@ -8,7 +8,9 @@ mod backend_impl {
     extern crate shine_render_gl;
 
     pub use self::shine_render_gl::*;
-    
+    //pub use self::shine_render_gl::VertexDeclaration;
+    //pub use self::shine_render_gl::ShaderDeclaration;
+
     pub use self::shine_render_gl::PlatformEngine;
     pub use self::shine_render_gl::PlatformWindowSettings;
     pub use self::shine_render_gl::PlatformWindowBuilder;
@@ -17,13 +19,9 @@ mod backend_impl {
     pub use self::shine_render_gl::IndexBufferHandle;
     pub use self::shine_render_gl::Texture2DHandle;
     pub use self::shine_render_gl::ShaderProgramHandle;
-
-    //pub use self::shine_render_gl::VertexDeclaration;
-    //pub use self::shine_render_gl::ShaderDeclaration;
 }
 
 pub use backend_impl::*;
-
 
 pub type PlatformBackend = <PlatformEngine as Engine>::Backend;
 pub type PlatformCommandQueue = <PlatformEngine as Engine>::CommandQueue;
