@@ -3,8 +3,6 @@ use std::cell::*;
 use std::rc::*;
 use std::marker::PhantomData;
 use std::fmt;
-use std::ptr;
-use std::mem;
 use threadid;
 
 
@@ -42,6 +40,9 @@ struct SharedData<K: fmt::Debug, C> {
 
 
 /// Fork-join sorted command store.
+/// #safety
+/// Commands are never dropped. During clear and drain only the length of the containers are
+/// reset to zero, but drop is never called for the stored commands.
 pub struct FJSQueue<K: fmt::Debug, C> {
     shared: RwLock<SharedData<K, C>>,
     tls: Vec<Rc<RefCell<Buffer<K, C>>>>,
@@ -144,7 +145,7 @@ impl<'a, K: 'a + fmt::Debug, C: 'a> ConsumeGuard<'a, K, C> {
         for buffer in self.buffers.iter() {
             let mut buffer = buffer.borrow_mut();
             unsafe { buffer.commands.set_len(0) };
-            buffer.sort_keys.clear();
+            unsafe { buffer.sort_keys.set_len(0) };
         };
 
         Drain {
@@ -156,11 +157,11 @@ impl<'a, K: 'a + fmt::Debug, C: 'a> ConsumeGuard<'a, K, C> {
 
 impl<'a, K: 'a + fmt::Debug, C: 'a> Drop for ConsumeGuard<'a, K, C> {
     fn drop(&mut self) {
-        // if consumer was not drained explicitly, clean the queue manually
+        // clea ques as if it was drained
         for buffer in self.buffers.iter() {
             let mut buffer = buffer.borrow_mut();
-            buffer.commands.clear();
-            buffer.sort_keys.clear();
+            unsafe { buffer.commands.set_len(0) };
+            unsafe { buffer.sort_keys.set_len(0) };
         }
         self.shared.order.clear();
     }
@@ -173,20 +174,19 @@ pub struct Drain<'d, 'a: 'd, K: 'a + fmt::Debug, C: 'a> {
 }
 
 impl<'d, 'a: 'd, K: 'a + fmt::Debug, C: 'a> Iterator for Drain<'d, 'a, K, C> {
-    type Item = C;
-    fn next(&mut self) -> Option<C> {
+    type Item = &'d mut C;
+    fn next(&mut self) -> Option<&'d mut C> {
         let ref mut shared = *self.guard.shared;
         let ref mut buffers = self.guard.buffers;
 
         if self.idx < shared.order.len() {
             let (_, (bid, cid)) = shared.order[self.idx];
             self.idx += 1;
-            Some(unsafe { // move out the commands manually
-                let mut c: C = mem::uninitialized();
-                let src = buffers[bid as usize].borrow_mut().commands.as_ptr().offset(cid as isize);
-                ptr::copy_nonoverlapping(src, &mut c, 1);
-                c
-            })
+            let cmd = unsafe {
+                let cmd = buffers[bid as usize].borrow_mut().commands.as_mut_ptr().offset(cid as isize);
+                &mut *cmd
+            };
+            Some(cmd)
         } else {
             None
         }

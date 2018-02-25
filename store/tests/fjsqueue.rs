@@ -12,79 +12,44 @@ use self::shine_store::threadid;
 fn consume()
 {
     #[derive(Debug)]
-    struct Data(String, *mut usize);
+    struct Data(usize);
 
     impl Data {
-        fn new(i: usize, c: &mut usize) -> Data {
-            Data(format!("dd{}ss", i), c)
+        fn new(i: usize) -> Data {
+            Data(i)
         }
     }
-    impl Drop for Data {
-        fn drop(&mut self) {
-            let counter = unsafe { &mut *self.1 };
-            *counter += 1;
-            //println!("dropping data: {:?} {}", self.0, *counter);
-        }
-    }
-
-    let mut counter = 0;
 
     let store = FJSQueue::<u16, Data>::new();
 
     // insert some elements than drain them
     {
         let mut store = store.produce();
-        store.add(0, Data::new(0, &mut counter));
-        store.add(2, Data::new(2, &mut counter));
-        store.add(1, Data::new(1, &mut counter));
+        store.add(0, Data::new(0));
+        store.add(2, Data::new(2));
+        store.add(1, Data::new(1));
     }
     {
         let mut store = store.consume(|&k| k as u64);
-        for (i, _d) in store.drain().enumerate() {
-            //println!("drain[{}] = {:?} ", i, d.0);
-            assert_eq!(counter, i);
+        for (i, d) in store.drain().enumerate() {
+            assert_eq!(d.0, i);
         }
     }
-    assert_eq!(counter, 3);
-
 
     // insert again some more
     {
-        let c0 = counter;
         {
             let mut store = store.produce();
             for i in 0..1024 {
-                store.add(100 + i, Data::new(100 + i as usize, &mut counter));
+                store.add(100 + i, Data::new(100 + i as usize));
             }
         }
         {
             let mut store = store.consume(|&k| k as u64);
-            for (i, _d) in store.drain().enumerate() {
-                //println!("drain[{}] = {:?} ", i, d.0);
-                assert_eq!(counter, c0 + i);
+            for (i, d) in store.drain().enumerate() {
+                assert_eq!(d.0, 100 + i);
             }
         }
-    }
-
-    // check leak if drain is partially consumed only
-    {
-        let c0 = counter;
-        {
-            let mut store = store.produce();
-            store.add(0, Data::new(0, &mut counter));
-            store.add(2, Data::new(2, &mut counter));
-            store.add(1, Data::new(1, &mut counter));
-            store.add(6, Data::new(6, &mut counter));
-            store.add(7, Data::new(7, &mut counter));
-        }
-
-        {
-            let mut store = store.consume(|&k| k as u64);
-            let mut drain = store.drain();
-            drain.next().unwrap();
-            drain.next().unwrap();
-        }
-        assert_eq!(counter, c0 + 5);
     }
 }
 

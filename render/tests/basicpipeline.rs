@@ -147,17 +147,9 @@ impl View<PlatformEngine> for SimpleView {
         self.sh.draw(&mut queue, params, Primitive::Triangles, 0, 6);
     }
 
-    fn on_key(
-        &mut self,
-        ctl: &mut WindowControl,
-        _scan_code: ScanCode,
-        virtual_key: Option<VirtualKeyCode>,
-        is_down: bool,
-    ) {
+    fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
         match virtual_key {
-            Some(VirtualKeyCode::Escape) if !is_down => {
-                ctl.close();
-            }
+            Some(VirtualKeyCode::Escape) if !is_down => { ctl.close(); }
             _ => {}
         }
     }

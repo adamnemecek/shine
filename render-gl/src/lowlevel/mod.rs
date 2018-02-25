@@ -132,10 +132,4 @@ impl LowLevel {
 
         gl_check_error();
     }
-
-    /// A simple test function to check if ll is alive
-    pub fn hello(&mut self, time: f32) {
-        ffi!(gl::ClearColor(time, 0.0, 0.0, 1.0));
-        ffi!(gl::Clear(gl::COLOR_BUFFER_BIT));
-    }
 }

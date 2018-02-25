@@ -100,7 +100,6 @@ impl Drop for MiniCommandBox {
 
 /// Enum for render commands.
 pub enum Command {
-    Hello { time: f32 },
     //VertexCreate(vertexbuffer::CreateCommand),
     Clear(backend::ClearCommand),
     VertexRelease(vertexbuffer::ReleaseCommand),
@@ -116,21 +115,20 @@ pub enum Command {
 }
 
 impl Command {
-    pub fn process(self, context: &mut GLCommandProcessContext) {
+    pub fn process(&mut self, context: &mut GLCommandProcessContext) {
         use Command::*;
         match self {
-            Hello { time } => context.ll.hello(time),
-            Clear(cmd) => cmd.process(context),
-            //VertexCreate(cmd) => cmd.process(ll, flush),
-            VertexRelease(cmd) => cmd.process(context),
-            IndexCreate(cmd) => cmd.process(context),
-            IndexRelease(cmd) => cmd.process(context),
-            Texture2DCreate(cmd) => cmd.process(context),
-            Texture2DRelease(cmd) => cmd.process(context),
-            //ShaderProgramCreate(cmd) => cmd.process(context),
-            ShaderProgramRelease(cmd) => cmd.process(context),
-            BoxedCommand(mut cmd) => cmd.process(context),
-            MiniboxedCommand(mut cmd) => cmd.process(context),
+            &mut Clear(ref mut cmd) => cmd.process(context),
+            //&VertexCreate(ref mut cmd) => cmd.process(ll, flush),
+            &mut VertexRelease(ref mut cmd) => cmd.process(context),
+            &mut IndexCreate(ref mut cmd) => cmd.process(context),
+            &mut IndexRelease(ref mut cmd) => cmd.process(context),
+            &mut Texture2DCreate(ref mut cmd) => cmd.process(context),
+            &mut Texture2DRelease(ref mut cmd) => cmd.process(context),
+            //&ShaderProgramCreate(ref mut cmd) => cmd.process(context),
+            &mut ShaderProgramRelease(ref mut cmd) => cmd.process(context),
+            &mut BoxedCommand(ref mut cmd) => cmd.process(context),
+            &mut MiniboxedCommand(ref mut cmd) => cmd.process(context),
         }
     }
 }

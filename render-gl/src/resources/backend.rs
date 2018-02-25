@@ -53,7 +53,7 @@ pub struct ClearCommand {
 }
 
 impl ClearCommand {
-    pub fn process(self, context: &mut GLCommandProcessContext) {
+    pub fn process(&mut self, context: &mut GLCommandProcessContext) {
         context.ll.init_view(self.viewport, self.color, self.depth);
     }
 }

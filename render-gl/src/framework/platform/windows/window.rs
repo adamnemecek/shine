@@ -386,9 +386,7 @@ impl GLWindow {
     }
 
     pub fn update_view(&mut self) {
-        // make_current is not required as it there is a single context for each window
-        // and it is made current during surface events
-        if self.is_ready_to_render() {
+        if self.is_ready_to_render() && self.context.make_current().is_ok() {
             self.view.borrow_mut().on_update(&mut self.control, &mut self.backend);
             self.backend.flush();
         }
@@ -399,10 +397,8 @@ impl GLWindow {
     }
 
     pub fn render(&mut self) -> Result<(), Error> {
-        // make_current is not required as it there is a single context for each window
-        // and it is made current during surface events
-
         if self.is_ready_to_render() {
+            try!(self.context.make_current());
             self.view.borrow_mut().on_render(&mut self.control, &mut self.backend);
             self.backend.flush();
             try!(self.context.swap_buffers());

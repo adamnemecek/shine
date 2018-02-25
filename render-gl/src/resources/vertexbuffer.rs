@@ -32,7 +32,7 @@ pub struct ReleaseCommand {
 }
 
 impl ReleaseCommand {
-    pub fn process(self, context: &mut GLCommandProcessContext) {
+    pub fn process(&mut self, context: &mut GLCommandProcessContext) {
         let target = unsafe { context.vertex_store.at_unsafe_mut(&self.target) };
         target.release(context.ll);
     }
