@@ -25,6 +25,7 @@ struct CubeView {
     ib1: IndexBufferHandle<u8>,
     ib2: IndexBufferHandle<u8>,
     sh: ShaderProgramHandle<CubeShader>,
+    write_mask: WriteMask,
 }
 
 impl CubeView {
@@ -35,6 +36,7 @@ impl CubeView {
             ib1: Handle::null(),
             ib2: Handle::null(),
             sh: Handle::null(),
+            write_mask: Default::default(),
         }
     }
 }
@@ -125,7 +127,7 @@ impl View<PlatformEngine> for CubeView {
                 let mut queue = r.get_queue();
 
                 let y = yy as f32;
-                for xx in (0..11) {
+                for xx in 0..11 {
                     let x = xx as f32;
                     let model = Isometry3::new(Vector3::new(-15.0 + x * 3.0, -15.0 + y * 3.0, 0.),
                                                Vector3::new(self.time + x * 0.21, self.time + y * 0.37, 0.));
@@ -136,6 +138,7 @@ impl View<PlatformEngine> for CubeView {
                             v_color: (&self.vb, VxPos::COLOR).into(),
                             indices: (&self.ib1).into(),
                             u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
+                            write_mask: self.write_mask,
                         };
                         self.sh.draw(&mut queue, params,
                                      Primitive::Triangles, 0, 36);
@@ -145,6 +148,7 @@ impl View<PlatformEngine> for CubeView {
                             v_color: (&self.vb, VxPos::COLOR).into(),
                             indices: (&self.ib2).into(),
                             u_model_view_proj: (proj * (view * model).to_homogeneous()).into(),
+                            write_mask: self.write_mask,
                         };
                         self.sh.draw(&mut queue, params,
                                      Primitive::TriangleStrip, 0, 14);
@@ -157,6 +161,9 @@ impl View<PlatformEngine> for CubeView {
         println!("on_key");
         match virtual_key {
             Some(VirtualKeyCode::Escape) if !is_down => { ctl.close(); }
+            Some(VirtualKeyCode::R) if is_down => { self.write_mask.red = !self.write_mask.red; }
+            Some(VirtualKeyCode::G) if is_down => { self.write_mask.green = !self.write_mask.green; }
+            Some(VirtualKeyCode::B) if is_down => { self.write_mask.blue = !self.write_mask.blue; }
             _ => {}
         }
     }

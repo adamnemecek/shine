@@ -34,7 +34,7 @@ mod shaderstates;
 
 #[proc_macro_derive(ShaderDeclaration, attributes(
 vert_path, vert_src, geom_path, geom_src, frag_path, frag_src,
-depth, writemask, cull, /*viewport, stencil, blend*/
+depth, write_mask, cull, /*viewport, stencil, blend*/
 ))]
 pub fn shader_declaration(input: TokenStream) -> TokenStream
 {

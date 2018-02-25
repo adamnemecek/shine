@@ -36,7 +36,7 @@ pub mod libconfig {
     pub const CHECK_RENDER_ERRORS: bool = cfg!(debug_assertions = "true");
 
     pub const MINICOMMANDBOX_SIZE: usize = 128;
-}
+    }
 
 pub mod lowlevel;
 pub mod framework;

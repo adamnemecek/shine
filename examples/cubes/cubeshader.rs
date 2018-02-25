@@ -17,4 +17,5 @@
     {
     	gl_FragColor = vec4(color, 1.);
     }"]
+#[write_mask = "?"]
 pub struct CubeShader {}

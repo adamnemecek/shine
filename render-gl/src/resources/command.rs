@@ -19,8 +19,11 @@ pub trait DynCommand: 'static {
 impl<T: DynCommand> From<T> for Command {
     #[inline(always)]
     fn from(value: T) -> Command {
-        Command::DynamicCommand(MiniCommandBox::new(value))
-        //Command::DynamicCommand(Box::new(value))
+        if mem::size_of::<T>() > MINICOMMANDBOX_SIZE {
+            Command::BoxedCommand(Box::new(value))
+        } else {
+            Command::MiniboxedCommand(MiniCommandBox::new(value))
+        }
     }
 }
 
@@ -108,8 +111,8 @@ pub enum Command {
     //ShaderProgramCreate(shaderprogram::CreateCommand),
     ShaderProgramRelease(shaderprogram::ReleaseCommand),
 
-    DynamicCommand(MiniCommandBox),
-    //DynamicCommand(Box<DynCommand>),
+    MiniboxedCommand(MiniCommandBox),
+    BoxedCommand(Box<DynCommand>),
 }
 
 impl Command {
@@ -126,8 +129,8 @@ impl Command {
             Texture2DRelease(cmd) => cmd.process(context),
             //ShaderProgramCreate(cmd) => cmd.process(context),
             ShaderProgramRelease(cmd) => cmd.process(context),
-
-            DynamicCommand(mut cmd) => cmd.process(context),
+            BoxedCommand(mut cmd) => cmd.process(context),
+            MiniboxedCommand(mut cmd) => cmd.process(context),
         }
     }
 }

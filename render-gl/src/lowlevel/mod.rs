@@ -83,6 +83,7 @@ impl LowLevel {
     pub fn init_view(&mut self, viewport: Option<Viewport>, color: Option<Float32x4>, depth: Option<f32>) {
         let mut clear_flags: GLenum = 0;
         if let Some(color) = color {
+            self.states.commit_write_mask(Default::default());
             ffi!(gl::ClearColor(color.0, color.1, color.2, color.3));
             clear_flags |= gl::COLOR_BUFFER_BIT;
         }

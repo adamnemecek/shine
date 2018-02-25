@@ -273,6 +273,8 @@ impl StateManager {
 
         // apply state changes
         if self.forced { self.dirty_mask = MASK_ALL; }
+        self.used_mask = 0;
+
         if self.dirty_mask == 0 { return; }
         if (self.dirty_mask & MASK_VIEWPORT) != 0 { self.viewport.commit(); }
         if (self.dirty_mask & MASK_DEPTH) != 0 { self.depth.commit(); }
@@ -282,7 +284,6 @@ impl StateManager {
         if (self.dirty_mask & MASK_WRITE_MASK) != 0 { self.write_mask.commit(); }
 
         self.dirty_mask = 0;
-        self.used_mask = 0;
     }
 
     pub fn set_render_size(&mut self, size: Size) {
@@ -311,6 +312,14 @@ impl StateManager {
         if self.write_mask.value == fun { return; }
         self.dirty_mask |= MASK_WRITE_MASK;
         self.write_mask.value = fun;
+    }
+
+    pub fn commit_write_mask(&mut self, fun: WriteMask) {
+        assert!(self.used_mask == 0, "cannot commit state in \"update for draw\" mode");
+        if (0 == self.dirty_mask | MASK_WRITE_MASK) && self.write_mask.value == fun { return; }
+        self.write_mask.value = fun;
+        self.dirty_mask &= !MASK_WRITE_MASK;
+        self.write_mask.commit();
     }
 
     pub fn set_stencil(&mut self, fun: StencilFunction) {
