@@ -235,17 +235,17 @@ pub fn simple_lowlevel() {
                SimpleView::new(),
                |window, view, cmd| {
                    match cmd {
-                       WindowCommand::SurfaceReady => view.on_surface_ready(window),
-                       WindowCommand::SurfaceLost => view.on_surface_lost(window),
-                       WindowCommand::SurfaceChanged => view.on_surface_changed(window),
-                       WindowCommand::KeyboardUp(_scan_code, virtual_key) => view.on_key(window, virtual_key, false),
-                       WindowCommand::KeyboardDown(_scan_code, virtual_key) => view.on_key(window, virtual_key, true),
-                       WindowCommand::Tick => view.on_render(window),
+                       &WindowCommand::SurfaceReady => view.on_surface_ready(window),
+                       &WindowCommand::SurfaceLost => view.on_surface_lost(window),
+                       &WindowCommand::SurfaceChanged => view.on_surface_changed(window),
+                       &WindowCommand::KeyboardUp(_scan_code, virtual_key) => view.on_key(window, virtual_key, false),
+                       &WindowCommand::KeyboardDown(_scan_code, virtual_key) => view.on_key(window, virtual_key, true),
+                       &WindowCommand::Tick => view.on_render(window),
                        _ => {}
                    }
                }).expect("Could not initialize sub window");
 
-    while engine.dispatch_event(render::DispatchTimeout::Immediate) {
-        /**/
+    while engine.dispatch_event(render::DispatchTimeout::Infinite) {
+        //println!("main tick");
     }
 }
