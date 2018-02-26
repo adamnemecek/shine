@@ -5,75 +5,53 @@ use types::*;
 use error::*;
 use framework::*;
 
-
-/// Trait to control window behavior in during view callbacks
-pub trait WindowControl {
-    /// Requests to close the window.
-    fn close(&mut self);
-
-    /*
-    /// Requests toresize the window the window.
-    fn resize(&mut self, size: Size);
-    */
-}
-
-/// Trait the view dependent aspect of an application.
-pub trait View<E: Engine>: 'static {
-    /// Handles the surface ready event.
-    ///
-    /// Window has create all the OS resources.
-    fn on_surface_ready(&mut self, ctl: &mut WindowControl, r: &mut E::Backend);
-
-    /// Handles the surface lost event.
-    ///
-    /// Window still has the OS resources, but will be released soon after this call.
-    fn on_surface_lost(&mut self, ctl: &mut WindowControl, r: &mut E::Backend);
-
-    /// Handles the surface size or other config change.
-    ///
-    /// Window has create all the OS resources.
-    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut E::Backend);
-
-    /// Handles update requests.
-    fn on_update(&mut self, ctl: &mut WindowControl, r: &mut E::Backend);
-
-    /// Handles render requests.
-    ///
-    /// Rendering is triggered manually by calling the render function of the window or
-    /// by the system if paint event handing is enabled.
-    fn on_render(&mut self, ctl: &mut WindowControl, r: &mut E::Backend);
-
-    /// Handles key down and up events.
-    fn on_key(&mut self, ctl: &mut WindowControl, scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool);
-}
-
-
 /// Trait for window abstraction.
-pub trait Window<E: Engine> {
+pub trait Window<E: Engine>: Send {
     /// Requests to close the window.
-    ///
-    /// This function asks the OS to close the window. Window is not closed immediately,
-    /// event handling shall continue the execution until the OS close events arrive.
     fn close(&mut self);
 
-    /// Returns true if the window is closed or in closing state.
-    fn is_closed(&self) -> bool;
-
-    /// Gets the position of the window.
+    /// Returns the position of the window.
     fn get_position(&self) -> Position;
 
-    /// Gets the size of the window.
+    /// Returns the decorated size of the window.
     fn get_size(&self) -> Size;
 
-    /// Gets the size of the draw area of the window.
+    /// Returns the size of the render area (size of the screen without decoration).
     fn get_draw_size(&self) -> Size;
 
-    /// Returns if the context of the window is ready for rendering
-    fn is_ready_to_render(&self) -> bool;
-
-    /// Update view
-    fn update_view(&mut self);
-
-    /// Triggers an immediate render.
-    fn render(&mut self) -> Result<(), Error>;
+    /// Returns the backend (render context).
+    fn backend(&mut self) -> &mut E::Backend;
 }
+
+
+/// Trait to manage the lifetime of a window
+pub trait WindowHandler<E: Engine> {
+    /// Return if window is closed
+    fn is_closed(&self) -> bool;
+
+    /// Closes window and wait for completion
+    fn wait_close(&mut self);
+
+    /// Send a custom window command
+    fn send_command(&self, cmd: WindowCommand);
+
+    /// Send a custom window command and wait for it's result
+    fn send_sync_command(&self, cmd: WindowCommand);
+}
+
+
+/// Trait to build windows. It is usually implemented by a concrete PlatformWindowSettings
+pub trait WindowBuilder<E: Engine> {
+    /// The window handler type
+    type WindowHandler: WindowHandler<E>;
+
+    /// The native window type
+    type Window: Window<E>;
+
+    /// Builds a window and start the associated render thread.
+    fn build<Ctx, F>(&self, engine: &E, timeout: DispatchTimeout, ctx: Ctx, callback: F) -> Result<Self::WindowHandler, Error>
+        where
+            F: 'static + Send + Fn(&mut Self::Window, &mut Ctx, &WindowCommand),
+            Ctx: 'static + Send;
+}
+

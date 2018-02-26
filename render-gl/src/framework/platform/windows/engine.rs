@@ -1,5 +1,7 @@
 use std::mem;
 use std::ptr;
+use std::sync;
+use std::sync::mpsc;
 use std::cell::Cell;
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
@@ -11,16 +13,94 @@ use winapi::um::winbase::*;
 use core::*;
 use framework::*;
 
+mod vkey;
+
+use self::vkey::*;
+
 
 /// Window message handler callback function
 pub extern "system" fn wnd_proc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: LPARAM) -> LRESULT
 {
-    let win_ptr = ffi!(GetWindowLongPtrW(hwnd, 0));
-    if win_ptr == 0 {
+    let send_queue = ffi!(GetWindowLongPtrW(hwnd, 0));
+    if send_queue == 0 {
         return ffi!(DefWindowProcW(hwnd, msg, wparam, lparam));
     }
 
-    return GLWindow::handle_os_message(win_ptr as isize, hwnd, msg, wparam, lparam);
+    let send_queue = unsafe { Box::from_raw(send_queue as *mut mpsc::Sender<WindowCmd>) };
+
+    let mut result: Option<LRESULT> = None;
+    match msg {
+        win_messages::WM_DR_WINDOW_CREATED => {
+            let barrier = sync::Arc::new(sync::Barrier::new(2));
+            send_queue.send(WindowCmd::Sync(WindowCommand::SurfaceReady, barrier.clone())).unwrap();
+            barrier.wait();
+        }
+
+        WM_CLOSE => {
+            let barrier = sync::Arc::new(sync::Barrier::new(2));
+            send_queue.send(WindowCmd::Sync(WindowCommand::SurfaceLost, barrier.clone())).unwrap();
+            barrier.wait();
+        }
+
+        WM_DESTROY => {
+            ffi!(PostMessageW(ptr::null_mut(), win_messages::WM_DR_WINDOW_DESTROYED, 0, 0));
+        }
+
+        WM_SIZE => {
+            let w = LOWORD(lparam as DWORD) as i32;
+            let h = HIWORD(lparam as DWORD) as i32;
+
+            let size = Size { width: w, height: h };
+
+            //let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+            //ffi!(GetWindowRect(win.hwnd, &mut rect));
+            //let size = Size {
+            //    width: rect.right - rect.left,
+            //    height: rect.bottom - rect.top,
+            //};
+
+            send_queue.send(WindowCmd::Async(WindowCommand::Resize(size))).unwrap();
+            result = Some(0);
+        }
+
+        WM_MOVE => {
+            let x = LOWORD(lparam as DWORD) as i32;
+            let y = HIWORD(lparam as DWORD) as i32;
+            let position = Position { x: x, y: y };
+            send_queue.send(WindowCmd::Async(WindowCommand::Move(position))).unwrap();
+            result = Some(0);
+        }
+
+        WM_KEYDOWN | WM_SYSKEYDOWN => {
+            if msg == WM_SYSKEYDOWN && wparam as i32 == VK_F4 {
+                // pass close by F4 key to windows
+                result = None;
+            } else {
+                let (sc, vkey) = vkeycode_to_element(wparam, lparam);
+                send_queue.send(WindowCmd::Async(WindowCommand::KeyboardDown(sc, vkey))).unwrap();
+                result = Some(0);
+            }
+        }
+
+        WM_KEYUP | WM_SYSKEYUP => {
+            if msg == WM_SYSKEYUP && wparam as i32 == VK_F4 {
+                // pass close by F4 key
+                result = None;
+            } else {
+                let (sc, vkey) = vkeycode_to_element(wparam, lparam);
+                send_queue.send(WindowCmd::Async(WindowCommand::KeyboardUp(sc, vkey))).unwrap();
+                result = Some(0);
+            }
+        }
+
+        _ => {}
+    }
+
+    mem::forget(send_queue);
+    if let Some(res) = result {
+        return res;
+    }
+    ffi!(DefWindowProcW(hwnd, msg, wparam, lparam))
 }
 
 

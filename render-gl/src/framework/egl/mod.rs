@@ -20,7 +20,13 @@ impl Context {
 
     /// Makes this context active.
     #[inline]
-    pub fn make_current(&self) -> Result<(), Error> {
+    pub fn activate(&self) -> Result<(), Error> {
+        Ok(())
+    }
+
+    /// Makes this context inactive.
+    #[inline]
+    pub fn deactivate(&self) -> Result<(), Error> {
         Ok(())
     }
 

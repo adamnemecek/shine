@@ -1,56 +1,145 @@
 use core::*;
 use framework::*;
-
-
-pub trait PlatformWindowBuilder {
-    fn build<V: View<PlatformEngine>>(&self, engine: &PlatformEngine, view: V) -> Result<PlatformWindow, Error>;
-}
+use std::thread;
+use std::sync;
+use std::sync::mpsc;
 
 
 /// Window implementation for opengl
-pub type PlatformWindow = Box<GLWindow>;
+pub type PlatformWindow = GLWindow;
 
-impl Window<PlatformEngine> for Box<GLWindow> {
-//    type Backend = GLBackend;
+/// Window handler for opengl
+pub struct PlatformWindowHandler {
+    queue: mpsc::Sender<WindowCmd>,
+    join: Option<thread::JoinHandle<()>>,
+}
 
-    fn close(&mut self) {
-        if !self.is_closed() {
-            self.as_mut().close()
-        }
-    }
-
+impl WindowHandler<PlatformEngine> for PlatformWindowHandler {
     fn is_closed(&self) -> bool {
-        self.as_ref().is_closed()
+        self.join.is_none()
     }
 
-    fn get_position(&self) -> Position {
-        self.as_ref().get_position()
+    fn send_command(&self, cmd: WindowCommand) {
+        self.queue.send(WindowCmd::Async(cmd)).unwrap();
     }
 
-    /// Gets the size of the window.
-    fn get_size(&self) -> Size {
-        self.as_ref().get_size()
+    fn send_sync_command(&self, cmd: WindowCommand) {
+        let barrier = sync::Arc::new(sync::Barrier::new(2));
+        self.queue.send(WindowCmd::Sync(cmd, barrier.clone())).unwrap();
+        barrier.wait();
     }
 
-    /// Gets the size of the draw area of the window.
-    fn get_draw_size(&self) -> Size {
-        self.as_ref().get_draw_size()
-    }
-
-    /// Returns if the context of the window is ready for rendering
-    fn is_ready_to_render(&self) -> bool {
-        self.as_ref().is_ready_to_render()
-    }
-
-    /// Update view
-    fn update_view(&mut self) {
-        self.as_mut().update_view();
-    }
-
-    /// Triggers an immediate render.
-    fn render(&mut self) -> Result<(), Error> {
-        self.as_mut().render()
+    fn wait_close(&mut self) {
+        self.queue.send(WindowCmd::RequestClose).unwrap();
+        if let Some(join) = self.join.take() {
+            join.join().unwrap();
+        }
     }
 }
 
+impl WindowBuilder<PlatformEngine> for WindowSettings<GLExtraWindowSettings> {
+    type WindowHandler = PlatformWindowHandler;
+    type Window = PlatformWindow;
 
+    fn build<Ctx, F>(&self, engine: &PlatformEngine, timeout: DispatchTimeout, ctx: Ctx, callback: F) -> Result<Self::WindowHandler, Error>
+        where
+            F: 'static + Send + Fn(&mut Self::Window, &mut Ctx, &WindowCommand),
+            Ctx: 'static + Send {
+        let (tx, rx) = mpsc::channel::<WindowCmd>();
+        let win = GLWindow::new(self, engine.platform(), tx.clone())?;
+        let join =
+            match timeout {
+                DispatchTimeout::Infinite =>
+                    thread::spawn(move || {
+                        let mut ctx = ctx;
+                        let mut win = win;
+                        while !win.is_closed() {
+                            match rx.recv() {
+                                Ok(WindowCmd::Sync(data, barrier)) => {
+                                    win.pre_hook(&data);
+                                    callback(&mut win, &mut ctx, &data);
+                                    win.post_hook(&data);
+                                    barrier.wait();
+                                }
+                                Ok(WindowCmd::Async(data)) => {
+                                    win.pre_hook(&data);
+                                    callback(&mut win, &mut ctx, &data);
+                                    win.post_hook(&data);
+                                }
+                                Ok(WindowCmd::RequestClose) => {
+                                    win.close();
+                                }
+                                Err(mpsc::RecvError) => {
+                                    panic!("Window connection closed by main thread");
+                                }
+                            }
+                        }
+                    }),
+
+                DispatchTimeout::Immediate =>
+                    thread::spawn(move || {
+                        let mut ctx = ctx;
+                        let mut win = win;
+                        while !win.is_closed() {
+                            match rx.try_recv() {
+                                Ok(WindowCmd::Sync(data, barrier)) => {
+                                    win.pre_hook(&data);
+                                    callback(&mut win, &mut ctx, &data);
+                                    win.post_hook(&data);
+                                    barrier.wait();
+                                }
+                                Ok(WindowCmd::Async(data)) => {
+                                    win.pre_hook(&data);
+                                    callback(&mut win, &mut ctx, &data);
+                                    win.post_hook(&data);
+                                }
+                                Ok(WindowCmd::RequestClose) => {
+                                    win.close();
+                                }
+                                Err(mpsc::TryRecvError::Empty) => {
+                                    callback(&mut win, &mut ctx, &WindowCommand::Tick);
+                                }
+                                Err(mpsc::TryRecvError::Disconnected) => {
+                                    panic!("Window connection closed by main thread");
+                                }
+                            }
+                        }
+                    }),
+
+                DispatchTimeout::Time(duration) =>
+                    thread::spawn(move || {
+                        let mut ctx = ctx;
+                        let mut win = win;
+                        while !win.is_closed() {
+                            match rx.recv_timeout(duration) {
+                                Ok(WindowCmd::Sync(data, barrier)) => {
+                                    win.pre_hook(&data);
+                                    callback(&mut win, &mut ctx, &data);
+                                    win.post_hook(&data);
+                                    barrier.wait();
+                                }
+                                Ok(WindowCmd::Async(data)) => {
+                                    win.pre_hook(&data);
+                                    callback(&mut win, &mut ctx, &data);
+                                    win.post_hook(&data);
+                                }
+                                Ok(WindowCmd::RequestClose) => {
+                                    win.close();
+                                }
+                                Err(mpsc::RecvTimeoutError::Timeout) => {
+                                    callback(&mut win, &mut ctx, &WindowCommand::Tick);
+                                }
+                                Err(mpsc::RecvTimeoutError::Disconnected) => {
+                                    panic!("Window connection closed by main thread");
+                                }
+                            }
+                        }
+                    }),
+            };
+
+        Ok(PlatformWindowHandler {
+            queue: tx,
+            join: Some(join),
+        })
+    }
+}

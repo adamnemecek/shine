@@ -32,10 +32,17 @@ impl GLContext {
         }
     }
 
-    pub fn make_current(&self) -> Result<(), Error> {
+    pub fn activate(&self) -> Result<(), Error> {
         match self {
-            &GLContext::EGLContext(ref ctx) => { ctx.make_current() }
-            &GLContext::WGLContext(ref ctx) => { ctx.make_current() }
+            &GLContext::EGLContext(ref ctx) => { ctx.activate() }
+            &GLContext::WGLContext(ref ctx) => { ctx.activate() }
+        }
+    }
+
+    pub fn deactivate(&self) -> Result<(), Error> {
+        match self {
+            &GLContext::EGLContext(ref ctx) => { ctx.deactivate() }
+            &GLContext::WGLContext(ref ctx) => { ctx.deactivate() }
         }
     }
 

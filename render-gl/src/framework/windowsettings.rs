@@ -1,8 +1,4 @@
-use std::rc::Rc;
-use std::cell::RefCell;
-
 use core::*;
-use framework::*;
 
 
 /// OpenGL profile selection.
@@ -170,15 +166,3 @@ impl Default for GLExtraWindowSettings {
 
 /// WindowSettings implementation for opengl.
 pub type PlatformWindowSettings = WindowSettings<GLExtraWindowSettings>;
-
-impl PlatformWindowBuilder for WindowSettings<GLExtraWindowSettings> {
-    /// Builds window from the given settings.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the backend cannot create the window
-    fn build<V: View<PlatformEngine>>(&self, engine: &PlatformEngine, view: V) -> Result<PlatformWindow, Error> {
-        let view = Rc::new(RefCell::new(view));
-        GLWindow::new_boxed(self, engine.platform(), view)
-    }
-}

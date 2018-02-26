@@ -13,7 +13,8 @@ mod backend_impl {
 
     pub use self::shine_render_gl::PlatformEngine;
     pub use self::shine_render_gl::PlatformWindowSettings;
-    pub use self::shine_render_gl::PlatformWindowBuilder;
+    pub use self::shine_render_gl::PlatformWindow;
+    pub use self::shine_render_gl::PlatformWindowHandler;
 
     pub use self::shine_render_gl::VertexBufferHandle;
     pub use self::shine_render_gl::IndexBufferHandle;

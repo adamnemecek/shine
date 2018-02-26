@@ -149,7 +149,7 @@ impl Context {
         // create context
         context.hglrc = try!(context.create_context(context.pixel_format_id, &settings.fb_config, &settings.platform_extra));
 
-        try!(context.make_current());
+        try!(context.activate());
         try!(context.load_gl_functions());
         try!(context.set_context_attributes(&settings.fb_config, &settings.platform_extra));
 
@@ -160,9 +160,20 @@ impl Context {
 
     /// Makes this context active.
     #[inline]
-    pub fn make_current(&self) -> Result<(), Error> {
+    pub fn activate(&self) -> Result<(), Error> {
         assert!(!self.hglrc.is_null());
         if ffi!( wgl::MakeCurrent(self.hdc as *const _, self.hglrc as *const _)) != 0 {
+            Ok(())
+        } else {
+            Err(Error::ContextError(format!("Make current failed: {}", io::Error::last_os_error())))
+        }
+    }
+
+    /// Makes this context inactive.
+    #[inline]
+    pub fn deactivate(&self) -> Result<(), Error> {
+        assert!(!self.hglrc.is_null());
+        if ffi!( wgl::MakeCurrent(self.hdc as *const _, ptr::null_mut())) != 0 {
             Ok(())
         } else {
             Err(Error::ContextError(format!("Make current failed: {}", io::Error::last_os_error())))
