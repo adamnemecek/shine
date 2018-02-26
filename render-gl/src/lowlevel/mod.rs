@@ -81,9 +81,14 @@ impl LowLevel {
     pub fn end_render(&mut self) {}
 
     pub fn init_view(&mut self, viewport: Option<Viewport>, color: Option<Float32x4>, depth: Option<f32>) {
+        if let Some(viewport) = viewport {
+            self.states.set_viewport(viewport);
+        }
+
         let mut clear_flags: GLenum = 0;
         if let Some(color) = color {
-            self.states.commit_write_mask(Default::default());
+            self.states.set_write_mask(Default::default());
+            self.states.commit();
             ffi!(gl::ClearColor(color.0, color.1, color.2, color.3));
             clear_flags |= gl::COLOR_BUFFER_BIT;
         }
@@ -93,10 +98,6 @@ impl LowLevel {
         }
         if clear_flags != 0 {
             ffi!(gl::Clear(clear_flags));
-        }
-
-        if let Some(viewport) = viewport {
-            self.states.set_viewport(viewport);
         }
     }
 

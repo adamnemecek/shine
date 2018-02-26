@@ -7,11 +7,10 @@ pub enum Error {
 
     /// Error reported during a window creation.
     WindowCreationError(String),
+
     /// Error reported by the OS during rendering
     ContextError(String),
-    /// Error reported due to missing or closed context. For example window has been closed.
-    ContextLost,
 
-    /// Error occured during a render pass creation
+    /// Error occurred during a render pass creation
     PassCreationError(String),
 }

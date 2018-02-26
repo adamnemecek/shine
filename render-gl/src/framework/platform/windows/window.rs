@@ -162,23 +162,17 @@ impl GLWindow {
     }
 
     pub fn is_closed(&self) -> bool {
-        self.state == WindowState::WaitingClose
-            || self.state == WindowState::Closed
+        self.state == WindowState::Closed
             || self.hwnd == ptr::null_mut()
     }
 
     pub fn is_ready_to_render(&self) -> bool {
+        let screen_size = self.backend.get_screen_size();
         self.state == WindowState::Open
+            && (screen_size.width > 0 && screen_size.height > 0)
     }
 
-    pub fn start_render(&mut self) -> Result<(), Error> {
-        /*if !self.is_ready_to_render() {
-            Err(Error::ContextError("Context is not ready to render yet".to_string()));
-        }*/
-        Ok(())
-    }
-
-    pub fn end_render(&mut self) -> Result<(), Error> {
+    pub fn swap_buffers(&mut self) -> Result<(), Error> {
         self.backend.flush();
         try!(self.context.swap_buffers());
         Ok(())
@@ -189,14 +183,21 @@ impl GLWindow {
     }
 
     pub fn pre_hook(&mut self, cmd: &WindowCommand) {
+        //println!("hwnd:{:?} cmd:{:?}", self.hwnd, cmd);
         match cmd {
             &WindowCommand::SurfaceReady => {
                 self.state = WindowState::Open;
                 self.context.activate().unwrap();
             }
 
-            &WindowCommand::Resize(ref size) => { self.backend.set_screen_size(size.clone()); }
-            //&WindowCommand::Move(ref pos) => {}
+            &WindowCommand::Resize(ref window_size, ref client_size) => {
+                self.size = window_size.clone();
+                self.backend.set_screen_size(client_size.clone());
+            }
+
+            &WindowCommand::Move(ref position) => {
+                self.position = position.clone();
+            }
 
             _ => {}
         }
@@ -205,8 +206,13 @@ impl GLWindow {
     pub fn post_hook(&mut self, cmd: &WindowCommand) {
         match cmd {
             &WindowCommand::SurfaceLost => {
-                self.state = WindowState::Closed;
+                self.state = WindowState::WaitingClose;
                 self.context.deactivate().unwrap();
+            }
+
+            &WindowCommand::Closed => {
+                self.state = WindowState::Closed;
+                self.hwnd = ptr::null_mut();
             }
 
             _ => {}
@@ -216,7 +222,7 @@ impl GLWindow {
 
 impl Window<PlatformEngine> for GLWindow {
     fn close(&mut self) {
-        unimplemented!()
+        ffi!(PostMessageW(self.hwnd, WM_CLOSE, 0, 0));
     }
 
     fn get_position(&self) -> Position {
@@ -239,10 +245,6 @@ impl Window<PlatformEngine> for GLWindow {
 impl Drop for GLWindow {
     fn drop(&mut self) {
         //println!("GLWindow dropped");
-        if self.hwnd != ptr::null_mut() {
-            // the box is released, thus we remove any dangling pointers
-            ffi!(SetWindowLongPtrW(self.hwnd, 0, 0));
-            ffi!(DestroyWindow(self.hwnd));
-        }
+        assert!(self.hwnd.is_null(), "Window is leaking, wait close before dropping it");
     }
 }

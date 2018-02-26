@@ -315,7 +315,7 @@ impl StateManager {
     }
 
     pub fn commit_write_mask(&mut self, fun: WriteMask) {
-        assert!(self.used_mask == 0, "cannot commit state in \"update for draw\" mode");
+        //assert!(self.used_mask == 0, "cannot commit state in \"update for draw\" mode");
         if (0 == self.dirty_mask | MASK_WRITE_MASK) && self.write_mask.value == fun { return; }
         self.write_mask.value = fun;
         self.dirty_mask &= !MASK_WRITE_MASK;

@@ -34,8 +34,6 @@ pub trait Engine: 'static {
     /// Wait for an event to be available or for the specified timeout.
     ///
     /// Window events are delegated to the windows and shall be handled through the window.
-    /// todo: If no handle event is called in a message cycle for a window, the unprocessed messages
-    /// are discarded.
     /// # Return
     ///  Returns true if application is terminating, false otherwise
     fn dispatch_event(&self, timeout: DispatchTimeout) -> bool;

@@ -15,6 +15,7 @@ shine-render-gl-derive = {path = "../render-gl-derive"}
 
 libc = "*"
 arrayvec = "*"
+time = "*"
 
 [target.'cfg(target_os = "windows")'.dependencies.winapi]
 features = ["winuser", "libloaderapi", "winbase"]

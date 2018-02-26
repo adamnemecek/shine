@@ -10,6 +10,7 @@ shine-store = {path = "../store"}
 libc = "*"
 image = { version = "*", optional = true }
 nalgebra = { version = "*", optional = true }
+time = "*"
 
 [features]
 default = ["image", "nalgebra"]

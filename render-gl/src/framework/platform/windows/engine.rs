@@ -31,41 +31,38 @@ pub extern "system" fn wnd_proc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: L
     let mut result: Option<LRESULT> = None;
     match msg {
         win_messages::WM_DR_WINDOW_CREATED => {
-            println!("WM_DR_WINDOW_CREATED");
             let barrier = sync::Arc::new(sync::Barrier::new(2));
             send_queue.send(WindowCmd::Sync(WindowCommand::SurfaceReady, barrier.clone())).unwrap();
             barrier.wait();
-            println!("WM_DR_WINDOW_CREATED done");
         }
 
         WM_CLOSE => {
-            println!("WM_CLOSE");
             let barrier = sync::Arc::new(sync::Barrier::new(2));
             send_queue.send(WindowCmd::Sync(WindowCommand::SurfaceLost, barrier.clone())).unwrap();
             barrier.wait();
-            println!("WM_CLOSE done");
         }
 
         WM_DESTROY => {
-            println!("WM_DESTROY");
-            ffi!(PostMessageW(ptr::null_mut(), win_messages::WM_DR_WINDOW_DESTROYED, 0, 0));
+            send_queue.send(WindowCmd::Async(WindowCommand::Closed)).unwrap();
+            drop(send_queue);
+            ffi!(SetWindowLongPtrW(hwnd, 0, 0)); // send_queue dropped, also clear reference
+            ffi!(PostMessageW(ptr::null_mut(), win_messages::WM_DR_WINDOW_DESTROYED, 0, 0)); // notify engine
+            return ffi!(DefWindowProcW(hwnd, msg, wparam, lparam));
         }
 
         WM_SIZE => {
             let w = LOWORD(lparam as DWORD) as i32;
             let h = HIWORD(lparam as DWORD) as i32;
+            let client_size = Size { width: w, height: h };
 
-            let size = Size { width: w, height: h };
+            let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0 };
+            ffi!(GetWindowRect(hwnd, &mut rect));
+            let window_size = Size {
+                width: rect.right - rect.left,
+                height: rect.bottom - rect.top,
+            };
 
-            //let mut rect = RECT { left: 0, top: 0, right: 0, bottom: 0 };
-            //ffi!(GetWindowRect(win.hwnd, &mut rect));
-            //let size = Size {
-            //    width: rect.right - rect.left,
-            //    height: rect.bottom - rect.top,
-            //};
-
-            println!("resize: {:?}", size);
-            send_queue.send(WindowCmd::Async(WindowCommand::Resize(size))).unwrap();
+            send_queue.send(WindowCmd::Async(WindowCommand::Resize(window_size, client_size))).unwrap();
             result = Some(0);
         }
 
@@ -73,7 +70,6 @@ pub extern "system" fn wnd_proc(hwnd: HWND, msg: UINT, wparam: WPARAM, lparam: L
             let x = LOWORD(lparam as DWORD) as i32;
             let y = HIWORD(lparam as DWORD) as i32;
             let position = Position { x: x, y: y };
-            println!("move: {:?}", position);
             send_queue.send(WindowCmd::Async(WindowCommand::Move(position))).unwrap();
             result = Some(0);
         }
@@ -179,7 +175,7 @@ impl GLEngine {
             DispatchTimeout::Infinite => {
                 if ffi!(GetMessageW(&mut msg, ptr::null_mut(), 0, 0)) == 0 {
                     // Only happens if the message is `WM_QUIT`.
-                    //debug_assert_eq!(msg.message, WM_QUIT);
+                    debug_assert_eq!(msg.message, WM_QUIT);
                     return false;
                 }
             }

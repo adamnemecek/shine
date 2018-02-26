@@ -29,8 +29,8 @@ pub trait WindowHandler<E: Engine> {
     /// Return if window is closed
     fn is_closed(&self) -> bool;
 
-    /// Closes window and wait for completion
-    fn wait_close(&mut self);
+    /// Request to close the window
+    fn close(&mut self);
 
     /// Send a custom window command
     fn send_command(&self, cmd: WindowCommand);

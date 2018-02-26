@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate shine_render_gl as render;
+extern crate time;
 
 use std::env;
+use std::time::*;
 use render::*;
 
 #[derive(Copy, Clone, Debug)]
@@ -33,7 +35,7 @@ struct VxColorTex {
 
     void main()
     {
-        color = col_mod(uColor * vColor);
+        color = col_mod(uColor + vColor);
         txCoord = vTexCoord.xy;
         gl_Position = uTrsf * vec4(vPosition, 1.0);
     }"]
@@ -50,6 +52,7 @@ struct VxColorTex {
 struct ShSimple {}
 
 struct SimpleView {
+    id: u8,
     t: f32,
     vb1: lowlevel::GLVertexBuffer,
     vb2: lowlevel::GLVertexBuffer,
@@ -61,8 +64,9 @@ struct SimpleView {
 unsafe impl Send for SimpleView {}
 
 impl SimpleView {
-    fn new() -> SimpleView {
+    fn new(id: u8) -> SimpleView {
         SimpleView {
+            id: id,
             t: 0.0,
             vb1: lowlevel::GLVertexBuffer::new(),
             vb2: lowlevel::GLVertexBuffer::new(),
@@ -141,56 +145,61 @@ impl SimpleView {
 
     fn on_render(&mut self, win: &mut GLWindow) {
         use std::f32;
-        self.t += 0.05f32;
+        self.t += 0.005f32;
         if self.t > 2. * f32::consts::PI {
             self.t = 0f32;
         }
 
-        if win.start_render().is_ok() {
-            use render::lowlevel::*;
-            let ll = win.backend().ll_mut();
-
-            ll.init_view(Some(Viewport::Proportional(0.5, 0.5, 0.25, 0.25)),
-                         Some(Float32x4(0.0, 0.0, 0.5, 1.0)),
-                         Some(1.));
-
-            let st = self.t.sin();
-            let ct = self.t.cos();
-            let trsf = Float32x16::from(
-                [st, -ct, 0.0, 0.0,
-                    ct, st, 0.0, 0.0,
-                    0.0, 0.0, 1.0, 0.0,
-                    0.0, 0.0, 0.0, 1.0]);
-            let col = Float32x3::from([0.5, self.t / 6.28, 0.5]);
-
-            let vb1 = &mut self.vb1;
-            let vb2 = &mut self.vb2;
-            let ib = &mut self.ib;
-            let tx = &mut self.tx;
-            let sh = &mut self.sh;
-            if sh.bind(ll) {
-                if let Some(locations) = ll.program_binding.get_parameters() {
-                    let locations = &mut *locations.borrow_mut();
-
-                    locations[0].set_attribute(ll, &vb2, VxColorTex::COLOR);
-                    locations[1].set_attribute(ll, &vb2, VxColorTex::TEXCOORD);
-                    locations[2].set_attribute(ll, &vb1, VxPos::POSITION);
-
-                    locations[3].set_index(ll, &ib);
-
-                    locations[4].set_f32x3(ll, &col);
-                    locations[5].set_f32x16(ll, &trsf);
-                    locations[6].set_texture_2d(ll, &tx);
-                }
-
-                ll.draw(gl::TRIANGLES, 0, 6);
-            }
+        if win.is_ready_to_render() {
+            self.on_render_core(win);
+            win.swap_buffers().unwrap();
         }
-        win.end_render();
+    }
+
+    fn on_render_core(&mut self, win: &mut GLWindow) {
+        use render::lowlevel::*;
+        let ll = win.backend().ll_mut();
+
+        let id = self.id as f32;
+
+        ll.init_view(Some(Viewport::Proportional(0.5, 0.5, 0.25, 0.25)),
+                     Some(Float32x4(0.0, 0.0, id, 1.0)),
+                     Some(1.));
+
+        let st = self.t.sin();
+        let ct = self.t.cos();
+        let trsf = Float32x16::from(
+            [st, -ct, 0.0, 0.0,
+                ct, st, 0.0, 0.0,
+                0.0, 0.0, 1.0, 0.0,
+                0.0, 0.0, 0.0, 1.0]);
+        let col = Float32x3::from([id / 3., self.t / 6.28, 0.5]);
+
+        let vb1 = &mut self.vb1;
+        let vb2 = &mut self.vb2;
+        let ib = &mut self.ib;
+        let tx = &mut self.tx;
+        let sh = &mut self.sh;
+        if sh.bind(ll) {
+            if let Some(locations) = ll.program_binding.get_parameters() {
+                let locations = &mut *locations.borrow_mut();
+
+                locations[0].set_attribute(ll, &vb2, VxColorTex::COLOR);
+                locations[1].set_attribute(ll, &vb2, VxColorTex::TEXCOORD);
+                locations[2].set_attribute(ll, &vb1, VxPos::POSITION);
+
+                locations[3].set_index(ll, &ib);
+
+                locations[4].set_f32x3(ll, &col);
+                locations[5].set_f32x16(ll, &trsf);
+                locations[6].set_texture_2d(ll, &tx);
+            }
+
+            ll.draw(gl::TRIANGLES, 0, 6);
+        }
     }
 
     fn on_key(&mut self, win: &mut GLWindow, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
-        println!("on key: {:?},{}", virtual_key, is_down);
         match virtual_key {
             Some(VirtualKeyCode::Escape) if !is_down => { win.close(); }
             _ => {}
@@ -204,14 +213,14 @@ pub fn simple_lowlevel() {
 
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
 
-    render::PlatformWindowSettings::default()
+    let window = render::PlatformWindowSettings::default()
         .title("main")
         .size((1024, 1024))
         .fb_depth_bits(16, 8)
-        .fb_vsync(false)
+        .fb_vsync(true)
         .build(&engine,
                render::DispatchTimeout::Immediate,
-               SimpleView::new(),
+               SimpleView::new(0),
                |window, view, cmd| {
                    match cmd {
                        &WindowCommand::SurfaceReady => view.on_surface_ready(window),
@@ -224,7 +233,7 @@ pub fn simple_lowlevel() {
                    }
                }).expect("Could not initialize main window");
 
-    render::PlatformWindowSettings::default()
+    let mut sub_window1 = render::PlatformWindowSettings::default()
         .title("sub")
         .size((256, 256))
         .fb_depth_bits(16, 8)
@@ -232,7 +241,7 @@ pub fn simple_lowlevel() {
         //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine,
                render::DispatchTimeout::Immediate,
-               SimpleView::new(),
+               SimpleView::new(1),
                |window, view, cmd| {
                    match cmd {
                        &WindowCommand::SurfaceReady => view.on_surface_ready(window),
@@ -245,7 +254,63 @@ pub fn simple_lowlevel() {
                    }
                }).expect("Could not initialize sub window");
 
-    while engine.dispatch_event(render::DispatchTimeout::Infinite) {
-        //println!("main tick");
+    let mut sub_window2 = Some(render::PlatformWindowSettings::default()
+        .title("sub2")
+        .size((256, 256))
+        .fb_depth_bits(16, 8)
+        .fb_vsync(false)
+        //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
+        .build(&engine,
+               render::DispatchTimeout::Immediate,
+               SimpleView::new(2),
+               |window, view, cmd| {
+                   match cmd {
+                       &WindowCommand::SurfaceReady => view.on_surface_ready(window),
+                       &WindowCommand::SurfaceLost => view.on_surface_lost(window),
+                       &WindowCommand::SurfaceChanged => view.on_surface_changed(window),
+                       &WindowCommand::KeyboardUp(_scan_code, virtual_key) => view.on_key(window, virtual_key, false),
+                       &WindowCommand::KeyboardDown(_scan_code, virtual_key) => view.on_key(window, virtual_key, true),
+                       &WindowCommand::Tick => view.on_render(window),
+                       _ => {}
+                   }
+               }).expect("Could not initialize sub window"));
+
+
+    let timeout = Duration::from_millis(100);
+    let test_time = 5.;
+
+    let mut start = time::precise_time_s();
+    let mut test1 = false;
+    let mut test2 = false;
+    let mut test3 = false;
+    while engine.dispatch_event(render::DispatchTimeout::Time(timeout)) {
+        let now = time::precise_time_s();
+
+        if now - start > test_time && !test1 {
+            test1 = true;
+            start = now;
+            println!("test explicit close");
+            sub_window1.close();
+        }
+
+        if now - start > test_time && !test2 {
+            test2 = true;
+            start = now;
+            println!("test explicit drop");
+            if let Some(win) = sub_window2.take() {
+                drop(win);
+            }
+        }
+
+        if now - start > test_time && !test3 {
+            test3 = true;
+            start = now;
+            println!("press esc emulation");
+            window.send_command(WindowCommand::KeyboardUp(0, Some(VirtualKeyCode::Escape)));
+        }
     }
+
+    drop(window);
+    drop(sub_window1);
+    drop(sub_window2);
 }
