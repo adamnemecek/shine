@@ -207,7 +207,7 @@ impl GLWindow {
             &WindowCommand::SurfaceLost => {
                 self.state = WindowState::Closed;
                 self.context.deactivate().unwrap();
-            },
+            }
 
             _ => {}
         }

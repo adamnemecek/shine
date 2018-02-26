@@ -3,7 +3,7 @@ use std::sync::Barrier;
 use framework::*;
 use types::*;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum WindowCommand {
     SurfaceReady,
     SurfaceLost,

@@ -146,10 +146,8 @@ impl SimpleView {
             self.t = 0f32;
         }
 
-        use render::lowlevel::*;
-
-        win.start_render();
-       /* {
+        if win.start_render().is_ok() {
+            use render::lowlevel::*;
             let ll = win.backend().ll_mut();
 
             ll.init_view(Some(Viewport::Proportional(0.5, 0.5, 0.25, 0.25)),
@@ -187,7 +185,7 @@ impl SimpleView {
 
                 ll.draw(gl::TRIANGLES, 0, 6);
             }
-        }*/
+        }
         win.end_render();
     }
 
@@ -226,7 +224,7 @@ pub fn simple_lowlevel() {
                    }
                }).expect("Could not initialize main window");
 
-    /*render::PlatformWindowSettings::default()
+    render::PlatformWindowSettings::default()
         .title("sub")
         .size((256, 256))
         .fb_depth_bits(16, 8)
@@ -245,7 +243,7 @@ pub fn simple_lowlevel() {
                        WindowCommand::Tick => view.on_render(window),
                        _ => {}
                    }
-               }).expect("Could not initialize sub window");*/
+               }).expect("Could not initialize sub window");
 
     while engine.dispatch_event(render::DispatchTimeout::Immediate) {
         /**/

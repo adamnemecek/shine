@@ -152,6 +152,7 @@ impl Context {
         try!(context.activate());
         try!(context.load_gl_functions());
         try!(context.set_context_attributes(&settings.fb_config, &settings.platform_extra));
+        try!(context.deactivate()); // will activate again on the render thread
 
         //println!("{:?}", context.get_pixel_format_config());
 
