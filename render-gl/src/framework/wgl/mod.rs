@@ -152,6 +152,20 @@ impl Context {
         try!(context.activate());
         try!(context.load_gl_functions());
         try!(context.set_context_attributes(&settings.fb_config, &settings.platform_extra));
+
+        let vendor = {
+            let data = ffi!(gl::GetString(gl::VENDOR));
+            let data = unsafe { CStr::from_ptr(data as *const i8) }.to_bytes().to_vec();
+            String::from_utf8(data).unwrap()
+        };
+        let renderer = {
+            let data = ffi!(gl::GetString(gl::RENDERER));
+            let data = unsafe { CStr::from_ptr(data as *const i8) }.to_bytes().to_vec();
+            String::from_utf8(data).unwrap()
+        };
+        println!("vendor: {}", vendor);
+        println!("renderer: {}", renderer);
+
         try!(context.deactivate()); // will activate again on the render thread
 
         //println!("{:?}", context.get_pixel_format_config());

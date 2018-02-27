@@ -213,13 +213,14 @@ pub fn simple_lowlevel() {
 
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
 
+    let render_timeout = Duration::from_millis(20);
     let window = render::PlatformWindowSettings::default()
         .title("main")
         .size((1024, 1024))
         .fb_depth_bits(16, 8)
         .fb_vsync(true)
         .build(&engine,
-               render::DispatchTimeout::Immediate,
+               render::DispatchTimeout::Time(render_timeout),
                SimpleView::new(0),
                |window, view, cmd| {
                    match cmd {
@@ -240,7 +241,7 @@ pub fn simple_lowlevel() {
         .fb_vsync(false)
         //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine,
-               render::DispatchTimeout::Immediate,
+               render::DispatchTimeout::Time(render_timeout),
                SimpleView::new(1),
                |window, view, cmd| {
                    match cmd {
@@ -261,7 +262,7 @@ pub fn simple_lowlevel() {
         .fb_vsync(false)
         //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine,
-               render::DispatchTimeout::Immediate,
+               render::DispatchTimeout::Time(render_timeout),
                SimpleView::new(2),
                |window, view, cmd| {
                    match cmd {
