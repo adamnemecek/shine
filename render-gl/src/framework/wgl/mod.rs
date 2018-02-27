@@ -149,26 +149,11 @@ impl Context {
         // create context
         context.hglrc = try!(context.create_context(context.pixel_format_id, &settings.fb_config, &settings.platform_extra));
 
-        try!(context.activate());
-        try!(context.load_gl_functions());
-        try!(context.set_context_attributes(&settings.fb_config, &settings.platform_extra));
-
-        let vendor = {
-            let data = ffi!(gl::GetString(gl::VENDOR));
-            let data = unsafe { CStr::from_ptr(data as *const i8) }.to_bytes().to_vec();
-            String::from_utf8(data).unwrap()
-        };
-        let renderer = {
-            let data = ffi!(gl::GetString(gl::RENDERER));
-            let data = unsafe { CStr::from_ptr(data as *const i8) }.to_bytes().to_vec();
-            String::from_utf8(data).unwrap()
-        };
-        println!("vendor: {}", vendor);
-        println!("renderer: {}", renderer);
-
-        try!(context.deactivate()); // will activate again on the render thread
-
-        //println!("{:?}", context.get_pixel_format_config());
+        context.activate()?;
+        context.load_gl_functions()?;
+        context.set_context_attributes(&settings.fb_config, &settings.platform_extra)?;
+        context.dump_info();
+        context.deactivate()?; // will activate again on the render thread
 
         Ok(context)
     }
@@ -279,7 +264,7 @@ impl Context {
                 //    try!(self.get_pixel_format_attrib(n, wgl_ext::COLORSPACE_EXT)) == wgl_ext::COLORSPACE_SRGB_EXT
             } else { false },
 
-            // values not considered or not part of pixel format
+            // values not part of pixel format
             debug: false,
             vsync: false,
         })
@@ -328,7 +313,7 @@ impl Context {
             double_buffer: (pfd.dwFlags & PFD_DOUBLEBUFFER) != 0,
             srgb: false,
 
-            // values not considered or not part of pixel format
+            // values not part of pixel format
             debug: false,
             vsync: false,
         })
@@ -636,12 +621,20 @@ impl Context {
 
     fn set_context_attributes(&self, fb_config: &FBConfig, _extra_config: &GLExtraWindowSettings) -> Result<(), Error> {
         if self.wgl_ext.SwapIntervalEXT.is_loaded() {
-            if ffi!(self.wgl_ext.SwapIntervalEXT(if fb_config.vsync { 1 } else { 0 })) == 0 {
+            let interval = if fb_config.vsync { 1 } else { 0 };
+            println!("interval: {} {}", fb_config.vsync, interval);
+            if ffi!(self.wgl_ext.SwapIntervalEXT(interval)) == 0 {
                 return Err(Error::WindowCreationError(format!("WGL: wglSwapIntervalEXT failed")));
             }
         }
 
         Ok(())
+    }
+
+    pub fn dump_info(&self) {
+        println!("vendor: {}", gl_get_string(gl::VENDOR));
+        println!("renderer: {}", gl_get_string(gl::RENDERER));
+        println!("config: {:?}", self.get_pixel_format_config().unwrap());
     }
 
     fn release_context(&mut self) {

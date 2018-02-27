@@ -18,6 +18,9 @@ impl Context {
         Err(Error::WindowCreationError(format!("EGL context is not supported yet")))
     }
 
+    /// Dumps general context information.
+    pub fn dump_info(&self) {}
+
     /// Makes this context active.
     #[inline]
     pub fn activate(&self) -> Result<(), Error> {

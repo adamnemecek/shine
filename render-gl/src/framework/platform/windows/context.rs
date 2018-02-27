@@ -7,7 +7,7 @@ use framework::*;
 /// Enum defining the context for the render backend
 pub enum GLContext {
     EGLContext(egl::Context),
-    WGLContext(wgl::Context)
+    WGLContext(wgl::Context),
 }
 
 
@@ -32,6 +32,15 @@ impl GLContext {
         }
     }
 
+    /// Dumps general context information.
+    pub fn dump_info(&self) {
+        match self {
+            &GLContext::EGLContext(ref ctx) => { ctx.dump_info() }
+            &GLContext::WGLContext(ref ctx) => { ctx.dump_info() }
+        }
+    }
+
+    /// Makes this context active.
     pub fn activate(&self) -> Result<(), Error> {
         match self {
             &GLContext::EGLContext(ref ctx) => { ctx.activate() }
@@ -39,6 +48,7 @@ impl GLContext {
         }
     }
 
+    /// Makes this context inactive.
     pub fn deactivate(&self) -> Result<(), Error> {
         match self {
             &GLContext::EGLContext(ref ctx) => { ctx.deactivate() }
@@ -46,6 +56,7 @@ impl GLContext {
         }
     }
 
+    /// Swaps the back and front buffers
     pub fn swap_buffers(&self) -> Result<(), Error> {
         match self {
             &GLContext::EGLContext(ref ctx) => { ctx.swap_buffers() }

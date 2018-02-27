@@ -95,7 +95,6 @@ pub struct GLWindow {
     state: WindowState,
     size: Size,
     position: Position,
-    context: GLContext,
     backend: GLBackend,
 }
 
@@ -140,8 +139,7 @@ impl GLWindow {
             state: WindowState::WaitingOpen,
             size: settings.size,
             position: Position { x: 0, y: 0 },
-            context: context,
-            backend: GLBackend::new(),
+            backend: GLBackend::new(context),
         };
 
         //connect the OS and rust window
@@ -172,12 +170,6 @@ impl GLWindow {
             && (screen_size.width > 0 && screen_size.height > 0)
     }
 
-    pub fn swap_buffers(&mut self) -> Result<(), Error> {
-        self.backend.flush();
-        try!(self.context.swap_buffers());
-        Ok(())
-    }
-
     pub fn get_hwnd(&self) -> HWND {
         self.hwnd
     }
@@ -187,7 +179,7 @@ impl GLWindow {
         match cmd {
             &WindowCommand::SurfaceReady => {
                 self.state = WindowState::Open;
-                self.context.activate().unwrap();
+                self.backend.context_mut().activate().unwrap();
             }
 
             &WindowCommand::Resize(ref window_size, ref client_size) => {
@@ -212,7 +204,7 @@ impl GLWindow {
             &WindowCommand::SurfaceLost => {
                 self.backend.flush();
                 self.state = WindowState::WaitingClose;
-                self.context.deactivate().unwrap();
+                self.backend.context_mut().deactivate().unwrap();
             }
 
             &WindowCommand::Closed => {
@@ -242,8 +234,20 @@ impl Window<PlatformEngine> for GLWindow {
         self.backend.get_screen_size()
     }
 
-    fn backend(&mut self) -> &mut GLBackend {
-        &mut self.backend
+    fn start_update<'a>(&'a mut self) -> Option<RefUpdate<'a, PlatformEngine>> {
+        if self.is_closed() {
+            Some(RefUpdate::new(&mut self.backend))
+        } else {
+            None
+        }
+    }
+
+    fn start_render<'a>(&'a mut self) -> Option<RefRender<'a, PlatformEngine>> {
+        if self.is_ready_to_render() {
+            Some(RefRender::new(&mut self.backend))
+        } else {
+            None
+        }
     }
 }
 

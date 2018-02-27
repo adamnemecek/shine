@@ -1,9 +1,12 @@
 #![deny(missing_docs)]
 #![deny(missing_copy_implementations)]
 
+use std::ops::{Deref, DerefMut};
 use types::*;
 use error::*;
 use framework::*;
+use resources::*;
+
 
 /// Trait for window abstraction.
 pub trait Window<E: Engine>: Send {
@@ -19,8 +22,11 @@ pub trait Window<E: Engine>: Send {
     /// Returns the size of the render area (size of the screen without decoration).
     fn get_draw_size(&self) -> Size;
 
-    /// Returns the backend (render context).
-    fn backend(&mut self) -> &mut E::Backend;
+    /// Returns a scope for general hardware resource update.
+    fn start_update<'a>(&'a mut self) -> Option<RefUpdate<'a, E>>;
+
+    /// Returns a scope for rendering
+    fn start_render<'a>(&'a mut self) -> Option<RefRender<'a, E>>;
 }
 
 
@@ -55,3 +61,75 @@ pub trait WindowBuilder<E: Engine> {
             Ctx: 'static + Send;
 }
 
+
+/// Guard for hardware resource update.
+/// See Window::start_update.
+pub struct RefUpdate<'a, E: Engine> {
+    backend: &'a mut E::Backend,
+}
+
+impl<'a, E: Engine> RefUpdate<'a, E> {
+    /// Constructs a RefUpdate.
+    pub fn new<'b>(backend: &'b mut E::Backend) -> RefUpdate<'b, E> {
+        RefUpdate {
+            backend: backend
+        }
+    }
+}
+
+impl<'a, E: Engine> Deref for RefUpdate<'a, E> {
+    type Target = E::Backend;
+
+    fn deref(&self) -> &E::Backend {
+        self.backend
+    }
+}
+
+impl<'a, E: Engine> DerefMut for RefUpdate<'a, E> {
+    fn deref_mut(&mut self) -> &mut E::Backend {
+        self.backend
+    }
+}
+
+impl<'a, E: Engine> Drop for RefUpdate<'a, E> {
+    fn drop(&mut self) {
+        self.backend.flush();
+    }
+}
+
+
+/// Guard for rendering.
+/// See Window::start_render.
+pub struct RefRender<'a, E: Engine> {
+    backend: &'a mut E::Backend,
+}
+
+impl<'a, E: Engine> RefRender<'a, E> {
+    /// Constructs a RefRender.
+    pub fn new<'b>(backend: &'b mut E::Backend) -> RefRender<'b, E> {
+        RefRender {
+            backend: backend
+        }
+    }
+}
+
+impl<'a, E: Engine> Deref for RefRender<'a, E> {
+    type Target = E::Backend;
+
+    fn deref(&self) -> &E::Backend {
+        self.backend
+    }
+}
+
+impl<'a, E: Engine> DerefMut for RefRender<'a, E> {
+    fn deref_mut(&mut self) -> &mut E::Backend {
+        self.backend
+    }
+}
+
+impl<'a, E: Engine> Drop for RefRender<'a, E> {
+    fn drop(&mut self) {
+        self.backend.flush();
+        self.backend.swap_buffers();
+    }
+}

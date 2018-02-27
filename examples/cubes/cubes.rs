@@ -50,54 +50,55 @@ impl CubeView {
 impl CubeView {
     fn on_surface_ready(&mut self, win: &mut PlatformWindow) {
         println!("surface ready");
-        let r = win.backend();
-        let mut queue = r.get_queue();
+        if let Some(backend) = win.start_update() {
+            let mut queue = backend.get_queue();
 
-        let pos = [
-            VxPos { position: (-1.0, 1.0, -1.0).into(), color: (0, 0, 0, 255).into() },
-            VxPos { position: (1.0, 1.0, -1.0).into(), color: (0, 0, 255, 255).into() },
-            VxPos { position: (-1.0, -1.0, -1.0).into(), color: (0, 255, 0, 255).into() },
-            VxPos { position: (1.0, -1.0, -1.0).into(), color: (0, 255, 255, 255).into() },
-            VxPos { position: (-1.0, 1.0, 1.0).into(), color: (255, 0, 0, 255).into() },
-            VxPos { position: (1.0, 1.0, 1.0).into(), color: (255, 0, 255, 255).into() },
-            VxPos { position: (-1.0, -1.0, 1.0).into(), color: (255, 255, 0, 255).into() },
-            VxPos { position: (1.0, -1.0, 1.0).into(), color: (255, 255, 255, 255).into() },
-        ];
-        self.vb.create_and_set(&mut queue, &pos);
+            let pos = [
+                VxPos { position: (-1.0, 1.0, -1.0).into(), color: (0, 0, 0, 255).into() },
+                VxPos { position: (1.0, 1.0, -1.0).into(), color: (0, 0, 255, 255).into() },
+                VxPos { position: (-1.0, -1.0, -1.0).into(), color: (0, 255, 0, 255).into() },
+                VxPos { position: (1.0, -1.0, -1.0).into(), color: (0, 255, 255, 255).into() },
+                VxPos { position: (-1.0, 1.0, 1.0).into(), color: (255, 0, 0, 255).into() },
+                VxPos { position: (1.0, 1.0, 1.0).into(), color: (255, 0, 255, 255).into() },
+                VxPos { position: (-1.0, -1.0, 1.0).into(), color: (255, 255, 0, 255).into() },
+                VxPos { position: (1.0, -1.0, 1.0).into(), color: (255, 255, 255, 255).into() },
+            ];
+            self.vb.create_and_set(&mut queue, &pos);
 
-        let indices_tri_list = [
-            0u8, 1, 2, // 0
-            1, 3, 2,
-            4, 6, 5, // 2
-            5, 6, 7,
-            0, 2, 4, // 4
-            4, 2, 6,
-            1, 5, 3, // 6
-            5, 7, 3,
-            0, 4, 1, // 8
-            4, 5, 1,
-            2, 3, 6, // 10
-            6, 3, 7,
-        ];
-        self.ib1.create_and_set(&mut queue, &indices_tri_list);
+            let indices_tri_list = [
+                0u8, 1, 2, // 0
+                1, 3, 2,
+                4, 6, 5, // 2
+                5, 6, 7,
+                0, 2, 4, // 4
+                4, 2, 6,
+                1, 5, 3, // 6
+                5, 7, 3,
+                0, 4, 1, // 8
+                4, 5, 1,
+                2, 3, 6, // 10
+                6, 3, 7,
+            ];
+            self.ib1.create_and_set(&mut queue, &indices_tri_list);
 
-        let indices_tri_strip = [
-            0u8, 1, 2,
-            3,
-            7,
-            1,
-            5,
-            0,
-            4,
-            2,
-            6,
-            7,
-            4,
-            5,
-        ];
-        self.ib2.create_and_set(&mut queue, &indices_tri_strip);
+            let indices_tri_strip = [
+                0u8, 1, 2,
+                3,
+                7,
+                1,
+                5,
+                0,
+                4,
+                2,
+                6,
+                7,
+                4,
+                5,
+            ];
+            self.ib2.create_and_set(&mut queue, &indices_tri_strip);
 
-        self.sh.create_and_compile(&mut queue);
+            self.sh.create_and_compile(&mut queue);
+        }
     }
 
     fn on_surface_lost(&mut self, _win: &mut PlatformWindow) {
@@ -123,9 +124,8 @@ impl CubeView {
         self.count += 1;
         self.time += 0.01;
 
-        if win.is_ready_to_render() {
-            self.on_render(win);
-            win.swap_buffers().unwrap();
+        if let Some(backend) = win.start_render() {
+            self.on_render(backend);
         }
 
         {
@@ -140,21 +140,20 @@ impl CubeView {
         }
     }
 
-    fn on_render(&mut self, win: &mut PlatformWindow) {
-        let r = win.backend();
-        r.init_view(Some(Viewport::FullScreen),
-                    Some(Float32x4(0., 0.2, 0., 1.)),
-                    Some(1.));
-        let aspect = r.get_view_aspect();
+    fn on_render(&mut self, backend: RefRender<PlatformEngine>) {
+        backend.init_view(Viewport::FullScreen,
+                          Some(Float32x4(0., 0.2, 0., 1.)),
+                          Some(1.));
+        let aspect = backend.get_pixel_aspect();
 
         let eye = Point3::new(0.0, 0.0, -35.0);
         let target = Point3::new(0.0, 0.0, 0.0);
         let view = Isometry3::look_at_rh(&eye, &target, &Vector3::y());
         let proj = Perspective3::new(aspect, (60f32).to_radians(), 30., 60.).unwrap();
 
-        (0..11).into_par_iter()
+        (0..11)//.into_par_iter()
             .for_each(|yy| {
-                let mut queue = r.get_queue();
+                let mut queue = backend.get_queue();
 
                 let y = yy as f32;
                 for xx in 0..11 {
@@ -207,6 +206,8 @@ pub fn main() {
         .title("main")
         .size((512, 512))
         .fb_vsync(false)
+        //.fb_debug(true)
+        //.fb_sub_samples(16)
         .fb_depth_bits(24, 8)
         .build(&engine,
                render::DispatchTimeout::Immediate,

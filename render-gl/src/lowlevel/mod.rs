@@ -1,10 +1,10 @@
 mod utils;
-pub mod vertexbinding;
-pub mod indexbinding;
-pub mod texturebinding;
-pub mod programparameter;
-pub mod programbinding;
-pub mod states;
+mod vertexbinding;
+mod indexbinding;
+mod texturebinding;
+mod programparameter;
+mod programbinding;
+mod states;
 
 mod vertexbuffer;
 mod indexbuffer;

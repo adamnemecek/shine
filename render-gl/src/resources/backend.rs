@@ -1,6 +1,7 @@
 use core::*;
 use lowlevel::*;
 use resources::*;
+use framework::*;
 
 /// Guarded backend connection to collect command messages
 pub struct GLCommandQueue {
@@ -46,15 +47,15 @@ pub struct GLCommandProcessContext/*<'a>*/ {
 
 /// Clear command to set up view for rendering
 pub struct ClearCommand {
+    viewport: Viewport,
     color: Option<Float32x4>,
     depth: Option<f32>,
     //stencil: Option<u32>
-    viewport: Option<Viewport>,
 }
 
 impl ClearCommand {
     pub fn process(&mut self, context: &mut GLCommandProcessContext) {
-        context.ll.init_view(self.viewport, self.color, self.depth);
+        context.ll.init_view(Some(self.viewport), self.color, self.depth);
     }
 }
 
@@ -68,6 +69,7 @@ impl From<ClearCommand> for Command {
 
 /// Render backend implementation using opengl
 pub struct GLBackend {
+    context: GLContext,
     ll: LowLevel,
     command_store: CommandStore,
     index_store: IndexBufferStore,
@@ -79,8 +81,9 @@ pub struct GLBackend {
 unsafe impl Sync for LowLevel {}
 
 impl GLBackend {
-    pub fn new() -> GLBackend {
+    pub fn new(context: GLContext) -> GLBackend {
         GLBackend {
+            context: context,
             ll: LowLevel::new(),
             command_store: CommandStore::new(),
             index_store: IndexBufferStore::new(),
@@ -98,14 +101,8 @@ impl GLBackend {
         self.ll.set_screen_size(size);
     }
 
-    pub fn start_render(&mut self) -> Result<(), Error> {
-        self.ll.start_render();
-        Ok(())
-    }
-
-    pub fn end_render(&mut self) -> Result<(), Error> {
-        self.ll.end_render();
-        Ok(())
+    pub fn context_mut(&mut self) -> &mut GLContext {
+        &mut self.context
     }
 
     pub fn ll_mut(&mut self) -> &mut LowLevel {
@@ -117,6 +114,15 @@ impl Backend for GLBackend {
     type CommandQueue/*<'a>*/ = GLCommandQueue/*<'a>*/;
     type CommandContext/*<'a>*/ = GLCommandProcessContext/*<'a>*/;
     type VertexBufferLayout = GLVertexBufferLayout;
+
+    fn get_screen_size(&self) -> Size {
+        self.get_screen_size()
+    }
+
+    fn get_pixel_aspect(&self) -> f32 {
+        let size = self.get_screen_size();
+        (size.width as f32) / (size.height as f32)
+    }
 
     fn get_queue<'a>(&'a self) -> GLCommandQueue/*<'a>*/ {
         /*generic_associated_types workaround*/ unsafe {
@@ -134,6 +140,7 @@ impl Backend for GLBackend {
     }
 
     fn flush(&mut self) {
+        println!("flush");
         let mut consume = self.command_store.consume(|&k| (k.0 as u64) << 32 + k.1 as u64);
         let mut context = {
             /*generic_associated_types workaround*/ unsafe {
@@ -155,9 +162,12 @@ impl Backend for GLBackend {
         context.texture_2d_store.finalize_requests();
         context.shader_program_store.finalize_requests();
 
+        println!("render");
+        self.ll.start_render();
         for cmd in consume.drain() {
             cmd.process(&mut context);
         }
+        self.ll.end_render();
 
         // release unreferenced resources
         let ref mut ll = self.ll;
@@ -179,7 +189,11 @@ impl Backend for GLBackend {
         });
     }
 
-    fn init_view(&self, viewport: Option<Viewport>, color: Option<Float32x4>, depth: Option<f32>)
+    fn swap_buffers(&mut self) {
+        self.context.swap_buffers().unwrap();
+    }
+
+    fn init_view(&self, viewport: Viewport, color: Option<Float32x4>, depth: Option<f32>)
     {
         self.get_queue().add_command(0,
                                      ClearCommand {
@@ -187,15 +201,6 @@ impl Backend for GLBackend {
                                          depth: depth,
                                          viewport: viewport,
                                      });
-    }
-
-    fn get_view_size(&self) -> Size {
-        self.get_screen_size()
-    }
-
-    fn get_view_aspect(&self) -> f32 {
-        let size = self.get_screen_size();
-        (size.width as f32) / (size.height as f32)
     }
 }
 

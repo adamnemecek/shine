@@ -28,7 +28,7 @@ impl HelloView {
     }
 
     fn on_render(&mut self, win: &mut PlatformWindow) {
-        let r = win.backend();
+        let r = win.get_backend();
 
         (0..300).into_par_iter()
             .for_each(|tid| {

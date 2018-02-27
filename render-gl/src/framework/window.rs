@@ -61,7 +61,7 @@ impl WindowBuilder<PlatformEngine> for WindowSettings<GLExtraWindowSettings> {
                     let mut ctx = ctx;
                     let mut win = win;
                     let working = working;
-                    loop {
+                    while !win.is_closed() {
                         match rx.recv() {
                             Ok(WindowCmd::Sync(data, barrier)) => {
                                 win.pre_hook(&data);
@@ -122,7 +122,7 @@ impl WindowBuilder<PlatformEngine> for WindowSettings<GLExtraWindowSettings> {
                     let mut ctx = ctx;
                     let mut win = win;
                     let working = working;
-                    loop {
+                    while !win.is_closed() {
                         match rx.recv_timeout(duration) {
                             Ok(WindowCmd::Sync(data, barrier)) => {
                                 win.pre_hook(&data);

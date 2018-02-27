@@ -72,33 +72,34 @@ impl SimpleView {
 
     fn on_surface_ready(&mut self, win: &mut PlatformWindow) {
         println!("surface ready");
-        let backend = win.backend();
-        let mut queue = backend.get_queue();
+        if let Some(backend) = win.start_update() {
+            let mut queue = backend.get_queue();
 
-        let pos = [
-            VxPos { position: (1., 0., 0.).into() },
-            VxPos { position: (1., 1., 0.).into() },
-            VxPos { position: (0., 1., 0.).into() },
-            VxPos { position: (0., 0., 0.).into() },
-        ];
-        self.vb1.create_and_set(&mut queue, &pos);
+            let pos = [
+                VxPos { position: (1., 0., 0.).into() },
+                VxPos { position: (1., 1., 0.).into() },
+                VxPos { position: (0., 1., 0.).into() },
+                VxPos { position: (0., 0., 0.).into() },
+            ];
+            self.vb1.create_and_set(&mut queue, &pos);
 
-        let color_tex = [
-            VxColorTex { color: (1., 0., 0.).into(), tex_coord: (1., 0.).into() },
-            VxColorTex { color: (1., 1., 0.).into(), tex_coord: (1., 1.).into() },
-            VxColorTex { color: (0., 1., 0.).into(), tex_coord: (0., 1.).into() },
-            VxColorTex { color: (0., 0., 0.).into(), tex_coord: (0., 0.).into() },
-        ];
-        self.vb2.create_and_set(&mut queue, &color_tex);
+            let color_tex = [
+                VxColorTex { color: (1., 0., 0.).into(), tex_coord: (1., 0.).into() },
+                VxColorTex { color: (1., 1., 0.).into(), tex_coord: (1., 1.).into() },
+                VxColorTex { color: (0., 1., 0.).into(), tex_coord: (0., 1.).into() },
+                VxColorTex { color: (0., 0., 0.).into(), tex_coord: (0., 0.).into() },
+            ];
+            self.vb2.create_and_set(&mut queue, &color_tex);
 
-        let indices = [0u8, 1, 2, 0, 2, 3];
-        self.ib.create_and_set(&mut queue, &indices);
+            let indices = [0u8, 1, 2, 0, 2, 3];
+            self.ib.create_and_set(&mut queue, &indices);
 
-        let img = include_bytes!("img.jpg");
-        let img = image::load_from_memory(img).unwrap();
-        self.tx.create_and_set(&mut queue, &img);
+            let img = include_bytes!("img.jpg");
+            let img = image::load_from_memory(img).unwrap();
+            self.tx.create_and_set(&mut queue, &img);
 
-        self.sh.create_and_compile(&mut queue);
+            self.sh.create_and_compile(&mut queue);
+        }
     }
 
     fn on_surface_lost(&mut self, _win: &mut PlatformWindow) {
@@ -123,17 +124,15 @@ impl SimpleView {
             self.t = 0f32;
         }
 
-        if win.is_ready_to_render() {
-            self.on_render(win);
-            win.swap_buffers().unwrap();
+        if let Some(backend) = win.start_render() {
+            self.on_render(backend);
         }
     }
 
-    fn on_render(&mut self, win: &mut PlatformWindow) {
-        let r = win.backend();
-        r.init_view(Some(Viewport::Proportional(0.5, 0.5, 0.25, 0.25)),
-                    Some(Float32x4(0., 0., 0., 1.)),
-                    Some(1.));
+    fn on_render(&mut self, backend: RefRender<PlatformEngine>) {
+        backend.init_view(Viewport::Proportional(0.5, 0.5, 0.25, 0.25),
+                          Some(Float32x4(0., 0., 0., 1.)),
+                          Some(1.));
 
         let st = self.t.sin();
         let ct = self.t.cos();
@@ -151,7 +150,7 @@ impl SimpleView {
             depth: DepthFunction::Disable,
         };
 
-        let mut queue = r.get_queue();
+        let mut queue = backend.get_queue();
         self.sh.draw(&mut queue, params, Primitive::Triangles, 0, 6);
     }
 

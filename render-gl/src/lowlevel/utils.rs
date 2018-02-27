@@ -1,6 +1,5 @@
-#![allow(dead_code)]
-
 use std::mem;
+use std::ffi::CStr;
 use core::*;
 use lowlevel::*;
 use libconfig::*;
@@ -27,6 +26,14 @@ pub fn gl_check_error() {
     }
 }
 
+/// Gets a string aattribute from opengl
+pub fn gl_get_string(id: GLenum) -> String {
+    gl_check_error();
+    let data = ffi!(gl::GetString(id));
+    gl_check_error();
+    let data = unsafe { CStr::from_ptr(data as *const i8) }.to_bytes().to_vec();
+    String::from_utf8(data).unwrap()
+}
 
 /// Returns the size (in bytes) of a gl type identified by the type-enum.
 pub fn gl_get_type_size(gl_type: GLenum) -> usize {

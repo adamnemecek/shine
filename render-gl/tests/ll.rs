@@ -79,61 +79,65 @@ impl SimpleView {
     fn on_surface_ready(&mut self, win: &mut GLWindow) {
         println!("surface ready");
         use lowlevel::*;
-        let ll = win.backend().ll_mut();
+        if let Some(mut backend) = win.start_update() {
+            let ll = backend.ll_mut();
 
-        {
-            let pos = [
-                VxPos { position: (1., 0., 0.).into() },
-                VxPos { position: (1., 1., 0.).into() },
-                VxPos { position: (0., 1., 0.).into() },
-                VxPos { position: (0., 0., 0.).into() },
-            ];
+            {
+                let pos = [
+                    VxPos { position: (1., 0., 0.).into() },
+                    VxPos { position: (1., 1., 0.).into() },
+                    VxPos { position: (0., 1., 0.).into() },
+                    VxPos { position: (0., 0., 0.).into() },
+                ];
 
-            let VertexData::Transient(slice) = pos.to_data();
-            self.vb1.upload_data(ll, VxPos::get_attribute_layout(), slice);
-        }
+                let VertexData::Transient(slice) = pos.to_data();
+                self.vb1.upload_data(ll, VxPos::get_attribute_layout(), slice);
+            }
 
-        {
-            let color_tex = [
-                VxColorTex { color: (1., 0., 0.).into(), tex_coord: (1., 0.).into() },
-                VxColorTex { color: (1., 1., 0.).into(), tex_coord: (1., 1.).into() },
-                VxColorTex { color: (0., 1., 0.).into(), tex_coord: (0., 1.).into() },
-                VxColorTex { color: (0., 0., 0.).into(), tex_coord: (0., 0.).into() }
-            ];
+            {
+                let color_tex = [
+                    VxColorTex { color: (1., 0., 0.).into(), tex_coord: (1., 0.).into() },
+                    VxColorTex { color: (1., 1., 0.).into(), tex_coord: (1., 1.).into() },
+                    VxColorTex { color: (0., 1., 0.).into(), tex_coord: (0., 1.).into() },
+                    VxColorTex { color: (0., 0., 0.).into(), tex_coord: (0., 0.).into() }
+                ];
 
-            let VertexData::Transient(slice) = color_tex.to_data();
-            self.vb2.upload_data(ll, VxColorTex::get_attribute_layout(), slice);
-        }
+                let VertexData::Transient(slice) = color_tex.to_data();
+                self.vb2.upload_data(ll, VxColorTex::get_attribute_layout(), slice);
+            }
 
-        {
-            let indices = [0u8, 1, 2, 0, 2, 3];
+            {
+                let indices = [0u8, 1, 2, 0, 2, 3];
 
-            let IndexData::Transient(slice) = indices.to_data();
-            self.ib.upload_data(ll, IndexBinding::glenum_from_index_type(<u8 as IndexType>::get_layout()), slice);
-        }
+                let IndexData::Transient(slice) = indices.to_data();
+                self.ib.upload_data(ll, IndexBinding::glenum_from_index_type(<u8 as IndexType>::get_layout()), slice);
+            }
 
-        {
-            let img = include_bytes!("img.raw");
-            let width = 1024;
-            let height = 768;
-            let format = PixelFormat::Rgb8;
-            self.tx.upload_data(ll, gl::TEXTURE_2D, width, height, TextureBinding::glenum_from_pixel_format(format), img);
-        }
+            {
+                let img = include_bytes!("img.raw");
+                let width = 1024;
+                let height = 768;
+                let format = PixelFormat::Rgb8;
+                self.tx.upload_data(ll, gl::TEXTURE_2D, width, height, TextureBinding::glenum_from_pixel_format(format), img);
+            }
 
-        {
-            self.sh.create_program(ll, ShSimple::source_iter());
-            self.sh.parse_parameters(ll, ShSimpleParameters::get_index_by_name);
+            {
+                self.sh.create_program(ll, ShSimple::source_iter());
+                self.sh.parse_parameters(ll, ShSimpleParameters::get_index_by_name);
+            }
         }
     }
 
     fn on_surface_lost(&mut self, win: &mut GLWindow) {
         println!("surface lost");
-        let ll = win.backend().ll_mut();
-        self.vb1.release(ll);
-        self.vb2.release(ll);
-        self.ib.release(ll);
-        self.tx.release(ll);
-        self.sh.release(ll);
+        if let Some(mut backend) = win.start_update() {
+            let ll = backend.ll_mut();
+            self.vb1.release(ll);
+            self.vb2.release(ll);
+            self.ib.release(ll);
+            self.tx.release(ll);
+            self.sh.release(ll);
+        }
     }
 
     fn on_surface_changed(&mut self, win: &mut GLWindow) {
@@ -150,15 +154,14 @@ impl SimpleView {
             self.t = 0f32;
         }
 
-        if win.is_ready_to_render() {
-            self.on_render(win);
-            win.swap_buffers().unwrap();
+        if let Some(backend) = win.start_render() {
+            self.on_render(backend);
         }
     }
 
-    fn on_render(&mut self, win: &mut GLWindow) {
+    fn on_render(&mut self, mut backend: RefRender<PlatformEngine>) {
         use render::lowlevel::*;
-        let ll = win.backend().ll_mut();
+        let ll = backend.ll_mut();
 
         let id = self.id as f32;
 
@@ -219,6 +222,7 @@ pub fn simple_lowlevel() {
         .size((1024, 1024))
         .fb_depth_bits(16, 8)
         .fb_vsync(true)
+        .fb_sub_samples(16)
         .build(&engine,
                render::DispatchTimeout::Time(render_timeout),
                SimpleView::new(0),
