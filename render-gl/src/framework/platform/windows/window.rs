@@ -205,7 +205,12 @@ impl GLWindow {
 
     pub fn post_hook(&mut self, cmd: &WindowCommand) {
         match cmd {
+            &WindowCommand::SurfaceReady => {
+                self.backend.flush();
+            }
+
             &WindowCommand::SurfaceLost => {
+                self.backend.flush();
                 self.state = WindowState::WaitingClose;
                 self.context.deactivate().unwrap();
             }
