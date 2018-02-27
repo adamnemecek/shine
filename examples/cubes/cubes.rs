@@ -26,6 +26,9 @@ struct CubeView {
     ib2: IndexBufferHandle<u8>,
     sh: ShaderProgramHandle<CubeShader>,
     write_mask: WriteMask,
+
+    batch_start: f64,
+    count: isize,
 }
 
 impl CubeView {
@@ -37,13 +40,17 @@ impl CubeView {
             ib2: Handle::null(),
             sh: Handle::null(),
             write_mask: Default::default(),
+
+            batch_start: 0.,
+            count: -1,
         }
     }
 }
 
-impl View<PlatformEngine> for CubeView {
-    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
+impl CubeView {
+    fn on_surface_ready(&mut self, win: &mut PlatformWindow) {
         println!("surface ready");
+        let r = win.backend();
         let mut queue = r.get_queue();
 
         let pos = [
@@ -93,7 +100,7 @@ impl View<PlatformEngine> for CubeView {
         self.sh.create_and_compile(&mut queue);
     }
 
-    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {
+    fn on_surface_lost(&mut self, _win: &mut PlatformWindow) {
         println!("surface lost");
         self.vb.reset();
         self.ib1.reset();
@@ -101,17 +108,40 @@ impl View<PlatformEngine> for CubeView {
         self.sh.reset();
     }
 
-    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut PlatformBackend) {
+    fn on_surface_changed(&mut self, win: &mut PlatformWindow) {
         println!("surface changed");
-        self.on_surface_lost(ctl, r);
-        self.on_surface_ready(ctl, r);
+        self.on_surface_lost(win);
+        self.on_surface_ready(win);
     }
 
-    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {
+    fn on_tick(&mut self, win: &mut PlatformWindow) {
+        if self.count < 0 {
+            let now = time::precise_time_s();
+            self.batch_start = now;
+            self.count = 0;
+        }
+        self.count += 1;
         self.time += 0.01;
+
+        if win.is_ready_to_render() {
+            self.on_render(win);
+            win.swap_buffers().unwrap();
+        }
+
+        {
+            let now = time::precise_time_s();
+            let dt = now - self.batch_start;
+            if dt > 3. {
+                let fps = self.count as f64 / dt;
+                println!("fps: {}", fps);
+                self.batch_start = now;
+                self.count = 0;
+            }
+        }
     }
 
-    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
+    fn on_render(&mut self, win: &mut PlatformWindow) {
+        let r = win.backend();
         r.init_view(Some(Viewport::FullScreen),
                     Some(Float32x4(0., 0.2, 0., 1.)),
                     Some(1.));
@@ -157,10 +187,10 @@ impl View<PlatformEngine> for CubeView {
             });
     }
 
-    fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
+    fn on_key(&mut self, win: &mut PlatformWindow, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
         println!("on_key");
         match virtual_key {
-            Some(VirtualKeyCode::Escape) if !is_down => { ctl.close(); }
+            Some(VirtualKeyCode::Escape) if !is_down => { win.close(); }
             Some(VirtualKeyCode::R) if is_down => { self.write_mask.red = !self.write_mask.red; }
             Some(VirtualKeyCode::G) if is_down => { self.write_mask.green = !self.write_mask.green; }
             Some(VirtualKeyCode::B) if is_down => { self.write_mask.blue = !self.write_mask.blue; }
@@ -173,30 +203,27 @@ impl View<PlatformEngine> for CubeView {
 pub fn main() {
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
 
-    let mut window = render::PlatformWindowSettings::default()
+    let window = render::PlatformWindowSettings::default()
         .title("main")
         .size((512, 512))
         .fb_vsync(false)
         .fb_depth_bits(24, 8)
-        .build(&engine, CubeView::new())
-        .expect("Could not initialize main window");
+        .build(&engine,
+               render::DispatchTimeout::Immediate,
+               CubeView::new(),
+               |window, view, cmd| {
+                   match cmd {
+                       &WindowCommand::SurfaceReady => view.on_surface_ready(window),
+                       &WindowCommand::SurfaceLost => view.on_surface_lost(window),
+                       &WindowCommand::SurfaceChanged => view.on_surface_changed(window),
+                       &WindowCommand::KeyboardUp(_scan_code, virtual_key) => view.on_key(window, virtual_key, false),
+                       &WindowCommand::KeyboardDown(_scan_code, virtual_key) => view.on_key(window, virtual_key, true),
+                       &WindowCommand::Tick => view.on_tick(window),
+                       _ => {}
+                   }
+               }).expect("Could not initialize main window");
 
-    let mut frame_count = 0;
-    let mut start_time = time::precise_time_s();
-    loop {
-        if !engine.dispatch_event(render::DispatchTimeout::Immediate) {
-            break;
-        }
+    while engine.dispatch_event(render::DispatchTimeout::Infinite) {}
 
-        window.update_view();
-        window.render().unwrap();
-        frame_count += 1;
-        let end_time = time::precise_time_s();
-        if end_time - start_time > 3f64 {
-            let fps = frame_count as f64 / (end_time - start_time);
-            start_time = end_time;
-            frame_count = 0;
-            println!("fps: {}", fps);
-        }
-    }
+    drop(window);
 }

@@ -3,6 +3,7 @@ extern crate image;
 extern crate shine_render as render;
 
 use std::env;
+use std::time::*;
 use render::*;
 
 #[derive(Copy, Clone, Debug, VertexDeclaration)]
@@ -47,6 +48,7 @@ struct VxColorTex {
 struct SimpleShader {}
 
 struct SimpleView {
+    id: u8,
     t: f32,
     vb1: VertexBufferHandle<VxPos>,
     vb2: VertexBufferHandle<VxColorTex>,
@@ -56,8 +58,9 @@ struct SimpleView {
 }
 
 impl SimpleView {
-    fn new() -> SimpleView {
+    fn new(id: u8) -> SimpleView {
         SimpleView {
+            id: id,
             t: 0.0,
             vb1: Handle::null(),
             vb2: Handle::null(),
@@ -66,12 +69,11 @@ impl SimpleView {
             sh: Handle::null(),
         }
     }
-}
 
-impl View<PlatformEngine> for SimpleView {
-    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
+    fn on_surface_ready(&mut self, win: &mut PlatformWindow) {
         println!("surface ready");
-        let mut queue = r.get_queue();
+        let backend = win.backend();
+        let mut queue = backend.get_queue();
 
         let pos = [
             VxPos { position: (1., 0., 0.).into() },
@@ -99,7 +101,7 @@ impl View<PlatformEngine> for SimpleView {
         self.sh.create_and_compile(&mut queue);
     }
 
-    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {
+    fn on_surface_lost(&mut self, _win: &mut PlatformWindow) {
         println!("surface lost");
         self.vb1.reset();
         self.vb2.reset();
@@ -108,21 +110,27 @@ impl View<PlatformEngine> for SimpleView {
         self.sh.reset();
     }
 
-    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut PlatformBackend) {
+    fn on_surface_changed(&mut self, win: &mut PlatformWindow) {
         println!("surface changed");
-        self.on_surface_lost(ctl, r);
-        self.on_surface_ready(ctl, r);
+        self.on_surface_lost(win);
+        self.on_surface_ready(win);
     }
 
-    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut PlatformBackend) {
+    fn on_tick(&mut self, win: &mut PlatformWindow) {
         use std::f32;
         self.t += 0.05f32;
         if self.t > 2. * f32::consts::PI {
             self.t = 0f32;
         }
+
+        if win.is_ready_to_render() {
+            self.on_render(win);
+            win.swap_buffers().unwrap();
+        }
     }
 
-    fn on_render(&mut self, _ctl: &mut WindowControl, r: &mut PlatformBackend) {
+    fn on_render(&mut self, win: &mut PlatformWindow) {
+        let r = win.backend();
         r.init_view(Some(Viewport::Proportional(0.5, 0.5, 0.25, 0.25)),
                     Some(Float32x4(0., 0., 0., 1.)),
                     Some(1.));
@@ -147,9 +155,9 @@ impl View<PlatformEngine> for SimpleView {
         self.sh.draw(&mut queue, params, Primitive::Triangles, 0, 6);
     }
 
-    fn on_key(&mut self, ctl: &mut WindowControl, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
+    fn on_key(&mut self, win: &mut PlatformWindow, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
         match virtual_key {
-            Some(VirtualKeyCode::Escape) if !is_down => { ctl.close(); }
+            Some(VirtualKeyCode::Escape) if !is_down => { win.close(); }
             _ => {}
         }
     }
@@ -164,30 +172,50 @@ pub fn render() {
 
     let engine = render::PlatformEngine::new().expect("Could not initialize render engine");
 
-    let mut window = render::PlatformWindowSettings::default()
+    let render_timeout = render::DispatchTimeout::Time(Duration::from_millis(20));
+
+    let window = render::PlatformWindowSettings::default()
         .title("main")
         .size((1024, 1024))
-        .build(&engine, SimpleView::new())
-        .expect("Could not initialize main window");
+        .fb_depth_bits(16, 8)
+        .fb_vsync(true)
+        .build(&engine,
+               render_timeout,
+               SimpleView::new(0),
+               |window, view, cmd| {
+                   match cmd {
+                       &WindowCommand::SurfaceReady => view.on_surface_ready(window),
+                       &WindowCommand::SurfaceLost => view.on_surface_lost(window),
+                       &WindowCommand::SurfaceChanged => view.on_surface_changed(window),
+                       &WindowCommand::KeyboardUp(_scan_code, virtual_key) => view.on_key(window, virtual_key, false),
+                       &WindowCommand::KeyboardDown(_scan_code, virtual_key) => view.on_key(window, virtual_key, true),
+                       &WindowCommand::Tick => view.on_tick(window),
+                       _ => {}
+                   }
+               }).expect("Could not initialize main window");
 
-
-    let mut sub_window = render::PlatformWindowSettings::default()
-        .title("sub")
+    let sub_window = render::PlatformWindowSettings::default()
+        .title("main")
         .size((256, 256))
         .fb_depth_bits(16, 8)
-        .fb_vsync(false)
-        //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
-        .build(&engine, SimpleView::new()).expect("Could not initialize sub window");
+        .fb_vsync(true)
+        .build(&engine,
+               render_timeout,
+               SimpleView::new(1),
+               |window, view, cmd| {
+                   match cmd {
+                       &WindowCommand::SurfaceReady => view.on_surface_ready(window),
+                       &WindowCommand::SurfaceLost => view.on_surface_lost(window),
+                       &WindowCommand::SurfaceChanged => view.on_surface_changed(window),
+                       &WindowCommand::KeyboardUp(_scan_code, virtual_key) => view.on_key(window, virtual_key, false),
+                       &WindowCommand::KeyboardDown(_scan_code, virtual_key) => view.on_key(window, virtual_key, true),
+                       &WindowCommand::Tick => view.on_tick(window),
+                       _ => {}
+                   }
+               }).expect("Could not initialize sub window");
 
-    loop {
-        if !engine.dispatch_event(render::DispatchTimeout::Immediate) {
-            break;
-        }
+    while engine.dispatch_event(render::DispatchTimeout::Infinite) {}
 
-        window.update_view();
-        sub_window.update_view();
-
-        window.render().unwrap();
-        sub_window.render().unwrap();
-    }
+    drop(window);
+    drop(sub_window);
 }

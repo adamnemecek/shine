@@ -143,7 +143,7 @@ impl SimpleView {
         self.on_surface_ready(win);
     }
 
-    fn on_render(&mut self, win: &mut GLWindow) {
+    fn on_tick(&mut self, win: &mut GLWindow) {
         use std::f32;
         self.t += 0.005f32;
         if self.t > 2. * f32::consts::PI {
@@ -151,12 +151,12 @@ impl SimpleView {
         }
 
         if win.is_ready_to_render() {
-            self.on_render_core(win);
+            self.on_render(win);
             win.swap_buffers().unwrap();
         }
     }
 
-    fn on_render_core(&mut self, win: &mut GLWindow) {
+    fn on_render(&mut self, win: &mut GLWindow) {
         use render::lowlevel::*;
         let ll = win.backend().ll_mut();
 
@@ -229,7 +229,7 @@ pub fn simple_lowlevel() {
                        &WindowCommand::SurfaceChanged => view.on_surface_changed(window),
                        &WindowCommand::KeyboardUp(_scan_code, virtual_key) => view.on_key(window, virtual_key, false),
                        &WindowCommand::KeyboardDown(_scan_code, virtual_key) => view.on_key(window, virtual_key, true),
-                       &WindowCommand::Tick => view.on_render(window),
+                       &WindowCommand::Tick => view.on_tick(window),
                        _ => {}
                    }
                }).expect("Could not initialize main window");
@@ -239,7 +239,6 @@ pub fn simple_lowlevel() {
         .size((256, 256))
         .fb_depth_bits(16, 8)
         .fb_vsync(false)
-        //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine,
                render::DispatchTimeout::Time(render_timeout),
                SimpleView::new(1),
@@ -250,7 +249,7 @@ pub fn simple_lowlevel() {
                        &WindowCommand::SurfaceChanged => view.on_surface_changed(window),
                        &WindowCommand::KeyboardUp(_scan_code, virtual_key) => view.on_key(window, virtual_key, false),
                        &WindowCommand::KeyboardDown(_scan_code, virtual_key) => view.on_key(window, virtual_key, true),
-                       &WindowCommand::Tick => view.on_render(window),
+                       &WindowCommand::Tick => view.on_tick(window),
                        _ => {}
                    }
                }).expect("Could not initialize sub window");
@@ -260,7 +259,6 @@ pub fn simple_lowlevel() {
         .size((256, 256))
         .fb_depth_bits(16, 8)
         .fb_vsync(false)
-        //.extra(|e| { e.gl_profile(render::opengl::OpenGLProfile::ES2); })
         .build(&engine,
                render::DispatchTimeout::Time(render_timeout),
                SimpleView::new(2),
@@ -271,7 +269,7 @@ pub fn simple_lowlevel() {
                        &WindowCommand::SurfaceChanged => view.on_surface_changed(window),
                        &WindowCommand::KeyboardUp(_scan_code, virtual_key) => view.on_key(window, virtual_key, false),
                        &WindowCommand::KeyboardDown(_scan_code, virtual_key) => view.on_key(window, virtual_key, true),
-                       &WindowCommand::Tick => view.on_render(window),
+                       &WindowCommand::Tick => view.on_tick(window),
                        _ => {}
                    }
                }).expect("Could not initialize sub window"));
