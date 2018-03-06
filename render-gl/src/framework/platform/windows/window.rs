@@ -235,7 +235,7 @@ impl Window<PlatformEngine> for GLWindow {
     }
 
     fn start_update<'a>(&'a mut self) -> Option<RefUpdate<'a, PlatformEngine>> {
-        if self.is_closed() {
+        if !self.is_closed() {
             Some(RefUpdate::new(&mut self.backend))
         } else {
             None

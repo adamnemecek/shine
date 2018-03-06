@@ -140,7 +140,6 @@ impl Backend for GLBackend {
     }
 
     fn flush(&mut self) {
-        println!("flush");
         let mut consume = self.command_store.consume(|&k| (k.0 as u64) << 32 + k.1 as u64);
         let mut context = {
             /*generic_associated_types workaround*/ unsafe {
@@ -162,7 +161,6 @@ impl Backend for GLBackend {
         context.texture_2d_store.finalize_requests();
         context.shader_program_store.finalize_requests();
 
-        println!("render");
         self.ll.start_render();
         for cmd in consume.drain() {
             cmd.process(&mut context);

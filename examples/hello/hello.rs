@@ -21,18 +21,17 @@ impl HelloView {
         //use std::f32;
         self.time = (self.time + 0.01).fract();
 
-        if win.is_ready_to_render() {
-            self.on_render(win);
-            win.swap_buffers().unwrap();
+        if let Some(backend) = win.start_render() {
+            self.on_render(backend);
         }
     }
 
-    fn on_render(&mut self, win: &mut PlatformWindow) {
-        let r = win.get_backend();
-
-        (0..300).into_par_iter()
+    fn on_render(&mut self, backend: RefRender<PlatformEngine>) {
+        (0..300)/*.into_par_iter()*/
             .for_each(|tid| {
-                r.init_view(None, Some(Float32x4((self.time * tid as f32).sin(), self.time, 0., 1.)), None);
+                backend.init_view(Viewport::FullScreen,
+                                  Some(Float32x4((self.time * tid as f32).sin(), self.time, 0., 1.)),
+                                  None);
             });
     }
 
