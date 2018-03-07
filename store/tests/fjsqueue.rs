@@ -22,7 +22,7 @@ fn consume()
 
     let store = FJSQueue::<u16, Data>::new();
 
-    // insert some elements than drain them
+    // insert some elements than consume them
     {
         let mut store = store.produce();
         store.add(0, Data::new(0));
@@ -30,10 +30,30 @@ fn consume()
         store.add(1, Data::new(1));
     }
     {
-        let mut store = store.consume(|&k| k as u64);
-        for (i, d) in store.drain().enumerate() {
-            assert_eq!(d.0, i);
-        }
+        let mut store = store.consume();
+        store.seal_sorted(|&k| k as u64);
+        assert_eq!(store.len(), 3);
+        assert_eq!(store.iter().map(|a| a.0).collect::<Vec<_>>(), [0, 1, 2]);
+        assert_eq!(store.iter_mut().map(|a| a.0).collect::<Vec<_>>(), [0, 1, 2]);
+        assert_eq!(store.len(), 3);
+        store.clear();
+    }
+
+    // insert some elements than consume them
+    {
+        let mut store = store.produce();
+        store.add(0, Data::new(0));
+        store.add(2, Data::new(2));
+        store.add(1, Data::new(1));
+    }
+    {
+        let mut store = store.consume();
+        store.seal_ignore_order();
+        assert_eq!(store.len(), 3);
+        assert_eq!(store.iter().map(|a| a.0).collect::<Vec<_>>(), [0, 2, 1]);
+        assert_eq!(store.iter_mut().map(|a| a.0).collect::<Vec<_>>(), [0, 2, 1]);
+        assert_eq!(store.len(), 3);
+        store.clear();
     }
 
     // insert again some more
@@ -45,10 +65,16 @@ fn consume()
             }
         }
         {
-            let mut store = store.consume(|&k| k as u64);
-            for (i, d) in store.drain().enumerate() {
+            let mut store = store.consume();
+            store.seal_sorted(|&k| k as u64);
+            assert_eq!(store.len(), 1024);
+            for (i, d) in store.iter().enumerate() {
                 assert_eq!(d.0, 100 + i);
             }
+            for (i, d) in store.iter_mut().enumerate() {
+                assert_eq!(d.0, 100 + i);
+            }
+            store.clear();
         }
     }
 }
@@ -61,7 +87,8 @@ fn simple()
 
     let mut tp = Vec::new();
 
-    for tid in 0..threadid::get_max_thread_count() {
+    let th_count = threadid::get_max_thread_count();
+    for tid in 0..th_count {
         let store = store.clone();
         tp.push(
             thread::spawn(move || {
@@ -84,16 +111,21 @@ fn simple()
     }
 
     {
-        let mut store = store.consume(|&k| k as u64);
-        let mut drain = store.drain();
-        let mut prev = drain.next().unwrap();
-        //println!("data[{}] = {:?}", 0, prev);
-        for (_i, d) in drain.enumerate() {
-            //println!("data[{}] = {:?}", i + 1, d);
-            assert!(prev.0 <= d.0);
-            assert!(prev.0 != d.0 || prev.1 != d.1 || prev.2 < d.2, "sort is not stable");
-            prev = d;
+        let mut store = store.consume();
+        store.seal_sorted(|&k| k as u64);
+        assert_eq!(store.len(), th_count * 10);
+
+        {
+            let mut iter = store.iter();
+            let mut prev = iter.next().unwrap();
+            for (_i, d) in iter.enumerate() {
+                //println!("data[{}] = {:?}", i + 1, d);
+                assert!(prev.0 <= d.0);
+                assert!(prev.0 != d.0 || prev.1 != d.1 || prev.2 < d.2, "sort is not stable");
+                prev = d;
+            }
         }
+        store.clear();
     }
 }
 
@@ -126,7 +158,7 @@ fn check_lock() {
         let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
         assert!(panic::catch_unwind(|| {
             let p0 = store.0.produce();
-            let p1 = store.0.consume(|&k| k as u64);
+            let p1 = store.0.consume();
             drop(p1);
             drop(p0);
         }).is_err());
@@ -136,7 +168,7 @@ fn check_lock() {
     {
         let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
         assert!(panic::catch_unwind(|| {
-            let p0 = store.0.consume(|&k| k as u64);
+            let p0 = store.0.consume();
             let p1 = store.0.produce();
             drop(p1);
             drop(p0);
@@ -147,8 +179,8 @@ fn check_lock() {
     {
         let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
         assert!(panic::catch_unwind(|| {
-            let p0 = store.0.consume(|&k| k as u64);
-            let p1 = store.0.consume(|&k| k as u64);
+            let p0 = store.0.consume();
+            let p1 = store.0.consume();
             drop(p1);
             drop(p0);
         }).is_err());

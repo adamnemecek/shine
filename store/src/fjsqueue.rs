@@ -1,25 +1,35 @@
 use std::sync::*;
-use std::cell::*;
-use std::rc::*;
+use std::cell::UnsafeCell;
 use std::marker::PhantomData;
-use std::fmt;
 use threadid;
 
 
 /// Buffer associated to a thread to store commands. To avoid false sharing, alignment of this
 /// struct is set to the typical size of a cache-line
 #[repr(align(64))]
-struct Buffer<K: fmt::Debug, C> {
+struct Buffer<K, C> {
     commands: Vec<C>,
     sort_keys: Vec<K>,
+    locked: bool,
 }
 
-impl<K: fmt::Debug, C> Buffer<K, C> {
+impl<K, C> Buffer<K, C> {
     fn new() -> Buffer<K, C> {
         Buffer {
             commands: Vec::new(),
             sort_keys: Vec::new(),
+            locked: false,
         }
+    }
+
+    fn lock(&mut self) {
+        assert!(!self.locked);
+        self.locked = true;
+    }
+
+    fn unlock(&mut self) {
+        assert!(self.locked);
+        self.locked = false;
     }
 
     fn len(&self) -> usize {
@@ -33,8 +43,9 @@ impl<K: fmt::Debug, C> Buffer<K, C> {
 }
 
 /// Shared data
-struct SharedData<K: fmt::Debug, C> {
+struct SharedData<K, C> {
     order: Vec<(u64, (u8, usize))>,
+    sealed: bool,
     phantom: PhantomData<(K, C)>,
 }
 
@@ -43,28 +54,29 @@ struct SharedData<K: fmt::Debug, C> {
 /// #safety
 /// Commands are never dropped. During clear and drain only the length of the containers are
 /// reset to zero, but drop is never called for the stored commands.
-pub struct FJSQueue<K: fmt::Debug, C> {
+pub struct FJSQueue<K, C> {
     shared: RwLock<SharedData<K, C>>,
-    tls: Vec<Rc<RefCell<Buffer<K, C>>>>,
+    tls: Vec<UnsafeCell<Buffer<K, C>>>,
 }
 
-unsafe impl<K: fmt::Debug, C> Send for FJSQueue<K, C> {}
+unsafe impl<K, C> Send for FJSQueue<K, C> {}
 
-unsafe impl<K: fmt::Debug, C> Sync for FJSQueue<K, C> {}
+unsafe impl<K, C> Sync for FJSQueue<K, C> {}
 
 
-impl<K: fmt::Debug, C> FJSQueue<K, C> {
+impl<K, C> FJSQueue<K, C> {
     pub fn new() -> FJSQueue<K, C> {
         let thread_count = threadid::get_max_thread_count();
         FJSQueue {
             shared: RwLock::new(SharedData {
                 order: Vec::new(),
+                sealed: false,
                 phantom: PhantomData,
             }),
             tls: {
                 let mut v = Vec::with_capacity(thread_count);
                 for _ in 0..thread_count {
-                    v.push(Rc::new(RefCell::new(Buffer::new())));
+                    v.push(UnsafeCell::new(Buffer::new()));
                 }
                 v
             },
@@ -73,119 +85,179 @@ impl<K: fmt::Debug, C> FJSQueue<K, C> {
 
     /// Returns a locking guard for the producers
     pub fn produce<'a>(&'a self) -> ProduceGuard<'a, K, C> {
-        ProduceGuard {
-            _shared: self.shared.try_read().unwrap(),
-            buffer: self.tls[threadid::get()].borrow_mut(),
-        }
+        let guard = ProduceGuard {
+            shared: self.shared.try_read().unwrap(),
+            buffer: {
+                let buffer = self.tls[threadid::get()].get();
+                let buffer = unsafe { &mut *buffer };
+                buffer.lock();
+                buffer
+            },
+        };
+        assert!(!guard.shared.sealed, "queue has been sealed already");
+        guard
     }
 
     /// Returns a locking guard for the (single) consumer.
-    /// Items are consumed in a sorted order, where ordering is defined by the application of a
-    /// predicate on the key. At first it might seem strange, but the sorting is
-    /// a radix algorithm that requires fixed-bit length keys.
-    pub fn consume<'a, F: Fn(&K) -> u64>(&'a self, to_radix: F) -> ConsumeGuard<'a, K, C> {
-        let mut guard = ConsumeGuard {
+    pub fn consume<'a>(&'a self) -> ConsumeGuard<'a, K, C> {
+        ConsumeGuard {
             shared: self.shared.try_write().unwrap(),
-            buffers: &self.tls,
-        };
-        guard.sort(to_radix);
-        guard
+            buffers: {
+                self.tls.iter().for_each(|buffer| {
+                    let buffer = buffer.get();
+                    let buffer = unsafe { &mut *buffer };
+                    buffer.lock();
+                });
+                &self.tls
+            },
+        }
     }
 }
 
 
 /// Guarded producer access to a store.
-pub struct ProduceGuard<'a, K: 'a + fmt::Debug, C: 'a> {
-    _shared: RwLockReadGuard<'a, SharedData<K, C>>,
-    buffer: RefMut<'a, Buffer<K, C>>,
+pub struct ProduceGuard<'a, K: 'a, C: 'a> {
+    shared: RwLockReadGuard<'a, SharedData<K, C>>,
+    buffer: &'a mut Buffer<K, C>,
 }
 
-impl<'a, K: 'a + fmt::Debug, C: 'a> ProduceGuard<'a, K, C> {
+impl<'a, K: 'a, C: 'a> ProduceGuard<'a, K, C> {
     pub fn add(&mut self, k: K, c: C) {
+        assert!(!self.shared.sealed, "queue is sealed");
         self.buffer.store(k, c);
+    }
+}
+
+impl<'a, K: 'a, C: 'a> Drop for ProduceGuard<'a, K, C> {
+    fn drop(&mut self) {
+        self.buffer.unlock();
     }
 }
 
 
 /// Guarded consumer access to the store.
-pub struct ConsumeGuard<'a, K: 'a + fmt::Debug, C: 'a> {
+pub struct ConsumeGuard<'a, K: 'a, C: 'a> {
     shared: RwLockWriteGuard<'a, SharedData<K, C>>,
-    buffers: &'a Vec<Rc<RefCell<Buffer<K, C>>>>,
+    buffers: &'a Vec<UnsafeCell<Buffer<K, C>>>,
 }
 
-impl<'a, K: 'a + fmt::Debug, C: 'a> ConsumeGuard<'a, K, C> {
-    /// Creates the item ordering bysed on the predicate(key) values.
-    fn sort<F: Fn(&K) -> u64>(&mut self, to_radix: F) {
+impl<'a, K: 'a, C: 'a> ConsumeGuard<'a, K, C> {
+    fn calculate_len(&self) -> usize {
+        self.buffers.iter()
+            .fold(0usize, |acc, buffer| {
+                let buffer = unsafe { &*buffer.get() };
+                acc + buffer.len()
+            })
+    }
+
+    /// Seals the commands but no ordering is ensured
+    pub fn seal_ignore_order(&mut self) {
+        assert!(!self.shared.sealed, "queue has been sealed already");
+        let size = self.calculate_len();
+
         let ref mut shared = *self.shared;
         let ref mut buffers = self.buffers;
         let ref mut order = shared.order;
 
-        let size = buffers.iter().fold(0, |acc, buffer| acc + buffer.borrow().len());
         order.reserve(size);
+        assert!(order.is_empty());
         for (bid, buffer) in buffers.iter().enumerate() {
-            for (cid, key) in buffer.borrow().sort_keys.iter().enumerate() {
+            let buffer = unsafe { &*buffer.get() };
+            for (cid, _) in buffer.sort_keys.iter().enumerate() {
+                order.push((0, (bid as u8, cid)));
+            }
+        }
+
+        shared.sealed = true;
+    }
+
+    /// Seals the commands and order them by the given to_radix predicate
+    pub fn seal_sorted<F: Fn(&K) -> u64>(&mut self, to_radix: F) {
+        assert!(!self.shared.sealed, "queue has been sealed already");
+        let size = self.calculate_len();
+
+        let ref mut shared = *self.shared;
+        let ref mut buffers = self.buffers;
+        let ref mut order = shared.order;
+
+        order.reserve(size);
+        assert!(order.is_empty());
+        for (bid, buffer) in buffers.iter().enumerate() {
+            let buffer = unsafe { &*buffer.get() };
+            for (cid, key) in buffer.sort_keys.iter().enumerate() {
                 order.push((to_radix(key), (bid as u8, cid)));
             }
         }
 
         //todo: implement radix sort
         order.sort_by_key(|a| a.0);
+
+        shared.sealed = true;
     }
 
-    // Clears the queue returning all items in sorted order.
-    // Keeps the allocated memory for reuse.
-    // ## Note: If the Drain is leaked, queue items might be leaked as well.
-    pub fn drain<'d>(&'d mut self) -> Drain<'d, 'a, K, C> {
-        // command buffer is cleared by setting the length to 0. As self is moved out,
-        // it's safe to set length prior. Borrow checker prohibit any
-        // modification on the queue while drain has not completed (dropped) and
-        // queue items are consumed/dropped oney-by-one using raw pointers during iteration.
-        // Keys are not used after sorting, so those container can be cleared in the safe way.
+    pub fn len(&self) -> usize {
+        assert!(self.shared.sealed, "queue must be sealed before accessing the items");
+        self.shared.order.len()
+    }
 
+    pub fn clear(&mut self) {
+        let ref mut shared = *self.shared;
+        let ref mut order = shared.order;
+
+        order.clear();
         for buffer in self.buffers.iter() {
-            let mut buffer = buffer.borrow_mut();
-            unsafe { buffer.commands.set_len(0) };
-            unsafe { buffer.sort_keys.set_len(0) };
-        };
+            let buffer = unsafe { &mut *buffer.get() };
+            buffer.commands.clear();
+            buffer.sort_keys.clear();
+        }
+        shared.sealed = false;
+    }
 
-        Drain {
-            idx: 0,
+    pub fn iter<'g>(&'g self) -> Iter<'g, 'a, K, C> {
+        assert!(self.shared.sealed, "queue must be sealed before accessing the items");
+        Iter {
             guard: self,
+            index: 0,
+        }
+    }
+
+    pub fn iter_mut<'g>(&'g mut self) -> IterMut<'g, 'a, K, C> {
+        assert!(self.shared.sealed, "queue must be sealed before accessing the items");
+        IterMut {
+            guard: self,
+            index: 0,
         }
     }
 }
 
-impl<'a, K: 'a + fmt::Debug, C: 'a> Drop for ConsumeGuard<'a, K, C> {
+impl<'a, K: 'a, C: 'a> Drop for ConsumeGuard<'a, K, C> {
     fn drop(&mut self) {
-        // clea ques as if it was drained
-        for buffer in self.buffers.iter() {
-            let mut buffer = buffer.borrow_mut();
-            unsafe { buffer.commands.set_len(0) };
-            unsafe { buffer.sort_keys.set_len(0) };
-        }
-        self.shared.order.clear();
+        self.buffers.iter().for_each(|buffer| {
+            let buffer = buffer.get();
+            let buffer = unsafe { &mut *buffer };
+            buffer.unlock();
+        });
     }
 }
 
 
-pub struct Drain<'d, 'a: 'd, K: 'a + fmt::Debug, C: 'a> {
-    guard: &'d mut ConsumeGuard<'a, K, C>,
-    idx: usize,
+/// Iterator over the commands
+pub struct Iter<'g, 'a: 'g, K: 'a, C: 'a> {
+    guard: &'g ConsumeGuard<'a, K, C>,
+    index: usize,
 }
 
-impl<'d, 'a: 'd, K: 'a + fmt::Debug, C: 'a> Iterator for Drain<'d, 'a, K, C> {
-    type Item = &'d mut C;
-    fn next(&mut self) -> Option<&'d mut C> {
-        let ref mut shared = *self.guard.shared;
-        let ref mut buffers = self.guard.buffers;
+impl<'g, 'a: 'g, K: 'a, C: 'a> Iterator for Iter<'g, 'a, K, C> {
+    type Item = &'g C;
+    fn next(&mut self) -> Option<&'g C> {
+        let ref shared = *self.guard.shared;
+        let ref buffers = self.guard.buffers;
 
-        if self.idx < shared.order.len() {
-            let (_, (bid, cid)) = shared.order[self.idx];
-            self.idx += 1;
-            let cmd = unsafe {
-                let cmd = buffers[bid as usize].borrow_mut().commands.as_mut_ptr().offset(cid as isize);
-                &mut *cmd
-            };
+        if self.index < shared.order.len() {
+            let (_, (bid, cid)) = shared.order[self.index];
+            self.index += 1;
+            let buffer = unsafe { &*buffers[bid as usize].get() };
+            let cmd = &buffer.commands[cid];
             Some(cmd)
         } else {
             None
@@ -194,18 +266,39 @@ impl<'d, 'a: 'd, K: 'a + fmt::Debug, C: 'a> Iterator for Drain<'d, 'a, K, C> {
 
     fn size_hint(&self) -> (usize, Option<usize>) {
         let ref shared = *self.guard.shared;
-        let rem = shared.order.len() - self.idx;
+        let rem = shared.order.len() - self.index;
         (rem, Some(rem))
     }
 }
 
-impl<'d, 'a: 'd, K: 'a + fmt::Debug, C: 'a> Drop for Drain<'d, 'a, K, C> {
-    fn drop(&mut self) {
-        // drain all the remaining items in "order"
-        while self.next().is_some() {}
 
-        //also clear the order
+/// Iterator over the commands
+pub struct IterMut<'i, 'a: 'i, K: 'a, C: 'a> {
+    guard: &'i mut ConsumeGuard<'a, K, C>,
+    index: usize,
+}
+
+impl<'i, 'a: 'i, K: 'a, C: 'a> Iterator for IterMut<'i, 'a, K, C> {
+    type Item = &'i mut C;
+    fn next(&mut self) -> Option<&'i mut C> {
         let ref mut shared = *self.guard.shared;
-        shared.order.clear();
+        let ref mut buffers = self.guard.buffers;
+
+        if self.index < shared.order.len() {
+            let (_, (bid, cid)) = shared.order[self.index];
+            self.index += 1;
+            let buffer = buffers[bid as usize].get();
+            let buffer = unsafe { &mut *buffer };
+            let cmd = &mut buffer.commands[cid];
+            Some(cmd)
+        } else {
+            None
+        }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let ref shared = *self.guard.shared;
+        let rem = shared.order.len() - self.index;
+        (rem, Some(rem))
     }
 }

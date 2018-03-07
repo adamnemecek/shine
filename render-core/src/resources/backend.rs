@@ -12,12 +12,9 @@ pub trait Backend: 'static {
     /// Returns the pixel aspect of the associated window.
     fn get_pixel_aspect(&self) -> f32;
 
-    //todo: replace api for create_queue, submit_queue
-    // window::start_update, start_render shall create/submit automatically
-    fn get_queue(&self) -> Self::CommandQueue;
-    fn flush(&mut self);
+    fn submit(&mut self, queue: &mut Self::CommandQueue);
     fn swap_buffers(&mut self);
 
     /// Sets up a view for rendering
-    fn init_view(&self, viewport: Viewport, color: Option<Float32x4>, depth: Option<f32>);
+    fn init_view(queue: &mut Self::CommandQueue, view: u8, viewport: Viewport, color: Option<Float32x4>, depth: Option<f32>);
 }

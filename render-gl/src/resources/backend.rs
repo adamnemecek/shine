@@ -139,8 +139,7 @@ impl Backend for GLBackend {
         }
     }
 
-    fn flush(&mut self) {
-        let mut consume = self.command_store.consume(|&k| (k.0 as u64) << 32 + k.1 as u64);
+    fn submit(&mut self, queue: &mut Backend::CommandQueue) {
         let mut context = {
             /*generic_associated_types workaround*/ unsafe {
                 // compose shall not outlive Backend but cannot enforce without generic_associated_types
@@ -162,9 +161,11 @@ impl Backend for GLBackend {
         context.shader_program_store.finalize_requests();
 
         self.ll.start_render();
-        for cmd in consume.drain() {
+        let queue = queue.consume();
+        for cmd in queue.iter() {
             cmd.process(&mut context);
         }
+        queue.clear();
         self.ll.end_render();
 
         // release unreferenced resources
