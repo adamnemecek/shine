@@ -7,6 +7,12 @@ description = "General purpose multi-threaded sanbox engine."
 repository = "https://github.com/gzp/shine"
 keywords = ["component system", "game"]
 
+[workspace]
+members = [ "store", "ecs" ]
+
 [dependencies]
 shine-store = {path = "store"}
 shine-ecs = {path = "ecs"}
+
+#[dev-dependencies] https://github.com/rust-lang/cargo/issues/860
+#env_logger = "*"

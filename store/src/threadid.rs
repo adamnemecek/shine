@@ -12,6 +12,9 @@ struct ThreadIdManager {
 
 impl ThreadIdManager {
     fn new() -> ThreadIdManager {
+        info!("Max thread count: {}", get_max_thread_count());
+        info!("Preferred thread count: {}", get_preferred_thread_count());
+
         ThreadIdManager {
             thread_counter: 0,
             thread_limit: get_max_thread_count(),

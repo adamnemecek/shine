@@ -1,17 +1,19 @@
 [package]
-name = "shine-store"
+name = "shine-ecs"
 version = "0.1.1"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "SHINE. Storage and container module of a general purpose multi-threaded rendering engine."
+description = "SHINE. Entity component system module of a general purpose multi-threaded rendering engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["shine", "render", "opengl", "game"]
 
 [dependencies]
-libc = "*"
 log = "*"
-lazy_static = "*"
-num_cpus="*"
+shred = "*"
+hibitset = "*"
+
+shine-store = {path = "../store"}
+
 
 [dev-dependencies]
 env_logger = "*"

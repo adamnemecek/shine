@@ -1,10 +1,12 @@
 extern crate shine_store;
+#[macro_use] extern crate log;
+extern crate env_logger;
 
 use std::env;
 use std::thread;
 use std::sync::Arc;
 
-use self::shine_store::hashstore::*;
+use shine_store::hashstore::*;
 
 
 /// Resource id for test data
@@ -19,7 +21,7 @@ struct TestData(String);
 
 impl TestData {
     fn new(s: String) -> TestData {
-        //println!("creating '{}'", s);
+        trace!("creating '{}'", s);
         TestData(s)
     }
 
@@ -30,7 +32,7 @@ impl TestData {
 
 impl Drop for TestData {
     fn drop(&mut self) {
-        //println!("dropping '{}'", self.0);
+        trace!("dropping '{}'", self.0);
     }
 }
 
@@ -43,11 +45,13 @@ impl From<TestDataId> for TestData {
 
 #[test]
 fn simple_single_threaded() {
+    let _ = env_logger::try_init();
+
     let store = HashStore::<TestDataId, TestData>::new();
     let mut r0;// = TestRef::none();
     let mut r1;// = TestRef::none();
 
-    //println!("request 0,1");
+    trace!("request 0,1");
     {
         let mut store = store.read();
         assert!(store.get(&TestDataId(0)).is_null());
@@ -65,13 +69,13 @@ fn simple_single_threaded() {
         assert!(r12 == r1);
     }
 
-    //println!("request process");
+    trace!("request process");
     {
         let mut store = store.write();
         store.finalize_requests();
     }
 
-    //println!("check 0,1, request 2");
+    trace!("check 0,1, request 2");
     {
         let mut store = store.read();
         assert!(store[&r0].0 == format!("id: {}", 0));
@@ -83,7 +87,7 @@ fn simple_single_threaded() {
         assert!(store[&r2].0 == format!("id: {}", 2));
     }
 
-    //println!("drop 2");
+    trace!("drop 2");
     {
         let mut store = store.write();
         store.finalize_requests();
@@ -105,7 +109,7 @@ fn simple_single_threaded() {
         assert!(r1.is_null());
     }
 
-    //println!("drop 1");
+    trace!("drop 1");
     {
         let mut store = store.write();
         store.finalize_requests();
@@ -125,7 +129,7 @@ fn simple_single_threaded() {
         assert!(r0.is_null());
     }
 
-    //println!("drop 0");
+    trace!("drop 0");
     {
         let mut store = store.write();
         store.finalize_requests();
@@ -137,6 +141,8 @@ fn simple_single_threaded() {
 
 #[test]
 fn simple_multi_threaded() {
+    let _ = env_logger::try_init();
+
     assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     let store = HashStore::<TestDataId, TestData>::new();
@@ -172,7 +178,7 @@ fn simple_multi_threaded() {
         }
     }
 
-    //println!("request process");
+    info!("request process");
     {
         let mut store = store.write();
         store.finalize_requests();
@@ -204,7 +210,7 @@ fn simple_multi_threaded() {
         }
     }
 
-    //println!("drain");
+    info!("drain");
     {
         let mut store = store.write();
         store.finalize_requests();
@@ -237,7 +243,8 @@ fn simple_multi_threaded() {
 
 #[test]
 fn check_lock() {
-    // single threaded as panic hook is a global resource
+    let _ = env_logger::try_init();
+
     assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
 
     use std::mem;

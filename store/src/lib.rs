@@ -1,14 +1,11 @@
-#![feature(macro_reexport)]
 #![feature(iterator_for_each)]
 #![feature(align_offset)]
 #![feature(drain_filter)]
 #![feature(attr_literals)]
 
-#[macro_use]
-extern crate lazy_static;
-
+#[macro_use] extern crate lazy_static;
 extern crate num_cpus;
-
+#[macro_use] extern crate log;
 
 /// Define engine limitations
 pub mod libconfig {
@@ -28,5 +25,3 @@ pub mod hashstore;
 
 pub mod threadid;
 pub mod spscstate;
-
-pub mod forkjoinsortedqueue;

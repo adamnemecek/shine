@@ -1,5 +1,3 @@
-#![deny(missing_copy_implementations)]
-
 use std::ptr;
 use std::ops;
 use std::fmt;
