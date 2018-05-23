@@ -29,4 +29,4 @@ pub mod hashstore;
 pub mod threadid;
 pub mod spscstate;
 
-pub mod fjsqueue;
+pub mod forkjoinsortedqueue;

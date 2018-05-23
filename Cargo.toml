@@ -3,28 +3,10 @@ name = "shine"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "General purpose multi-threaded rendering engine."
-repository = "https://github.com/zpgaal/shine"
-keywords = ["render", "opengl", "game"]
+description = "General purpose multi-threaded sanbox engine."
+repository = "https://github.com/gzp/shine"
+keywords = ["component system", "game"]
 
 [dependencies]
 shine-store = {path = "store"}
-shine-render-core = {path = "render-core"}
-shine-render-gl = {path = "render-gl"}
-shine-render = {path = "render"}
-
-
-# for examples
-rayon = "*"
-image = "*"
-nalgebra = "*"
-time = "*"
-
-
-[[example]]
-name = "cubes"
-path = "examples/cubes/cubes.rs"
-
-[[example]]
-name = "hello"
-path = "examples/hello/hello.rs"
+shine-ecs = {path = "ecs"}

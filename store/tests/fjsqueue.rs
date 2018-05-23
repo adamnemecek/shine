@@ -4,7 +4,7 @@ use std::thread;
 use std::sync::Arc;
 use std::env;
 
-use self::shine_store::fjsqueue::*;
+use self::shine_store::forkjoinsortedqueue::*;
 use self::shine_store::threadid;
 
 
@@ -20,7 +20,7 @@ fn consume()
         }
     }
 
-    let store = FJSQueue::<u16, Data>::new();
+    let store = ForkJoinSortedQueue::<u16, Data>::new();
 
     // insert some elements than consume them
     {
@@ -83,7 +83,7 @@ fn consume()
 #[test]
 fn simple()
 {
-    let store = Arc::new(FJSQueue::<u16, (u16, usize, usize)>::new());
+    let store = Arc::new(ForkJoinSortedQueue::<u16, (u16, usize, usize)>::new());
 
     let mut tp = Vec::new();
 
@@ -138,13 +138,13 @@ fn check_lock() {
     use std::panic;
 
     // create a newtype to have RefUnwindSafe property for the queue
-    struct Queue(FJSQueue<u16, (u16, usize, usize)>);
+    struct Queue(ForkJoinSortedQueue<u16, (u16, usize, usize)>);
     impl panic::RefUnwindSafe for Queue {}
 
     panic::set_hook(Box::new(|_info| { /*println!("panic: {:?}", _info);*/ }));
 
     {
-        let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
+        let store = Queue(ForkJoinSortedQueue::<u16, (u16, usize, usize)>::new());
         assert!(panic::catch_unwind(|| {
             let p0 = store.0.produce();
             let p1 = store.0.produce();
@@ -155,7 +155,7 @@ fn check_lock() {
     }
 
     {
-        let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
+        let store = Queue(ForkJoinSortedQueue::<u16, (u16, usize, usize)>::new());
         assert!(panic::catch_unwind(|| {
             let p0 = store.0.produce();
             let p1 = store.0.consume();
@@ -166,7 +166,7 @@ fn check_lock() {
     }
 
     {
-        let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
+        let store = Queue(ForkJoinSortedQueue::<u16, (u16, usize, usize)>::new());
         assert!(panic::catch_unwind(|| {
             let p0 = store.0.consume();
             let p1 = store.0.produce();
@@ -177,7 +177,7 @@ fn check_lock() {
     }
 
     {
-        let store = Queue(FJSQueue::<u16, (u16, usize, usize)>::new());
+        let store = Queue(ForkJoinSortedQueue::<u16, (u16, usize, usize)>::new());
         assert!(panic::catch_unwind(|| {
             let p0 = store.0.consume();
             let p1 = store.0.consume();
