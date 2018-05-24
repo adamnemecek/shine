@@ -1,5 +1,5 @@
 use hibitset::BitSet;
-use bitset::DrainBitSetLike;
+use utils::DrainBitSetLike;
 
 /// An entity instance.
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -46,8 +46,21 @@ impl EntityStore {
         }
     }
 
+    pub fn new_with_capacity(capacity: u32) -> EntityStore {
+        EntityStore {
+            used: BitSet::with_capacity(capacity),
+            free: BitSet::with_capacity(capacity),
+            raised: BitSet::with_capacity(capacity),
+            killed: BitSet::with_capacity(capacity),
+            max_entity_count: 0,
+            count: 0,
+        }
+    }
+
     /// Allocates a new entity
     pub fn create(&mut self) -> Entity {
+        trace!("{:?}", self.killed);
+
         let id = {
             let free = &self.free;
             // find the first entry that is really freed, not in zombie state

@@ -26,6 +26,20 @@ impl<'a> Iterator for DrainBitSetLike<'a> {
 
 impl<'a> Drop for DrainBitSetLike<'a> {
     fn drop(&mut self) {
+        trace!("clear bitset");
         unsafe { (*self.bitset).clear() };
+    }
+}
+
+
+/// Helper to store empty slots in dense containers.
+pub enum DenseEntry<T> {
+    Vacant,
+    Occupied(T),
+}
+
+impl<T> Default for DenseEntry<T> {
+    fn default() -> DenseEntry<T> {
+        DenseEntry::Vacant
     }
 }

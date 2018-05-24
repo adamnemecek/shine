@@ -3,35 +3,35 @@ use entity::*;
 
 /// A connection between two entities
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub struct EntityLink {
+pub struct Link {
     from: Entity,
     to: Entity,
 }
 
-impl EntityLink {
-    pub fn new(from: Entity, to: Entity) -> EntityLink {
-        EntityLink {
+impl Link {
+    pub fn new(from: Entity, to: Entity) -> Link {
+        Link {
             from: from,
             to: to,
         }
     }
 
-    pub fn new_invalid() -> EntityLink {
-        EntityLink {
+    pub fn new_invalid() -> Link {
+        Link {
             from: Entity::new_invalid(),
             to: Entity::new_invalid(),
         }
     }
 
-    pub fn new_from(from: Entity) -> EntityLink {
-        EntityLink {
+    pub fn new_from(from: Entity) -> Link {
+        Link {
             from: from,
             to: Entity::new_invalid(),
         }
     }
 
-    pub fn new_to(to: Entity) -> EntityLink {
-        EntityLink {
+    pub fn new_to(to: Entity) -> Link {
+        Link {
             from: Entity::new_invalid(),
             to: to,
         }
@@ -53,13 +53,13 @@ impl EntityLink {
         mem::swap(&mut self.from, &mut self.to);
     }
 
-    pub fn get_flipped(&self) -> EntityLink {
-        EntityLink::new(self.to, self.from)
+    pub fn get_flipped(&self) -> Link {
+        Link::new(self.to, self.from)
     }
 }
 
-impl From<(Entity, Entity)> for EntityLink {
-    fn from(value: (Entity, Entity)) -> EntityLink {
-        EntityLink::new(value.0, value.1)
+impl From<(Entity, Entity)> for Link {
+    fn from(value: (Entity, Entity)) -> Link {
+        Link::new(value.0, value.1)
     }
 }

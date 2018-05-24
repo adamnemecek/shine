@@ -11,6 +11,7 @@ keywords = ["shine", "render", "opengl", "game"]
 log = "*"
 shred = "*"
 hibitset = "*"
+itertools = "*"
 
 shine-store = {path = "../store"}
 
