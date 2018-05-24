@@ -1,29 +1,80 @@
+use std::ops::{Deref, DerefMut};
+use shred::{Resources, ResourceId, Read, Write, SystemData};
+
 use componentcontainer::ComponentContainer;
 
 pub trait Component {
     type Storage: 'static + ComponentContainer;
 }
 
-/*
-pub trait ReadComponentStorage {
-    /// The component type of the storage
-    type Component: Component;
 
-    /// Get immutable to an `Entity`s component
-    fn get(&self, entity: Entity) -> Option<&Self::Component>;
-
-    //fn iter(&self) -> Iterator<(u32, &Self::Component)>;
+/// Grant read access for a component
+pub struct ReadComponent<'a, C: Component> {
+    inner: Read<'a, C::Storage>,
 }
 
-pub trait WriteComponentStorage: ReadComponentStorage {
-    /// Get mutable access to an `Entity`s component
-    fn get_mut(&mut self, entity: Entity) -> Option<&mut Self::Component>;
+impl<'a, C: Component> Deref for ReadComponent<'a, C> {
+    type Target = C::Storage;
 
-    /// Insert a component for an `Entity`
-    fn insert(&mut self, entity: Entity, comp: Self::Component);
-
-    /// Remove the component for an `Entity`
-    fn remove(&mut self, entity: Entity);
+    fn deref(&self) -> &C::Storage {
+        self.inner.deref()
+    }
 }
-*/
 
+impl<'a, C: Component> SystemData<'a> for ReadComponent<'a, C>
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        ReadComponent { inner: res.fetch::<C::Storage>().into() }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![
+            ResourceId::new::<C::Storage>(),
+        ]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![]
+    }
+}
+
+
+/// Grant read/write access to a component
+pub struct WriteComponent<'a, C: Component> {
+    inner: Write<'a, C::Storage>,
+}
+
+impl<'a, C: Component> Deref for WriteComponent<'a, C> {
+    type Target = C::Storage;
+
+    fn deref(&self) -> &C::Storage {
+        self.inner.deref()
+    }
+}
+
+impl<'a, C: Component> DerefMut for WriteComponent<'a, C> {
+    fn deref_mut(&mut self) -> &mut C::Storage {
+        self.inner.deref_mut()
+    }
+}
+
+impl<'a, C: Component> SystemData<'a> for WriteComponent<'a, C>
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        WriteComponent { inner: res.fetch_mut::<C::Storage>().into() }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![
+            ResourceId::new::<C::Storage>(),
+        ]
+    }
+}

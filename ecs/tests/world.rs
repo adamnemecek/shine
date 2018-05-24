@@ -2,8 +2,6 @@ extern crate shine_ecs as ecs;
 extern crate env_logger;
 extern crate shred;
 
-use shred::{Read, Write};
-
 use ecs::*;
 
 
@@ -43,16 +41,21 @@ fn world_simple()
         let mut pos = world.resources.fetch_mut::<<Pos as Component>::Storage>();
         let mut vel = world.resources.fetch_mut::<<Velocity as Component>::Storage>();
 
-        for i in 0..10 {
+        for _i in 0..10 {
             let e = ent.create();
             pos.insert(e, Pos { x: 0., y: 0., z: 0. });
             vel.insert(e, Velocity { x: 0., y: 0., z: 1. });
         }
     }
 
-    let (a, b): (Read<DenseStorage<Pos>>, Write<DenseStorage<Velocity>>) = world.system_data();
+    {
+        let (e, p, mut v): (ReadEntites, ReadComponent<Pos>, WriteComponent<Velocity>) = world.system_data();
+        //println!("e {:?}", e.get_mask());
+        println!("p {:?}", p.get_mask());
+        println!("v {:?}", v.get_mask_mut());
+    }
 
-    //world.resources.sys
+//world.resources.sys
 
 
 

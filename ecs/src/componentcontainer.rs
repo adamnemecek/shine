@@ -38,6 +38,14 @@ impl<S: UncheckedComponentContainer> MaskedComponentContainer<S> {
             store: Default::default(),
         }
     }
+
+    pub fn get_mask(&self) -> &BitSet {
+        &self.mask
+    }
+
+    pub fn get_mask_mut(&mut self) -> &mut BitSet {
+        &mut self.mask
+    }
 }
 
 impl<S: UncheckedComponentContainer> ComponentContainer for MaskedComponentContainer<S> {
