@@ -1,7 +1,8 @@
-use hibitset::BitSet;
+use hibitset::{BitSet, BitIter, BitSetLike};
 
 use utils::DenseEntry;
 use entity::Entity;
+use storagelike::StorageLike;
 use uncheckedcomponentcontainer::UncheckedComponentContainer;
 
 
@@ -39,12 +40,18 @@ impl<S: UncheckedComponentContainer> MaskedComponentContainer<S> {
         }
     }
 
-    pub fn get_mask(&self) -> &BitSet {
-        &self.mask
+    pub fn iter<'a>(&'a self) -> MaskedComponentIter<'a, S> {
+        MaskedComponentIter {
+            store: &self.store,
+            iter: (&self.mask).iter(),
+        }
     }
 
-    pub fn get_mask_mut(&mut self) -> &mut BitSet {
-        &mut self.mask
+    pub fn iter_mut<'a>(&'a mut self) -> MaskedComponentIterMut<'a, S> {
+        MaskedComponentIterMut {
+            store: &mut self.store,
+            iter: (&self.mask).iter(),
+        }
     }
 }
 
@@ -84,6 +91,59 @@ impl<S: UncheckedComponentContainer> ComponentContainer for MaskedComponentConta
     fn clear(&mut self) {
         self.mask.clear();
         unsafe { self.store.clear() };
+    }
+}
+
+
+pub struct MaskedComponentIter<'a, S: 'a + UncheckedComponentContainer> {
+    store: &'a S,
+    iter: BitIter<&'a BitSet>,
+}
+
+impl<'a, S: UncheckedComponentContainer> StorageLike for MaskedComponentIter<'a, S> {
+    type Item = &'a S::Item;
+
+    fn next_entity(&mut self) -> Option<Entity> {
+        self.iter.next().map(|id| Entity::from_id(id))
+    }
+
+    fn get(&mut self, entity: Entity) -> Self::Item {
+        unsafe { self.store.get(entity.id() as usize) }
+    }
+}
+
+impl<'a, S: UncheckedComponentContainer> Iterator for MaskedComponentIter<'a, S> {
+    type Item = <Self as StorageLike>::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        StorageLike::next(self)
+    }
+}
+
+
+pub struct MaskedComponentIterMut<'a, S: 'a + UncheckedComponentContainer> {
+    store: &'a mut S,
+    iter: BitIter<&'a BitSet>,
+}
+
+impl<'a, S: UncheckedComponentContainer> StorageLike for MaskedComponentIterMut<'a, S> {
+    type Item = &'a mut S::Item;
+
+    fn next_entity(&mut self) -> Option<Entity> {
+        self.iter.next().map(|id| Entity::from_id(id))
+    }
+
+    fn get(&mut self, entity: Entity) -> Self::Item {
+        let store = self.store as *mut S;
+        unsafe { (*store).get_mut(entity.id() as usize) }
+    }
+}
+
+impl<'a, S: UncheckedComponentContainer> Iterator for MaskedComponentIterMut<'a, S> {
+    type Item = &'a mut S::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        StorageLike::next(self)
     }
 }
 

@@ -1,16 +1,19 @@
 extern crate shine_ecs as ecs;
 extern crate env_logger;
 extern crate shred;
+extern crate hibitset;
 
 use ecs::*;
 
 
+#[derive(Debug)]
 struct Pos {
     x: f32,
     y: f32,
     z: f32,
 }
 
+#[derive(Debug)]
 struct Velocity {
     x: f32,
     y: f32,
@@ -41,26 +44,26 @@ fn world_simple()
         let mut pos = world.resources.fetch_mut::<<Pos as Component>::Storage>();
         let mut vel = world.resources.fetch_mut::<<Velocity as Component>::Storage>();
 
-        for _i in 0..10 {
+        for i in 0..30 {
             let e = ent.create();
-            pos.insert(e, Pos { x: 0., y: 0., z: 0. });
-            vel.insert(e, Velocity { x: 0., y: 0., z: 1. });
+            if i % 3 == 0 {
+                pos.insert(e, Pos { x: 0., y: 0., z: 0. });
+            }
+            if i % 2 == 0 {
+                vel.insert(e, Velocity { x: 0., y: 0., z: 1. });
+            }
+
+
+            for p in pos.iter_mut() {
+                p.x += 0.1;
+                p.y += 0.1;
+                p.z += 0.1;
+            }
         }
     }
 
     {
-        let (e, p, mut v): (ReadEntites, ReadComponent<Pos>, WriteComponent<Velocity>) = world.system_data();
-        //println!("e {:?}", e.get_mask());
-        println!("p {:?}", p.get_mask());
-        println!("v {:?}", v.get_mask_mut());
+        let (_e, _p, mut _v): (ReadEntities, ReadComponent<Pos>, WriteComponent<Velocity>) = world.system_data();
     }
-
-//world.resources.sys
-
-
-
-    /*world.exec(|(p,v) : (Pos, Velocity)| {
-
-    });*/
 }
 

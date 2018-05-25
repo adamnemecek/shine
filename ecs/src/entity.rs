@@ -16,6 +16,12 @@ impl Entity {
         }
     }
 
+    pub(crate) fn from_id(id: u32) -> Entity {
+        Entity {
+            id: id
+        }
+    }
+
     pub fn id(&self) -> u32 {
         self.id
     }
@@ -57,6 +63,10 @@ impl EntityStore {
             max_entity_count: 0,
             count: 0,
         }
+    }
+
+    pub fn len(&self) -> usize {
+        self.count as usize
     }
 
     /// Allocates a new entity
@@ -123,11 +133,11 @@ impl EntityStore {
 
 
 /// Grant read access for a component
-pub struct ReadEntites<'a> {
+pub struct ReadEntities<'a> {
     inner: Read<'a, EntityStore>,
 }
 
-impl<'a> Deref for ReadEntites<'a> {
+impl<'a> Deref for ReadEntities<'a> {
     type Target = EntityStore;
 
     fn deref(&self) -> &EntityStore {
@@ -135,12 +145,12 @@ impl<'a> Deref for ReadEntites<'a> {
     }
 }
 
-impl<'a> SystemData<'a> for ReadEntites<'a>
+impl<'a> SystemData<'a> for ReadEntities<'a>
 {
     fn setup(_: &mut Resources) {}
 
     fn fetch(res: &'a Resources) -> Self {
-        ReadEntites { inner: res.fetch::<EntityStore>().into() }
+        ReadEntities { inner: res.fetch::<EntityStore>().into() }
     }
 
     fn reads() -> Vec<ResourceId> {
@@ -156,11 +166,11 @@ impl<'a> SystemData<'a> for ReadEntites<'a>
 
 
 /// Grant read/write access to a component
-pub struct WriteEntites<'a> {
+pub struct WriteEntities<'a> {
     inner: Write<'a, EntityStore>,
 }
 
-impl<'a> Deref for WriteEntites<'a> {
+impl<'a> Deref for WriteEntities<'a> {
     type Target = EntityStore;
 
     fn deref(&self) -> &EntityStore {
@@ -168,18 +178,18 @@ impl<'a> Deref for WriteEntites<'a> {
     }
 }
 
-impl<'a> DerefMut for WriteEntites<'a> {
+impl<'a> DerefMut for WriteEntities<'a> {
     fn deref_mut(&mut self) -> &mut EntityStore {
         self.inner.deref_mut()
     }
 }
 
-impl<'a> SystemData<'a> for WriteEntites<'a>
+impl<'a> SystemData<'a> for WriteEntities<'a>
 {
     fn setup(_: &mut Resources) {}
 
     fn fetch(res: &'a Resources) -> Self {
-        WriteEntites { inner: res.fetch_mut::<EntityStore>().into() }
+        WriteEntities { inner: res.fetch_mut::<EntityStore>().into() }
     }
 
     fn reads() -> Vec<ResourceId> {

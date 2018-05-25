@@ -1,6 +1,6 @@
 use shred::{Resources, SystemData};
 
-use entity::EntityStore;
+use entity::{EntityStore, ReadEntities, WriteEntities};
 use component::Component;
 
 pub struct World {
@@ -22,8 +22,15 @@ impl World {
         self.resources.insert::<C::Storage>(Default::default());
     }
 
-    pub fn system_data<'a, T: SystemData<'a>>(&'a self) -> T
-    {
+    pub fn entities(&self) -> ReadEntities {
+        ReadEntities::fetch(&self.resources)
+    }
+
+    pub fn entities_mut(&self) -> WriteEntities {
+        WriteEntities::fetch(&self.resources)
+    }
+
+    pub fn system_data<'a, T: SystemData<'a>>(&'a self) -> T {
         SystemData::fetch(&self.resources)
     }
 }
