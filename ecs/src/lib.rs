@@ -7,7 +7,7 @@ extern crate hibitset;
 
 mod utils;
 mod entity;
-mod storagelike;
+mod iterator;
 mod uncheckedcomponentcontainer;
 mod componentcontainer;
 mod component;
@@ -16,7 +16,7 @@ mod world;
 
 pub use self::utils::*;
 pub use self::entity::*;
-pub use self::storagelike::*;
+pub use self::iterator::*;
 pub use self::uncheckedcomponentcontainer::*;
 pub use self::componentcontainer::*;
 pub use self::component::*;
