@@ -1,65 +1,112 @@
-use std::mem;
-use entity::*;
+use std::ops::{Deref, DerefMut};
+use std::collections::HashMap;
+use shred::{Resources, ResourceId, Read, Write, SystemData};
 
-/// A connection between two entities
-#[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
-pub struct Link {
-    from: Entity,
-    to: Entity,
+use SparseStorage;
+use linkcontainer::LinkContainer;
+//use maskedcomponentcontainer::MaskedComponentContainer;
+
+
+
+pub type SparseLinkStore<T> = HashMap<(usize,usize), T>;
+
+/// Trait to assign link store policy to type
+pub trait Link {
+    type StorageCategory: 'static;
 }
 
-impl Link {
-    pub fn new(from: Entity, to: Entity) -> Link {
-        Link {
-            from: from,
-            to: to,
-        }
-    }
+/// Trait to assign a concrete link store to a type
+pub trait LinkStore {
+    type Storage: 'static + LinkContainer;
+}
 
-    pub fn new_invalid() -> Link {
-        Link {
-            from: Entity::new_invalid(),
-            to: Entity::new_invalid(),
-        }
-    }
+/// Internal helper to derive to concrete component storage from a policy(category) and type.
+/// It's a workaround for impl specialization.
+impl<S, T> LinkStore for T
+    where
+        T: 'static + Sized + Sync + Send + Link<StorageCategory=S>,
+        S: 'static,
+        (S, T): LinkStore,
+{
+    type Storage = <(S, T) as LinkStore>::Storage;
+}
 
-    pub fn new_from(from: Entity) -> Link {
-        Link {
-            from: from,
-            to: Entity::new_invalid(),
-        }
-    }
+/// LinkStore specialization for SparseStorage
+impl<T> LinkStore for (SparseStorage, T)
+    where
+        T: 'static + Sync + Send + Sized + Link<StorageCategory=SparseStorage>,
+{
+    type Storage = SparseLinkStore<T>;
+}
 
-    pub fn new_to(to: Entity) -> Link {
-        Link {
-            from: Entity::new_invalid(),
-            to: to,
-        }
-    }
 
-    pub fn is_valid(&self) -> bool {
-        self.from.is_valid() && self.to.is_valid()
-    }
+/// Grant immutable access to the components of a store
+pub struct ReadLink<'a, C: LinkStore> {
+    inner: Read<'a, C::Storage>,
+}
 
-    pub fn is_from_valid(&self) -> bool {
-        self.from.is_valid()
-    }
+impl<'a, C: LinkStore> Deref for ReadLink<'a, C> {
+    type Target = C::Storage;
 
-    pub fn is_to_valid(&self) -> bool {
-        self.to.is_valid()
-    }
-
-    pub fn flip(&mut self) {
-        mem::swap(&mut self.from, &mut self.to);
-    }
-
-    pub fn get_flipped(&self) -> Link {
-        Link::new(self.to, self.from)
+    fn deref(&self) -> &C::Storage {
+        self.inner.deref()
     }
 }
 
-impl From<(Entity, Entity)> for Link {
-    fn from(value: (Entity, Entity)) -> Link {
-        Link::new(value.0, value.1)
+impl<'a, C: LinkStore> SystemData<'a> for ReadLink<'a, C>
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        ReadLink { inner: res.fetch::<C::Storage>().into() }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![
+            ResourceId::new::<C::Storage>(),
+        ]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![]
+    }
+}
+
+
+/// Grant mutable access to a component
+pub struct WriteLink<'a, C: LinkStore> {
+    inner: Write<'a, C::Storage>,
+}
+
+impl<'a, C: LinkStore> Deref for WriteLink<'a, C> {
+    type Target = C::Storage;
+
+    fn deref(&self) -> &C::Storage {
+        self.inner.deref()
+    }
+}
+
+impl<'a, C: LinkStore> DerefMut for WriteLink<'a, C> {
+    fn deref_mut(&mut self) -> &mut C::Storage {
+        self.inner.deref_mut()
+    }
+}
+
+impl<'a, C: LinkStore> SystemData<'a> for WriteLink<'a, C>
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        WriteLink { inner: res.fetch_mut::<C::Storage>().into() }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![
+            ResourceId::new::<C::Storage>(),
+        ]
     }
 }

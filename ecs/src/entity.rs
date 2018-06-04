@@ -16,7 +16,7 @@ impl Entity {
         }
     }
 
-    pub(crate) fn from_id(id: u32) -> Entity {
+    pub fn from_id(id: u32) -> Entity {
         Entity {
             id: id
         }
@@ -132,7 +132,7 @@ impl EntityStore {
 }
 
 
-/// Grant read access for a component
+/// Grant immutable access to the entities
 pub struct ReadEntities<'a> {
     inner: Read<'a, EntityStore>,
 }
@@ -165,7 +165,7 @@ impl<'a> SystemData<'a> for ReadEntities<'a>
 }
 
 
-/// Grant read/write access to a component
+/// Grant immutable access to the entities
 pub struct WriteEntities<'a> {
     inner: Write<'a, EntityStore>,
 }
