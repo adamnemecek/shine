@@ -29,6 +29,7 @@ pub mod arena {
     pub use super::indexedarena::*;
 }
 
+pub mod stdext;
 pub mod threadid;
 pub mod spscstate;
 pub mod store;

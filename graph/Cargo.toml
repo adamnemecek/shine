@@ -12,5 +12,8 @@ libc = "*"
 log = "*"
 lazy_static = "*"
 
+shine-store = {path = "../store"}
+
 [dev-dependencies]
 env_logger = "*"
+
