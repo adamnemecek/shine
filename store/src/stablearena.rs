@@ -5,14 +5,14 @@ use std::marker::PhantomData;
 /// todo: The allocated memory is managed by the Arena using free list.
 /// Arena has no concurrency handling. At most one thread may accessing the arean at a time, hence
 /// some synchronisation method have to be used in parallel environment.
-pub struct Arena<T> {
+pub struct StableArena<T> {
     size: usize,
     _ph: PhantomData<T>,
 }
 
-impl<T> Arena<T> {
-    pub fn new() -> Arena<T> {
-        Arena {
+impl<T> StableArena<T> {
+    pub fn new() -> StableArena<T> {
+        StableArena {
             size: 0,
             _ph: PhantomData,
         }
@@ -20,14 +20,14 @@ impl<T> Arena<T> {
 
     pub fn allocate(&mut self, data: T) -> &mut T {
         self.size += 1;
-        //println!("size alloc: {}", self.size);
+        trace!("size after allocation: {}", self.size);
         let b = Box::new(data);
         unsafe { &mut *Box::into_raw(b) }
     }
 
     pub fn deallocate(&mut self, data: &mut T) {
         self.size -= 1;
-        //println!("size release: {}", self.size);
+        trace!("size after deallocation: {}", self.size);
         unsafe { Box::from_raw(data as *mut T) };
     }
 

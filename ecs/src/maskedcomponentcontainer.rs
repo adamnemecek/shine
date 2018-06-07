@@ -3,7 +3,7 @@ use hibitset::BitSet;
 
 use entity::Entity;
 use componentcontainer::ComponentContainer;
-use iterator::{ComponentMap, MaskedContainer};
+use iterator::{Reference, MaskedContainer};
 
 
 /// Adds a bitset based lookup to a ComponentContainer to speed up queries
@@ -41,7 +41,7 @@ impl<S: ComponentContainer + Default> MaskedComponentContainer<S> {
      }*/
 }
 
-impl<S: ComponentContainer> ComponentMap for MaskedComponentContainer<S> {
+impl<S: ComponentContainer> ComponentContainer for MaskedComponentContainer<S> {
     type Item = S::Item;
 
     unsafe fn get_unchecked(&self, entity: Entity) -> &Self::Item {
@@ -69,9 +69,7 @@ impl<S: ComponentContainer> ComponentMap for MaskedComponentContainer<S> {
             None
         }
     }
-}
 
-impl<S: ComponentContainer> ComponentContainer for MaskedComponentContainer<S> {
     fn insert(&mut self, entity: Entity, value: Self::Item) {
         self.mask.add(entity.id());
         self.store.insert(entity, value);
@@ -107,16 +105,41 @@ impl<S: ComponentContainer> ops::IndexMut<Entity> for MaskedComponentContainer<S
     }
 }
 
-impl<S: ComponentContainer> MaskedContainer for MaskedComponentContainer<S> {
-    type Mask = BitSet;
-    type Store = S;
+pub struct RefImpl<'a, S: 'a + ComponentContainer> {
+    container: &'a S,
+}
 
-    fn store(&self) -> (&Self::Mask, &Self::Store) {
-        (&self.mask, &self.store)
+impl<'a, S: 'a + ComponentContainer> Reference<'a> for RefImpl<'a, S> {
+    type Item = S::Item;
+
+    fn reference(&mut self, entity: Entity) {}
+}
+
+
+pub struct RefMutImpl<'a, S: 'a + ComponentContainer> {
+    container: &'a mut S,
+}
+
+impl<'a, S: 'a + ComponentContainer> Reference<'a> for RefMutImpl<'a, S> {
+    type Item = S::Item;
+
+    fn reference(&mut self, entity: Entity) {}
+}
+
+impl<'a, S: ComponentContainer> MaskedContainer for MaskedComponentContainer<S> {
+    type Item = S::Item;
+    type Mask = BitSet;
+
+    // TODO: GAT
+    type Ref = RefImpl<'static, S>;
+    type RefMut = RefMutImpl<'static, S>;
+
+    fn create_ref<'b>(&'b self) -> (&'b Self::Mask, Self::Ref) {
+        (&self.mask, RefImpl { container: unsafe { &*(&self.store as *const _) } })
     }
 
-    fn store_mut(&mut self) -> (&Self::Mask, &mut Self::Store) {
-        (&self.mask, &mut self.store)
+    fn create_ref_mut<'b>(&'b mut self) -> (&'b Self::Mask, Self::RefMut) {
+        (&self.mask, RefMutImpl { container: unsafe { &mut *(&mut self.store as *mut _) } })
     }
 }
 

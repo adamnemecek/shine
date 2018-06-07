@@ -138,7 +138,7 @@ struct SharedData<D> {
 
 // D that requires exclusive lock
 struct ExclusiveData<D> {
-    arena: Arena<Entry<D>>,
+    arena: StableArena<Entry<D>>,
     requests: Vec<*mut Entry<D>>,
 }
 
@@ -178,7 +178,7 @@ impl<D> Store<D> {
                 }),
             exclusive: Mutex::new(
                 ExclusiveData {
-                    arena: Arena::new(),
+                    arena: StableArena::new(),
                     requests: Vec::new(),
                 }),
         }
@@ -193,7 +193,7 @@ impl<D> Store<D> {
                 }),
             exclusive: Mutex::new(
                 ExclusiveData {
-                    arena: Arena::new() /*Arena::_with_capacity(page_size, capacity)*/,
+                    arena: StableArena::new() /*Arena::_with_capacity(page_size, capacity)*/,
                     requests: Vec::with_capacity(capacity),
                 }),
         }
@@ -307,7 +307,7 @@ impl<'a, D: 'a> WriteGuard<'a, D> {
         self.shared.resources.append(&mut self.exclusive.requests);
     }
 
-    fn drain_impl<F: FnMut(&mut D) -> bool>(arena: &mut Arena<Entry<D>>, v: &mut Vec<*mut Entry<D>>, filter: &mut F) {
+    fn drain_impl<F: FnMut(&mut D) -> bool>(arena: &mut StableArena<Entry<D>>, v: &mut Vec<*mut Entry<D>>, filter: &mut F) {
         v.drain_filter(|&mut e| {
             let e = unsafe { &mut *e };
             if e.ref_count.load(Ordering::Relaxed) == 0 {

@@ -1,5 +1,6 @@
 extern crate shine_store;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 
 use std::env;

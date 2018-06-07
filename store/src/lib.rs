@@ -3,9 +3,11 @@
 #![feature(drain_filter)]
 #![feature(attr_literals)]
 
-#[macro_use] extern crate lazy_static;
+#[macro_use]
+extern crate lazy_static;
 extern crate num_cpus;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 
 /// Define engine limitations
 pub mod libconfig {
@@ -19,9 +21,15 @@ pub mod libconfig {
     pub const PREFERRED_THREAD_COUNT: usize = 0;
 }
 
-pub mod arena;
-pub mod store;
-pub mod hashstore;
+mod stablearena;
+mod indexedarena;
+
+pub mod arena {
+    pub use super::stablearena::*;
+    pub use super::indexedarena::*;
+}
 
 pub mod threadid;
 pub mod spscstate;
+pub mod store;
+pub mod hashstore;

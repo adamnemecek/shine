@@ -3,18 +3,25 @@ use std::collections::HashMap;
 
 use utils::DenseEntry;
 use entity::Entity;
-use iterator::ComponentMap;
 
 
 /// Trait to create and remove components of an entity.
-pub trait ComponentContainer: 'static + Send + Sync + ComponentMap {
+pub trait ComponentContainer: 'static + Send + Sync {
+    type Item: 'static + Sync + Send;
+
+    unsafe fn get_unchecked(&self, entity: Entity) -> &Self::Item;
+    unsafe fn get_unchecked_mut(&mut self, entity: Entity) -> &mut Self::Item;
+
+    fn get(&self, entity: Entity) -> Option<&Self::Item>;
+    fn get_mut(&mut self, entity: Entity) -> Option<&mut Self::Item>;
+
     fn insert(&mut self, entity: Entity, value: Self::Item);
     fn remove(&mut self, entity: Entity) -> Option<Self::Item>;
     fn clear(&mut self);
 }
 
 
-impl<T: 'static + Sync + Send> ComponentMap for Vec<DenseEntry<T>> {
+impl<T: 'static + Sync + Send> ComponentContainer for Vec<DenseEntry<T>> {
     type Item = T;
 
     unsafe fn get_unchecked(&self, entity: Entity) -> &Self::Item {
@@ -56,9 +63,7 @@ impl<T: 'static + Sync + Send> ComponentMap for Vec<DenseEntry<T>> {
             None
         }
     }
-}
 
-impl<T: 'static + Sync + Send> ComponentContainer for Vec<DenseEntry<T>> {
     fn insert(&mut self, entity: Entity, value: Self::Item) {
         let id = entity.id() as usize;
         if id >= self.len() {
@@ -86,7 +91,7 @@ impl<T: 'static + Sync + Send> ComponentContainer for Vec<DenseEntry<T>> {
 }
 
 
-impl<T: 'static + Sync + Send> ComponentMap for HashMap<usize, T> {
+impl<T: 'static + Sync + Send> ComponentContainer for HashMap<usize, T> {
     type Item = T;
 
     unsafe fn get_unchecked(&self, entity: Entity) -> &Self::Item {
@@ -108,9 +113,7 @@ impl<T: 'static + Sync + Send> ComponentMap for HashMap<usize, T> {
         let id = entity.id() as usize;
         HashMap::get_mut(self, &id)
     }
-}
 
-impl<T: 'static + Sync + Send> ComponentContainer for HashMap<usize, T> {
     fn insert(&mut self, entity: Entity, value: Self::Item) {
         let id = entity.id() as usize;
         HashMap::insert(self, id, value);

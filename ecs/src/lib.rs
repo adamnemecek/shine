@@ -1,5 +1,6 @@
 #![feature(vec_resize_default)]
 #![feature(rustc_private)]
+#![feature(trace_macros)]
 
 
 #[macro_use]

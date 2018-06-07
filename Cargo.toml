@@ -8,11 +8,13 @@ repository = "https://github.com/gzp/shine"
 keywords = ["component system", "game"]
 
 [workspace]
-members = [ "store", "ecs" ]
+#members = [ "store", "graph", "ecs" ]
+members = [ "store", "graph" ]
 
 [dependencies]
 shine-store = {path = "store"}
-shine-ecs = {path = "ecs"}
+shine-graph = {path = "graph"}
+#shine-ecs = {path = "ecs"}
 
 #[dev-dependencies] https://github.com/rust-lang/cargo/issues/860
 #env_logger = "*"

@@ -2,9 +2,16 @@ use std::ops;
 use std::collections::HashMap;
 
 use edge::Edge;
-use iterator::LinkMap;
 
-pub trait LinkContainer: 'static + Send + Sync + LinkMap {
+pub trait LinkContainer: 'static + Send + Sync {
+    type Item: 'static + Sync + Send;
+
+    unsafe fn get_unchecked(&self, edge: Edge) -> &Self::Item;
+    unsafe fn get_unchecked_mut(&mut self, edge: Edge) -> &mut Self::Item;
+
+    fn get(&self, edge: Edge) -> Option<&Self::Item>;
+    fn get_mut(&mut self, edge: Edge) -> Option<&mut Self::Item>;
+
     fn insert(&mut self, edge: Edge, value: Self::Item);
     fn remove(&mut self, edge: Edge) -> Option<Self::Item>;
 
@@ -29,7 +36,7 @@ impl<T: 'static + Sync + Send> ops::IndexMut<Edge> for LinkContainer<Item=T>
 
 
 /// Implement a sparse storage
-impl<T: 'static + Sync + Send> LinkMap for HashMap<(usize, usize), T> {
+impl<T: 'static + Sync + Send> LinkContainer for HashMap<(usize, usize), T> {
     type Item = T;
 
     unsafe fn get_unchecked(&self, edge: Edge) -> &Self::Item {
@@ -51,9 +58,7 @@ impl<T: 'static + Sync + Send> LinkMap for HashMap<(usize, usize), T> {
         let id = (edge.from().id() as usize, edge.to().id() as usize);
         HashMap::get_mut(self, &id)
     }
-}
 
-impl<T: 'static + Sync + Send> LinkContainer for HashMap<(usize, usize), T> {
     fn insert(&mut self, edge: Edge, value: Self::Item) {
         let id = (edge.from().id() as usize, edge.to().id() as usize);
         HashMap::insert(self, id, value);

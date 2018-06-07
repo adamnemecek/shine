@@ -50,7 +50,6 @@ impl Link for Spring {
 #[test]
 fn world_simple()
 {
-    foo();
     let _ = env_logger::try_init();
 
     let mut world = World::new();
@@ -81,16 +80,16 @@ fn world_simple()
             }
 
 
-            /* {
-                 let mut iter = join_wr(&mut pos, &vel);
+            {
+                 let mut iter = RWJoin2::new(&vel, &mut pos);
                  while let Some(p) = iter.next() {
                      println!("e:{:?}, p:{:?}, v: {:?}", p.0, p.1, p.2);
-                     p.1.x += p.2.x;
+                     /*p.1.x += p.2.x;
                      p.1.y += p.2.y;
-                     p.1.z += p.2.z;
+                     p.1.z += p.2.z;*/
                  }
              }
-
+/*
              {
                  let mut iter = join_wr(&mut pos, spring.backward_view());
                  while let Some(p) = iter.next() {

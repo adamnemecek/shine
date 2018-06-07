@@ -1,19 +1,16 @@
 [package]
-name = "shine-store"
+name = "shine-graph"
 version = "0.1.1"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "SHINE. Storage and container module of a general purpose multi-threaded rendering engine."
+description = "SHINE. Graph and sparse matrix library for the shine engine."
 repository = "https://github.com/zpgaal/shine"
-keywords = ["shine", "render", "opengl", "game"]
+keywords = ["graph", "matrix", "spares"]
 
 [dependencies]
 libc = "*"
 log = "*"
 lazy_static = "*"
-num_cpus="*"
 
 [dev-dependencies]
 env_logger = "*"
-rand = "*"
-permutohedron = "*"

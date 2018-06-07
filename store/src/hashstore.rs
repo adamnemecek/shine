@@ -152,7 +152,7 @@ impl<K: Key, D: From<K>> SharedData<K, D> {
 
 // D that requires exclusive lock
 struct ExclusiveData<K: Key, D: From<K>> {
-    arena: Arena<Entry<K, D>>,
+    arena: StableArena<Entry<K, D>>,
     requests: HashMap<K, *mut Entry<K, D>>,
 }
 
@@ -203,7 +203,7 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
                 }),
             exclusive: Mutex::new(
                 ExclusiveData {
-                    arena: Arena::new(),
+                    arena: StableArena::new(),
                     requests: HashMap::new(),
                 }),
         }
@@ -218,7 +218,7 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
                 }),
             exclusive: Mutex::new(
                 ExclusiveData {
-                    arena: Arena::new() /*Arena::_with_capacity(page_size, capacity)*/,
+                    arena: StableArena::new() /*Arena::_with_capacity(page_size, capacity)*/,
                     requests: HashMap::with_capacity(capacity),
                 }),
         }
@@ -360,7 +360,7 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
         self.shared.resources.extend(&mut self.exclusive.requests.drain());
     }
 
-    fn drain_impl<F: FnMut(&mut D) -> bool>(arena: &mut Arena<Entry<K, D>>, v: &mut HashMap<K, *mut Entry<K, D>>, filter: &mut F) {
+    fn drain_impl<F: FnMut(&mut D) -> bool>(arena: &mut StableArena<Entry<K, D>>, v: &mut HashMap<K, *mut Entry<K, D>>, filter: &mut F) {
         v.retain(|_k, &mut e| {
             let e = unsafe { &mut *e };
             if e.ref_count.load(Ordering::Relaxed) == 0 {
