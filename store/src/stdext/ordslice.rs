@@ -1,19 +1,17 @@
 use std::cmp::Ordering;
 
-
+/// Extension trait for slices of #Ord items
 pub trait SliceOrdExt {
     type Item: Ord;
 
     fn lower_bound(&self, x: &Self::Item) -> usize;
 
     fn lower_bound_by<'a, F>(&'a self, f: F) -> usize
-        where
-            F: FnMut(&'a Self::Item) -> Ordering;
+    where
+        F: FnMut(&'a Self::Item) -> Ordering;
 }
 
-
-impl<T: Ord> SliceOrdExt for [T]
-{
+impl<T: Ord> SliceOrdExt for [T] {
     type Item = T;
 
     fn lower_bound(&self, x: &T) -> usize {
@@ -21,8 +19,8 @@ impl<T: Ord> SliceOrdExt for [T]
     }
 
     fn lower_bound_by<'a, F>(&'a self, mut f: F) -> usize
-        where
-            F: FnMut(&'a Self::Item) -> Ordering,
+    where
+        F: FnMut(&'a Self::Item) -> Ordering,
     {
         let mut size = self.len();
         if size == 0 {

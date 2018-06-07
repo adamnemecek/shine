@@ -4,6 +4,7 @@ extern crate env_logger;
 
 use std::env;
 use std::thread;
+
 use shine_store::spscstate::*;
 
 const ITER_COUNT: i32 = 0x2ffff;
@@ -53,7 +54,10 @@ fn single_threaded_stress_small_buffer() {
 fn multi_threaded_stress_small_buffer() {
     let _ = env_logger::try_init();
 
-    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(
+        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
+        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
+    );
 
     let (p, c) = state_channel();
 
@@ -105,7 +109,11 @@ fn is_prime(n: i32) -> bool {
 }
 
 fn long_calc(x: i32) -> i32 {
-    if is_prime(x) { 11 } else { 87 }
+    if is_prime(x) {
+        11
+    } else {
+        87
+    }
 }
 
 struct BigData {
@@ -117,7 +125,12 @@ struct BigData {
 
 impl Default for BigData {
     fn default() -> BigData {
-        BigData { pre: 2, x: 0, data: [0; 64], post: 2 }
+        BigData {
+            pre: 2,
+            x: 0,
+            data: [0; 64],
+            post: 2,
+        }
     }
 }
 
@@ -155,7 +168,10 @@ fn single_threaded_stress_big_buffer() {
 fn multi_threaded_stress_big_buffer() {
     let _ = env_logger::try_init();
 
-    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(
+        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
+        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
+    );
 
     let (p, c) = state_channel::<BigData>();
 

@@ -1,10 +1,10 @@
-use std::ptr;
-use std::ops;
 use std::fmt;
-use std::sync::*;
+use std::ops;
+use std::ptr;
 use std::sync::atomic::*;
-use arena::*;
+use std::sync::*;
 
+use arena::StableArena;
 
 /// Reference counted indexing of the store items in O(1).
 pub struct Index<D>(*mut Entry<D>);
@@ -73,7 +73,6 @@ impl<D> Drop for Index<D> {
     }
 }
 
-
 /// Unsafe indexing of the store items in O(1) without reference count maintenance.
 pub struct UnsafeIndex<D>(*mut Entry<D>);
 
@@ -119,7 +118,6 @@ impl<D> Clone for UnsafeIndex<D> {
     }
 }
 
-
 /// An entry in the store.
 #[derive(Debug)]
 struct Entry<D> {
@@ -129,12 +127,10 @@ struct Entry<D> {
     value: D,
 }
 
-
 // Store data that requires exclusive lock
 struct SharedData<D> {
     resources: Vec<*mut Entry<D>>,
 }
-
 
 // D that requires exclusive lock
 struct ExclusiveData<D> {
@@ -145,11 +141,10 @@ struct ExclusiveData<D> {
 impl<D> ExclusiveData<D> {
     /// Adds a new item to the store
     fn add(&mut self, data: D) -> Index<D> {
-        let entry = self.arena.allocate(
-            Entry {
-                ref_count: AtomicUsize::new(0),
-                value: data,
-            });
+        let entry = self.arena.allocate(Entry {
+            ref_count: AtomicUsize::new(0),
+            value: data,
+        });
         let entry = entry as *mut Entry<D>;
 
         let index = Index::new(entry);
@@ -157,7 +152,6 @@ impl<D> ExclusiveData<D> {
         index
     }
 }
-
 
 /// Resource store.
 pub struct Store<D> {
@@ -172,30 +166,26 @@ unsafe impl<D> Sync for Store<D> {}
 impl<D> Store<D> {
     pub fn new() -> Store<D> {
         Store {
-            shared: RwLock::new(
-                SharedData {
-                    resources: Vec::new()
-                }),
-            exclusive: Mutex::new(
-                ExclusiveData {
-                    arena: StableArena::new(),
-                    requests: Vec::new(),
-                }),
+            shared: RwLock::new(SharedData {
+                resources: Vec::new(),
+            }),
+            exclusive: Mutex::new(ExclusiveData {
+                arena: StableArena::new(),
+                requests: Vec::new(),
+            }),
         }
     }
 
     /// Creates a new store with memory allocated for at least capacity items
     pub fn new_with_capacity(_page_size: usize, capacity: usize) -> Store<D> {
         Store {
-            shared: RwLock::new(
-                SharedData {
-                    resources: Vec::with_capacity(capacity)
-                }),
-            exclusive: Mutex::new(
-                ExclusiveData {
-                    arena: StableArena::new() /*Arena::_with_capacity(page_size, capacity)*/,
-                    requests: Vec::with_capacity(capacity),
-                }),
+            shared: RwLock::new(SharedData {
+                resources: Vec::with_capacity(capacity),
+            }),
+            exclusive: Mutex::new(ExclusiveData {
+                arena: StableArena::new(), /*Arena::_with_capacity(page_size, capacity)*/
+                requests: Vec::with_capacity(capacity),
+            }),
         }
     }
 
@@ -249,7 +239,6 @@ impl<D> Drop for Store<D> {
     }
 }
 
-
 /// Guarded read access to a store
 pub struct ReadGuard<'a, D: 'a> {
     _shared: RwLockReadGuard<'a, SharedData<D>>,
@@ -283,13 +272,11 @@ impl<'a, 'i, D: 'a> ops::Index<&'i Index<D>> for ReadGuard<'a, D> {
     }
 }
 
-
 /// Guarded update access to a store
 pub struct WriteGuard<'a, D: 'a> {
     shared: RwLockWriteGuard<'a, SharedData<D>>,
     exclusive: MutexGuard<'a, ExclusiveData<D>>,
 }
-
 
 impl<'a, D: 'a> WriteGuard<'a, D> {
     pub fn add(&mut self, data: D) -> Index<D> {
@@ -307,7 +294,11 @@ impl<'a, D: 'a> WriteGuard<'a, D> {
         self.shared.resources.append(&mut self.exclusive.requests);
     }
 
-    fn drain_impl<F: FnMut(&mut D) -> bool>(arena: &mut StableArena<Entry<D>>, v: &mut Vec<*mut Entry<D>>, filter: &mut F) {
+    fn drain_impl<F: FnMut(&mut D) -> bool>(
+        arena: &mut StableArena<Entry<D>>,
+        v: &mut Vec<*mut Entry<D>>,
+        filter: &mut F,
+    ) {
         v.drain_filter(|&mut e| {
             let e = unsafe { &mut *e };
             if e.ref_count.load(Ordering::Relaxed) == 0 {
@@ -326,7 +317,11 @@ impl<'a, D: 'a> WriteGuard<'a, D> {
     /// In other words, remove all unreferenced resources such that f(&mut data) returns true.
     pub fn drain_unused_filtered<F: FnMut(&mut D) -> bool>(&mut self, mut filter: F) {
         let exclusive = &mut *self.exclusive;
-        Self::drain_impl(&mut exclusive.arena, &mut self.shared.resources, &mut filter);
+        Self::drain_impl(
+            &mut exclusive.arena,
+            &mut self.shared.resources,
+            &mut filter,
+        );
         Self::drain_impl(&mut exclusive.arena, &mut exclusive.requests, &mut filter);
     }
 

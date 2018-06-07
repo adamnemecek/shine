@@ -1,18 +1,18 @@
-use std::ptr;
-use std::ops;
-use std::sync::*;
-use std::sync::atomic::*;
-use arena::*;
 use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
 use std::marker::PhantomData;
+use std::ops;
+use std::ptr;
+use std::sync::atomic::*;
+use std::sync::*;
+
+use arena::StableArena;
 
 /// Trait for resource id
 pub trait Key: Clone + Send + Eq + Hash + fmt::Debug {}
 
 pub trait Data<K: Key>: From<K> {}
-
 
 /// Reference counted indexing of the store items in O(1).
 pub struct Index<K: Key, D: From<K>>(*mut Entry<K, D>);
@@ -20,7 +20,6 @@ pub struct Index<K: Key, D: From<K>>(*mut Entry<K, D>);
 unsafe impl<K: Key, D: From<K>> Send for Index<K, D> {}
 
 unsafe impl<K: Key, D: From<K>> Sync for Index<K, D> {}
-
 
 impl<K: Key, D: From<K>> Index<K, D> {
     pub fn null() -> Index<K, D> {
@@ -77,7 +76,6 @@ impl<K: Key, D: From<K>> Drop for Index<K, D> {
     }
 }
 
-
 /// Unsafe indexing of the store items in O(1) without reference count maintenance.
 pub struct UnsafeIndex<K: Key, D: From<K>>(*mut Entry<K, D>);
 
@@ -123,7 +121,6 @@ impl<K: Key, D: From<K>> Clone for UnsafeIndex<K, D> {
     }
 }
 
-
 /// An entry in the store.
 #[derive(Debug)]
 struct Entry<K: Key, D: From<K>> {
@@ -134,8 +131,7 @@ struct Entry<K: Key, D: From<K>> {
     phantom: PhantomData<K>,
 }
 
-
-// Store data that requires exclusive lock
+// Internal hash-store data that can be shared
 struct SharedData<K: Key, D: From<K>> {
     resources: HashMap<K, *mut Entry<K, D>>,
 }
@@ -149,8 +145,7 @@ impl<K: Key, D: From<K>> SharedData<K, D> {
     }
 }
 
-
-// D that requires exclusive lock
+// Internal hash-store data that requires exclusive lock
 struct ExclusiveData<K: Key, D: From<K>> {
     arena: StableArena<Entry<K, D>>,
     requests: HashMap<K, *mut Entry<K, D>>,
@@ -167,22 +162,18 @@ impl<K: Key, D: From<K>> ExclusiveData<K, D> {
     /// Adds a new item to the store
     fn get_or_add(&mut self, k: K) -> Index<K, D> {
         let arena = &mut self.arena;
-        let entry =
-            self.requests.entry(k.clone())
-                .or_insert_with(|| {
-                    let new_entry = arena.allocate(
-                        Entry {
-                            ref_count: AtomicUsize::new(0),
-                            value: D::from(k.clone()),
-                            phantom: PhantomData,
-                        });
-                    new_entry as *mut Entry<K, D>
-                });
+        let entry = self.requests.entry(k.clone()).or_insert_with(|| {
+            let new_entry = arena.allocate(Entry {
+                ref_count: AtomicUsize::new(0),
+                value: D::from(k.clone()),
+                phantom: PhantomData,
+            });
+            new_entry as *mut Entry<K, D>
+        });
 
         Index::new(*entry)
     }
 }
-
 
 /// Resource store.
 pub struct HashStore<K: Key, D: From<K>> {
@@ -197,30 +188,26 @@ unsafe impl<K: Key, D: From<K>> Sync for HashStore<K, D> {}
 impl<K: Key, D: From<K>> HashStore<K, D> {
     pub fn new() -> HashStore<K, D> {
         HashStore {
-            shared: RwLock::new(
-                SharedData {
-                    resources: HashMap::new()
-                }),
-            exclusive: Mutex::new(
-                ExclusiveData {
-                    arena: StableArena::new(),
-                    requests: HashMap::new(),
-                }),
+            shared: RwLock::new(SharedData {
+                resources: HashMap::new(),
+            }),
+            exclusive: Mutex::new(ExclusiveData {
+                arena: StableArena::new(),
+                requests: HashMap::new(),
+            }),
         }
     }
 
     /// Creates a new store with memory allocated for at least capacity items
     pub fn new_with_capacity(_page_size: usize, capacity: usize) -> HashStore<K, D> {
         HashStore {
-            shared: RwLock::new(
-                SharedData {
-                    resources: HashMap::with_capacity(capacity)
-                }),
-            exclusive: Mutex::new(
-                ExclusiveData {
-                    arena: StableArena::new() /*Arena::_with_capacity(page_size, capacity)*/,
-                    requests: HashMap::with_capacity(capacity),
-                }),
+            shared: RwLock::new(SharedData {
+                resources: HashMap::with_capacity(capacity),
+            }),
+            exclusive: Mutex::new(ExclusiveData {
+                arena: StableArena::new(), /*Arena::_with_capacity(page_size, capacity)*/
+                requests: HashMap::with_capacity(capacity),
+            }),
         }
     }
 
@@ -274,7 +261,6 @@ impl<K: Key, D: From<K>> Drop for HashStore<K, D> {
     }
 }
 
-
 /// Guarded read access to a store
 pub struct ReadGuard<'a, K: 'a + Key, D: 'a + From<K>> {
     shared: RwLockReadGuard<'a, SharedData<K, D>>,
@@ -323,7 +309,6 @@ impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::Index<&'i Index<K, D>> for ReadG
     }
 }
 
-
 /// Guarded update access to a store
 pub struct WriteGuard<'a, K: 'a + Key, D: 'a + From<K>> {
     shared: RwLockWriteGuard<'a, SharedData<K, D>>,
@@ -357,10 +342,16 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
     /// Merges the requests into the "active" items
     pub fn finalize_requests(&mut self) {
         // Move all resources into the stored resources
-        self.shared.resources.extend(&mut self.exclusive.requests.drain());
+        self.shared
+            .resources
+            .extend(&mut self.exclusive.requests.drain());
     }
 
-    fn drain_impl<F: FnMut(&mut D) -> bool>(arena: &mut StableArena<Entry<K, D>>, v: &mut HashMap<K, *mut Entry<K, D>>, filter: &mut F) {
+    fn drain_impl<F: FnMut(&mut D) -> bool>(
+        arena: &mut StableArena<Entry<K, D>>,
+        v: &mut HashMap<K, *mut Entry<K, D>>,
+        filter: &mut F,
+    ) {
         v.retain(|_k, &mut e| {
             let e = unsafe { &mut *e };
             if e.ref_count.load(Ordering::Relaxed) == 0 {
@@ -379,7 +370,11 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
     /// In other words, remove all unreferenced resources such that f(&mut data) returns true.
     pub fn drain_unused_filtered<F: FnMut(&mut D) -> bool>(&mut self, mut filter: F) {
         let exclusive = &mut *self.exclusive;
-        Self::drain_impl(&mut exclusive.arena, &mut self.shared.resources, &mut filter);
+        Self::drain_impl(
+            &mut exclusive.arena,
+            &mut self.shared.resources,
+            &mut filter,
+        );
         Self::drain_impl(&mut exclusive.arena, &mut exclusive.requests, &mut filter);
     }
 

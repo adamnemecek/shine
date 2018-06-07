@@ -1,17 +1,16 @@
 extern crate shine_store;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 
 use std::env;
-use std::thread;
 use std::sync::Arc;
+use std::thread;
 
 use shine_store::store::*;
 
-
 /// Test resource data
 struct TestData(String);
-
 
 impl TestData {
     fn new<S: Into<String>>(s: S) -> TestData {
@@ -32,8 +31,8 @@ fn simple_single_threaded() {
     let _ = env_logger::try_init();
 
     let store = Store::<TestData>::new();
-    let mut r0;// = TestRef::none();
-    let mut r1;// = TestRef::none();
+    let mut r0; // = TestRef::none();
+    let mut r1; // = TestRef::none();
 
     info!("request 0,1");
     {
@@ -107,12 +106,14 @@ fn simple_single_threaded() {
     }
 }
 
-
 #[test]
 fn simple_multi_threaded() {
     let _ = env_logger::try_init();
 
-    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(
+        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
+        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
+    );
 
     let store = Store::<TestData>::new();
     let store = Arc::new(store);
@@ -121,7 +122,7 @@ fn simple_multi_threaded() {
 
     // request from multiple threads
     {
-        let mut tp = vec!();
+        let mut tp = vec![];
         for i in 0..ITER {
             let store = store.clone();
             tp.push(thread::spawn(move || {
@@ -154,13 +155,15 @@ fn simple_multi_threaded() {
     }
 }
 
-
 #[test]
 fn check_lock() {
     let _ = env_logger::try_init();
 
     // single threaded as panic hook is a global resource
-    assert!(env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1", "This test shall run in single threaded test environment: RUST_TEST_THREADS=1");
+    assert!(
+        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
+        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
+    );
 
     use std::mem;
     use std::panic;
@@ -169,34 +172,40 @@ fn check_lock() {
 
     {
         let store = Store::<TestData>::new();
-        assert!(panic::catch_unwind(|| {
-            let w = store.write();
-            let r = store.read();
-            drop(r);
-            drop(w);
-        }).is_err());
+        assert!(
+            panic::catch_unwind(|| {
+                let w = store.write();
+                let r = store.read();
+                drop(r);
+                drop(w);
+            }).is_err()
+        );
         mem::forget(store);
     }
 
     {
         let store = Store::<TestData>::new();
-        assert!(panic::catch_unwind(|| {
-            let r = store.read();
-            let w = store.write();
-            drop(w);
-            drop(r);
-        }).is_err());
+        assert!(
+            panic::catch_unwind(|| {
+                let r = store.read();
+                let w = store.write();
+                drop(w);
+                drop(r);
+            }).is_err()
+        );
         mem::forget(store);
     }
 
     {
         let store = Store::<TestData>::new();
-        assert!(panic::catch_unwind(|| {
-            let w1 = store.write();
-            let w2 = store.write();
-            drop(w2);
-            drop(w1);
-        }).is_err());
+        assert!(
+            panic::catch_unwind(|| {
+                let w1 = store.write();
+                let w2 = store.write();
+                drop(w2);
+                drop(w1);
+            }).is_err()
+        );
         mem::forget(store);
     }
 

@@ -1,8 +1,7 @@
+use std::fmt;
 use std::mem;
 use std::ops;
 use std::ptr;
-use std::fmt;
-
 
 enum Entry<T> {
     // Vacant entry pointing to the next free item (or usize::max_value if no empty item)
@@ -39,11 +38,17 @@ impl<T> IndexedArena<T> {
         trace!("Increment capacity by {}", capacity);
 
         let start = self.items.len();
-        if capacity > 0 { self.items.reserve_exact(capacity); }
+        if capacity > 0 {
+            self.items.reserve_exact(capacity);
+        }
         let capacity = self.items.capacity();
         unsafe { self.items.set_len(capacity) };
         for id in (start..self.items.len()).rev() {
-            assert!(if let Entry::Vacant(_) = self.free_head { true } else { false });
+            assert!(if let Entry::Vacant(_) = self.free_head {
+                true
+            } else {
+                false
+            });
             let head = mem::replace(&mut self.free_head, Entry::Vacant(id));
             unsafe { ptr::write(&mut self.items[id], head) };
         }
@@ -65,7 +70,11 @@ impl<T> IndexedArena<T> {
     }
 
     fn ensure_free(&mut self) {
-        assert!(if let Entry::Vacant(_) = self.free_head { true } else { false });
+        assert!(if let Entry::Vacant(_) = self.free_head {
+            true
+        } else {
+            false
+        });
         match self.free_head {
             Entry::Vacant(id) => {
                 if id == usize::max_value() {
@@ -73,9 +82,13 @@ impl<T> IndexedArena<T> {
                     self.reserve(increment);
                 }
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
-        assert!(if let Entry::Vacant(_) = self.free_head { true } else { false });
+        assert!(if let Entry::Vacant(_) = self.free_head {
+            true
+        } else {
+            false
+        });
     }
 
     pub fn is_empty(&self) -> bool {
@@ -89,17 +102,33 @@ impl<T> IndexedArena<T> {
     pub fn allocate(&mut self, data: T) -> (usize, &mut T) {
         self.ensure_free();
         self.size += 1;
-        let id = if let Entry::Vacant(id) = self.free_head { id } else { unreachable!() };
+        let id = if let Entry::Vacant(id) = self.free_head {
+            id
+        } else {
+            unreachable!()
+        };
         self.free_head = mem::replace(&mut self.items[id], Entry::Occupied(data));
-        assert!(if let Entry::Vacant(_) = self.free_head { true } else { false });
-        if let Entry::Occupied(ref mut data) = &mut self.items[id] { (id, data) } else { unreachable!() }
+        assert!(if let Entry::Vacant(_) = self.free_head {
+            true
+        } else {
+            false
+        });
+        if let Entry::Occupied(ref mut data) = &mut self.items[id] {
+            (id, data)
+        } else {
+            unreachable!()
+        }
     }
 
     pub fn deallocate(&mut self, id: usize) -> T {
         self.size -= 1;
         let head = mem::replace(&mut self.free_head, Entry::Vacant(id));
         let data = mem::replace(&mut self.items[id], head);
-        if let Entry::Occupied(data) = data { data } else { unreachable!() }
+        if let Entry::Occupied(data) = data {
+            data
+        } else {
+            panic!("Invalid index")
+        }
     }
 
     pub fn clear(&mut self) {
@@ -134,15 +163,29 @@ impl<T> ops::IndexMut<usize> for IndexedArena<T> {
 
 impl<T> fmt::Debug for IndexedArena<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        let free = if let Entry::Vacant(id) = self.free_head { id } else { unreachable!() };
+        let free = if let Entry::Vacant(id) = self.free_head {
+            id
+        } else {
+            unreachable!()
+        };
         writeln!(f, "free: {}", free)?;
-        writeln!(f, "size/len/cap: {}/{}/{}", self.size, self.items.len(), self.items.capacity())?;
+        writeln!(
+            f,
+            "size/len/cap: {}/{}/{}",
+            self.size,
+            self.items.len(),
+            self.items.capacity()
+        )?;
 
         write!(f, "[ ")?;
         for v in self.items.iter() {
             match v {
-                Entry::Vacant(id) => { write!(f, "{} ", id)?; }
-                _ => { write!(f, "DATA ")?; }
+                Entry::Vacant(id) => {
+                    write!(f, "{} ", id)?;
+                }
+                _ => {
+                    write!(f, "DATA ")?;
+                }
             }
         }
         writeln!(f, "]")?;

@@ -1,7 +1,7 @@
 use std::cell::UnsafeCell;
+use std::ops::{Deref, DerefMut};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
-use std::ops::{Deref, DerefMut};
 
 type AtomicFlag = AtomicUsize;
 
@@ -9,7 +9,6 @@ type AtomicFlag = AtomicUsize;
 /// to avoid false sharing.
 #[repr(align(64))]
 struct AlignedData<T>(T);
-
 
 /// Triple buffer that uses atomic operations to rotate the 3 buffers during consume/produce operations
 struct TripleBuffer<T> {
@@ -28,7 +27,11 @@ unsafe impl<T> Sync for TripleBuffer<T> {}
 impl<T: Default> TripleBuffer<T> {
     pub fn new() -> TripleBuffer<T> {
         TripleBuffer {
-            buffers: UnsafeCell::new([AlignedData(Default::default()), AlignedData(Default::default()), AlignedData(Default::default())]),
+            buffers: UnsafeCell::new([
+                AlignedData(Default::default()),
+                AlignedData(Default::default()),
+                AlignedData(Default::default()),
+            ]),
             flags: AtomicFlag::new(0x6),
         }
     }
@@ -56,7 +59,12 @@ impl<T> TripleBuffer<T> {
             // clear the "new" bit and swap the indices of consume and intermediate buffers
             new_flags = (old_flags & 0x30) | ((old_flags & 0x3) << 2) | ((old_flags & 0xC) >> 2);
 
-            match self.flags.compare_exchange(old_flags, new_flags, Ordering::SeqCst, Ordering::Relaxed) {
+            match self.flags.compare_exchange(
+                old_flags,
+                new_flags,
+                Ordering::SeqCst,
+                Ordering::Relaxed,
+            ) {
                 Ok(_) => break,
                 Err(x) => old_flags = x,
             }
@@ -70,16 +78,21 @@ impl<T> TripleBuffer<T> {
         let mut old_flags = self.flags.load(Ordering::Acquire);
         loop {
             // set the "new" bit and swap the indices of produce and intermediate buffers
-            let new_flags = 0x40 | ((old_flags & 0xC) << 2) | ((old_flags & 0x30) >> 2) | (old_flags & 0x3);
+            let new_flags =
+                0x40 | ((old_flags & 0xC) << 2) | ((old_flags & 0x30) >> 2) | (old_flags & 0x3);
 
-            match self.flags.compare_exchange(old_flags, new_flags, Ordering::SeqCst, Ordering::Relaxed) {
+            match self.flags.compare_exchange(
+                old_flags,
+                new_flags,
+                Ordering::SeqCst,
+                Ordering::Relaxed,
+            ) {
                 Ok(_) => break,
                 Err(x) => old_flags = x,
             }
         }
     }
 }
-
 
 /// Sender part of the communication.
 pub struct Sender<T>(Arc<TripleBuffer<T>>);
@@ -107,11 +120,10 @@ impl<T: Copy> Sender<T> {
                 *b = value;
                 Ok(())
             }
-            Err(_) => Err(())
+            Err(_) => Err(()),
         }
     }
 }
-
 
 /// Reference to the buffer held by the producer
 pub struct RefSendBuffer<'a, T: 'a>(&'a TripleBuffer<T>, usize);
@@ -135,7 +147,6 @@ impl<'a, T> DerefMut for RefSendBuffer<'a, T> {
     }
 }
 
-
 /// Receiver part of the communication
 pub struct Receiver<T>(Arc<TripleBuffer<T>>);
 
@@ -153,7 +164,7 @@ impl<T> Receiver<T> {
     pub fn receive_buffer(&self) -> Result<RefReceiveBuffer<T>, ()> {
         match self.0.try_get_consume_index() {
             Ok(idx) => Ok(RefReceiveBuffer(&self.0, idx)),
-            Err(_) => Err(())
+            Err(_) => Err(()),
         }
     }
 }
@@ -162,11 +173,10 @@ impl<T: Copy> Receiver<T> {
     pub fn receive(&self) -> Result<T, ()> {
         match self.receive_buffer() {
             Ok(b) => Ok(*b),
-            Err(_) => Err(())
+            Err(_) => Err(()),
         }
     }
 }
-
 
 /// Reference to the buffer held by the consumer
 pub struct RefReceiveBuffer<'a, T: 'a>(&'a TripleBuffer<T>, usize);
@@ -183,7 +193,6 @@ impl<'a, T> DerefMut for RefReceiveBuffer<'a, T> {
         unsafe { &mut (*self.0.buffers.get())[self.1].0 }
     }
 }
-
 
 /// Create a Sender/Receiver with an embedded shared buffer for communication.
 /// It is not a "Single Producer Single Consumer" queue as some massages can be dropped based

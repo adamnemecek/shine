@@ -2,13 +2,13 @@ extern crate shine_store;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
-extern crate rand;
 extern crate permutohedron;
+extern crate rand;
 
-use std::mem;
-use std::cell::Cell;
-use rand::Rng;
 use permutohedron::Heap;
+use rand::Rng;
+use std::cell::Cell;
+use std::mem;
 
 use shine_store::arena::*;
 

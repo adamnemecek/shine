@@ -1,7 +1,6 @@
-use std::sync::Mutex;
-use std::usize;
-use num_cpus;
 use libconfig;
+use num_cpus;
+use std::sync::Mutex;
 
 /// Thread ID manager. Allocates and release thread ids
 struct ThreadIdManager {
@@ -28,7 +27,11 @@ impl ThreadIdManager {
         } else {
             let id = self.thread_counter;
             self.thread_counter += 1;
-            assert!(self.thread_counter <= self.thread_limit, "The running threads exceeds maximum allowed: {}", self.thread_limit);
+            assert!(
+                self.thread_counter <= self.thread_limit,
+                "The running threads exceeds maximum allowed: {}",
+                self.thread_limit
+            );
             id
         }
     }
@@ -40,7 +43,6 @@ impl ThreadIdManager {
 lazy_static! {
     static ref THREAD_ID_MANAGER: Mutex<ThreadIdManager> = Mutex::new(ThreadIdManager::new());
 }
-
 
 /// Unique thread ID local to the current thread.
 /// A thread ID may be reused after a thread exits.
@@ -62,7 +64,6 @@ impl Drop for ThreadId {
 }
 
 thread_local!(static THREAD_ID: ThreadId = ThreadId::new());
-
 
 /// Returns the maximum number of threads to use.
 pub fn get_max_thread_count() -> usize {

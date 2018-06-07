@@ -21,16 +21,16 @@ pub mod libconfig {
     pub const PREFERRED_THREAD_COUNT: usize = 0;
 }
 
-mod stablearena;
 mod indexedarena;
+mod stablearena;
 
 pub mod arena {
-    pub use super::stablearena::*;
     pub use super::indexedarena::*;
+    pub use super::stablearena::*;
 }
 
-pub mod stdext;
-pub mod threadid;
-pub mod spscstate;
-pub mod store;
 pub mod hashstore;
+pub mod spscstate;
+pub mod stdext;
+pub mod store;
+pub mod threadid;
