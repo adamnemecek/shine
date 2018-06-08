@@ -3,28 +3,6 @@
     "tasks": [
         {
             "type": "shell",
-            "label": "cargo test",
-            "command": "cargo",
-            "args": [
-                "test",
-                "-p",
-                "shine-store"
-            ],
-            "options": {
-                "env": {
-                    "RUST_TEST_THREADS": "1"
-                }
-            },
-            "problemMatcher": [
-                "$rustc"
-            ],
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            }
-        },
-        {
-            "type": "shell",
             "label": "cargo build",
             "command": "cargo",
             "args": [
@@ -33,10 +11,6 @@
             "problemMatcher": [
                 "$rustc"
             ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
         }
     ]
 }

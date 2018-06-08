@@ -31,10 +31,13 @@ pub enum InsertResult {
 }
 
 /// Compressed Sparse (Square) Row/Column matrix that stores only the
-/// indices to the non-zero items.
+/// indices to the non-zero items but no values.
 pub struct CSIndexMat {
     shape: CSFormat,
     size: usize,
+
+    //TODO: Mask for the major direction
+    //major_mask: BitSet,
 
     // Offsets of the start in the index/data vector for each Row/Column
     offsets: Vec<usize>,
@@ -49,6 +52,7 @@ impl CSIndexMat {
         CSIndexMat {
             size: size,
             shape: shape,
+            //major_mask: BitSet::new_with_capacity(size),
             offsets: vec![0usize; size],
             indices: Vec::with_capacity(nnz_capacity),
         }
@@ -73,26 +77,28 @@ impl CSIndexMat {
         }
     }
 
-    /// Increase the size to the given value. If matrix has a bigger size, it is not shrunk.
-    pub fn resize(&mut self, size: usize) {
+    /// Return the current size of the matrix.
+    pub fn size(&self) -> usize {
+        self.size
+    }
+
+    /// Return if matrix has only "zero" items
+    pub fn is_zero(&self) -> bool {
+        self.nnz() == 0
+    }
+
+    /// Increase the size to the given value.
+    /// If matrix has a bigger size, it is not shrunk.
+    pub fn increase_size_to(&mut self, size: usize) {
         if size <= self.size {
             return;
         }
 
         trace!("resized to: {}", size);
         let nnz = self.nnz();
+        //self.major_mask.resize(size);
         self.offsets.resize(size + 1, nnz);
         self.size = size;
-    }
-
-    /// Helper to find index(data) position of an item.
-    fn lower_bound(&self, major: usize, minor: usize) -> usize {
-        // minor indices corresponding to major Row/Column are in the (idx0..idx1) range
-        let idx0 = self.offsets[major];
-        let idx1 = self.offsets[major + 1];
-
-        let pos = self.indices[idx0..idx1].lower_bound(&minor) + idx0;
-        pos
     }
 
     /// Add an item to the matrix and return the index(data) position of the item.
@@ -100,12 +106,22 @@ impl CSIndexMat {
     fn add_major_minor(&mut self, major: usize, minor: usize) -> InsertResult {
         let size = if major > minor { major + 1 } else { minor + 1 };
         if size > self.size {
-            self.resize(size);
+            self.increase_size_to(size);
         }
 
-        let pos = self.lower_bound(major, minor);
+        let idx0 = self.offsets[major];
+        let idx1 = self.offsets[major + 1];
+        let pos = {
+            if idx0 == idx1 {
+                trace!("new major row opened: {}", major);
+                //self.major_mask.add(major);
+                idx0
+            } else {
+                self.indices[idx0..idx1].lower_bound(&minor) + idx0
+            }
+        };
 
-        if pos < self.indices.len() && self.indices[pos] == minor {
+        if pos < idx1 && self.indices[pos] == minor {
             trace!("item replaced at: {}", pos);
             InsertResult::Replace { pos: pos }
         } else {
@@ -136,13 +152,22 @@ impl CSIndexMat {
             return None;
         }
 
-        let pos = self.lower_bound(major, minor);
+        //if !self.major_mask.contains(major)
+        //    return None;
 
-        if pos < self.indices.len() && self.indices[pos] == minor {
+        let idx0 = self.offsets[major];
+        let idx1 = self.offsets[major + 1];
+        let pos = self.indices[idx0..idx1].lower_bound(&minor) + idx0;
+
+        if pos < idx1 && self.indices[pos] == minor {
             trace!("item removed at: {}", pos);
             self.indices.remove(pos);
             for offset in self.offsets[major + 1..].iter_mut() {
                 *offset -= 1;
+            }
+            if self.offsets[major] == self.offsets[major + 1] {
+                trace!("major row cleared: {}", major);
+                //self.major_mask.remove(major);
             }
             Some(pos)
         } else {
@@ -163,6 +188,7 @@ impl CSIndexMat {
         self.size = 0;
         self.indices.clear();
         self.offsets.clear();
+        //self.major_mask.clear();
     }
 
     /// Get the index(data) position at the given position.
@@ -171,8 +197,14 @@ impl CSIndexMat {
             return None;
         }
 
-        let pos = self.lower_bound(major, minor);
-        if pos < self.indices.len() && self.indices[pos] == minor {
+        //if !self.major_mask.contains(major)
+        //    return None;
+
+        let idx0 = self.offsets[major];
+        let idx1 = self.offsets[major + 1];
+        let pos = self.indices[idx0..idx1].lower_bound(&minor) + idx0;
+
+        if pos < idx1 && self.indices[pos] == minor {
             Some(pos)
         } else {
             None
@@ -188,6 +220,7 @@ impl CSIndexMat {
     }
 }
 
+/// Sparese Compressed Sparse (Square) Row/Column matrix with data storage.
 pub trait CSMat {
     type Item;
 
