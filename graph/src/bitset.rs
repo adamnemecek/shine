@@ -23,14 +23,17 @@ impl BitSet {
 
     pub fn new_with_capacity(capacity: usize) -> BitSet {
         let mut set = Self::new();
-        let mut count = (capacity + 63) >> 6;
+        /*let mut count = (capacity + 63) >> 6;
         set.bits.resize(count, 0);
-
-        count = count >> 6;
-        while count > 1 {
-            set.levels.push(vec![0; count]);
+        
+        // create intermediate levels
+        loop {
             count = count >> 6;
-        }
+            if count <= 1 {
+                break;
+            }
+            set.levels.push(vec![0;count]);
+        }*/
 
         set
     }
