@@ -34,7 +34,6 @@ pub enum InsertResult {
 /// indices to the non-zero items but no values.
 pub struct CSIndexMat {
     shape: CSFormat,
-    size: usize,
 
     //TODO: Mask for the major direction
     //major_mask: BitSet,
@@ -50,10 +49,9 @@ impl CSIndexMat {
     /// Create a new Compressed Sparse (Square) Row matrix with a predefined size
     pub fn new_with_capacity(shape: CSFormat, size: usize, nnz_capacity: usize) -> CSIndexMat {
         CSIndexMat {
-            size: size,
             shape: shape,
             //major_mask: BitSet::new_with_capacity(size),
-            offsets: vec![0usize; size],
+            offsets: vec![0usize; size + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
     }
@@ -70,16 +68,12 @@ impl CSIndexMat {
 
     /// Return the number of non-zero elements.
     pub fn nnz(&self) -> usize {
-        if self.size == 0 {
-            0usize
-        } else {
-            *self.offsets.last().unwrap()
-        }
+        *self.offsets.last().unwrap()
     }
 
     /// Return the current size of the matrix.
     pub fn size(&self) -> usize {
-        self.size
+        self.offsets.len() - 1
     }
 
     /// Return if matrix has only "zero" items
@@ -90,7 +84,7 @@ impl CSIndexMat {
     /// Increase the size to the given value.
     /// If matrix has a bigger size, it is not shrunk.
     pub fn increase_size_to(&mut self, size: usize) {
-        if size <= self.size {
+        if size <= self.size() {
             return;
         }
 
@@ -98,14 +92,13 @@ impl CSIndexMat {
         let nnz = self.nnz();
         //self.major_mask.resize(size);
         self.offsets.resize(size + 1, nnz);
-        self.size = size;
     }
 
     /// Add an item to the matrix and return the index(data) position of the item.
     /// The indexing is given in major, minor order independent of the shape
     fn add_major_minor(&mut self, major: usize, minor: usize) -> InsertResult {
         let size = if major > minor { major + 1 } else { minor + 1 };
-        if size > self.size {
+        if size > self.size() {
             self.increase_size_to(size);
         }
 
@@ -148,7 +141,7 @@ impl CSIndexMat {
     /// Remove an item from the matrix and return its index(data) position.
     /// The indexing is given in major, minor order independent of the shape.
     fn remove_major_minor(&mut self, major: usize, minor: usize) -> Option<usize> {
-        if major >= self.size || minor >= self.size {
+        if major >= self.size() || minor >= self.size() {
             return None;
         }
 
@@ -185,15 +178,15 @@ impl CSIndexMat {
 
     /// Remove all the items.
     pub fn clear(&mut self) {
-        self.size = 0;
         self.indices.clear();
         self.offsets.clear();
+        self.offsets.push(0);
         //self.major_mask.clear();
     }
 
     /// Get the index(data) position at the given position.
     fn get_major_minor(&self, major: usize, minor: usize) -> Option<usize> {
-        if major >= self.size || minor >= self.size {
+        if major >= self.size() || minor >= self.size() {
             return None;
         }
 
@@ -226,6 +219,10 @@ pub trait CSMat {
 
     /// Return the number of non-zero elements.
     fn nnz(&self) -> usize;
+
+    /// Return the current size of the matrix
+    /// Only a single value as is returned as only square matricies are used.
+    fn size(&self) -> usize;
 
     /// Add or replace an item at the (r,c) position.
     fn add(&mut self, r: usize, c: usize, value: Self::Item);
@@ -278,6 +275,10 @@ impl<T> CSMat for CSVecMat<T> {
 
     fn nnz(&self) -> usize {
         self.index.nnz()
+    }
+
+    fn size(&self) -> usize {
+        self.index.size()
     }
 
     fn add(&mut self, r: usize, c: usize, value: Self::Item) {
@@ -354,6 +355,10 @@ impl<T> CSMat for CSArenaMat<T> {
 
     fn nnz(&self) -> usize {
         self.index.nnz()
+    }
+
+    fn size(&self) -> usize {
+        self.index.size()
     }
 
     fn add(&mut self, r: usize, c: usize, value: Self::Item) {
