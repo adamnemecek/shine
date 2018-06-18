@@ -13,33 +13,33 @@ fn csr_simple_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
         trace!("pass: {}", i);
 
         assert_eq!(matrix.nnz(), 0);
-        assert_eq!(matrix.size(), 0);
+        assert_eq!(matrix.capacity(), 0);
 
         assert_eq!(matrix.get(0, 0), None);
         matrix.add(0, 0, (0, 0));
         assert_eq!(matrix.get(0, 0), Some(&(0, 0)));
-        assert_eq!(matrix.size(), 1);
+        assert_eq!(matrix.capacity(), 1);
         assert_eq!(matrix.nnz(), 1);
 
         assert_eq!(matrix.get(3, 4), None);
         matrix.add(3, 4, (3, 4));
         assert_eq!(matrix.get(3, 4), Some(&(3, 4)));
-        assert_eq!(matrix.size(), 5);
+        assert_eq!(matrix.capacity(), 5);
         assert_eq!(matrix.nnz(), 2);
 
         assert_eq!(matrix.remove(3, 4), Some((3, 4)));
         assert_eq!(matrix.get(3, 4), None);
-        assert_eq!(matrix.size(), 5);
+        assert_eq!(matrix.capacity(), 5);
         assert_eq!(matrix.nnz(), 1);
 
         matrix.add(4, 3, (4, 3));
         assert_eq!(matrix.get(4, 3), Some(&(4, 3)));
-        assert_eq!(matrix.size(), 5);
+        assert_eq!(matrix.capacity(), 5);
         assert_eq!(matrix.nnz(), 2);
 
         matrix.add(4, 2, (4, 2));
         assert_eq!(matrix.get(4, 2), Some(&(4, 2)));
-        assert_eq!(matrix.size(), 5);
+        assert_eq!(matrix.capacity(), 5);
         assert_eq!(matrix.nnz(), 3);
 
         matrix.add(4, 4, (4, 4));
@@ -47,7 +47,7 @@ fn csr_simple_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
         assert_eq!(matrix.get(4, 2), Some(&(4, 2)));
         assert_eq!(matrix.get(4, 3), Some(&(4, 3)));
         assert_eq!(matrix.get(4, 4), Some(&(4, 4)));
-        assert_eq!(matrix.size(), 5);
+        assert_eq!(matrix.capacity(), 5);
         assert_eq!(matrix.nnz(), 4);
 
         assert_eq!(matrix.get(4, 5), None);
@@ -56,7 +56,7 @@ fn csr_simple_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
 
         matrix.clear();
         assert_eq!(matrix.nnz(), 0);
-        assert_eq!(matrix.size(), 0);
+        assert_eq!(matrix.capacity(), 0);
         assert_eq!(matrix.get(0, 0), None);
         assert_eq!(matrix.get(4, 2), None);
         assert_eq!(matrix.get(4, 3), None);

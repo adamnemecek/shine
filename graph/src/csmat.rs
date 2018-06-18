@@ -46,12 +46,12 @@ pub struct CSIndexMat {
 }
 
 impl CSIndexMat {
-    /// Create a new Compressed Sparse (Square) Row matrix with a predefined size
-    pub fn new_with_capacity(shape: CSFormat, size: usize, nnz_capacity: usize) -> CSIndexMat {
+    /// Create a new Compressed Sparse (Square) Row matrix with a predefined capacity
+    pub fn new_with_capacity(shape: CSFormat, capacity: usize, nnz_capacity: usize) -> CSIndexMat {
         CSIndexMat {
             shape: shape,
-            //major_mask: BitSet::new_with_capacity(size),
-            offsets: vec![0usize; size + 1],
+            //major_mask: BitSet::new_with_capacity(capacity),
+            offsets: vec![0usize; capacity + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
     }
@@ -71,8 +71,8 @@ impl CSIndexMat {
         *self.offsets.last().unwrap()
     }
 
-    /// Return the current size of the matrix.
-    pub fn size(&self) -> usize {
+    /// Return the current capacity of the matrix.
+    pub fn capacity(&self) -> usize {
         self.offsets.len() - 1
     }
 
@@ -81,25 +81,25 @@ impl CSIndexMat {
         self.nnz() == 0
     }
 
-    /// Increase the size to the given value.
-    /// If matrix has a bigger size, it is not shrunk.
-    pub fn increase_size_to(&mut self, size: usize) {
-        if size <= self.size() {
+    /// Increase the capacity to the given value.
+    /// If matrix has a bigger capacity, it is not shrunk.
+    pub fn increase_capacity_to(&mut self, capacity: usize) {
+        if capacity <= self.capacity() {
             return;
         }
 
-        trace!("resized to: {}", size);
+        trace!("resized to: {}", capacity);
         let nnz = self.nnz();
-        //self.major_mask.resize(size);
-        self.offsets.resize(size + 1, nnz);
+        //self.major_mask.resize(capacity);
+        self.offsets.resize(capacity + 1, nnz);
     }
 
     /// Add an item to the matrix and return the index(data) position of the item.
     /// The indexing is given in major, minor order independent of the shape
     fn add_major_minor(&mut self, major: usize, minor: usize) -> InsertResult {
-        let size = if major > minor { major + 1 } else { minor + 1 };
-        if size > self.size() {
-            self.increase_size_to(size);
+        let capacity = if major > minor { major + 1 } else { minor + 1 };
+        if capacity > self.capacity() {
+            self.increase_capacity_to(capacity);
         }
 
         let idx0 = self.offsets[major];
@@ -141,7 +141,7 @@ impl CSIndexMat {
     /// Remove an item from the matrix and return its index(data) position.
     /// The indexing is given in major, minor order independent of the shape.
     fn remove_major_minor(&mut self, major: usize, minor: usize) -> Option<usize> {
-        if major >= self.size() || minor >= self.size() {
+        if major >= self.capacity() || minor >= self.capacity() {
             return None;
         }
 
@@ -186,7 +186,7 @@ impl CSIndexMat {
 
     /// Get the index(data) position at the given position.
     fn get_major_minor(&self, major: usize, minor: usize) -> Option<usize> {
-        if major >= self.size() || minor >= self.size() {
+        if major >= self.capacity() || minor >= self.capacity() {
             return None;
         }
 
@@ -220,9 +220,9 @@ pub trait CSMat {
     /// Return the number of non-zero elements.
     fn nnz(&self) -> usize;
 
-    /// Return the current size of the matrix
+    /// Return the current capacity of the matrix
     /// Only a single value as is returned as only square matricies are used.
-    fn size(&self) -> usize;
+    fn capacity(&self) -> usize;
 
     /// Add or replace an item at the (r,c) position.
     fn add(&mut self, r: usize, c: usize, value: Self::Item);
@@ -251,10 +251,10 @@ pub struct CSVecMat<T> {
 }
 
 impl<T> CSVecMat<T> {
-    /// Create a new Compressed Sparse (Square) Row matrix with a predefined size
-    pub fn new_with_capacity(shape: CSFormat, size: usize, nnz_capacity: usize) -> Self {
+    /// Create a new Compressed Sparse (Square) Row matrix with a predefined capacity
+    pub fn new_with_capacity(shape: CSFormat, capacity: usize, nnz_capacity: usize) -> Self {
         CSVecMat {
-            index: CSIndexMat::new_with_capacity(shape, size, nnz_capacity),
+            index: CSIndexMat::new_with_capacity(shape, capacity, nnz_capacity),
             data: Vec::with_capacity(nnz_capacity),
         }
     }
@@ -277,8 +277,8 @@ impl<T> CSMat for CSVecMat<T> {
         self.index.nnz()
     }
 
-    fn size(&self) -> usize {
-        self.index.size()
+    fn capacity(&self) -> usize {
+        self.index.capacity()
     }
 
     fn add(&mut self, r: usize, c: usize, value: Self::Item) {
@@ -330,10 +330,10 @@ pub struct CSArenaMat<T> {
 }
 
 impl<T> CSArenaMat<T> {
-    /// Create a new Compressed Sparse (Square) Row matrix with a predefined size
-    pub fn new_with_capacity(shape: CSFormat, size: usize, nnz_capacity: usize) -> Self {
+    /// Create a new Compressed Sparse (Square) Row matrix with a predefined capacity
+    pub fn new_with_capacity(shape: CSFormat, capacity: usize, nnz_capacity: usize) -> Self {
         CSArenaMat {
-            index: CSIndexMat::new_with_capacity(shape, size, nnz_capacity),
+            index: CSIndexMat::new_with_capacity(shape, capacity, nnz_capacity),
             arena: IndexedArena::new_with_capacity(nnz_capacity, 0),
             data: Vec::with_capacity(nnz_capacity),
         }
@@ -357,8 +357,8 @@ impl<T> CSMat for CSArenaMat<T> {
         self.index.nnz()
     }
 
-    fn size(&self) -> usize {
-        self.index.size()
+    fn capacity(&self) -> usize {
+        self.index.capacity()
     }
 
     fn add(&mut self, r: usize, c: usize, value: Self::Item) {

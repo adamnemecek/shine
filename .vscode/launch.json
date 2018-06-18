@@ -6,7 +6,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             //"program": "${workspaceRoot}/target/debug/${workspaceRootFolderName}",
-            "program": "${workspaceRoot}/target/debug/csmat-2531702b1ba314cd.exe",
+            "program": "${workspaceRoot}/target/debug/bitset-ca7e0fa0d943cf5e.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
