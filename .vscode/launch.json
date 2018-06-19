@@ -6,7 +6,7 @@
             "type": "cppvsdbg",
             "request": "launch",
             //"program": "${workspaceRoot}/target/debug/${workspaceRootFolderName}",
-            "program": "${workspaceRoot}/target/debug/bitset-ca7e0fa0d943cf5e.exe",
+            "program": "${workspaceRoot}/target/debug/bitset-c929b46c7d953a3d.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

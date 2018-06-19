@@ -1,3 +1,5 @@
+#![feature(const_int_ops)]
+
 #[macro_use]
 extern crate log;
 
