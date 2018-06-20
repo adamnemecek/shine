@@ -11,9 +11,11 @@ keywords = ["graph", "matrix", "spares"]
 libc = "*"
 log = "*"
 lazy_static = "*"
+num-traits = "*"
 
 shine-store = {path = "../store"}
 
 [dev-dependencies]
 env_logger = "*"
 rand = "*"
+permutohedron = "*"

@@ -2,6 +2,7 @@
 
 #[macro_use]
 extern crate log;
+extern crate num_traits;
 
 extern crate shine_store as store;
 

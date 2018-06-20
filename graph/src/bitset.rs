@@ -1,27 +1,47 @@
+use num_traits::PrimInt;
+use std::marker::PhantomData;
 use std::slice;
 
-//type Bits = u64;
-type Bits = u8;
+pub trait BitBlock: PrimInt {
+    fn bit_count() -> usize {
+        Self::zero().count_zeros() as usize
+    }
 
-const BIT_COUNT: usize = (0 as Bits).count_zeros() as usize;
-const BIT_SHIFT: usize = BIT_COUNT.trailing_zeros() as usize;
-const BIT_MASK: usize = BIT_COUNT - 1;
+    fn bit_shift() -> usize {
+        Self::bit_count().trailing_zeros() as usize
+    }
 
-/// Index a bit at a given level
-pub struct Index {
-    pub level: usize,
-    pub pos: usize,
+    fn bit_mask() -> usize {
+        Self::bit_count() - 1
+    }
 }
 
-impl Index {
-    pub fn from_pos(pos: usize) -> Index {
-        Index { level: 0, pos: pos }
+impl BitBlock for u8 {}
+impl BitBlock for u16 {}
+impl BitBlock for u32 {}
+impl BitBlock for u64 {}
+impl BitBlock for u128 {}
+
+/// Index a bit at a given level
+pub struct Index<B: BitBlock> {
+    pub level: usize,
+    pub pos: usize,
+    ph: PhantomData<B>,
+}
+
+impl<B: BitBlock> Index<B> {
+    pub fn from_pos(pos: usize) -> Index<B> {
+        Index {
+            level: 0,
+            pos: pos,
+            ph: PhantomData,
+        }
     }
 
     ///Advance index to the next level
     #[inline(always)]
     pub fn next_level(&mut self) {
-        self.pos >>= BIT_SHIFT;
+        self.pos >>= B::bit_shift();
         self.level += 1;
     }
 
@@ -31,32 +51,32 @@ impl Index {
     ///  - the position of the bit within the word
     ///  - the mask of the word where only the bit pointed by the index is set.
     #[inline(always)]
-    pub fn bit_detail(&self) -> (usize, usize, Bits) {
-        let word_pos = self.pos >> BIT_SHIFT;
-        let bit_pos = self.pos & BIT_MASK;
-        (word_pos, bit_pos, 1 << bit_pos)
+    pub fn bit_detail(&self) -> (usize, usize, B) {
+        let word_pos = self.pos >> B::bit_shift();
+        let bit_pos = self.pos & B::bit_mask();
+        (word_pos, bit_pos, B::one() << bit_pos)
     }
 }
 
 /// Hierarchical bitset.
 /// Each level indicates if any bit is set in the subtree.
 /// http://www.cs.loyola.edu/~binkley/papers/tcsrt08-hbit-vectors.pdf
-pub struct BitSet {
+pub struct BitSet<B: BitBlock> {
     capacity: usize,
-    top: Bits,
-    levels: Vec<Vec<Bits>>,
+    top: B,
+    levels: Vec<Vec<B>>,
 }
 
-impl BitSet {
-    pub fn new() -> BitSet {
+impl<B: BitBlock> BitSet<B> {
+    pub fn new() -> BitSet<B> {
         BitSet {
-            capacity: BIT_COUNT,
-            top: 0,
+            capacity: B::bit_count(),
+            top: B::zero(),
             levels: Vec::new(),
         }
     }
 
-    pub fn new_with_capacity(capacity: usize) -> BitSet {
+    pub fn new_with_capacity(capacity: usize) -> BitSet<B> {
         let mut set = Self::new();
         set.reserve(capacity);
         set
@@ -81,33 +101,33 @@ impl BitSet {
 
     /// Return the
     pub fn get_capacity(&self) -> usize {
-        self.levels.first().map(|l| l.len()).unwrap_or(1) << BIT_SHIFT
+        self.levels.first().map(|l| l.len()).unwrap_or(1) << B::bit_shift()
     }
 
     pub fn reserve(&mut self, additional: usize) {
         let reserved_bits = self.get_capacity();
         let required_bits = reserved_bits + additional;
-        let mut required_words = (required_bits + BIT_MASK) >> BIT_SHIFT;
-        self.capacity = required_words << BIT_SHIFT;
+        let mut required_words = (required_bits + B::bit_mask()) >> B::bit_shift();
+        self.capacity = required_words << B::bit_shift();
         let mut level = 0;
         while required_words > 1 {
             if self.levels.len() <= level {
-                self.levels.push(vec![0; required_words]);
-                if level == 0 {
+                self.levels.push(vec![B::zero(); required_words]);
+            /*if level == 0 {
                     // handle when the bits layer moved from top into the levels array
                     self.levels[0][0] = self.top;
                     self.top = if self.top == 0 { 0 } else { 1 };
-                }
+                }*/
             } else {
                 assert!(self.levels[level].len() <= required_words);
-                self.levels[level].resize(required_words, 0);
+                self.levels[level].resize(required_words, B::zero());
             }
             level += 1;
-            required_words >>= BIT_SHIFT;
+            required_words >>= B::bit_shift();
         }
     }
 
-    fn get_level(&self, level: usize) -> &[Bits] {
+    fn get_level(&self, level: usize) -> &[B] {
         assert!(level < self.get_level_count());
         if level < self.levels.len() {
             &self.levels[level]
@@ -116,7 +136,7 @@ impl BitSet {
         }
     }
 
-    fn get_level_mut(&mut self, level: usize) -> &mut [Bits] {
+    fn get_level_mut(&mut self, level: usize) -> &mut [B] {
         assert!(level < self.get_level_count());
         if level < self.levels.len() {
             &mut self.levels[level]
@@ -126,24 +146,22 @@ impl BitSet {
     }
 
     // Sets a bit of the given level and return if word is
-    fn set_level(&mut self, idx: &Index) -> bool {
+    fn set_level(&mut self, idx: &Index<B>) -> bool {
         let bit_detail = idx.bit_detail();
         let word = &mut self.get_level_mut(idx.level)[bit_detail.0];
-        let empty = *word == 0;
-
-        *word |= bit_detail.2;
+        let empty = word.is_zero();
+        *word = *word | bit_detail.2;
         empty
     }
 
     /// Clears a bit of the given level and return if the modification has
     /// effect on the parent levels.
-    fn unset_level(&mut self, idx: &Index) -> bool {
+    fn unset_level(&mut self, idx: &Index<B>) -> bool {
         let bit_detail = idx.bit_detail();
         let word = &mut self.get_level_mut(idx.level)[bit_detail.0];
-        let empty = *word == 0;
-
-        *word &= !bit_detail.2;
-        !empty && *word == 0
+        let empty = word.is_zero();
+        *word = *word & !bit_detail.2;
+        !empty && word.is_zero()
     }
 
     pub fn add(&mut self, pos: usize) {
@@ -176,6 +194,12 @@ impl BitSet {
         let idx = Index::from_pos(pos);
         let bit_detail = idx.bit_detail();
         let word = self.get_level(0)[bit_detail.0];
-        word & bit_detail.2 != 0
+        !(word & bit_detail.2).is_zero()
     }
 }
+
+pub type BitSetu8 = BitSet<u8>;
+pub type BitSetu16 = BitSet<u16>;
+pub type BitSetu32 = BitSet<u32>;
+pub type BitSetu64 = BitSet<u64>;
+pub type BitSetu128 = BitSet<u128>;
