@@ -53,13 +53,15 @@ fn csr_simple_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
 }
 
 fn csr_stress_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
-    let mx = vec![vec![0; 128]];
+    let size = 8;
     let cnt = 70;
+
+    let mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
     for _ in 0..cnt {
-        let r = rng.gen_range(0usize, 128);
-        let c = rng.gen_range(0usize, 128);
+        let r = rng.gen_range(0usize, size);
+        let c = rng.gen_range(0usize, size);
         if mx[r][c] == 1 {
             assert_eq!(matrix.get(r, c), None);
             matrix.add(r, c, (r, c));
@@ -68,8 +70,8 @@ fn csr_stress_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
         }
     }
 
-    for r in 0..128 {
-        for c in 0..128 {
+    for r in 0..size {
+        for c in 0..size {
             if mx[r][c] == 0 {
                 assert_eq!(matrix.get(r, c), None);
             } else {
@@ -97,7 +99,7 @@ fn csr_simple() {
 fn csr_stress() {
     let _ = env_logger::try_init();
 
-    for _ in 0..100 {
+    for _ in 0..1 {
         trace!("CSVecMat - row");
         csr_stress_(CSVecMat::<(usize, usize)>::new_row());
         trace!("CSVecMat - col");
