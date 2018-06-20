@@ -9,25 +9,37 @@ use shine_graph::bitset::*;
 fn bitset_simple() {
     let mut bitset = BitSet::new();
 
+    assert!(!bitset.get(0));
     assert!(!bitset.get(31));
 
+    bitset.add(0);
+    assert!(bitset.get(0));
+
     bitset.add(31);
+    assert!(bitset.get(0));
     assert!(bitset.get(31));
 
     bitset.add(32);
+    assert!(bitset.get(0));
     assert!(bitset.get(31));
     assert!(bitset.get(32));
 
     bitset.remove(31);
+    assert!(bitset.get(0));
     assert!(!bitset.get(31));
     assert!(bitset.get(32));
 
     bitset.remove(32);
+    assert!(bitset.get(0));
     assert!(!bitset.get(31));
     assert!(!bitset.get(32));
+
+    bitset.remove(0);
+    assert!(!bitset.get(0));
 }
 
 #[test]
+#[ignore]
 fn bitset_stress() {
     let _ = env_logger::try_init();
 

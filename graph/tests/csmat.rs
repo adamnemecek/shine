@@ -83,21 +83,28 @@ fn csr_stress_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
 fn csr_simple() {
     let _ = env_logger::try_init();
 
+    trace!("CSVecMat - row");
+    csr_simple_(CSVecMat::<(usize, usize)>::new_row());
+    trace!("CSVecMat - col");
+    csr_simple_(CSVecMat::<(usize, usize)>::new_column());
+    trace!("CSArenaMat - row");
+    csr_simple_(CSArenaMat::<(usize, usize)>::new_row());
+    trace!("CSArenaMat - col");
+    csr_simple_(CSArenaMat::<(usize, usize)>::new_column());
+}
+
+#[test]
+fn csr_stress() {
+    let _ = env_logger::try_init();
+
     for _ in 0..100 {
         trace!("CSVecMat - row");
-        csr_simple_(CSVecMat::<(usize, usize)>::new_row());
         csr_stress_(CSVecMat::<(usize, usize)>::new_row());
-
         trace!("CSVecMat - col");
-        csr_simple_(CSVecMat::<(usize, usize)>::new_column());
         csr_stress_(CSVecMat::<(usize, usize)>::new_column());
-
         trace!("CSArenaMat - row");
-        csr_simple_(CSArenaMat::<(usize, usize)>::new_row());
         csr_stress_(CSArenaMat::<(usize, usize)>::new_row());
-
         trace!("CSArenaMat - col");
-        csr_simple_(CSArenaMat::<(usize, usize)>::new_column());
         csr_stress_(CSArenaMat::<(usize, usize)>::new_column());
     }
 }

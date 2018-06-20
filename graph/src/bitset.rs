@@ -93,6 +93,11 @@ impl BitSet {
         while required_words > 1 {
             if self.levels.len() <= level {
                 self.levels.push(vec![0; required_words]);
+                if level == 0 {
+                    // handle when the bits layer moved from top into the levels array
+                    self.levels[0][0] = self.top;
+                    self.top = if self.top == 0 { 0 } else { 1 };
+                }
             } else {
                 assert!(self.levels[level].len() <= required_words);
                 self.levels[level].resize(required_words, 0);
