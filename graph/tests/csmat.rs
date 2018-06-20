@@ -52,17 +52,15 @@ fn csr_simple_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
     }
 }
 
-fn csr_stress_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
-    let size = 8;
-    let cnt = 70;
-
-    let mx = vec![vec![0; size]; size];
+fn csr_stress_<M: CSMat<Item = (usize, usize)>>(mut matrix: M, size: usize, cnt: usize) {
+    let mut mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
     for _ in 0..cnt {
         let r = rng.gen_range(0usize, size);
         let c = rng.gen_range(0usize, size);
-        if mx[r][c] == 1 {
+        if mx[r][c] == 0 {
+            mx[r][c] = 1;
             assert_eq!(matrix.get(r, c), None);
             matrix.add(r, c, (r, c));
         } else {
@@ -99,14 +97,17 @@ fn csr_simple() {
 fn csr_stress() {
     let _ = env_logger::try_init();
 
-    for _ in 0..1 {
+    trace!("CSVecMat - row, big");
+    csr_stress_(CSVecMat::<(usize, usize)>::new_row(), 1024, 100000);
+
+    for _ in 0..10 {
         trace!("CSVecMat - row");
-        csr_stress_(CSVecMat::<(usize, usize)>::new_row());
+        csr_stress_(CSVecMat::<(usize, usize)>::new_row(), 128, 900);
         trace!("CSVecMat - col");
-        csr_stress_(CSVecMat::<(usize, usize)>::new_column());
+        csr_stress_(CSVecMat::<(usize, usize)>::new_column(), 128, 900);
         trace!("CSArenaMat - row");
-        csr_stress_(CSArenaMat::<(usize, usize)>::new_row());
+        csr_stress_(CSArenaMat::<(usize, usize)>::new_row(), 128, 900);
         trace!("CSArenaMat - col");
-        csr_stress_(CSArenaMat::<(usize, usize)>::new_column());
+        csr_stress_(CSArenaMat::<(usize, usize)>::new_column(), 128, 900);
     }
 }
