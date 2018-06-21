@@ -116,7 +116,11 @@ impl<B: BitBlock> BitSet<B> {
                 if required_words == 2 {
                     // move the top layer into the levels array
                     self.levels.last_mut().unwrap()[0] = self.top;
-                    self.top = if self.top.is_zero() {B::zero()} else {B::one()};
+                    self.top = if self.top.is_zero() {
+                        B::zero()
+                    } else {
+                        B::one()
+                    };
                 }
             } else {
                 assert!(self.levels[level].len() <= required_words);
@@ -148,6 +152,14 @@ impl<B: BitBlock> BitSet<B> {
     // Sets a bit of the given level and return if word is
     fn set_level(&mut self, idx: &Index<B>) -> bool {
         let bit_detail = idx.bit_detail();
+        if self.get_level_count() <= idx.level {
+            let a = 0;
+            panic!();
+        }
+        if self.get_level_mut(idx.level).len() <= bit_detail.0 {
+            let a = 0;
+            panic!();
+        }
         let word = &mut self.get_level_mut(idx.level)[bit_detail.0];
         let empty = word.is_zero();
         *word = *word | bit_detail.2;

@@ -21,9 +21,9 @@ fn bitset_simple_<B: BitBlock>() {
         n + a,
         n + b,
         n + c,
-        3 * n + a,
-        3 * n + b,
-        3 * n + c,
+        7 * n + a,
+        7 * n + b,
+        7 * n + c,
     ];
 
     let mut heap = Heap::new(&mut bits);
@@ -54,6 +54,7 @@ fn bitset_simple_<B: BitBlock>() {
 }
 
 #[test]
+#[ignore]
 fn bitset_simple() {
     let _ = env_logger::try_init();
 
@@ -70,8 +71,6 @@ fn bitset_simple() {
 }
 
 fn bitset_stress_<B: BitBlock>(cnt: usize) {
-    let _ = env_logger::try_init();
-
     let mut bitset = BitSet::<B>::new();
 
     trace!("set one bit");
@@ -96,7 +95,7 @@ fn bitset_stress_<B: BitBlock>(cnt: usize) {
 }
 
 #[test]
-#[ignore]
+//#[ignore]
 fn bitset_stress() {
     let _ = env_logger::try_init();
 
