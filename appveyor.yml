@@ -13,9 +13,8 @@ install:
   - cargo -vV
 build_script:
   - cargo build
-  - cargo build -p shine-render-gl --tests
-  - cargo build -p shine-render --tests
   - cargo build -p shine-store --tests
-  - cargo build --examples
+  - cargo build -p shine-graph --tests
 test_script:
   - cargo test -p shine-store
+  - cargo test -p shine-graph
