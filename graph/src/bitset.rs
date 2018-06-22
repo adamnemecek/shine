@@ -107,31 +107,38 @@ impl<B: BitBlock> BitSet<B> {
     pub fn reserve(&mut self, additional: usize) {
         let reserved_bits = self.get_capacity();
         let required_bits = reserved_bits + additional;
-        let mut required_words = (required_bits + B::bit_mask()) >> B::bit_shift();
-        self.capacity = required_words << B::bit_shift();
+        let mut bit_count = (required_bits + B::bit_mask()) & !B::bit_mask();
+        self.capacity = bit_count;
         let mut level = 0;
-        while required_words > 1 {
+        let top = if self.top.is_zero() {
+            B::zero()
+        } else {
+            B::one()
+        };
+        while bit_count > 8 {
+            let word_count = (bit_count + B::bit_mask()) >> B::bit_shift();
             if self.levels.len() <= level {
-                self.levels.push(vec![B::zero(); required_words]);
-                if required_words == 2 {
-                    // move the top layer into the levels array
-                    self.levels.last_mut().unwrap()[0] = self.top;
-                    self.top = if self.top.is_zero() {
-                        B::zero()
-                    } else {
-                        B::one()
-                    };
-                }
+                self.levels.push(vec![B::zero(); word_count]);
+                self.levels.last_mut().unwrap()[0] = if word_count > 8 {
+                    top
+                } else {
+                    self.top
+                };
             } else {
-                assert!(self.levels[level].len() <= required_words);
-                self.levels[level].resize(required_words, B::zero());
+                assert!(self.levels[level].len() <= word_count);
+                self.levels[level].resize(word_count, B::zero());
             }
             level += 1;
-            required_words >>= B::bit_shift();
+            bit_count = word_count;
         }
+        self.top = top;
     }
 
-    fn get_level(&self, level: usize) -> &[B] {
+    pub fn get_top(&self) -> B {
+        self.top
+    }
+
+    pub fn get_level(&self, level: usize) -> &[B] {
         assert!(level < self.get_level_count());
         if level < self.levels.len() {
             &self.levels[level]
@@ -151,28 +158,20 @@ impl<B: BitBlock> BitSet<B> {
 
     // Sets a bit of the given level and return if word is
     fn set_level(&mut self, idx: &Index<B>) -> bool {
-        let bit_detail = idx.bit_detail();
-        if self.get_level_count() <= idx.level {
-            let a = 0;
-            panic!();
-        }
-        if self.get_level_mut(idx.level).len() <= bit_detail.0 {
-            let a = 0;
-            panic!();
-        }
-        let word = &mut self.get_level_mut(idx.level)[bit_detail.0];
+        let (word_pos, _, mask) = idx.bit_detail();
+        let word = &mut self.get_level_mut(idx.level)[word_pos];
         let empty = word.is_zero();
-        *word = *word | bit_detail.2;
+        *word = *word | mask;
         empty
     }
 
     /// Clears a bit of the given level and return if the modification has
     /// effect on the parent levels.
     fn unset_level(&mut self, idx: &Index<B>) -> bool {
-        let bit_detail = idx.bit_detail();
-        let word = &mut self.get_level_mut(idx.level)[bit_detail.0];
+        let (word_pos, _, mask) = idx.bit_detail();
+        let word = &mut self.get_level_mut(idx.level)[word_pos];
         let empty = word.is_zero();
-        *word = *word & !bit_detail.2;
+        *word = *word & !mask;
         !empty && word.is_zero()
     }
 
@@ -204,9 +203,9 @@ impl<B: BitBlock> BitSet<B> {
         }
 
         let idx = Index::from_pos(pos);
-        let bit_detail = idx.bit_detail();
-        let word = self.get_level(0)[bit_detail.0];
-        !(word & bit_detail.2).is_zero()
+        let (word_pos, _, mask) = idx.bit_detail();
+        let word = self.get_level(0)[word_pos];
+        !(word & mask).is_zero()
     }
 }
 

@@ -32,9 +32,10 @@ fn bitset_simple_<B: BitBlock>() {
 
         trace!("add bits one-by-one");
         for i in 0..bits.len() {
-            let bu = bits[i];
-            assert!(!bitset.get(bu));
-            bitset.add(bu);
+            let bi = bits[i];
+            assert!(!bitset.get(bi));
+            bitset.add(bi);
+            assert!(!bitset.get_top().is_zero());
             for j in 0..bits.len() {
                 let bj = bits[j];
                 assert_eq!(bitset.get(bj), j <= i);
@@ -50,11 +51,11 @@ fn bitset_simple_<B: BitBlock>() {
                 assert_eq!(bitset.get(bj), j > i);
             }
         }
+        assert!(bitset.get_top().is_zero());
     }
 }
 
 #[test]
-#[ignore]
 fn bitset_simple() {
     let _ = env_logger::try_init();
 
@@ -78,11 +79,13 @@ fn bitset_stress_<B: BitBlock>(cnt: usize) {
         assert!(!bitset.get(i));
         bitset.add(i);
         assert!(bitset.get(i));
+        assert!(!bitset.get_top().is_zero());
         for j in 0..cnt {
             assert!(bitset.get(j) == (i == j));
         }
         bitset.remove(i);
         assert!(!bitset.get(i));
+        assert!(bitset.get_top().is_zero());
     }
 
     trace!("set all bits");
