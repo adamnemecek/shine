@@ -90,20 +90,14 @@ impl<B: BitBlock> BitSet<B> {
         let mut bit_count = (required_bits + B::bit_mask()) & !B::bit_mask();
         self.capacity = bit_count;
         let mut level = 0;
-        let top = if self.top.is_zero() {
-            B::zero()
-        } else {
-            B::one()
-        };
         while bit_count > 8 {
             let block_count = (bit_count + B::bit_mask()) >> B::bit_shift();
             if self.levels.len() <= level {
+                // append a new level
                 self.levels.push(vec![B::zero(); block_count]);
-                self.levels.last_mut().unwrap()[0] = if block_count > 8 {
-                    top
-                } else {
-                    self.top
-                };
+                self.levels.last_mut().unwrap()[0] = self.top;
+                // after first append, the remaining levels are either 0 or 1
+                self.top = if self.top.is_zero() { B::zero() } else { B::one() };
             } else {
                 assert!(self.levels[level].len() <= block_count);
                 self.levels[level].resize(block_count, B::zero());
@@ -111,7 +105,6 @@ impl<B: BitBlock> BitSet<B> {
             level += 1;
             bit_count = block_count;
         }
-        self.top = top;
         self.capacity
     }
 
