@@ -6,6 +6,7 @@ extern crate permutohedron;
 
 use permutohedron::Heap;
 use shine_graph::bitset::*;
+use shine_graph::bitsetlike::*;
 
 fn bitset_simple_<B: BitBlock>() {
     let mut bitset = BitSet::<B>::new();
@@ -21,9 +22,9 @@ fn bitset_simple_<B: BitBlock>() {
         n + a,
         n + b,
         n + c,
-        7 * n + a,
-        7 * n + b,
-        7 * n + c,
+        3 * n + a,
+        3 * n + b,
+        3 * n + c,
     ];
 
     let mut heap = Heap::new(&mut bits);
@@ -32,10 +33,9 @@ fn bitset_simple_<B: BitBlock>() {
 
         trace!("add bits one-by-one");
         for i in 0..bits.len() {
-            let bi = bits[i];
-            assert!(!bitset.get(bi));
-            bitset.add(bi);
-            assert!(!bitset.get_top().is_zero());
+            let bu = bits[i];
+            assert!(!bitset.get(bu));
+            bitset.add(bu);
             for j in 0..bits.len() {
                 let bj = bits[j];
                 assert_eq!(bitset.get(bj), j <= i);
@@ -51,7 +51,6 @@ fn bitset_simple_<B: BitBlock>() {
                 assert_eq!(bitset.get(bj), j > i);
             }
         }
-        assert!(bitset.get_top().is_zero());
     }
 }
 
@@ -72,6 +71,8 @@ fn bitset_simple() {
 }
 
 fn bitset_stress_<B: BitBlock>(cnt: usize) {
+    let _ = env_logger::try_init();
+
     let mut bitset = BitSet::<B>::new();
 
     trace!("set one bit");
@@ -79,13 +80,11 @@ fn bitset_stress_<B: BitBlock>(cnt: usize) {
         assert!(!bitset.get(i));
         bitset.add(i);
         assert!(bitset.get(i));
-        assert!(!bitset.get_top().is_zero());
         for j in 0..cnt {
             assert!(bitset.get(j) == (i == j));
         }
         bitset.remove(i);
         assert!(!bitset.get(i));
-        assert!(bitset.get_top().is_zero());
     }
 
     trace!("set all bits");
@@ -98,7 +97,6 @@ fn bitset_stress_<B: BitBlock>(cnt: usize) {
 }
 
 #[test]
-//#[ignore]
 fn bitset_stress() {
     let _ = env_logger::try_init();
 

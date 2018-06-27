@@ -1,26 +1,8 @@
-use num_traits::PrimInt;
+use arrayvec::ArrayVec;
 use std::marker::PhantomData;
 use std::slice;
 
-pub trait BitBlock: PrimInt {
-    fn bit_count() -> usize {
-        Self::zero().count_zeros() as usize
-    }
-
-    fn bit_shift() -> usize {
-        Self::bit_count().trailing_zeros() as usize
-    }
-
-    fn bit_mask() -> usize {
-        Self::bit_count() - 1
-    }
-}
-
-impl BitBlock for u8 {}
-impl BitBlock for u16 {}
-impl BitBlock for u32 {}
-impl BitBlock for u64 {}
-impl BitBlock for u128 {}
+use bitsetlike::{BitBlock, BitSetLike, MAX_LEVEL};
 
 /// Index a bit at a given level
 pub struct Index<B: BitBlock> {
@@ -47,14 +29,14 @@ impl<B: BitBlock> Index<B> {
 
     /// Get the position of the bit in the slice.
     /// The items of the tuple in order:
-    ///  - index of the word in the dense storage
-    ///  - the position of the bit within the word
-    ///  - the mask of the word where only the bit pointed by the index is set.
+    ///  - index of the block in the dense storage
+    ///  - the position of the bit within the block
+    ///  - the mask of the block where only the bit pointed by the index is set.
     #[inline(always)]
     pub fn bit_detail(&self) -> (usize, usize, B) {
-        let word_pos = self.pos >> B::bit_shift();
+        let block_pos = self.pos >> B::bit_shift();
         let bit_pos = self.pos & B::bit_mask();
-        (word_pos, bit_pos, B::one() << bit_pos)
+        (block_pos, bit_pos, B::one() << bit_pos)
     }
 }
 
@@ -64,7 +46,7 @@ impl<B: BitBlock> Index<B> {
 pub struct BitSet<B: BitBlock> {
     capacity: usize,
     top: B,
-    levels: Vec<Vec<B>>,
+    levels: ArrayVec<[Vec<B>; MAX_LEVEL]>,
 }
 
 impl<B: BitBlock> BitSet<B> {
@@ -72,7 +54,7 @@ impl<B: BitBlock> BitSet<B> {
         BitSet {
             capacity: B::bit_count(),
             top: B::zero(),
-            levels: Vec::new(),
+            levels: ArrayVec::new(),
         }
     }
 
@@ -95,16 +77,14 @@ impl<B: BitBlock> BitSet<B> {
         self.reserve(amount);
     }
 
-    pub fn get_level_count(&self) -> usize {
-        self.levels.len() + 1
-    }
-
-    /// Return the
+    /// Return the count of the bitset that can be stored without (re)allocation.
     pub fn get_capacity(&self) -> usize {
         self.levels.first().map(|l| l.len()).unwrap_or(1) << B::bit_shift()
     }
 
-    pub fn reserve(&mut self, additional: usize) {
+    /// Reserve memory to store some more bits and return the new capacity.
+    /// Capacity is rouned up to the nearest block-size.
+    pub fn reserve(&mut self, additional: usize) -> usize {
         let reserved_bits = self.get_capacity();
         let required_bits = reserved_bits + additional;
         let mut bit_count = (required_bits + B::bit_mask()) & !B::bit_mask();
@@ -116,26 +96,23 @@ impl<B: BitBlock> BitSet<B> {
             B::one()
         };
         while bit_count > 8 {
-            let word_count = (bit_count + B::bit_mask()) >> B::bit_shift();
+            let block_count = (bit_count + B::bit_mask()) >> B::bit_shift();
             if self.levels.len() <= level {
-                self.levels.push(vec![B::zero(); word_count]);
-                self.levels.last_mut().unwrap()[0] = if word_count > 8 {
+                self.levels.push(vec![B::zero(); block_count]);
+                self.levels.last_mut().unwrap()[0] = if block_count > 8 {
                     top
                 } else {
                     self.top
                 };
             } else {
-                assert!(self.levels[level].len() <= word_count);
-                self.levels[level].resize(word_count, B::zero());
+                assert!(self.levels[level].len() <= block_count);
+                self.levels[level].resize(block_count, B::zero());
             }
             level += 1;
-            bit_count = word_count;
+            bit_count = block_count;
         }
         self.top = top;
-    }
-
-    pub fn get_top(&self) -> B {
-        self.top
+        self.capacity
     }
 
     pub fn get_level(&self, level: usize) -> &[B] {
@@ -156,23 +133,23 @@ impl<B: BitBlock> BitSet<B> {
         }
     }
 
-    // Sets a bit of the given level and return if word is
+    // Sets a bit of the given level and return if block is
     fn set_level(&mut self, idx: &Index<B>) -> bool {
-        let (word_pos, _, mask) = idx.bit_detail();
-        let word = &mut self.get_level_mut(idx.level)[word_pos];
-        let empty = word.is_zero();
-        *word = *word | mask;
+        let (block_pos, _, mask) = idx.bit_detail();
+        let block = &mut self.get_level_mut(idx.level)[block_pos];
+        let empty = block.is_zero();
+        *block = *block | mask;
         empty
     }
 
     /// Clears a bit of the given level and return if the modification has
     /// effect on the parent levels.
     fn unset_level(&mut self, idx: &Index<B>) -> bool {
-        let (word_pos, _, mask) = idx.bit_detail();
-        let word = &mut self.get_level_mut(idx.level)[word_pos];
-        let empty = word.is_zero();
-        *word = *word & !mask;
-        !empty && word.is_zero()
+        let (block_pos, _, mask) = idx.bit_detail();
+        let block = &mut self.get_level_mut(idx.level)[block_pos];
+        let empty = block.is_zero();
+        *block = *block & !mask;
+        !empty && block.is_zero()
     }
 
     pub fn add(&mut self, pos: usize) {
@@ -196,16 +173,41 @@ impl<B: BitBlock> BitSet<B> {
             idx.next_level();
         }
     }
+}
 
-    pub fn get(&self, pos: usize) -> bool {
+impl<B: BitBlock> BitSetLike for BitSet<B> {
+    type Bits = B;
+
+    fn get_level_count(&self) -> usize {
+        self.levels.len() + 1
+    }
+
+    fn get_block(&self, level: usize, block: usize) -> B {
+        if level < self.get_level_count() {
+            let level = self.get_level(level);
+            if block < level.len() {
+                level[block]
+            } else {
+                B::zero()
+            }
+        } else {
+            if self.top.is_zero() {
+                B::zero()
+            } else {
+                B::one()
+            }
+        }
+    }
+
+    fn get(&self, pos: usize) -> bool {
         if self.capacity <= pos {
             return false;
         }
 
         let idx = Index::from_pos(pos);
-        let (word_pos, _, mask) = idx.bit_detail();
-        let word = self.get_level(0)[word_pos];
-        !(word & mask).is_zero()
+        let (block_pos, _, mask) = idx.bit_detail();
+        let block = self.get_level(0)[block_pos];
+        !(block & mask).is_zero()
     }
 }
 

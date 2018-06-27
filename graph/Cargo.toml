@@ -12,6 +12,7 @@ libc = "*"
 log = "*"
 lazy_static = "*"
 num-traits = "*"
+arrayvec = "*"
 
 shine-store = {path = "../store"}
 
