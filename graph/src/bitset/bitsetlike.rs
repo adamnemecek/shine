@@ -31,6 +31,8 @@ impl BitBlock for u128 {}
 pub trait BitSetLike {
     type Bits: BitBlock;
 
+    fn is_empty(&self) -> bool;
+
     fn get_level_count(&self) -> usize;
     fn get_block(&self, level: usize, block: usize) -> Self::Bits;
     fn get(&self, pos: usize) -> bool;

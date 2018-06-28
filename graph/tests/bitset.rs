@@ -12,6 +12,24 @@ use rand::Rng;
 
 use shine_graph::bitset::*;
 
+fn bitset_clear_<B: BitBlock>() {
+    let mut bitset = BitSet::<B>::new();
+
+    assert!(bitset.is_empty());
+    assert!(!bitset.get(123));
+    bitset.add(123);
+    assert!(!bitset.is_empty());
+    assert!(bitset.get(123));
+
+    bitset.clear();
+
+    assert!(bitset.is_empty());
+    assert!(!bitset.get(123));
+    bitset.add(123);
+    assert!(!bitset.is_empty());
+    assert!(bitset.get(123));
+}
+
 fn bitset_simple_bitorder<'a, B: 'a + BitBlock>(bitset: &'a mut BitSet<B>, order: &'a [usize], bits: &'a [usize]) {
     trace!("add bits one-by-one");
     for i in 0..order.len() {
@@ -57,10 +75,10 @@ fn bitset_simple_<B: BitBlock>() {
         c,
         n,
         n + b,
-        n + c,
+        //n + c,
         //3 * n,
         //3 * n + c,
-        n * n,
+        //n * n,
         //n * n + b,
         n * n + c,
     ];
@@ -157,6 +175,22 @@ fn bitset_stress_random_<B: BitBlock>(range: usize, count: usize) {
 }
 
 #[test]
+fn bitset_clear() {
+    let _ = env_logger::try_init();
+
+    trace!("BitSet - u8");
+    bitset_clear_::<u8>();
+    trace!("BitSet - u16");
+    bitset_clear_::<u16>();
+    trace!("BitSet - u32");
+    bitset_clear_::<u32>();
+    trace!("BitSet - u64");
+    bitset_clear_::<u64>();
+    trace!("BitSet - u128");
+    bitset_clear_::<u128>();
+}
+
+#[test]
 fn bitset_simple() {
     let _ = env_logger::try_init();
 
@@ -176,8 +210,8 @@ fn bitset_simple() {
 fn bitset_random_stress() {
     let _ = env_logger::try_init();
 
-    let count = 10000;
-    let range = 2 << 30;
+    let count = 1000;
+    let range = 1 << 20;
 
     trace!("BitSet - u8");
     bitset_stress_random_::<u8>(range, count);

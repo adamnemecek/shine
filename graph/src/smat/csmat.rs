@@ -1,9 +1,9 @@
 use store::stdext::SliceOrdExt;
 
-//use bitset::{BitSetLike, BitSetu32};
+use bitset::BitSetu32;
 use smat::CSFormat;
 
-//pub type CSMatMajorMask = BitSetu32;
+pub type CSMatMajorMask = BitSetu32;
 
 /// Result of item insertion operaation.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,9 +28,10 @@ pub enum InsertResult {
 pub struct CSMat {
     shape: CSFormat,
 
-    //major_mask: CSMatMajorMask,
+    // Bitmask for the rows(columns) having nonzero items
+    major_mask: CSMatMajorMask,
 
-    // Offsets of the start in the index/data vector for each Row/Column
+    // Offsets of the start in the index/data vector for each row(column)
     offsets: Vec<usize>,
 
     // Column/Row indices for each non-zero items
@@ -42,7 +43,7 @@ impl CSMat {
     pub fn new_with_capacity(shape: CSFormat, capacity: usize, nnz_capacity: usize) -> CSMat {
         CSMat {
             shape: shape,
-            //major_mask: CSMatMajorMask::new_with_capacity(capacity),
+            major_mask: CSMatMajorMask::new_with_capacity(capacity),
             offsets: vec![0usize; capacity + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
@@ -82,7 +83,7 @@ impl CSMat {
 
         trace!("resized to: {}", capacity);
         let nnz = self.nnz();
-        //self.major_mask.increase_capacity_to(capacity);
+        self.major_mask.increase_capacity_to(capacity);
         self.offsets.resize(capacity + 1, nnz);
     }
 
@@ -99,7 +100,7 @@ impl CSMat {
         let pos = {
             if idx0 == idx1 {
                 trace!("new major row opened: {}", major);
-                //self.major_mask.add(major);
+                self.major_mask.add(major);
                 idx0
             } else {
                 self.indices[idx0..idx1].lower_bound(&minor) + idx0
@@ -137,9 +138,9 @@ impl CSMat {
             return None;
         }
 
-        //if !self.major_mask.get(major) {
-        //    return None;
-        //}
+        /*if !self.major_mask.get(major) {
+            return None;
+        }*/
 
         let idx0 = self.offsets[major];
         let idx1 = self.offsets[major + 1];
@@ -153,7 +154,7 @@ impl CSMat {
             }
             if self.offsets[major] == self.offsets[major + 1] {
                 trace!("major row cleared: {}", major);
-                //self.major_mask.remove(major);
+                self.major_mask.remove(major);
             }
             Some(pos)
         } else {
@@ -174,7 +175,7 @@ impl CSMat {
         self.indices.clear();
         self.offsets.clear();
         self.offsets.push(0);
-        //self.major_mask.clear();
+        self.major_mask.clear();
     }
 
     /// Get the index(data) position at the given position.
@@ -183,9 +184,9 @@ impl CSMat {
             return None;
         }
 
-        //if !self.major_mask.get(major) {
-        //    return None;
-        //}
+        /*if !self.major_mask.get(major) {
+            return None;
+        }*/
 
         let idx0 = self.offsets[major];
         let idx1 = self.offsets[major + 1];

@@ -3,9 +3,8 @@ use store::arena::IndexedArena;
 
 use smat::{CSFormat, CSMat, CSMatLike, InsertResult};
 
-/// Compressed Sparse (Square) Row/Column matrix with arena based
-/// data storage.
-/// During insertion and removal only indices are moved but accessing the items require an
+/// Compressed Sparse (Square) Row/Column matrix with arena based data storage.
+/// During insertion and removal only indices are updated but accessing the items require an
 /// indexed lookup.
 pub struct CSMatArena<T> {
     index: CSMat,

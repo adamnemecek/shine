@@ -170,6 +170,7 @@ impl<B: BitBlock> BitSet<B> {
     }
 
     pub fn clear(&mut self) {
+        self.capacity = 0;
         self.top = B::zero();
         for level in self.levels.iter_mut() {
             level.clear();
@@ -179,6 +180,10 @@ impl<B: BitBlock> BitSet<B> {
 
 impl<B: BitBlock> BitSetLike for BitSet<B> {
     type Bits = B;
+
+    fn is_empty(&self) -> bool {
+        self.top.is_zero()
+    }
 
     fn get_level_count(&self) -> usize {
         self.levels.len() + 1
