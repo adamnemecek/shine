@@ -2,11 +2,10 @@
 
 #[macro_use]
 extern crate log;
-extern crate num_traits;
 extern crate arrayvec;
+extern crate num_traits;
 
 extern crate shine_store as store;
 
-pub mod bitsetlike;
 pub mod bitset;
-pub mod csmat;
+pub mod smat;

@@ -2,7 +2,7 @@ use arrayvec::ArrayVec;
 use std::marker::PhantomData;
 use std::slice;
 
-use bitsetlike::{BitBlock, BitSetLike, MAX_LEVEL};
+use bitset::{BitBlock, BitSetLike, MAX_LEVEL};
 
 /// Index a bit at a given level
 pub struct Index<B: BitBlock> {
@@ -166,6 +166,13 @@ impl<B: BitBlock> BitSet<B> {
         let mut idx = Index::from_pos(pos);
         while idx.level < level_count && self.unset_level(&idx) {
             idx.next_level();
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.top = B::zero();
+        for level in self.levels.iter_mut() {
+            level.clear();
         }
     }
 }

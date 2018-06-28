@@ -6,9 +6,9 @@ extern crate rand;
 
 use rand::Rng;
 
-use shine_graph::csmat::*;
+use shine_graph::smat::*;
 
-fn csr_simple_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
+fn csr_simple_<M: CSMatLike<Item = (usize, usize)>>(mut matrix: M) {
     for i in 0..2 {
         trace!("pass: {}", i);
 
@@ -52,7 +52,7 @@ fn csr_simple_<M: CSMat<Item = (usize, usize)>>(mut matrix: M) {
     }
 }
 
-fn csr_stress_<M: CSMat<Item = (usize, usize)>>(mut matrix: M, size: usize, cnt: usize) {
+fn csr_stress_<M: CSMatLike<Item = (usize, usize)>>(mut matrix: M, size: usize, cnt: usize) {
     let mut mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
@@ -83,31 +83,31 @@ fn csr_stress_<M: CSMat<Item = (usize, usize)>>(mut matrix: M, size: usize, cnt:
 fn csr_simple() {
     let _ = env_logger::try_init();
 
-    trace!("CSVecMat - row");
-    csr_simple_(CSVecMat::<(usize, usize)>::new_row());
-    trace!("CSVecMat - col");
-    csr_simple_(CSVecMat::<(usize, usize)>::new_column());
-    trace!("CSArenaMat - row");
-    csr_simple_(CSArenaMat::<(usize, usize)>::new_row());
-    trace!("CSArenaMat - col");
-    csr_simple_(CSArenaMat::<(usize, usize)>::new_column());
+    trace!("CSMatVec - row");
+    csr_simple_(CSMatVec::<(usize, usize)>::new_row());
+    trace!("CSMatVec - col");
+    csr_simple_(CSMatVec::<(usize, usize)>::new_column());
+    trace!("CSMatArena - row");
+    csr_simple_(CSMatArena::<(usize, usize)>::new_row());
+    trace!("CSMatArena - col");
+    csr_simple_(CSMatArena::<(usize, usize)>::new_column());
 }
 
 #[test]
 fn csr_stress() {
     let _ = env_logger::try_init();
 
-    trace!("CSVecMat - row, big");
-    csr_stress_(CSVecMat::<(usize, usize)>::new_row(), 1024, 100000);
+    trace!("CSMatVec - row, big");
+    csr_stress_(CSMatVec::<(usize, usize)>::new_row(), 1024, 100000);
 
     for _ in 0..10 {
-        trace!("CSVecMat - row");
-        csr_stress_(CSVecMat::<(usize, usize)>::new_row(), 128, 900);
-        trace!("CSVecMat - col");
-        csr_stress_(CSVecMat::<(usize, usize)>::new_column(), 128, 900);
-        trace!("CSArenaMat - row");
-        csr_stress_(CSArenaMat::<(usize, usize)>::new_row(), 128, 900);
-        trace!("CSArenaMat - col");
-        csr_stress_(CSArenaMat::<(usize, usize)>::new_column(), 128, 900);
+        trace!("CSMatVec - row");
+        csr_stress_(CSMatVec::<(usize, usize)>::new_row(), 128, 900);
+        trace!("CSMatVec - col");
+        csr_stress_(CSMatVec::<(usize, usize)>::new_column(), 128, 900);
+        trace!("CSMatArena - row");
+        csr_stress_(CSMatArena::<(usize, usize)>::new_row(), 128, 900);
+        trace!("CSMatArena - col");
+        csr_stress_(CSMatArena::<(usize, usize)>::new_column(), 128, 900);
     }
 }

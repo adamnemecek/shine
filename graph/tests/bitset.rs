@@ -11,7 +11,6 @@ use permutohedron::Heap;
 use rand::Rng;
 
 use shine_graph::bitset::*;
-use shine_graph::bitsetlike::*;
 
 fn bitset_simple_bitorder<'a, B: 'a + BitBlock>(bitset: &'a mut BitSet<B>, order: &'a [usize], bits: &'a [usize]) {
     trace!("add bits one-by-one");
@@ -74,22 +73,6 @@ fn bitset_simple_<B: BitBlock>() {
     }
 }
 
-#[test]
-fn bitset_simple() {
-    let _ = env_logger::try_init();
-
-    trace!("BitSet - u8");
-    bitset_simple_::<u8>();
-    trace!("BitSet - u16");
-    bitset_simple_::<u16>();
-    trace!("BitSet - u32");
-    bitset_simple_::<u32>();
-    trace!("BitSet - u64");
-    bitset_simple_::<u64>();
-    trace!("BitSet - u128");
-    bitset_simple_::<u128>();
-}
-
 fn bitset_stress_<B: BitBlock>(cnt: usize) {
     let _ = env_logger::try_init();
 
@@ -114,22 +97,6 @@ fn bitset_stress_<B: BitBlock>(cnt: usize) {
             assert!(bitset.get(j) == (j <= i));
         }
     }
-}
-
-#[test]
-fn bitset_stress() {
-    let _ = env_logger::try_init();
-
-    trace!("BitSet - u8");
-    bitset_stress_::<u8>(4096);
-    trace!("BitSet - u16");
-    bitset_stress_::<u16>(512);
-    trace!("BitSet - u32");
-    bitset_stress_::<u32>(512);
-    trace!("BitSet - u64");
-    bitset_stress_::<u64>(512);
-    trace!("BitSet - u128");
-    bitset_stress_::<u128>(4096);
 }
 
 fn bitset_stress_random_<B: BitBlock>(range: usize, count: usize) {
@@ -190,6 +157,22 @@ fn bitset_stress_random_<B: BitBlock>(range: usize, count: usize) {
 }
 
 #[test]
+fn bitset_simple() {
+    let _ = env_logger::try_init();
+
+    trace!("BitSet - u8");
+    bitset_simple_::<u8>();
+    trace!("BitSet - u16");
+    bitset_simple_::<u16>();
+    trace!("BitSet - u32");
+    bitset_simple_::<u32>();
+    trace!("BitSet - u64");
+    bitset_simple_::<u64>();
+    trace!("BitSet - u128");
+    bitset_simple_::<u128>();
+}
+
+#[test]
 fn bitset_random_stress() {
     let _ = env_logger::try_init();
 
@@ -206,4 +189,20 @@ fn bitset_random_stress() {
     bitset_stress_random_::<u64>(range, count);
     trace!("BitSet - u128");
     bitset_stress_random_::<u128>(range, count);
+}
+
+#[test]
+fn bitset_stress() {
+    let _ = env_logger::try_init();
+
+    trace!("BitSet - u8");
+    bitset_stress_::<u8>(4096);
+    trace!("BitSet - u16");
+    bitset_stress_::<u16>(512);
+    trace!("BitSet - u32");
+    bitset_stress_::<u32>(512);
+    trace!("BitSet - u64");
+    bitset_stress_::<u64>(512);
+    trace!("BitSet - u128");
+    bitset_stress_::<u128>(4096);
 }
