@@ -1,7 +1,7 @@
 use num_traits::{One, PrimInt, Zero};
 
 //todo: use associated const and move it into BitBlock
-pub const MAX_LEVEL: usize = 3;
+pub const MAX_LEVEL: usize = 11;
 
 pub trait BitBlock: PrimInt {
     fn bit_count() -> usize {

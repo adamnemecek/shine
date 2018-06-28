@@ -94,8 +94,10 @@ impl<B: BitBlock> BitSet<B> {
             let block_count = (bit_count + B::bit_mask()) >> B::bit_shift();
             if self.levels.len() <= level {
                 // append a new level
-                self.levels.push(vec![B::zero(); block_count]);
-                self.levels.last_mut().unwrap()[0] = self.top;
+                self.levels.push(Vec::new());
+                let blocks = self.levels.last_mut().unwrap();
+                blocks.resize(block_count, B::zero());
+                blocks[0] = self.top;
                 // after first append, the remaining levels are either 0 or 1
                 self.top = if self.top.is_zero() { B::zero() } else { B::one() };
             } else {
