@@ -12,9 +12,15 @@ keywords = ["component system", "game"]
 members = [ "store", "graph" ]
 
 [dependencies]
+log = "*"
+
 shine-store = {path = "store"}
 shine-graph = {path = "graph"}
 #shine-ecs = {path = "ecs"}
 
 #[dev-dependencies] https://github.com/rust-lang/cargo/issues/860
 #env_logger = "*"
+
+env_logger = "*"
+rand = "*"
+permutohedron = "*"

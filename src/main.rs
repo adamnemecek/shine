@@ -1,6 +1,4 @@
-extern crate shine_store as store;
-//extern crate shine_ecs as ecs;
+extern crate shine_graph;
+extern crate shine_store;
 
-
-pub fn main() {
-}
+pub fn main() {}

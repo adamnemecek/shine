@@ -1,44 +1,7 @@
 use arrayvec::ArrayVec;
-use std::marker::PhantomData;
 use std::slice;
 
-use bitset::{BitBlock, BitSetLike, MAX_LEVEL};
-
-/// Index a bit at a given level
-pub struct Index<B: BitBlock> {
-    pub level: usize,
-    pub pos: usize,
-    ph: PhantomData<B>,
-}
-
-impl<B: BitBlock> Index<B> {
-    pub fn from_pos(pos: usize) -> Index<B> {
-        Index {
-            level: 0,
-            pos: pos,
-            ph: PhantomData,
-        }
-    }
-
-    ///Advance index to the next level
-    #[inline(always)]
-    pub fn next_level(&mut self) {
-        self.pos >>= B::bit_shift();
-        self.level += 1;
-    }
-
-    /// Get the position of the bit in the slice.
-    /// The items of the tuple in order:
-    ///  - index of the block in the dense storage
-    ///  - the position of the bit within the block
-    ///  - the mask of the block where only the bit pointed by the index is set.
-    #[inline(always)]
-    pub fn bit_detail(&self) -> (usize, usize, B) {
-        let block_pos = self.pos >> B::bit_shift();
-        let bit_pos = self.pos & B::bit_mask();
-        (block_pos, bit_pos, B::one() << bit_pos)
-    }
-}
+use bitset::{BitBlock, BitPos, BitSetLike, MAX_LEVEL};
 
 /// Hierarchical bitset.
 /// Each level indicates if any bit is set in the subtree.
@@ -129,7 +92,7 @@ impl<B: BitBlock> BitSet<B> {
     }
 
     // Sets a bit of the given level and return if block is
-    fn set_level(&mut self, idx: &Index<B>) -> bool {
+    fn set_level(&mut self, idx: &BitPos<B>) -> bool {
         let (block_pos, _, mask) = idx.bit_detail();
         let block = &mut self.get_level_mut(idx.level)[block_pos];
         let empty = block.is_zero();
@@ -139,7 +102,7 @@ impl<B: BitBlock> BitSet<B> {
 
     /// Clears a bit of the given level and return if the modification has
     /// effect on the parent levels.
-    fn unset_level(&mut self, idx: &Index<B>) -> bool {
+    fn unset_level(&mut self, idx: &BitPos<B>) -> bool {
         let (block_pos, _, mask) = idx.bit_detail();
         let block = &mut self.get_level_mut(idx.level)[block_pos];
         let empty = block.is_zero();
@@ -152,7 +115,7 @@ impl<B: BitBlock> BitSet<B> {
             self.increase_capacity_to(pos + 1);
         }
         let level_count = self.get_level_count();
-        let mut idx = Index::from_pos(pos);
+        let mut idx = BitPos::from_pos(pos);
         while idx.level < level_count && self.set_level(&idx) {
             idx.next_level();
         }
@@ -163,7 +126,7 @@ impl<B: BitBlock> BitSet<B> {
             self.increase_capacity_to(pos);
         }
         let level_count = self.get_level_count();
-        let mut idx = Index::from_pos(pos);
+        let mut idx = BitPos::from_pos(pos);
         while idx.level < level_count && self.unset_level(&idx) {
             idx.next_level();
         }
@@ -198,23 +161,12 @@ impl<B: BitBlock> BitSetLike for BitSet<B> {
                 B::zero()
             }
         } else {
-            if self.top.is_zero() {
+            if self.top.is_zero() || block > 0 {
                 B::zero()
             } else {
                 B::one()
             }
         }
-    }
-
-    fn get(&self, pos: usize) -> bool {
-        if self.capacity <= pos {
-            return false;
-        }
-
-        let idx = Index::from_pos(pos);
-        let (block_pos, _, mask) = idx.bit_detail();
-        let block = self.get_level(0)[block_pos];
-        !(block & mask).is_zero()
     }
 }
 
