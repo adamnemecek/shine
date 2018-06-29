@@ -1,35 +1,15 @@
 use store::stdext::SliceOrdExt;
 
-use bitset::BitSetu32;
-use smat::CSFormat;
-
-pub type CSMatMajorMask = BitSetu32;
-
-/// Result of item insertion operaation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InsertResult {
-    /// A new non-zero item is added
-    New {
-        /// The position of insertion in the data vector
-        pos: usize,
-        /// The new size of the data vector (previous size + 1)
-        size: usize,
-    },
-
-    /// A non-zero item was replaced
-    Replace {
-        /// The position of replacement in the data vector
-        pos: usize,
-    },
-}
+use bitset::BitSetFast;
+use smat::{MatrixShape, SMatrix, SMatrixAddResult};
 
 /// Compressed Sparse (Square) Row/Column matrix that stores only the
 /// indices to the non-zero items but no values.
-pub struct CSMat {
-    shape: CSFormat,
+pub struct CSMatrix {
+    shape: MatrixShape,
 
     // Bitmask for the rows(columns) having nonzero items
-    major_mask: CSMatMajorMask,
+    major_mask: BitSetFast,
 
     // Offsets of the start in the index/data vector for each row(column)
     offsets: Vec<usize>,
@@ -38,40 +18,30 @@ pub struct CSMat {
     indices: Vec<usize>,
 }
 
-impl CSMat {
+impl CSMatrix {
     /// Create a new Compressed Sparse (Square) Row matrix with a predefined capacity
-    pub fn new_with_capacity(shape: CSFormat, capacity: usize, nnz_capacity: usize) -> CSMat {
-        CSMat {
+    pub fn new_with_capacity(shape: MatrixShape, capacity: usize, nnz_capacity: usize) -> CSMatrix {
+        CSMatrix {
             shape: shape,
-            major_mask: CSMatMajorMask::new_with_capacity(capacity),
+            major_mask: BitSetFast::new_with_capacity(capacity),
             offsets: vec![0usize; capacity + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
     }
 
     /// Create an empty Compressed Sparse (Square) Row matrix
-    pub fn new_row() -> CSMat {
-        Self::new_with_capacity(CSFormat::Row, 0, 0)
+    pub fn new_row() -> CSMatrix {
+        Self::new_with_capacity(MatrixShape::Row, 0, 0)
     }
 
     /// Create an empty Compressed Sparse (Square) Column matrix
-    pub fn new_column() -> CSMat {
-        Self::new_with_capacity(CSFormat::Column, 0, 0)
-    }
-
-    /// Return the number of non-zero elements.
-    pub fn nnz(&self) -> usize {
-        *self.offsets.last().unwrap()
+    pub fn new_column() -> CSMatrix {
+        Self::new_with_capacity(MatrixShape::Column, 0, 0)
     }
 
     /// Return the current capacity of the matrix.
     pub fn capacity(&self) -> usize {
         self.offsets.len() - 1
-    }
-
-    /// Return if matrix has only "zero" items
-    pub fn is_zero(&self) -> bool {
-        self.nnz() == 0
     }
 
     /// Increase the capacity to the given value.
@@ -86,10 +56,29 @@ impl CSMat {
         self.major_mask.increase_capacity_to(capacity);
         self.offsets.resize(capacity + 1, nnz);
     }
+}
 
-    /// Add an item to the matrix and return the index(data) position of the item.
-    /// The indexing is given in major, minor order independent of the shape
-    fn add_major_minor(&mut self, major: usize, minor: usize) -> InsertResult {
+impl SMatrix for CSMatrix {
+    fn shape(&self) -> MatrixShape {
+        self.shape
+    }
+
+    fn nnz(&self) -> usize {
+        *self.offsets.last().unwrap()
+    }
+
+    fn is_empty(&self) -> bool {
+        self.nnz() == 0
+    }
+
+    fn clear(&mut self) {
+        self.indices.clear();
+        self.offsets.clear();
+        self.offsets.push(0);
+        self.major_mask.clear();
+    }
+
+    fn add_major_minor(&mut self, major: usize, minor: usize) -> SMatrixAddResult {
         let capacity = if major > minor { major + 1 } else { minor + 1 };
         if capacity > self.capacity() {
             self.increase_capacity_to(capacity);
@@ -109,30 +98,20 @@ impl CSMat {
 
         if pos < idx1 && self.indices[pos] == minor {
             trace!("item replaced at: {}", pos);
-            InsertResult::Replace { pos: pos }
+            SMatrixAddResult::Replace { pos: pos }
         } else {
             trace!("item added at: {}", pos);
             self.indices.insert(pos, minor);
             for offset in self.offsets[major + 1..].iter_mut() {
                 *offset += 1;
             }
-            InsertResult::New {
+            SMatrixAddResult::New {
                 pos: pos,
                 size: self.nnz(),
             }
         }
     }
 
-    ///Add an item to the matrix and return the index(data) position of the item.
-    pub fn add(&mut self, r: usize, c: usize) -> InsertResult {
-        match self.shape {
-            CSFormat::Row => self.add_major_minor(r, c),
-            CSFormat::Column => self.add_major_minor(c, r),
-        }
-    }
-
-    /// Remove an item from the matrix and return its index(data) position.
-    /// The indexing is given in major, minor order independent of the shape.
     fn remove_major_minor(&mut self, major: usize, minor: usize) -> Option<usize> {
         if major >= self.capacity() || minor >= self.capacity() {
             return None;
@@ -162,23 +141,6 @@ impl CSMat {
         }
     }
 
-    /// Remove an item from the matrix and return its index(data) position.
-    pub fn remove(&mut self, r: usize, c: usize) -> Option<usize> {
-        match self.shape {
-            CSFormat::Row => self.remove_major_minor(r, c),
-            CSFormat::Column => self.remove_major_minor(c, r),
-        }
-    }
-
-    /// Remove all the items.
-    pub fn clear(&mut self) {
-        self.indices.clear();
-        self.offsets.clear();
-        self.offsets.push(0);
-        self.major_mask.clear();
-    }
-
-    /// Get the index(data) position at the given position.
     fn get_major_minor(&self, major: usize, minor: usize) -> Option<usize> {
         if major >= self.capacity() || minor >= self.capacity() {
             return None;
@@ -196,14 +158,6 @@ impl CSMat {
             Some(pos)
         } else {
             None
-        }
-    }
-
-    /// Remove an item from the matrix and return its index(data) position.
-    pub fn get(&self, r: usize, c: usize) -> Option<usize> {
-        match self.shape {
-            CSFormat::Row => self.get_major_minor(r, c),
-            CSFormat::Column => self.get_major_minor(c, r),
         }
     }
 }

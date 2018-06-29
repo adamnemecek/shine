@@ -8,7 +8,9 @@ use rand::Rng;
 
 use shine_graph::smat::*;
 
-fn csr_simple_<M: CSMatLike<Item = (usize, usize)>>(mut matrix: M) {
+type Data = (usize, usize);
+
+fn csr_simple_<M: SparseMatrix<Item = Data>>(mut matrix: M) {
     for i in 0..2 {
         trace!("pass: {}", i);
 
@@ -52,7 +54,7 @@ fn csr_simple_<M: CSMatLike<Item = (usize, usize)>>(mut matrix: M) {
     }
 }
 
-fn csr_stress_<M: CSMatLike<Item = (usize, usize)>>(mut matrix: M, size: usize, cnt: usize) {
+fn csr_stress_<M: SparseMatrix<Item = Data>>(mut matrix: M, size: usize, cnt: usize) {
     let mut mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
@@ -83,31 +85,31 @@ fn csr_stress_<M: CSMatLike<Item = (usize, usize)>>(mut matrix: M, size: usize, 
 fn csr_simple() {
     let _ = env_logger::try_init();
 
-    trace!("CSMatVec - row");
-    csr_simple_(CSMatVec::<(usize, usize)>::new_row());
-    trace!("CSMatVec - col");
-    csr_simple_(CSMatVec::<(usize, usize)>::new_column());
-    trace!("CSMatArena - row");
-    csr_simple_(CSMatArena::<(usize, usize)>::new_row());
-    trace!("CSMatArena - col");
-    csr_simple_(CSMatArena::<(usize, usize)>::new_column());
+    trace!("SparseDMatrix/CSMatrix/row");
+    csr_simple_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()));
+    trace!("SparseDMatrix/CSMatrix/col");
+    csr_simple_(SparseDMatrix::<_, Data>::new(CSMatrix::new_column()));
+    trace!("SparseAMatrix/CSMatrix/row");
+    csr_simple_(SparseAMatrix::<_, Data>::new(CSMatrix::new_row()));
+    trace!("SparseAMatrix/CSMatrix/col");
+    csr_simple_(SparseAMatrix::<_, Data>::new(CSMatrix::new_column()));
 }
 
 #[test]
 fn csr_stress() {
     let _ = env_logger::try_init();
 
-    trace!("CSMatVec - row, big");
-    csr_stress_(CSMatVec::<(usize, usize)>::new_row(), 1024, 100000);
+    trace!("SparseDMatrix/CSMatrix/row - big");
+    csr_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()), 1024, 100000);
 
     for _ in 0..10 {
-        trace!("CSMatVec - row");
-        csr_stress_(CSMatVec::<(usize, usize)>::new_row(), 128, 900);
-        trace!("CSMatVec - col");
-        csr_stress_(CSMatVec::<(usize, usize)>::new_column(), 128, 900);
-        trace!("CSMatArena - row");
-        csr_stress_(CSMatArena::<(usize, usize)>::new_row(), 128, 900);
-        trace!("CSMatArena - col");
-        csr_stress_(CSMatArena::<(usize, usize)>::new_column(), 128, 900);
+        trace!("SparseDMatrix/CSMatrix/row");
+        csr_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()), 128, 900);
+        trace!("SparseDMatrix/CSMatrix/col");
+        csr_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_column()), 128, 900);
+        trace!("SparseAMatrix/CSMatrix/row");
+        csr_stress_(SparseAMatrix::<_, Data>::new(CSMatrix::new_row()), 128, 900);
+        trace!("SparseAMatrix/CSMatrix/col");
+        csr_stress_(SparseAMatrix::<_, Data>::new(CSMatrix::new_column()), 128, 900);
     }
 }

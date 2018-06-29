@@ -1,55 +1,54 @@
 use std::mem;
 use store::arena::IndexedArena;
 
-use smat::{CSFormat, CSMat, CSMatLike, InsertResult};
+use smat::{SMatrix, SMatrixAddResult, SparseMatrix};
 
 /// Compressed Sparse (Square) Row/Column matrix with arena based data storage.
 /// During insertion and removal only indices are updated but accessing the items require an
 /// indexed lookup.
-pub struct CSMatArena<T> {
-    index: CSMat,
+pub struct SparseAMatrix<M: SMatrix, T> {
+    index: M,
     arena: IndexedArena<T>,
     data: Vec<usize>,
 }
 
-impl<T> CSMatArena<T> {
-    /// Create a new Compressed Sparse (Square) Row matrix with a predefined capacity
-    pub fn new_with_capacity(shape: CSFormat, capacity: usize, nnz_capacity: usize) -> Self {
-        CSMatArena {
-            index: CSMat::new_with_capacity(shape, capacity, nnz_capacity),
+impl<M: SMatrix, T> SparseAMatrix<M, T> {
+    pub fn new(index: M) -> Self {
+        Self::new_with_capacity(index, 0)
+    }
+
+    pub fn new_with_capacity(index: M, nnz_capacity: usize) -> Self {
+        SparseAMatrix {
+            index: index,
             arena: IndexedArena::new_with_capacity(nnz_capacity, 0),
             data: Vec::with_capacity(nnz_capacity),
         }
     }
-
-    /// Create an empty Compressed Sparse (Square) Row matrix
-    pub fn new_row() -> Self {
-        Self::new_with_capacity(CSFormat::Row, 0, 0)
-    }
-
-    /// Create an empty Compressed Sparse (Square) Column matrix
-    pub fn new_column() -> Self {
-        Self::new_with_capacity(CSFormat::Column, 0, 0)
-    }
 }
 
-impl<T> CSMatLike for CSMatArena<T> {
+impl<M: SMatrix, T> SparseMatrix for SparseAMatrix<M, T> {
     type Item = T;
 
     fn nnz(&self) -> usize {
         self.index.nnz()
     }
 
-    fn capacity(&self) -> usize {
-        self.index.capacity()
+    fn is_empty(&self) -> bool {
+        self.index.is_empty()
+    }
+
+    fn clear(&mut self) {
+        self.index.clear();
+        self.data.clear();
+        self.arena.clear();
     }
 
     fn add(&mut self, r: usize, c: usize, value: Self::Item) {
         match self.index.add(r, c) {
-            InsertResult::Replace { pos } => {
+            SMatrixAddResult::Replace { pos } => {
                 mem::replace(&mut self.arena[self.data[pos]], value);
             }
-            InsertResult::New { pos, .. } => {
+            SMatrixAddResult::New { pos, .. } => {
                 self.data.insert(pos, self.arena.allocate(value).0);
             }
         }
@@ -60,12 +59,6 @@ impl<T> CSMatLike for CSMatArena<T> {
             Some(pos) => Some(self.arena.deallocate(self.data.remove(pos))),
             None => None,
         }
-    }
-
-    fn clear(&mut self) {
-        self.index.clear();
-        self.data.clear();
-        self.arena.clear();
     }
 
     fn get(&self, r: usize, c: usize) -> Option<&Self::Item> {
