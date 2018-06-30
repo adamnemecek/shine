@@ -39,13 +39,15 @@ impl<M: SMatrix, T> SparseMatrix for SparseDMatrix<M, T> {
         self.data.clear();
     }
 
-    fn add(&mut self, r: usize, c: usize, value: Self::Item) {
+    fn add(&mut self, r: usize, c: usize, value: Self::Item) -> Option<Self::Item> {
         match self.index.add(r, c) {
             SMatrixAddResult::Replace { pos } => {
-                mem::replace(&mut self.data[pos], value);
+                let old = mem::replace(&mut self.data[pos], value);
+                Some(old)
             }
             SMatrixAddResult::New { pos, .. } => {
                 self.data.insert(pos, value);
+                None
             }
         }
     }

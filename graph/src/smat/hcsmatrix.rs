@@ -10,7 +10,7 @@ use smat::MatrixShape;
 pub struct HCSMatrix {
     shape: MatrixShape,
     nnz: usize,
-    major_mask: BitSetFast,
+    offset_mask: BitSetFast,
     offsets: HashMap<usize, usize>,
     indices: Vec<usize>,
 }

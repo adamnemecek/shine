@@ -91,45 +91,62 @@ impl<B: BitBlock> BitSet<B> {
         }
     }
 
-    // Sets a bit of the given level and return if block is
+    // Sets a bit of the given level and return if the modification has
+    /// effect on the parent levels (block changed from zero to non-zero)
     fn set_level(&mut self, idx: &BitPos<B>) -> bool {
         let (block_pos, _, mask) = idx.bit_detail();
         let block = &mut self.get_level_mut(idx.level)[block_pos];
-        let empty = block.is_zero();
+        let changed = block.is_zero();
         *block = *block | mask;
-        empty
+        changed
     }
 
     /// Clears a bit of the given level and return if the modification has
-    /// effect on the parent levels.
+    /// effect on the parent levels (block changed from non-zero to zero)
     fn unset_level(&mut self, idx: &BitPos<B>) -> bool {
         let (block_pos, _, mask) = idx.bit_detail();
         let block = &mut self.get_level_mut(idx.level)[block_pos];
-        let empty = block.is_zero();
+        let changed = *block == mask;
         *block = *block & !mask;
-        !empty && block.is_zero()
+        changed
     }
 
-    pub fn add(&mut self, pos: usize) {
+    pub fn add(&mut self, pos: usize) -> bool {
         if self.capacity <= pos {
             self.increase_capacity_to(pos + 1);
         }
         let level_count = self.get_level_count();
         let mut idx = BitPos::from_pos(pos);
+
+        if self.get(pos) {
+            // bit already set
+            return true;
+        }
+
+        // update levels
         while idx.level < level_count && self.set_level(&idx) {
             idx.next_level();
         }
+        false
     }
 
-    pub fn remove(&mut self, pos: usize) {
+    pub fn remove(&mut self, pos: usize) -> bool {
         if self.capacity <= pos {
-            self.increase_capacity_to(pos);
+            return false;
         }
         let level_count = self.get_level_count();
         let mut idx = BitPos::from_pos(pos);
+
+        if !self.get(pos) {
+            // bit already cleared
+            return false;
+        }
+
+        // update levels
         while idx.level < level_count && self.unset_level(&idx) {
             idx.next_level();
         }
+        true
     }
 
     pub fn clear(&mut self) {

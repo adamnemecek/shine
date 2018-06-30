@@ -26,7 +26,8 @@ pub enum SMatrixAddResult {
     },
 }
 
-pub trait SMatrixBase {
+/// Sparse (Square) Row/Column matrix to manage the indices of the non-zero items
+pub trait SMatrix {
     fn shape(&self) -> MatrixShape;
     fn nnz(&self) -> usize;
     fn is_empty(&self) -> bool;
@@ -58,7 +59,7 @@ pub trait SMatrixBase {
     }
 }
 
-/// Compressed Sparse (Square) Row/Column matrix with data storage.
+/// Sparse (Square) Row/Column matrix
 pub trait SparseMatrix {
     type Item;
 
@@ -72,7 +73,7 @@ pub trait SparseMatrix {
     fn clear(&mut self);
 
     /// Add or replace an item at the (r,c) position.
-    fn add(&mut self, r: usize, c: usize, value: Self::Item);
+    fn add(&mut self, r: usize, c: usize, value: Self::Item) -> Option<Self::Item>;
 
     /// Remove an item at the (r,c) position.
     fn remove(&mut self, r: usize, c: usize) -> Option<Self::Item>;

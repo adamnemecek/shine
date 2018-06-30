@@ -9,7 +9,7 @@ pub struct CSMatrix {
     shape: MatrixShape,
 
     // Bitmask for the rows(columns) having nonzero items
-    major_mask: BitSetFast,
+    offset_mask: BitSetFast,
 
     // Offsets of the start in the index/data vector for each row(column)
     offsets: Vec<usize>,
@@ -23,7 +23,7 @@ impl CSMatrix {
     pub fn new_with_capacity(shape: MatrixShape, capacity: usize, nnz_capacity: usize) -> CSMatrix {
         CSMatrix {
             shape: shape,
-            major_mask: BitSetFast::new_with_capacity(capacity),
+            offset_mask: BitSetFast::new_with_capacity(capacity),
             offsets: vec![0usize; capacity + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
@@ -53,7 +53,7 @@ impl CSMatrix {
 
         trace!("resized to: {}", capacity);
         let nnz = self.nnz();
-        self.major_mask.increase_capacity_to(capacity);
+        self.offset_mask.increase_capacity_to(capacity);
         self.offsets.resize(capacity + 1, nnz);
     }
 }
@@ -75,7 +75,7 @@ impl SMatrix for CSMatrix {
         self.indices.clear();
         self.offsets.clear();
         self.offsets.push(0);
-        self.major_mask.clear();
+        self.offset_mask.clear();
     }
 
     fn add_major_minor(&mut self, major: usize, minor: usize) -> SMatrixAddResult {
@@ -89,7 +89,7 @@ impl SMatrix for CSMatrix {
         let pos = {
             if idx0 == idx1 {
                 trace!("new major row opened: {}", major);
-                self.major_mask.add(major);
+                self.offset_mask.add(major);
                 idx0
             } else {
                 self.indices[idx0..idx1].lower_bound(&minor) + idx0
@@ -117,7 +117,7 @@ impl SMatrix for CSMatrix {
             return None;
         }
 
-        /*if !self.major_mask.get(major) {
+        /*if !self.offset_mask.get(major) {
             return None;
         }*/
 
@@ -133,7 +133,7 @@ impl SMatrix for CSMatrix {
             }
             if self.offsets[major] == self.offsets[major + 1] {
                 trace!("major row cleared: {}", major);
-                self.major_mask.remove(major);
+                self.offset_mask.remove(major);
             }
             Some(pos)
         } else {
@@ -146,7 +146,7 @@ impl SMatrix for CSMatrix {
             return None;
         }
 
-        /*if !self.major_mask.get(major) {
+        /*if !self.offset_mask.get(major) {
             return None;
         }*/
 

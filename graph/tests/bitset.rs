@@ -22,11 +22,14 @@ fn bitset_clear_<B: BitBlock>() {
     for _ in 0..1 {
         assert!(bitset.is_empty());
         assert!(!bitset.get(123));
+        assert!(!bitset.remove(123));
+        assert!(!bitset.get(123));
         assert!(bitset.iter().next().is_none());
 
-        bitset.add(123);
-
+        assert!(!bitset.add(123));
         assert!(!bitset.is_empty());
+        assert!(bitset.get(123));
+        assert!(bitset.add(123));
         assert!(bitset.get(123));
         assert!(bitset.iter().eq([123].iter().cloned()));
 
@@ -39,7 +42,7 @@ fn bitset_simple_bitorder<'a, B: 'a + BitBlock>(bitset: &'a mut BitSet<B>, order
     for i in 0..order.len() {
         let bi = bits[order[i]];
         assert!(!bitset.get(bi));
-        bitset.add(bi);
+        assert!(!bitset.add(bi));
         for j in 0..order.len() {
             let bj = bits[order[j]];
             assert_eq!(bitset.get(bj), j <= i);
@@ -52,7 +55,7 @@ fn bitset_simple_bitorder<'a, B: 'a + BitBlock>(bitset: &'a mut BitSet<B>, order
     trace!("remove bits one-by-one");
     for i in 0..order.len() {
         let bi = bits[order[i]];
-        bitset.remove(bi);
+        assert!(bitset.remove(bi));
         for j in 0..bits.len() {
             let bj = bits[order[j]];
             assert_eq!(bitset.get(bj), j > i);
@@ -95,18 +98,18 @@ fn bitset_stress_<B: BitBlock>(cnt: usize) {
     trace!("set one bit");
     for i in 0..cnt {
         assert!(!bitset.get(i));
-        bitset.add(i);
+        assert!(!bitset.add(i));
         assert!(bitset.get(i));
         for j in 0..cnt {
             assert!(bitset.get(j) == (i == j));
         }
-        bitset.remove(i);
+        assert!(bitset.remove(i));
         assert!(!bitset.get(i));
     }
 
     trace!("set all bits");
     for i in 0..cnt {
-        bitset.add(i);
+        assert!(!bitset.add(i));
         for j in 0..cnt {
             assert!(bitset.get(j) == (j <= i));
         }
@@ -124,8 +127,9 @@ fn bitset_stress_random_<B: BitBlock>(range: usize, count: usize) {
     {
         for i in 0..bits.len() {
             let bi = bits[i];
-            assert_eq!(bitset.get(bi), expected.contains(&bi));
-            bitset.add(bi);
+            let cont = expected.contains(&bi);
+            assert_eq!(bitset.get(bi), cont);
+            assert_eq!(bitset.add(bi), cont);
             expected.insert(bi);
             assert!(bitset.get(bi));
         }
@@ -143,8 +147,9 @@ fn bitset_stress_random_<B: BitBlock>(range: usize, count: usize) {
         let l = bits.len() / 2;
         for i in 0..l {
             let bi = bits[i];
-            assert_eq!(bitset.get(bi), expected.contains(&bi));
-            bitset.remove(bi);
+            let cont = expected.contains(&bi);
+            assert_eq!(bitset.get(bi), cont);
+            assert_eq!(bitset.remove(bi), cont);
             expected.remove(&bi);
             assert!(!bitset.get(bi));
         }

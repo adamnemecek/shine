@@ -22,11 +22,17 @@ fn csr_simple_<M: SparseMatrix<Item = Data>>(mut matrix: M) {
         assert_eq!(matrix.nnz(), 1);
 
         assert_eq!(matrix.get(3, 4), None);
-        matrix.add(3, 4, (3, 4));
+        assert_eq!(matrix.add(3, 4, (3, 4)), None);
+        assert_eq!(matrix.get(3, 4), Some(&(3, 4)));
+        assert_eq!(matrix.nnz(), 2);
+        assert_eq!(matrix.add(3, 4, (3, 4)), Some((3, 4)));
         assert_eq!(matrix.get(3, 4), Some(&(3, 4)));
         assert_eq!(matrix.nnz(), 2);
 
         assert_eq!(matrix.remove(3, 4), Some((3, 4)));
+        assert_eq!(matrix.get(3, 4), None);
+        assert_eq!(matrix.nnz(), 1);
+        assert_eq!(matrix.remove(3, 4), None);
         assert_eq!(matrix.get(3, 4), None);
         assert_eq!(matrix.nnz(), 1);
 
@@ -64,10 +70,11 @@ fn csr_stress_<M: SparseMatrix<Item = Data>>(mut matrix: M, size: usize, cnt: us
         if mx[r][c] == 0 {
             mx[r][c] = 1;
             assert_eq!(matrix.get(r, c), None);
-            matrix.add(r, c, (r, c));
-        } else {
-            assert_eq!(matrix.get(r, c), Some(&(r, c)));
+            assert_eq!(matrix.add(r, c, (r, c)), None);
         }
+        assert_eq!(matrix.get(r, c), Some(&(r, c)));
+        assert_eq!(matrix.add(r, c, (r, c)), Some((r, c)));
+        assert_eq!(matrix.get(r, c), Some(&(r, c)));
     }
 
     for r in 0..size {
