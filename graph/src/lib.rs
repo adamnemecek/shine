@@ -1,4 +1,5 @@
 #![feature(const_int_ops)]
+#![feature(vec_resize_with)]
 
 #[macro_use]
 extern crate log;

@@ -51,21 +51,34 @@ impl<T> SparseVector for SparseDVector<T> {
         if !self.mask.add(idx) {
             self.nnz += 1;
         }
+        if self.values.len() <= idx {
+            self.values.resize_with(idx + 1, || None);
+        }
         mem::replace(&mut self.values[idx], Some(value))
     }
 
     fn remove(&mut self, idx: usize) -> Option<Self::Item> {
         if self.mask.remove(idx) {
             self.nnz -= 1;
+            self.values[idx].take()
+        } else {
+            None
         }
-        self.values[idx].take()
     }
 
     fn get(&self, idx: usize) -> Option<&Self::Item> {
-        self.values[idx].as_ref()
+        if self.values.len() <= idx {
+            None
+        } else {
+            self.values[idx].as_ref()
+        }
     }
 
     fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Item> {
-        self.values[idx].as_mut()
+        if self.values.len() <= idx {
+            None
+        } else {
+            self.values[idx].as_mut()
+        }
     }
 }

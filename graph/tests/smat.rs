@@ -10,7 +10,7 @@ use shine_graph::smat::*;
 
 type Data = (usize, usize);
 
-fn csr_simple_<M: SparseMatrix<Item = Data>>(mut matrix: M) {
+fn smat_simple_<M: SparseMatrix<Item = Data>>(mut matrix: M) {
     for i in 0..2 {
         trace!("pass: {}", i);
 
@@ -60,7 +60,7 @@ fn csr_simple_<M: SparseMatrix<Item = Data>>(mut matrix: M) {
     }
 }
 
-fn csr_stress_<M: SparseMatrix<Item = Data>>(mut matrix: M, size: usize, cnt: usize) {
+fn smat_stress_<M: SparseMatrix<Item = Data>>(mut matrix: M, size: usize, cnt: usize) {
     let mut mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
@@ -89,34 +89,34 @@ fn csr_stress_<M: SparseMatrix<Item = Data>>(mut matrix: M, size: usize, cnt: us
 }
 
 #[test]
-fn csr_simple() {
+fn smat_simple() {
     let _ = env_logger::try_init();
 
     trace!("SparseDMatrix/CSMatrix/row");
-    csr_simple_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()));
+    smat_simple_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()));
     trace!("SparseDMatrix/CSMatrix/col");
-    csr_simple_(SparseDMatrix::<_, Data>::new(CSMatrix::new_column()));
+    smat_simple_(SparseDMatrix::<_, Data>::new(CSMatrix::new_column()));
     trace!("SparseAMatrix/CSMatrix/row");
-    csr_simple_(SparseAMatrix::<_, Data>::new(CSMatrix::new_row()));
+    smat_simple_(SparseAMatrix::<_, Data>::new(CSMatrix::new_row()));
     trace!("SparseAMatrix/CSMatrix/col");
-    csr_simple_(SparseAMatrix::<_, Data>::new(CSMatrix::new_column()));
+    smat_simple_(SparseAMatrix::<_, Data>::new(CSMatrix::new_column()));
 }
 
 #[test]
-fn csr_stress() {
+fn smat_stress() {
     let _ = env_logger::try_init();
 
     trace!("SparseDMatrix/CSMatrix/row - big");
-    csr_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()), 1024, 100000);
+    smat_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()), 1024, 100000);
 
     for _ in 0..10 {
         trace!("SparseDMatrix/CSMatrix/row");
-        csr_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()), 128, 900);
+        smat_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()), 128, 900);
         trace!("SparseDMatrix/CSMatrix/col");
-        csr_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_column()), 128, 900);
+        smat_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_column()), 128, 900);
         trace!("SparseAMatrix/CSMatrix/row");
-        csr_stress_(SparseAMatrix::<_, Data>::new(CSMatrix::new_row()), 128, 900);
+        smat_stress_(SparseAMatrix::<_, Data>::new(CSMatrix::new_row()), 128, 900);
         trace!("SparseAMatrix/CSMatrix/col");
-        csr_stress_(SparseAMatrix::<_, Data>::new(CSMatrix::new_column()), 128, 900);
+        smat_stress_(SparseAMatrix::<_, Data>::new(CSMatrix::new_column()), 128, 900);
     }
 }
