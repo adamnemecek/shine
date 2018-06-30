@@ -1,6 +1,11 @@
-nightly:cargo:
-  image: rustdocker/rust:nightly
+.cargo_test_template: &cargo_test
   stage: test
+  variables:
+    RUST_TEST_THREADS: 1
   script:
     - cargo test --verbose --jobs 1 -p shine-store
     - cargo test --verbose --jobs 1 -p shine-graph
+
+nightly:cargo:
+  image: rustdocker/rust:nightly
+  <<: *cargo_test
