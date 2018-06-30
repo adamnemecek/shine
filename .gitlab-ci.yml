@@ -1,5 +1,5 @@
-stable:cargo:
-  image: rustdocker/rust:stable
+nightly:cargo:
+  image: rustdocker/rust:nightly
   stage: test
   script:
     - cargo test --verbose --jobs 1 -p shine-store
