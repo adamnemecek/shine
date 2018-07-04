@@ -128,9 +128,9 @@ fn svec_join() {
     v2.add(14, 14);
     v2.add(17, 17);
 
-    /*for i in svec_join_rw(&v1, &mut v2).iter() {
+    for i in svec_join_r1w1(&v1, &mut v2).iter() {
         println!("join rw: {:?}", i);
         *i.2 = 1;
         println!("join rw: {:?}", i);
-    }*/
+    }
 }
