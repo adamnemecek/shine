@@ -119,6 +119,7 @@ fn svec_join() {
 
     let mut v1 = new_dvec::<Data>();
     let mut v2 = new_dvec::<Data>();
+    let mut v3 = new_dvec::<Data>();
 
     v1.add(14, 14);
     v1.add(15, 15);
@@ -128,9 +129,12 @@ fn svec_join() {
     v2.add(14, 14);
     v2.add(17, 17);
 
-    for i in svec_join_r1w1(&v1, &mut v2).iter() {
-        println!("join rw: {:?}", i);
-        *i.2 = 1;
-        println!("join rw: {:?}", i);
+    v3.add(16, 16);
+    v3.add(17, 17);
+
+    for i in join::join_r2w1(&v1, &v2, &mut v3).iter() {
+        println!("join r2w1: {:?}", i);
+        *i.3 = i.1 + i.2;
+        println!("join r2w1: {:?}", i);
     }
 }

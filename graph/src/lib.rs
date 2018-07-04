@@ -1,6 +1,7 @@
 #![feature(const_int_ops)]
 #![feature(vec_resize_with)]
 #![feature(log_syntax, trace_macros)]
+#![feature(crate_visibility_modifier)]
 
 #[macro_use]
 extern crate log;

@@ -1,3 +1,4 @@
+pub mod join;
 mod sparsedvector;
 mod sparsehvector;
 mod sparsevector;
