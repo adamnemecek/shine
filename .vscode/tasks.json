@@ -10,7 +10,28 @@
             ],
             "problemMatcher": [
                 "$rustc"
+            ]
+        },
+        {
+            "type": "shell",
+            "label": "cargo test",
+            "command": "cargo",
+            "args": [
+                "test",
+                "-p",
+                "shine-graph",
+                //"--test",
+                //"svec",
+                "--",
+                "--nocapture",
             ],
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
         }
     ]
 }

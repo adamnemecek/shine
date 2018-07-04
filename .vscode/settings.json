@@ -3,8 +3,4 @@
     "editor.formatOnSave": true,
     "rust-client.updateOnStartup": true,
     "rust.cfg_test": true,
-    "rust.cargoEnv": {
-        "RUST_TEST_THREADS": 1,
-        "RUST_LOG": "bitset:trace"
-    }
 }

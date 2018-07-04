@@ -10,7 +10,7 @@ use shine_graph::svec::*;
 
 type Data = usize;
 
-fn svec_simple_<V: SparseVector<Item = Data>>(mut vector: V) {
+fn svec_simple_<S: SparseVectorStore<Item = Data>>(mut vector: SparseVector<S>) {
     for i in 0..2 {
         trace!("pass: {}", i);
 
@@ -51,6 +51,12 @@ fn svec_simple_<V: SparseVector<Item = Data>>(mut vector: V) {
         assert_eq!(vector.get(17), Some(&17));
         assert_eq!(vector.nnz(), 4);
 
+        {
+            for (i, v) in vector.iter() {
+                println!("{:?}, {:?}", i, v);
+            }
+        }
+
         vector.clear();
         assert_eq!(vector.nnz(), 0);
         assert_eq!(vector.get(0), None);
@@ -60,7 +66,7 @@ fn svec_simple_<V: SparseVector<Item = Data>>(mut vector: V) {
     }
 }
 
-fn svec_stress_<V: SparseVector<Item = Data>>(mut vector: V, size: usize, cnt: usize) {
+fn svec_stress_<S: SparseVectorStore<Item = Data>>(mut vector: SparseVector<S>, size: usize, cnt: usize) {
     let mut vc = vec![0; size];
 
     let mut rng = rand::thread_rng();
@@ -90,9 +96,9 @@ fn svec_simple() {
     let _ = env_logger::try_init();
 
     trace!("SparseDVector");
-    svec_simple_(SparseDVector::<Data>::new());
+    svec_simple_(new_dvec());
     trace!("SparseHVector");
-    svec_simple_(SparseHVector::<Data>::new());
+    svec_simple_(new_hvec());
 }
 
 #[test]
@@ -101,8 +107,30 @@ fn svec_stress() {
 
     for _ in 0..10 {
         trace!("SparseDVector");
-        svec_stress_(SparseDVector::<Data>::new(), 1024, 100000);
+        svec_stress_(new_dvec(), 1024, 100000);
         trace!("SparseHVector");
-        svec_stress_(SparseHVector::<Data>::new(), 1024, 100000);
+        svec_stress_(new_hvec(), 1024, 100000);
     }
+}
+
+#[test]
+fn svec_join() {
+    let _ = env_logger::try_init();
+
+    let mut v1 = new_dvec::<Data>();
+    let mut v2 = new_dvec::<Data>();
+
+    v1.add(14, 14);
+    v1.add(15, 15);
+    v1.add(16, 16);
+    v1.add(17, 17);
+
+    v2.add(14, 14);
+    v2.add(17, 17);
+
+    /*for i in svec_join_rw(&v1, &mut v2).iter() {
+        println!("join rw: {:?}", i);
+        *i.2 = 1;
+        println!("join rw: {:?}", i);
+    }*/
 }

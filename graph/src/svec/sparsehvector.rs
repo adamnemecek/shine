@@ -1,65 +1,58 @@
 use std::collections::HashMap;
 
 use bitset::BitSetFast;
-use svec::SparseVector;
+use svec::{SparseVector, SparseVectorStore};
 
-/// Sparse Vector using hashmap to store non-zero items.
-pub struct SparseHVector<T> {
-    mask: BitSetFast,
+pub struct SparseHVectorStore<T> {
     values: HashMap<usize, T>,
 }
 
-impl<T> SparseHVector<T> {
+impl<T> SparseHVectorStore<T> {
     pub fn new() -> Self {
-        SparseHVector {
-            mask: BitSetFast::new(),
-            values: HashMap::new(),
-        }
+        SparseHVectorStore { values: HashMap::new() }
     }
 
-    pub fn new_with_capacity(capacity: usize, nnz_capacity: usize) -> Self {
-        SparseHVector {
-            mask: BitSetFast::new_with_capacity(capacity),
-            values: HashMap::with_capacity(nnz_capacity),
+    pub fn new_with_capacity(capacity: usize) -> Self {
+        SparseHVectorStore {
+            values: HashMap::with_capacity(capacity),
         }
     }
 }
 
-impl<T> SparseVector for SparseHVector<T> {
+impl<T> SparseVectorStore for SparseHVectorStore<T> {
     type Item = T;
 
-    fn nnz(&self) -> usize {
-        self.values.len()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.values.is_empty()
-    }
-
     fn clear(&mut self) {
-        self.mask.clear();
         self.values.clear();
     }
 
-    fn add(&mut self, idx: usize, value: Self::Item) -> Option<Self::Item> {
-        self.mask.add(idx);
-        self.values.insert(idx, value)
+    fn add(&mut self, idx: usize, value: Self::Item) {
+        self.values.insert(idx, value);
     }
 
-    fn remove(&mut self, idx: usize) -> Option<Self::Item> {
-        if !self.mask.remove(idx) {
-            // if mask was not set a known-to-fail search on values can be skipped
-            None
-        } else {
-            self.values.remove(&idx)
-        }
+    fn remove(&mut self, idx: usize) {
+        self.values.remove(&idx);
     }
 
-    fn get(&self, idx: usize) -> Option<&Self::Item> {
-        self.values.get(&idx)
+    fn take(&mut self, idx: usize) -> Self::Item {
+        self.values.remove(&idx).unwrap()
     }
 
-    fn get_mut(&mut self, idx: usize) -> Option<&mut Self::Item> {
-        self.values.get_mut(&idx)
+    fn replace(&mut self, idx: usize, value: Self::Item) -> Self::Item {
+        self.values.insert(idx, value).unwrap()
     }
+
+    fn get(&self, idx: usize) -> &Self::Item {
+        self.values.get(&idx).unwrap()
+    }
+
+    fn get_mut(&mut self, idx: usize) -> &mut Self::Item {
+        self.values.get_mut(&idx).unwrap()
+    }
+}
+
+pub type SparseHVector<T> = SparseVector<SparseHVectorStore<T>>;
+
+pub fn new_hvec<T>() -> SparseHVector<T> {
+    SparseVector::new(BitSetFast::new(), SparseHVectorStore::new())
 }

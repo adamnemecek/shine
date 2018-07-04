@@ -195,4 +195,5 @@ pub type BitSetu128 = BitSet<u128>;
 
 /// The "fastest" bitset for graph algorithms
 /// TODO: banchmark and select the optimal.
-pub type BitSetFast = BitSetu32;
+pub type BitBlockFast = u32;
+pub type BitSetFast = BitSet<BitBlockFast>;
