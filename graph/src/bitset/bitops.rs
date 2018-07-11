@@ -69,6 +69,7 @@ macro_rules! bitop_and {
     };
 }
 
+bitop_and!{ (and1, And1) => (S0) }
 bitop_and!{ (and2, And2) => (S0,S1) }
 bitop_and!{ (and3, And3) => (S0,S1,S2) }
 bitop_and!{ (and4, And4) => (S0,S1,S2,S3) }
@@ -149,6 +150,7 @@ macro_rules! bitop_or {
     };
 }
 
+bitop_or!{ (or1, Or1) => (S0) }
 bitop_or!{ (or2, Or2) => (S0,S1) }
 bitop_or!{ (or3, Or3) => (S0,S1,S2) }
 bitop_or!{ (or4, Or4) => (S0,S1,S2,S3) }

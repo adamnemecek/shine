@@ -6,6 +6,7 @@ extern crate rand;
 
 use rand::Rng;
 
+use shine_graph::bitset::*;
 use shine_graph::svec::*;
 
 type Data = usize;
@@ -120,6 +121,7 @@ fn svec_join() {
     let mut v1 = new_dvec::<Data>();
     let mut v2 = new_dvec::<Data>();
     let mut v3 = new_dvec::<Data>();
+    let mut v4 = new_dvec::<Data>();
 
     v1.add(14, 14);
     v1.add(15, 15);
@@ -132,9 +134,27 @@ fn svec_join() {
     v3.add(16, 16);
     v3.add(17, 17);
 
-    for i in join::join_r2w1(&v1, &v2, &mut v3).iter() {
-        println!("join r2w1: {:?}", i);
-        *i.3 = i.1 + i.2;
-        println!("join r2w1: {:?}", i);
+    v4.add(17, 117);
+
+    for (id, e1, e2, e3, mut e4) in join::join_r2w1c1(&v1, &v2, &mut v3, &mut v4).iter() {
+        println!("join r2w2: entity({}) = {:?},{:?},{:?},{:?}", id, e1, e2, e3, e4.get());
+        *e3 = e1 + e2;
+        *e4.acquire_default() += e1 + e2;
+        println!("join r2w2: entity({}) = {:?},{:?},{:?},{:?}", id, e1, e2, e3, e4.get());
+    }
+
+    for id in bitops::and3(v1.get_mask(), v2.get_mask(), v4.get_mask()).iter() {
+        println!("id: {}", id);
+    }
+
+    println!("entry v4: {:?}", v4.entry(17).get());
+    println!("entry v3: {:?}", v3.entry(17).get());
+
+    {
+        let mut aa = v3.entry(118);
+        println!("entry v3 1: {:?}", aa.get());
+        println!("entry v3 2: {:?}", aa.acquire_with(|| 111));
+        println!("entry v3 3: {:?}", aa.acquire_default());
+        println!("entry v3 4: {:?}", aa.get());
     }
 }
