@@ -1,0 +1,11 @@
+[package]
+name = "shine-tools"
+version = "0.1.0"
+authors = ["gzp <z.p.gaal@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "SHINE. General tools for the shine engine."
+repository = "https://github.com/zpgaal/shine"
+keywords = ["shine"]
+
+[dependencies]
+itertools = "*"

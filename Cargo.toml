@@ -8,14 +8,14 @@ repository = "https://github.com/gzp/shine"
 keywords = ["component system", "game"]
 
 [workspace]
-#members = [ "store", "graph", "ecs" ]
-members = [ "store", "graph" ]
+members = [ "tools", "store", "graph" ]
 
 [dependencies]
 log = "*"
 
 shine-store = {path = "store"}
 shine-graph = {path = "graph"}
+shine-tools = {path = "tools"}
 #shine-ecs = {path = "ecs"}
 
 #[dev-dependencies] https://github.com/rust-lang/cargo/issues/860

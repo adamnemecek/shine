@@ -3,10 +3,10 @@
     "tasks": [
         {
             "type": "shell",
-            "label": "cargo build",
+            "label": "build",
             "command": "cargo",
             "args": [
-                "build"
+                "build",
             ],
             "problemMatcher": [
                 "$rustc"
@@ -14,24 +14,44 @@
         },
         {
             "type": "shell",
-            "label": "cargo test",
+            "label": "build tools",
+            "command": "cargo",
+            "args": [
+                "build",
+                "-p",
+                "shine-tools",
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+        {
+            "type": "shell",
+            "label": "build test",
+            "command": "cargo",
+            "args": [
+                "build",
+                "-p",
+                "shine-graph",
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+        {
+            "type": "shell",
+            "label": "run test",
             "command": "cargo",
             "args": [
                 "test",
                 "-p",
                 "shine-graph",
-                //"--test",
-                //"svec",
                 "--",
                 "--nocapture",
             ],
             "problemMatcher": [
                 "$rustc"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
+            ]
         }
     ]
 }
