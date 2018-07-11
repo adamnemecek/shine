@@ -72,6 +72,10 @@ impl<S: SparseVectorStore> SparseVector<S> {
         }
     }
 
+    pub fn contains(&self, idx: usize) -> bool {
+        self.mask.get(idx)
+    }
+
     pub fn get(&self, idx: usize) -> Option<&S::Item> {
         if self.mask.get(idx) {
             Some(self.store.get(idx))
@@ -89,7 +93,7 @@ impl<S: SparseVectorStore> SparseVector<S> {
     }
 
     pub fn entry<'a>(&'a mut self, idx: usize) -> Entry<'a, S> {
-        Entry::new(&mut self.mask, &mut self.store, idx)
+        Entry::new(self, idx)
     }
 
     pub fn iter<'a>(&'a self) -> Iter<'a, BitSetFast, S> {
@@ -184,79 +188,55 @@ where
     }
 }
 
-/// Entry to slot already taken.
-pub struct OccupiedEntry<'a, I: 'a> {
-    data: &'a mut I,
-}
-
-/// Entry to an empty slot.
-pub struct VacantEntry<'a, S>
+/// Entry to a slot in the vector.
+pub struct Entry<'a, S>
 where
     S: 'a + SparseVectorStore,
 {
     id: usize,
-    mask: &'a mut BitSetFast,
-    store: &'a mut S,
-}
-
-/// Union tye for vacant and occupied slots
-pub enum Entry<'a, S>
-where
-    S: 'a + SparseVectorStore,
-{
-    Occupied(OccupiedEntry<'a, S::Item>),
-    Vacant(VacantEntry<'a, S>),
-    Empty,
+    data: Option<*mut S::Item>,
+    store: &'a mut SparseVector<S>,
 }
 
 impl<'a, S> Entry<'a, S>
 where
     S: 'a + SparseVectorStore,
 {
-    crate fn new<'b>(mask: &'b mut BitSetFast, store: &'b mut S, idx: usize) -> Entry<'b, S> {
-        if mask.get(idx) {
-            Entry::Occupied(OccupiedEntry {
-                data: store.get_mut(idx),
-            })
-        } else {
-            Entry::Vacant(VacantEntry {
-                id: idx,
-                mask: mask,
-                store: store,
-            })
+    crate fn new<'b>(store: &'b mut SparseVector<S>, idx: usize) -> Entry<'b, S> {
+        Entry {
+            id: idx,
+            data: store.get_mut(idx).map(|d| d as *mut _),
+            store: store,
         }
     }
 
     /// Return the (mutable) non-zero data at the given slot. If data is zero, None is returned.
     pub fn get(&mut self) -> Option<&mut S::Item> {
-        match *self {
-            Entry::Occupied(ref mut entry) => Some(entry.data),
-            Entry::Vacant(_) => None,
-            Entry::Empty => unreachable!(),
+        self.data.map(|d| unsafe { &mut *d })
+    }
+
+    // Acquire the mutable non-zero data at the given slot.
+    /// If data is zero the provided default value is used.
+    pub fn acquire<'b>(&'b mut self, item: S::Item) -> &'b mut S::Item {
+        self.acquire_with(|| item)
+    }
+
+    pub fn remove(&mut self) -> Option<S::Item> {
+        match self.data.take() {
+            Some(_) => self.store.remove(self.id),
+            None => None,
         }
     }
 
     /// Acquire the mutable non-zero data at the given slot.
     /// If data is zero the non-zero value is created by the f function
     pub fn acquire_with<'b, F: FnOnce() -> S::Item>(&'b mut self, f: F) -> &'b mut S::Item {
-        match mem::replace(self, Entry::Empty) {
-            Entry::Vacant(entry) => {
-                entry.mask.add(entry.id);
-                entry.store.add(entry.id, f());
-                *self = Entry::Occupied(OccupiedEntry {
-                    data: entry.store.get_mut(entry.id),
-                })
-            }
-
-            Entry::Occupied(entry) => *self = Entry::Occupied(entry),
-
-            Entry::Empty => unreachable!(),
-        };
-
-        match *self {
-            Entry::Occupied(ref mut entry) => entry.data,
-            _ => unreachable!(),
+        if self.data.is_none() {
+            self.store.add(self.id, f());
+            self.data = self.store.get_mut(self.id).map(|d| d as *mut _);
         }
+
+        self.get().unwrap()
     }
 }
 
