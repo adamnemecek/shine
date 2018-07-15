@@ -184,7 +184,7 @@ where
     }
 }
 
-/// Entry to a slot in the vector.
+/// Entry to a slot in a sparse vector.
 pub struct Entry<'a, S>
 where
     S: 'a + Store,

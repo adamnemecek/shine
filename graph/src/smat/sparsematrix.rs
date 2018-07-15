@@ -79,6 +79,75 @@ impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
             None => None,
         }
     }
+
+    pub fn entry<'a>(&'a mut self, r: usize, c: usize) -> Entry<'a, M, S> {
+        Entry::new(self, r, c)
+    }
+}
+
+/// Entry to a slot in a sparse vector.
+pub struct Entry<'a, M, S>
+where
+    M: 'a + IndexMask,
+    S: 'a + Store,
+{
+    id: (usize, usize),
+    data: Option<*mut S::Item>,
+    store: &'a mut SparseMatrix<M, S>,
+}
+
+impl<'a, M, S> Entry<'a, M, S>
+where
+    M: 'a + IndexMask,
+    S: 'a + Store,
+{
+    crate fn new<'b>(store: &'b mut SparseMatrix<M, S>, r: usize, c: usize) -> Entry<'b, M, S> {
+        Entry {
+            id: (r, c),
+            data: store.get_mut(r, c).map(|d| d as *mut _),
+            store: store,
+        }
+    }
+
+    /// Return the (mutable) non-zero data at the given slot. If data is zero, None is returned.
+    pub fn get(&mut self) -> Option<&mut S::Item> {
+        self.data.map(|d| unsafe { &mut *d })
+    }
+
+    // Acquire the mutable non-zero data at the given slot.
+    /// If data is zero the provided default value is used.
+    pub fn acquire<'b>(&'b mut self, item: S::Item) -> &'b mut S::Item {
+        self.acquire_with(|| item)
+    }
+
+    pub fn remove(&mut self) -> Option<S::Item> {
+        match self.data.take() {
+            Some(_) => self.store.remove(self.id.0, self.id.1),
+            None => None,
+        }
+    }
+
+    /// Acquire the mutable non-zero data at the given slot.
+    /// If data is zero the non-zero value is created by the f function
+    pub fn acquire_with<'b, F: FnOnce() -> S::Item>(&'b mut self, f: F) -> &'b mut S::Item {
+        if self.data.is_none() {
+            self.store.add(self.id.0, self.id.1, f());
+            self.data = self.store.get_mut(self.id.0, self.id.1).map(|d| d as *mut _);
+        }
+
+        self.get().unwrap()
+    }
+}
+
+impl<'a, I, M, S> Entry<'a, M, S>
+where
+    I: Default,
+    M: 'a + IndexMask,
+    S: 'a + Store<Item = I>,
+{
+    pub fn acquire_default<'b>(&'b mut self) -> &'b mut S::Item {
+        self.acquire_with(Default::default)
+    }
 }
 
 use smat::CSIndexMask;
