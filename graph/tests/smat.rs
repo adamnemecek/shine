@@ -10,7 +10,7 @@ use shine_graph::smat::*;
 
 type Data = (usize, usize);
 
-fn smat_simple_<M: SparseMatrix<Item = Data>>(mut matrix: M) {
+fn smat_simple_<M: SparseMatrixMask, S: Store<Item = Data>>(mut matrix: SparseMatrix<M, S>) {
     for i in 0..2 {
         trace!("pass: {}", i);
 
@@ -23,25 +23,32 @@ fn smat_simple_<M: SparseMatrix<Item = Data>>(mut matrix: M) {
 
         assert_eq!(matrix.get(3, 4), None);
         assert_eq!(matrix.add(3, 4, (3, 4)), None);
+        assert_eq!(matrix.get(0, 0), Some(&(0, 0)));
         assert_eq!(matrix.get(3, 4), Some(&(3, 4)));
         assert_eq!(matrix.nnz(), 2);
         assert_eq!(matrix.add(3, 4, (3, 4)), Some((3, 4)));
+        assert_eq!(matrix.get(0, 0), Some(&(0, 0)));
         assert_eq!(matrix.get(3, 4), Some(&(3, 4)));
         assert_eq!(matrix.nnz(), 2);
 
         assert_eq!(matrix.remove(3, 4), Some((3, 4)));
+        assert_eq!(matrix.get(0, 0), Some(&(0, 0)));
         assert_eq!(matrix.get(3, 4), None);
         assert_eq!(matrix.nnz(), 1);
         assert_eq!(matrix.remove(3, 4), None);
+        assert_eq!(matrix.get(0, 0), Some(&(0, 0)));
         assert_eq!(matrix.get(3, 4), None);
         assert_eq!(matrix.nnz(), 1);
 
         matrix.add(4, 3, (4, 3));
+        assert_eq!(matrix.get(0, 0), Some(&(0, 0)));
         assert_eq!(matrix.get(4, 3), Some(&(4, 3)));
         assert_eq!(matrix.nnz(), 2);
 
         matrix.add(4, 2, (4, 2));
+        assert_eq!(matrix.get(0, 0), Some(&(0, 0)));
         assert_eq!(matrix.get(4, 2), Some(&(4, 2)));
+        assert_eq!(matrix.get(4, 3), Some(&(4, 3)));
         assert_eq!(matrix.nnz(), 3);
 
         matrix.add(4, 4, (4, 4));
@@ -60,7 +67,7 @@ fn smat_simple_<M: SparseMatrix<Item = Data>>(mut matrix: M) {
     }
 }
 
-fn smat_stress_<M: SparseMatrix<Item = Data>>(mut matrix: M, size: usize, cnt: usize) {
+fn smat_stress_<M: SparseMatrixMask, S: Store<Item = Data>>(mut matrix: SparseMatrix<M, S>, size: usize, cnt: usize) {
     let mut mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
@@ -92,31 +99,24 @@ fn smat_stress_<M: SparseMatrix<Item = Data>>(mut matrix: M, size: usize, cnt: u
 fn smat_simple() {
     let _ = env_logger::try_init();
 
-    trace!("SparseDMatrix/CSMatrix/row");
-    smat_simple_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()));
-    trace!("SparseDMatrix/CSMatrix/col");
-    smat_simple_(SparseDMatrix::<_, Data>::new(CSMatrix::new_column()));
-    trace!("SparseAMatrix/CSMatrix/row");
-    smat_simple_(SparseAMatrix::<_, Data>::new(CSMatrix::new_row()));
-    trace!("SparseAMatrix/CSMatrix/col");
-    smat_simple_(SparseAMatrix::<_, Data>::new(CSMatrix::new_column()));
+    trace!("SparseDMatrix");
+    smat_simple_(new_dmat::<Data>());
+    trace!("SparseAMatrix");
+    smat_simple_(new_amat::<Data>());
 }
 
 #[test]
+#[ignore]
 fn smat_stress() {
     let _ = env_logger::try_init();
 
-    trace!("SparseDMatrix/CSMatrix/row - big");
-    smat_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()), 1024, 100000);
+    trace!("SparseDMatrix - big");
+    smat_stress_(new_dmat::<Data>(), 1024, 100000);
 
     for _ in 0..10 {
-        trace!("SparseDMatrix/CSMatrix/row");
-        smat_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_row()), 128, 900);
-        trace!("SparseDMatrix/CSMatrix/col");
-        smat_stress_(SparseDMatrix::<_, Data>::new(CSMatrix::new_column()), 128, 900);
-        trace!("SparseAMatrix/CSMatrix/row");
-        smat_stress_(SparseAMatrix::<_, Data>::new(CSMatrix::new_row()), 128, 900);
-        trace!("SparseAMatrix/CSMatrix/col");
-        smat_stress_(SparseAMatrix::<_, Data>::new(CSMatrix::new_column()), 128, 900);
+        trace!("SparseDMatrix/CSMatrix");
+        smat_stress_(new_dmat::<Data>(), 128, 900);
+        trace!("SparseAMatrix/CSMatrix");
+        smat_stress_(new_amat::<Data>(), 128, 900);
     }
 }

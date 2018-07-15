@@ -1,86 +1,100 @@
-/// Shape of the sparse matrix.
-#[derive(Debug, Clone, Copy)]
-pub enum MatrixShape {
-    /// Row major storage
-    Row,
-
-    /// Column major storage
-    Column,
-}
-
-/// Result of item insertion operaation.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SMatrixAddResult {
-    /// A new non-zero item is added
-    New {
-        /// The position of insertion in the data vector
-        pos: usize,
-        /// The new size of the data vector (previous size + 1)
-        size: usize,
-    },
-
-    /// A non-zero item was replaced
-    Replace {
-        /// The position of replacement in the data vector
-        pos: usize,
-    },
-}
-
-/// Sparse (Square) Row/Column matrix to manage the indices of the non-zero items
-pub trait SMatrix {
-    fn shape(&self) -> MatrixShape;
-    fn nnz(&self) -> usize;
-    fn is_empty(&self) -> bool;
-
+/// Sparse (Square) Row matrix to manage the indices of the non-zero items
+pub trait SparseMatrixMask {
     fn clear(&mut self);
-    fn add_major_minor(&mut self, major: usize, minor: usize) -> SMatrixAddResult;
-    fn remove_major_minor(&mut self, major: usize, minor: usize) -> Option<usize>;
-    fn get_major_minor(&self, major: usize, minor: usize) -> Option<usize>;
-
-    fn add(&mut self, r: usize, c: usize) -> SMatrixAddResult {
-        match self.shape() {
-            MatrixShape::Row => self.add_major_minor(r, c),
-            MatrixShape::Column => self.add_major_minor(c, r),
-        }
-    }
-
-    fn remove(&mut self, r: usize, c: usize) -> Option<usize> {
-        match self.shape() {
-            MatrixShape::Row => self.remove_major_minor(r, c),
-            MatrixShape::Column => self.remove_major_minor(c, r),
-        }
-    }
-
-    fn get(&self, r: usize, c: usize) -> Option<usize> {
-        match self.shape() {
-            MatrixShape::Row => self.get_major_minor(r, c),
-            MatrixShape::Column => self.get_major_minor(c, r),
-        }
-    }
+    fn add(&mut self, major: usize, minor: usize) -> (usize, bool);
+    fn remove(&mut self, major: usize, minor: usize) -> Option<usize>;
+    fn get(&self, major: usize, minor: usize) -> Option<usize>;
 }
 
-/// Sparse (Square) Row/Column matrix
-pub trait SparseMatrix {
+pub trait Store {
     type Item;
 
-    /// Return the number of non-zero elements.
-    fn nnz(&self) -> usize;
-
-    /// Return if all the items are zero.
-    fn is_empty(&self) -> bool;
-
-    /// Remove all the items.
     fn clear(&mut self);
 
-    /// Add or replace an item at the (r,c) position.
-    fn add(&mut self, r: usize, c: usize, value: Self::Item) -> Option<Self::Item>;
+    fn insert(&mut self, idx: usize, value: Self::Item);
+    fn replace(&mut self, idx: usize, value: Self::Item) -> Self::Item;
+    fn remove(&mut self, idx: usize) -> Self::Item;
 
-    /// Remove an item at the (r,c) position.
-    fn remove(&mut self, r: usize, c: usize) -> Option<Self::Item>;
+    fn get(&self, idx: usize) -> &Self::Item;
+    fn get_mut(&mut self, idx: usize) -> &mut Self::Item;
+}
 
-    /// Get an immutable item at the (r,c) position.
-    fn get(&self, r: usize, c: usize) -> Option<&Self::Item>;
+/// Sparse (Square) Row matrix
+pub struct SparseMatrix<M: SparseMatrixMask, S: Store> {
+    nnz: usize,
+    mask: M,
+    store: S,
+}
 
-    /// Get a mutable item at the (r,c) position.
-    fn get_mut(&mut self, r: usize, c: usize) -> Option<&mut Self::Item>;
+impl<M: SparseMatrixMask, S: Store> SparseMatrix<M, S> {
+    pub fn new(mask: M, store: S) -> Self {
+        SparseMatrix {
+            nnz: 0,
+            mask: mask,
+            store: store,
+        }
+    }
+
+    pub fn nnz(&self) -> usize {
+        self.nnz
+    }
+
+    pub fn clear(&mut self) {
+        self.mask.clear();
+        self.store.clear();
+        self.nnz = 0;
+    }
+
+    pub fn add(&mut self, r: usize, c: usize, value: S::Item) -> Option<S::Item> {
+        let (pos, b) = self.mask.add(r, c);
+        if b {
+            Some(self.store.replace(pos, value))
+        } else {
+            self.nnz += 1;
+            self.store.insert(pos, value);
+            None
+        }
+    }
+
+    pub fn remove(&mut self, r: usize, c: usize) -> Option<S::Item> {
+        match self.mask.remove(r, c) {
+            Some(pos) => {
+                self.nnz -= 1;
+                Some(self.store.remove(pos))
+            }
+            None => None,
+        }
+    }
+
+    pub fn get(&self, r: usize, c: usize) -> Option<&S::Item> {
+        match self.mask.get(r, c) {
+            Some(pos) => Some(self.store.get(pos)),
+            None => None,
+        }
+    }
+
+    pub fn get_mut(&mut self, r: usize, c: usize) -> Option<&mut S::Item> {
+        match self.mask.get(r, c) {
+            Some(pos) => Some(self.store.get_mut(pos)),
+            None => None,
+        }
+    }
+}
+
+use smat::CSMatrixMask;
+use smat::{ArenaStore, DenseStore, UnitStore};
+
+pub type SparseDMatrix<T> = SparseMatrix<CSMatrixMask, DenseStore<T>>;
+pub fn new_dmat<T>() -> SparseDMatrix<T> {
+    SparseMatrix::new(CSMatrixMask::new(), DenseStore::new())
+}
+
+pub type SparseAMatrix<T> = SparseMatrix<CSMatrixMask, ArenaStore<T>>;
+pub fn new_amat<T>() -> SparseAMatrix<T> {
+    SparseMatrix::new(CSMatrixMask::new(), ArenaStore::new())
+}
+
+pub type SparseTMatrix = SparseMatrix<CSMatrixMask, UnitStore>;
+pub fn new_tmat() -> SparseTMatrix {
+    SparseMatrix::new(CSMatrixMask::new(), UnitStore::new())
 }

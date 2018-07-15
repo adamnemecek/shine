@@ -1,11 +1,13 @@
-mod csmatrix;
-mod hcsmatrix;
-mod sparseamatrix;
-mod sparsedmatrix;
+mod arenastore;
+mod csmatrixmask;
+mod densestore;
+mod hcsmatrixmask;
 mod sparsematrix;
+mod unitstore;
 
-pub use self::csmatrix::*;
-pub use self::hcsmatrix::*;
-pub use self::sparseamatrix::*;
-pub use self::sparsedmatrix::*;
+pub use self::arenastore::*;
+pub use self::csmatrixmask::*;
+pub use self::densestore::*;
+pub use self::hcsmatrixmask::*;
 pub use self::sparsematrix::*;
+pub use self::unitstore::*;

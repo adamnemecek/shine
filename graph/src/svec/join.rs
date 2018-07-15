@@ -1,18 +1,17 @@
 use std::mem;
 
 use bitset::{bitops, BitIter, BitSetLike};
-use sstore::SparseStore;
-use svec::{SparseVector, SparseVectorMask, SparseVectorMaskBlock, Entry};
+use svec::{Entry, SparseVector, SparseVectorMask, SparseVectorMaskBlock, Store};
 
 macro_rules! impl_svec_iter {
     ($iter: ident => create($($arg_create: ident),*), read($($arg_read: ident),*), write($($arg_write: ident),*)) => {
-        #[allow(non_snake_case)] 
+        #[allow(non_snake_case)]
         pub struct $iter<'a, B, $($arg_create,)* $($arg_read,)* $($arg_write),*>
         where
             B: 'a + BitSetLike,
-            $($arg_create: 'a + SparseStore,)*
-            $($arg_read: 'a + SparseStore,)*
-            $($arg_write: 'a + SparseStore,)*
+            $($arg_create: 'a + Store,)*
+            $($arg_read: 'a + Store,)*
+            $($arg_write: 'a + Store,)*
         {
             crate iterator: BitIter<'a, B>,
             $(crate $arg_create: &'a mut SparseVector<$arg_create>,)*
@@ -24,36 +23,35 @@ macro_rules! impl_svec_iter {
             for $iter<'a, B, $($arg_create,)* $($arg_read,)* $($arg_write),*>
         where
             B: 'a + BitSetLike,
-            $($arg_create: 'a + SparseStore,)*
-            $($arg_read: 'a + SparseStore,)*
-            $($arg_write: 'a + SparseStore,)*
+            $($arg_create: 'a + Store,)*
+            $($arg_read: 'a + Store,)*
+            $($arg_write: 'a + Store,)*
         {
             type Item = (usize, $(Entry<'a, $arg_create>,)* $(&'a $arg_read::Item,)* $(&'a mut $arg_write::Item,)* );
 
             fn next(&mut self) -> Option<Self::Item> {
                 self.iterator.next().map(|idx| {
-                    (idx, 
+                    (idx,
                         $(unsafe { mem::transmute(Entry::new(self.$arg_create, idx)) },)*
                         $(unsafe { mem::transmute(self.$arg_read.get(idx)) },)*
                         $(unsafe { mem::transmute(self.$arg_write.get_mut(idx)) },)*
                     )
                 })
             }
-        }        
+        }
     };
 }
-
 
 macro_rules! impl_svec_join {
     (($join_fun:ident, $join:ident) =>
             ($iter:ident, $mask:ident), create($($arg_create:ident),*), read($($arg_read:ident),*), write($($arg_write:ident),*)) => {
-        #[allow(non_snake_case)] 
+        #[allow(non_snake_case)]
         pub struct $join<'a, $($arg_create,)* $($arg_read,)* $($arg_write),*>
         where
-            $($arg_create: 'a + SparseStore,)*
-            $($arg_read: 'a + SparseStore,)*
-            $($arg_write: 'a + SparseStore,)*
-        {            
+            $($arg_create: 'a + Store,)*
+            $($arg_read: 'a + Store,)*
+            $($arg_write: 'a + Store,)*
+        {
             mask: $mask<'a>,
             $($arg_create: &'a mut SparseVector<$arg_create>,)*
             $($arg_read: &'a $arg_read,)*
@@ -62,9 +60,9 @@ macro_rules! impl_svec_join {
 
         impl<'a, $($arg_create,)* $($arg_read,)* $($arg_write),*> $join<'a, $($arg_create,)* $($arg_read,)* $($arg_write),*>
         where
-            $($arg_create: 'a + SparseStore,)*
-            $($arg_read: 'a + SparseStore,)*
-            $($arg_write: 'a + SparseStore,)*
+            $($arg_create: 'a + Store,)*
+            $($arg_read: 'a + Store,)*
+            $($arg_write: 'a + Store,)*
         {
             pub fn iter<'b>(&'b mut self) -> $iter<'b, $mask<'a>, $($arg_create,)* $($arg_read,)* $($arg_write),*> {
                 $iter {
@@ -76,16 +74,16 @@ macro_rules! impl_svec_join {
             }
         }
 
-        #[allow(non_snake_case)] 
+        #[allow(non_snake_case)]
         pub fn $join_fun<'a, $($arg_read,)* $($arg_write,)* $($arg_create),*>(
             $($arg_create: &'a mut SparseVector<$arg_create>,)*
             $($arg_read: &'a SparseVector<$arg_read>,)*
-            $($arg_write: &'a mut SparseVector<$arg_write>),*            
+            $($arg_write: &'a mut SparseVector<$arg_write>),*
         ) -> $join<'a, $($arg_create,)* $($arg_read,)* $($arg_write),*>
         where
-            $($arg_create: 'a + SparseStore,)*
-            $($arg_read: 'a + SparseStore,)*
-            $($arg_write: 'a + SparseStore,)*
+            $($arg_create: 'a + Store,)*
+            $($arg_read: 'a + Store,)*
+            $($arg_write: 'a + Store,)*
         {
             $join {
                 mask: $mask::new( $(&$arg_read.mask,)* $(&$arg_write.mask),* ),
@@ -96,7 +94,6 @@ macro_rules! impl_svec_join {
         }
     };
 }
-        
 
 macro_rules! impl_vec {
     (($join_fun:ident, $join:ident, $iter:ident, $mask:ident) => create($($arg_create:ident),*), read($($arg_read:ident),*), write($($arg_write:ident),*)) => {
@@ -108,12 +105,63 @@ macro_rules! impl_vec {
 pub type JoinMask1<'a> = bitops::And1<'a, SparseVectorMaskBlock, SparseVectorMask>;
 pub type JoinMask2<'a> = bitops::And2<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask>;
 pub type JoinMask3<'a> = bitops::And3<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
-pub type JoinMask4<'a> = bitops::And4<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
-pub type JoinMask5<'a> = bitops::And5<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
-pub type JoinMask6<'a> = bitops::And6<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
-pub type JoinMask7<'a> = bitops::And7<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
-pub type JoinMask8<'a> = bitops::And8<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
-pub type JoinMask9<'a> = bitops::And9<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
+pub type JoinMask4<'a> =
+    bitops::And4<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
+pub type JoinMask5<'a> = bitops::And5<
+    'a,
+    SparseVectorMaskBlock,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+>;
+pub type JoinMask6<'a> = bitops::And6<
+    'a,
+    SparseVectorMaskBlock,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+>;
+pub type JoinMask7<'a> = bitops::And7<
+    'a,
+    SparseVectorMaskBlock,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+>;
+pub type JoinMask8<'a> = bitops::And8<
+    'a,
+    SparseVectorMaskBlock,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+>;
+pub type JoinMask9<'a> = bitops::And9<
+    'a,
+    SparseVectorMaskBlock,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+    SparseVectorMask,
+>;
 
 impl_vec!{ (join_r0w1, JoinC0R0W1, JoinIterC0R0W1, JoinMask1) => create(), read(), write(W0) }
 impl_vec!{ (join_r0w2, JoinC0R0W2, JoinIterC0R0W2, JoinMask2) => create(), read(), write(W0, W1) }

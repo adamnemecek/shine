@@ -1,25 +1,23 @@
-use sstore::SparseStore;
+use smat::Store;
 
-pub struct SparseUnitStore {
+pub struct UnitStore {
     unit: (),
 }
 
-impl SparseUnitStore {
+impl UnitStore {
     pub fn new() -> Self {
-        SparseUnitStore { unit: () }
+        UnitStore { unit: () }
     }
 }
 
-impl SparseStore for SparseUnitStore {
+impl Store for UnitStore {
     type Item = ();
 
     fn clear(&mut self) {}
 
-    fn add(&mut self, _idx: usize, _value: Self::Item) {}
+    fn insert(&mut self, _idx: usize, _value: Self::Item) {}
 
-    fn remove(&mut self, _idx: usize) {}
-
-    fn take(&mut self, _idx: usize) -> Self::Item {
+    fn remove(&mut self, _idx: usize) -> Self::Item {
         self.unit
     }
 

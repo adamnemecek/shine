@@ -1,13 +1,11 @@
 use store::stdext::SliceOrdExt;
 
 use bitset::BitSetFast;
-use smat::{MatrixShape, SMatrix, SMatrixAddResult};
+use smat::SparseMatrixMask;
 
-/// Compressed Sparse (Square) Row/Column matrix that stores only the
-/// indices to the non-zero items but no values.
-pub struct CSMatrix {
-    shape: MatrixShape,
-
+/// Compressed Sparse (Square) Row/Column matrix index handling of the non-zero items but no values.
+/// Its a variant of the CSR data structure.
+pub struct CSMatrixMask {
     // Bitmask for the rows(columns) having nonzero items
     offset_mask: BitSetFast,
 
@@ -18,33 +16,32 @@ pub struct CSMatrix {
     indices: Vec<usize>,
 }
 
-impl CSMatrix {
+impl CSMatrixMask {
     /// Create a new Compressed Sparse (Square) Row matrix with a predefined capacity
-    pub fn new_with_capacity(shape: MatrixShape, capacity: usize, nnz_capacity: usize) -> CSMatrix {
-        CSMatrix {
-            shape: shape,
-            offset_mask: BitSetFast::new_with_capacity(capacity),
-            offsets: vec![0usize; capacity + 1],
+    pub fn new_with_capacity(major_capacity: usize, nnz_capacity: usize) -> CSMatrixMask {
+        CSMatrixMask {
+            offset_mask: BitSetFast::new_with_capacity(major_capacity),
+            offsets: vec![0usize; major_capacity + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
     }
 
     /// Create an empty Compressed Sparse (Square) Row matrix
-    pub fn new_row() -> CSMatrix {
-        Self::new_with_capacity(MatrixShape::Row, 0, 0)
+    pub fn new() -> CSMatrixMask {
+        Self::new_with_capacity(0, 0)
     }
 
-    /// Create an empty Compressed Sparse (Square) Column matrix
-    pub fn new_column() -> CSMatrix {
-        Self::new_with_capacity(MatrixShape::Column, 0, 0)
+    /// Return the row(column) capacity.
+    pub fn nnz(&self) -> usize {
+        *self.offsets.last().unwrap()
     }
 
-    /// Return the current capacity of the matrix.
+    /// Return the row(column) capacity.
     pub fn capacity(&self) -> usize {
         self.offsets.len() - 1
     }
 
-    /// Increase the capacity to the given value.
+    /// Increase the row(column) capacity to the given value.
     /// If matrix has a bigger capacity, it is not shrunk.
     pub fn increase_capacity_to(&mut self, capacity: usize) {
         if capacity <= self.capacity() {
@@ -58,19 +55,7 @@ impl CSMatrix {
     }
 }
 
-impl SMatrix for CSMatrix {
-    fn shape(&self) -> MatrixShape {
-        self.shape
-    }
-
-    fn nnz(&self) -> usize {
-        *self.offsets.last().unwrap()
-    }
-
-    fn is_empty(&self) -> bool {
-        self.nnz() == 0
-    }
-
+impl SparseMatrixMask for CSMatrixMask {
     fn clear(&mut self) {
         self.indices.clear();
         self.offsets.clear();
@@ -78,7 +63,7 @@ impl SMatrix for CSMatrix {
         self.offset_mask.clear();
     }
 
-    fn add_major_minor(&mut self, major: usize, minor: usize) -> SMatrixAddResult {
+    fn add(&mut self, major: usize, minor: usize) -> (usize, bool) {
         let capacity = if major > minor { major + 1 } else { minor + 1 };
         if capacity > self.capacity() {
             self.increase_capacity_to(capacity);
@@ -98,21 +83,18 @@ impl SMatrix for CSMatrix {
 
         if pos < idx1 && self.indices[pos] == minor {
             trace!("item replaced at: {}", pos);
-            SMatrixAddResult::Replace { pos: pos }
+            (pos, true)
         } else {
             trace!("item added at: {}", pos);
             self.indices.insert(pos, minor);
             for offset in self.offsets[major + 1..].iter_mut() {
                 *offset += 1;
             }
-            SMatrixAddResult::New {
-                pos: pos,
-                size: self.nnz(),
-            }
+            (pos, false)
         }
     }
 
-    fn remove_major_minor(&mut self, major: usize, minor: usize) -> Option<usize> {
+    fn remove(&mut self, major: usize, minor: usize) -> Option<usize> {
         if major >= self.capacity() || minor >= self.capacity() {
             return None;
         }
@@ -141,7 +123,7 @@ impl SMatrix for CSMatrix {
         }
     }
 
-    fn get_major_minor(&self, major: usize, minor: usize) -> Option<usize> {
+    fn get(&self, major: usize, minor: usize) -> Option<usize> {
         if major >= self.capacity() || minor >= self.capacity() {
             return None;
         }

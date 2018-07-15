@@ -1,18 +1,30 @@
 use std::mem;
 
 use bitset::{BitBlockFast, BitIter, BitSetFast, BitSetLike};
-use sstore::SparseStore;
 
 pub type SparseVectorMaskBlock = BitBlockFast;
 pub type SparseVectorMask = BitSetFast;
 
-pub struct SparseVector<S: SparseStore> {
+pub trait Store {
+    type Item;
+
+    fn clear(&mut self);
+
+    fn add(&mut self, idx: usize, value: Self::Item);
+    fn replace(&mut self, idx: usize, value: Self::Item) -> Self::Item;
+    fn remove(&mut self, idx: usize) -> Self::Item;
+
+    fn get(&self, idx: usize) -> &Self::Item;
+    fn get_mut(&mut self, idx: usize) -> &mut Self::Item;
+}
+
+pub struct SparseVector<S: Store> {
     crate nnz: usize,
     crate mask: SparseVectorMask,
     crate store: S,
 }
 
-impl<S: SparseStore> SparseVector<S> {
+impl<S: Store> SparseVector<S> {
     pub fn new(mask: SparseVectorMask, store: S) -> Self {
         SparseVector {
             nnz: 0,
@@ -56,7 +68,7 @@ impl<S: SparseStore> SparseVector<S> {
     pub fn remove(&mut self, idx: usize) -> Option<S::Item> {
         if self.mask.remove(idx) {
             self.nnz -= 1;
-            Some(self.store.take(idx))
+            Some(self.store.remove(idx))
         } else {
             None
         }
@@ -98,7 +110,7 @@ impl<S: SparseStore> SparseVector<S> {
 impl<I, S> SparseVector<S>
 where
     I: Default,
-    S: SparseStore<Item = I>,
+    S: Store<Item = I>,
 {
     pub fn add_default(&mut self, idx: usize) -> Option<S::Item> {
         self.add_with(idx, Default::default)
@@ -108,7 +120,7 @@ where
 /// Iterate over the non-zero (non-mutable) elements of a vector
 pub struct Iter<'a, S>
 where
-    S: 'a + SparseStore,
+    S: 'a + Store,
 {
     iterator: BitIter<'a, SparseVectorMask>,
     store: &'a S,
@@ -116,7 +128,7 @@ where
 
 impl<'a, S> Iter<'a, S>
 where
-    S: 'a + SparseStore,
+    S: 'a + Store,
 {
     crate fn new<'b>(mask: &'b SparseVectorMask, store: &'b S) -> Iter<'b, S> {
         Iter {
@@ -128,7 +140,7 @@ where
 
 impl<'a, S> Iterator for Iter<'a, S>
 where
-    S: 'a + SparseStore,
+    S: 'a + Store,
 {
     type Item = (usize, &'a S::Item);
     fn next(&mut self) -> Option<Self::Item> {
@@ -141,7 +153,7 @@ where
 /// Iterate over the non-zero (mutable) elements of a vector
 pub struct IterMut<'a, S>
 where
-    S: 'a + SparseStore,
+    S: 'a + Store,
 {
     iterator: BitIter<'a, SparseVectorMask>,
     store: &'a mut S,
@@ -149,7 +161,7 @@ where
 
 impl<'a, S> IterMut<'a, S>
 where
-    S: 'a + SparseStore,
+    S: 'a + Store,
 {
     crate fn new<'b>(mask: &'b SparseVectorMask, store: &'b mut S) -> IterMut<'b, S> {
         IterMut {
@@ -161,7 +173,7 @@ where
 
 impl<'a, S> Iterator for IterMut<'a, S>
 where
-    S: 'a + SparseStore,
+    S: 'a + Store,
 {
     type Item = (usize, &'a mut S::Item);
 
@@ -175,7 +187,7 @@ where
 /// Entry to a slot in the vector.
 pub struct Entry<'a, S>
 where
-    S: 'a + SparseStore,
+    S: 'a + Store,
 {
     id: usize,
     data: Option<*mut S::Item>,
@@ -184,7 +196,7 @@ where
 
 impl<'a, S> Entry<'a, S>
 where
-    S: 'a + SparseStore,
+    S: 'a + Store,
 {
     crate fn new<'b>(store: &'b mut SparseVector<S>, idx: usize) -> Entry<'b, S> {
         Entry {
@@ -227,31 +239,26 @@ where
 impl<'a, I, S> Entry<'a, S>
 where
     I: Default,
-    S: 'a + SparseStore<Item = I>,
+    S: 'a + Store<Item = I>,
 {
     pub fn acquire_default<'b>(&'b mut self) -> &'b mut S::Item {
         self.acquire_with(Default::default)
     }
 }
 
-use sstore::{SparseArenaStore, SparseDenseStore, SparseHashStore, SparseUnitStore};
+use svec::{DenseStore, HashStore, UnitStore};
 
-pub type SparseDVector<T> = SparseVector<SparseDenseStore<T>>;
+pub type SparseDVector<T> = SparseVector<DenseStore<T>>;
 pub fn new_dvec<T>() -> SparseDVector<T> {
-    SparseVector::new(SparseVectorMask::new(), SparseDenseStore::new())
+    SparseVector::new(SparseVectorMask::new(), DenseStore::new())
 }
 
-pub type SparseHVector<T> = SparseVector<SparseHashStore<T>>;
+pub type SparseHVector<T> = SparseVector<HashStore<T>>;
 pub fn new_hvec<T>() -> SparseHVector<T> {
-    SparseVector::new(SparseVectorMask::new(), SparseHashStore::new())
+    SparseVector::new(SparseVectorMask::new(), HashStore::new())
 }
 
-pub type SparseAVector<T> = SparseVector<SparseArenaStore<T>>;
-pub fn new_avec<T>() -> SparseAVector<T> {
-    SparseVector::new(SparseVectorMask::new(), SparseArenaStore::new())
-}
-
-pub type SparseTVector = SparseVector<SparseUnitStore>;
+pub type SparseTVector = SparseVector<UnitStore>;
 pub fn new_tvec() -> SparseTVector {
-    SparseVector::new(SparseVectorMask::new(), SparseUnitStore::new())
+    SparseVector::new(SparseVectorMask::new(), UnitStore::new())
 }

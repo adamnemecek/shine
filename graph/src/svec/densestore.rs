@@ -1,24 +1,24 @@
 use std::mem;
 
-use sstore::SparseStore;
+use svec::Store;
 
-pub struct SparseDenseStore<T> {
+pub struct DenseStore<T> {
     values: Vec<Option<T>>,
 }
 
-impl<T> SparseDenseStore<T> {
+impl<T> DenseStore<T> {
     pub fn new() -> Self {
-        SparseDenseStore { values: Vec::new() }
+        DenseStore { values: Vec::new() }
     }
 
     pub fn new_with_capacity(capacity: usize) -> Self {
-        SparseDenseStore {
+        DenseStore {
             values: Vec::with_capacity(capacity),
         }
     }
 }
 
-impl<T> SparseStore for SparseDenseStore<T> {
+impl<T> Store for DenseStore<T> {
     type Item = T;
 
     fn clear(&mut self) {
@@ -34,11 +34,7 @@ impl<T> SparseStore for SparseDenseStore<T> {
         self.values[idx] = Some(value);
     }
 
-    fn remove(&mut self, idx: usize) {
-        self.values[idx] = None
-    }
-
-    fn take(&mut self, idx: usize) -> Self::Item {
+    fn remove(&mut self, idx: usize) -> Self::Item {
         self.values[idx].take().unwrap()
     }
 

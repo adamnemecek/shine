@@ -1,24 +1,24 @@
 use std::collections::HashMap;
 
-use sstore::SparseStore;
+use svec::Store;
 
-pub struct SparseHashStore<T> {
+pub struct HashStore<T> {
     values: HashMap<usize, T>,
 }
 
-impl<T> SparseHashStore<T> {
+impl<T> HashStore<T> {
     pub fn new() -> Self {
-        SparseHashStore { values: HashMap::new() }
+        HashStore { values: HashMap::new() }
     }
 
     pub fn new_with_capacity(capacity: usize) -> Self {
-        SparseHashStore {
+        HashStore {
             values: HashMap::with_capacity(capacity),
         }
     }
 }
 
-impl<T> SparseStore for SparseHashStore<T> {
+impl<T> Store for HashStore<T> {
     type Item = T;
 
     fn clear(&mut self) {
@@ -29,11 +29,7 @@ impl<T> SparseStore for SparseHashStore<T> {
         self.values.insert(idx, value);
     }
 
-    fn remove(&mut self, idx: usize) {
-        self.values.remove(&idx);
-    }
-
-    fn take(&mut self, idx: usize) -> Self::Item {
+    fn remove(&mut self, idx: usize) -> Self::Item {
         self.values.remove(&idx).unwrap()
     }
 
