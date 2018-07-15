@@ -1,13 +1,13 @@
 use store::stdext::SliceOrdExt;
 
-use bitset::BitSetFast;
-use smat::SparseMatrixMask;
+use smat::IndexMask;
+use svec::BitMask;
 
 /// Compressed Sparse (Square) Row/Column matrix index handling of the non-zero items but no values.
 /// Its a variant of the CSR data structure.
-pub struct CSMatrixMask {
+pub struct CSIndexMask {
     // Bitmask for the rows(columns) having nonzero items
-    offset_mask: BitSetFast,
+    offset_mask: BitMask,
 
     // Offsets of the start in the index/data vector for each row(column)
     offsets: Vec<usize>,
@@ -16,18 +16,18 @@ pub struct CSMatrixMask {
     indices: Vec<usize>,
 }
 
-impl CSMatrixMask {
+impl CSIndexMask {
     /// Create a new Compressed Sparse (Square) Row matrix with a predefined capacity
-    pub fn new_with_capacity(major_capacity: usize, nnz_capacity: usize) -> CSMatrixMask {
-        CSMatrixMask {
-            offset_mask: BitSetFast::new_with_capacity(major_capacity),
+    pub fn new_with_capacity(major_capacity: usize, nnz_capacity: usize) -> CSIndexMask {
+        CSIndexMask {
+            offset_mask: BitMask::new_with_capacity(major_capacity),
             offsets: vec![0usize; major_capacity + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
     }
 
     /// Create an empty Compressed Sparse (Square) Row matrix
-    pub fn new() -> CSMatrixMask {
+    pub fn new() -> CSIndexMask {
         Self::new_with_capacity(0, 0)
     }
 
@@ -55,7 +55,7 @@ impl CSMatrixMask {
     }
 }
 
-impl SparseMatrixMask for CSMatrixMask {
+impl IndexMask for CSIndexMask {
     fn clear(&mut self) {
         self.indices.clear();
         self.offsets.clear();

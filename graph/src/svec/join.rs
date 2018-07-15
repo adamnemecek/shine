@@ -1,7 +1,7 @@
 use std::mem;
 
 use bitset::{bitops, BitIter, BitSetLike};
-use svec::{Entry, SparseVector, SparseVectorMask, SparseVectorMaskBlock, Store};
+use svec::{BitMask, BitMaskBlock, Entry, SparseVector, Store};
 
 macro_rules! impl_svec_iter {
     ($iter: ident => create($($arg_create: ident),*), read($($arg_read: ident),*), write($($arg_write: ident),*)) => {
@@ -102,66 +102,17 @@ macro_rules! impl_vec {
     };
 }
 
-pub type JoinMask1<'a> = bitops::And1<'a, SparseVectorMaskBlock, SparseVectorMask>;
-pub type JoinMask2<'a> = bitops::And2<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask>;
-pub type JoinMask3<'a> = bitops::And3<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
-pub type JoinMask4<'a> =
-    bitops::And4<'a, SparseVectorMaskBlock, SparseVectorMask, SparseVectorMask, SparseVectorMask, SparseVectorMask>;
-pub type JoinMask5<'a> = bitops::And5<
-    'a,
-    SparseVectorMaskBlock,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
->;
-pub type JoinMask6<'a> = bitops::And6<
-    'a,
-    SparseVectorMaskBlock,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
->;
-pub type JoinMask7<'a> = bitops::And7<
-    'a,
-    SparseVectorMaskBlock,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
->;
-pub type JoinMask8<'a> = bitops::And8<
-    'a,
-    SparseVectorMaskBlock,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
->;
-pub type JoinMask9<'a> = bitops::And9<
-    'a,
-    SparseVectorMaskBlock,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
-    SparseVectorMask,
->;
+pub type JoinMask1<'a> = bitops::And1<'a, BitMaskBlock, BitMask>;
+pub type JoinMask2<'a> = bitops::And2<'a, BitMaskBlock, BitMask, BitMask>;
+pub type JoinMask3<'a> = bitops::And3<'a, BitMaskBlock, BitMask, BitMask, BitMask>;
+pub type JoinMask4<'a> = bitops::And4<'a, BitMaskBlock, BitMask, BitMask, BitMask, BitMask>;
+pub type JoinMask5<'a> = bitops::And5<'a, BitMaskBlock, BitMask, BitMask, BitMask, BitMask, BitMask>;
+pub type JoinMask6<'a> = bitops::And6<'a, BitMaskBlock, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask>;
+pub type JoinMask7<'a> = bitops::And7<'a, BitMaskBlock, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask>;
+pub type JoinMask8<'a> =
+    bitops::And8<'a, BitMaskBlock, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask>;
+pub type JoinMask9<'a> =
+    bitops::And9<'a, BitMaskBlock, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask, BitMask>;
 
 impl_vec!{ (join_r0w1, JoinC0R0W1, JoinIterC0R0W1, JoinMask1) => create(), read(), write(W0) }
 impl_vec!{ (join_r0w2, JoinC0R0W2, JoinIterC0R0W2, JoinMask2) => create(), read(), write(W0, W1) }

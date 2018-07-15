@@ -2,8 +2,8 @@ use std::mem;
 
 use bitset::{BitBlockFast, BitIter, BitSetFast, BitSetLike};
 
-pub type SparseVectorMaskBlock = BitBlockFast;
-pub type SparseVectorMask = BitSetFast;
+pub type BitMaskBlock = BitBlockFast;
+pub type BitMask = BitSetFast;
 
 pub trait Store {
     type Item;
@@ -20,12 +20,12 @@ pub trait Store {
 
 pub struct SparseVector<S: Store> {
     crate nnz: usize,
-    crate mask: SparseVectorMask,
+    crate mask: BitMask,
     crate store: S,
 }
 
 impl<S: Store> SparseVector<S> {
-    pub fn new(mask: SparseVectorMask, store: S) -> Self {
+    pub fn new(mask: BitMask, store: S) -> Self {
         SparseVector {
             nnz: 0,
             mask: mask,
@@ -33,7 +33,7 @@ impl<S: Store> SparseVector<S> {
         }
     }
 
-    pub fn get_mask(&self) -> &SparseVectorMask {
+    pub fn get_mask(&self) -> &BitMask {
         &self.mask
     }
 
@@ -122,7 +122,7 @@ pub struct Iter<'a, S>
 where
     S: 'a + Store,
 {
-    iterator: BitIter<'a, SparseVectorMask>,
+    iterator: BitIter<'a, BitMask>,
     store: &'a S,
 }
 
@@ -130,7 +130,7 @@ impl<'a, S> Iter<'a, S>
 where
     S: 'a + Store,
 {
-    crate fn new<'b>(mask: &'b SparseVectorMask, store: &'b S) -> Iter<'b, S> {
+    crate fn new<'b>(mask: &'b BitMask, store: &'b S) -> Iter<'b, S> {
         Iter {
             iterator: mask.iter(),
             store: store,
@@ -155,7 +155,7 @@ pub struct IterMut<'a, S>
 where
     S: 'a + Store,
 {
-    iterator: BitIter<'a, SparseVectorMask>,
+    iterator: BitIter<'a, BitMask>,
     store: &'a mut S,
 }
 
@@ -163,7 +163,7 @@ impl<'a, S> IterMut<'a, S>
 where
     S: 'a + Store,
 {
-    crate fn new<'b>(mask: &'b SparseVectorMask, store: &'b mut S) -> IterMut<'b, S> {
+    crate fn new<'b>(mask: &'b BitMask, store: &'b mut S) -> IterMut<'b, S> {
         IterMut {
             iterator: mask.iter(),
             store: store,
@@ -250,15 +250,15 @@ use svec::{DenseStore, HashStore, UnitStore};
 
 pub type SparseDVector<T> = SparseVector<DenseStore<T>>;
 pub fn new_dvec<T>() -> SparseDVector<T> {
-    SparseVector::new(SparseVectorMask::new(), DenseStore::new())
+    SparseVector::new(BitMask::new(), DenseStore::new())
 }
 
 pub type SparseHVector<T> = SparseVector<HashStore<T>>;
 pub fn new_hvec<T>() -> SparseHVector<T> {
-    SparseVector::new(SparseVectorMask::new(), HashStore::new())
+    SparseVector::new(BitMask::new(), HashStore::new())
 }
 
 pub type SparseTVector = SparseVector<UnitStore>;
 pub fn new_tvec() -> SparseTVector {
-    SparseVector::new(SparseVectorMask::new(), UnitStore::new())
+    SparseVector::new(BitMask::new(), UnitStore::new())
 }

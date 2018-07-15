@@ -1,5 +1,5 @@
 /// Sparse (Square) Row matrix to manage the indices of the non-zero items
-pub trait SparseMatrixMask {
+pub trait IndexMask {
     fn clear(&mut self);
     fn add(&mut self, major: usize, minor: usize) -> (usize, bool);
     fn remove(&mut self, major: usize, minor: usize) -> Option<usize>;
@@ -20,13 +20,13 @@ pub trait Store {
 }
 
 /// Sparse (Square) Row matrix
-pub struct SparseMatrix<M: SparseMatrixMask, S: Store> {
+pub struct SparseMatrix<M: IndexMask, S: Store> {
     nnz: usize,
     mask: M,
     store: S,
 }
 
-impl<M: SparseMatrixMask, S: Store> SparseMatrix<M, S> {
+impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
     pub fn new(mask: M, store: S) -> Self {
         SparseMatrix {
             nnz: 0,
@@ -81,20 +81,20 @@ impl<M: SparseMatrixMask, S: Store> SparseMatrix<M, S> {
     }
 }
 
-use smat::CSMatrixMask;
+use smat::CSIndexMask;
 use smat::{ArenaStore, DenseStore, UnitStore};
 
-pub type SparseDMatrix<T> = SparseMatrix<CSMatrixMask, DenseStore<T>>;
+pub type SparseDMatrix<T> = SparseMatrix<CSIndexMask, DenseStore<T>>;
 pub fn new_dmat<T>() -> SparseDMatrix<T> {
-    SparseMatrix::new(CSMatrixMask::new(), DenseStore::new())
+    SparseMatrix::new(CSIndexMask::new(), DenseStore::new())
 }
 
-pub type SparseAMatrix<T> = SparseMatrix<CSMatrixMask, ArenaStore<T>>;
+pub type SparseAMatrix<T> = SparseMatrix<CSIndexMask, ArenaStore<T>>;
 pub fn new_amat<T>() -> SparseAMatrix<T> {
-    SparseMatrix::new(CSMatrixMask::new(), ArenaStore::new())
+    SparseMatrix::new(CSIndexMask::new(), ArenaStore::new())
 }
 
-pub type SparseTMatrix = SparseMatrix<CSMatrixMask, UnitStore>;
+pub type SparseTMatrix = SparseMatrix<CSIndexMask, UnitStore>;
 pub fn new_tmat() -> SparseTMatrix {
-    SparseMatrix::new(CSMatrixMask::new(), UnitStore::new())
+    SparseMatrix::new(CSIndexMask::new(), UnitStore::new())
 }

@@ -1,13 +1,13 @@
 mod arenastore;
-mod csmatrixmask;
+mod csindexmask;
 mod densestore;
-mod hcsmatrixmask;
+mod hcsindexmask;
 mod sparsematrix;
 mod unitstore;
 
 pub use self::arenastore::*;
-pub use self::csmatrixmask::*;
+pub use self::csindexmask::*;
 pub use self::densestore::*;
-pub use self::hcsmatrixmask::*;
+pub use self::hcsindexmask::*;
 pub use self::sparsematrix::*;
 pub use self::unitstore::*;

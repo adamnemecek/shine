@@ -10,7 +10,7 @@ use shine_graph::smat::*;
 
 type Data = (usize, usize);
 
-fn smat_simple_<M: SparseMatrixMask, S: Store<Item = Data>>(mut matrix: SparseMatrix<M, S>) {
+fn smat_simple_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SparseMatrix<M, S>) {
     for i in 0..2 {
         trace!("pass: {}", i);
 
@@ -67,7 +67,7 @@ fn smat_simple_<M: SparseMatrixMask, S: Store<Item = Data>>(mut matrix: SparseMa
     }
 }
 
-fn smat_stress_<M: SparseMatrixMask, S: Store<Item = Data>>(mut matrix: SparseMatrix<M, S>, size: usize, cnt: usize) {
+fn smat_stress_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SparseMatrix<M, S>, size: usize, cnt: usize) {
     let mut mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
