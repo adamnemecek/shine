@@ -6,11 +6,12 @@ extern crate rand;
 
 use rand::Rng;
 
+use shine_graph::sstore::SparseStore;
 use shine_graph::svec::*;
 
 type Data = usize;
 
-fn svec_simple_<S: SparseVectorStore<Item = Data>>(mut vector: SparseVector<S>) {
+fn svec_simple_<S: SparseStore<Item = Data>>(mut vector: SparseVector<S>) {
     for i in 0..2 {
         trace!("pass: {}", i);
 
@@ -82,7 +83,7 @@ fn svec_simple_<S: SparseVectorStore<Item = Data>>(mut vector: SparseVector<S>) 
     }
 }
 
-fn svec_stress_<S: SparseVectorStore<Item = Data>>(mut vector: SparseVector<S>, size: usize, cnt: usize) {
+fn svec_stress_<S: SparseStore<Item = Data>>(mut vector: SparseVector<S>, size: usize, cnt: usize) {
     let mut vc = vec![0; size];
 
     let mut rng = rand::thread_rng();
@@ -115,6 +116,8 @@ fn svec_simple() {
     svec_simple_(new_dvec());
     trace!("SparseHVector");
     svec_simple_(new_hvec());
+    trace!("SparseAVector");
+    svec_simple_(new_avec());
 }
 
 #[test]
@@ -126,6 +129,8 @@ fn svec_stress() {
         svec_stress_(new_dvec(), 1024, 100000);
         trace!("SparseHVector");
         svec_stress_(new_hvec(), 1024, 100000);
+        trace!("SparseAVector");
+        svec_stress_(new_avec(), 1024, 100000);
     }
 }
 

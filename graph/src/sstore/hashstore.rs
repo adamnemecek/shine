@@ -1,25 +1,24 @@
 use std::collections::HashMap;
 
-use bitset::BitSetFast;
-use svec::{SparseVector, SparseVectorStore};
+use sstore::SparseStore;
 
-pub struct SparseHVectorStore<T> {
+pub struct SparseHashStore<T> {
     values: HashMap<usize, T>,
 }
 
-impl<T> SparseHVectorStore<T> {
+impl<T> SparseHashStore<T> {
     pub fn new() -> Self {
-        SparseHVectorStore { values: HashMap::new() }
+        SparseHashStore { values: HashMap::new() }
     }
 
     pub fn new_with_capacity(capacity: usize) -> Self {
-        SparseHVectorStore {
+        SparseHashStore {
             values: HashMap::with_capacity(capacity),
         }
     }
 }
 
-impl<T> SparseVectorStore for SparseHVectorStore<T> {
+impl<T> SparseStore for SparseHashStore<T> {
     type Item = T;
 
     fn clear(&mut self) {
@@ -49,10 +48,4 @@ impl<T> SparseVectorStore for SparseHVectorStore<T> {
     fn get_mut(&mut self, idx: usize) -> &mut Self::Item {
         self.values.get_mut(&idx).unwrap()
     }
-}
-
-pub type SparseHVector<T> = SparseVector<SparseHVectorStore<T>>;
-
-pub fn new_hvec<T>() -> SparseHVector<T> {
-    SparseVector::new(BitSetFast::new(), SparseHVectorStore::new())
 }

@@ -1,17 +1,16 @@
-use bitset::BitSetFast;
-use svec::{SparseVector, SparseVectorStore};
+use sstore::SparseStore;
 
-pub struct SparseTVectorStore {
+pub struct SparseUnitStore {
     unit: (),
 }
 
-impl SparseTVectorStore {
+impl SparseUnitStore {
     pub fn new() -> Self {
-        SparseTVectorStore { unit: () }
+        SparseUnitStore { unit: () }
     }
 }
 
-impl SparseVectorStore for SparseTVectorStore {
+impl SparseStore for SparseUnitStore {
     type Item = ();
 
     fn clear(&mut self) {}
@@ -35,10 +34,4 @@ impl SparseVectorStore for SparseTVectorStore {
     fn get_mut(&mut self, _idx: usize) -> &mut Self::Item {
         &mut self.unit
     }
-}
-
-pub type SparseTVector = SparseVector<SparseTVectorStore>;
-
-pub fn new_tvec() -> SparseTVector {
-    SparseVector::new(BitSetFast::new(), SparseTVectorStore::new())
 }
