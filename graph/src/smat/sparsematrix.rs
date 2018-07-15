@@ -150,8 +150,8 @@ where
     }
 }
 
-use smat::CSIndexMask;
 use smat::{ArenaStore, DenseStore, UnitStore};
+use smat::{CSIndexMask, HCSIndexMask};
 
 pub type SparseDMatrix<T> = SparseMatrix<CSIndexMask, DenseStore<T>>;
 pub fn new_dmat<T>() -> SparseDMatrix<T> {
@@ -166,4 +166,19 @@ pub fn new_amat<T>() -> SparseAMatrix<T> {
 pub type SparseTMatrix = SparseMatrix<CSIndexMask, UnitStore>;
 pub fn new_tmat() -> SparseTMatrix {
     SparseMatrix::new(CSIndexMask::new(), UnitStore::new())
+}
+
+pub type SparseHDMatrix<T> = SparseMatrix<HCSIndexMask, DenseStore<T>>;
+pub fn new_hdmat<T>() -> SparseHDMatrix<T> {
+    SparseMatrix::new(HCSIndexMask::new(), DenseStore::new())
+}
+
+pub type SparseHAMatrix<T> = SparseMatrix<HCSIndexMask, ArenaStore<T>>;
+pub fn new_hamat<T>() -> SparseHAMatrix<T> {
+    SparseMatrix::new(HCSIndexMask::new(), ArenaStore::new())
+}
+
+pub type SparseHTMatrix = SparseMatrix<HCSIndexMask, UnitStore>;
+pub fn new_htmat() -> SparseHTMatrix {
+    SparseMatrix::new(HCSIndexMask::new(), UnitStore::new())
 }

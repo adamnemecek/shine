@@ -17,7 +17,7 @@ pub struct CSIndexMask {
 }
 
 impl CSIndexMask {
-    /// Create a new Compressed Sparse (Square) Row matrix with a predefined capacity
+    /// Creates a new CSIndexMask with the given capacity
     pub fn new_with_capacity(major_capacity: usize, nnz_capacity: usize) -> CSIndexMask {
         CSIndexMask {
             offset_mask: BitMask::new_with_capacity(major_capacity),
@@ -26,7 +26,7 @@ impl CSIndexMask {
         }
     }
 
-    /// Create an empty Compressed Sparse (Square) Row matrix
+    /// Creates an empty CSIndexMask
     pub fn new() -> CSIndexMask {
         Self::new_with_capacity(0, 0)
     }
