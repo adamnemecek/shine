@@ -1,18 +1,15 @@
 use store::stdext::SliceOrdExt;
 
 use smat::IndexMask;
-use svec::BitMask;
 
-/// Compressed Sparse (Square) Row/Column matrix index handling of the non-zero items but no values.
-/// Its a variant of the CSR data structure.
+/// Compressed Sparse (Square) Row matrix.
+/// Its a variant of the CSR data structure where a dense vector is
+///  used to store the offset for the occupied rows.
 pub struct CSIndexMask {
-    // Bitmask for the rows(columns) having nonzero items
-    offset_mask: BitMask,
-
-    // Offsets of the start in the index/data vector for each row(column)
+    // Offsets of the start in the indices(data) vector for each row
     offsets: Vec<usize>,
 
-    // Column/Row indices for each non-zero items
+    // Column indices for each non-zero items
     indices: Vec<usize>,
 }
 
@@ -20,7 +17,6 @@ impl CSIndexMask {
     /// Creates a new CSIndexMask with the given capacity
     pub fn new_with_capacity(major_capacity: usize, nnz_capacity: usize) -> CSIndexMask {
         CSIndexMask {
-            offset_mask: BitMask::new_with_capacity(major_capacity),
             offsets: vec![0usize; major_capacity + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
@@ -31,17 +27,17 @@ impl CSIndexMask {
         Self::new_with_capacity(0, 0)
     }
 
-    /// Return the row(column) capacity.
+    /// Return the row capacity.
     pub fn nnz(&self) -> usize {
         *self.offsets.last().unwrap()
     }
 
-    /// Return the row(column) capacity.
+    /// Return the row capacity.
     pub fn capacity(&self) -> usize {
         self.offsets.len() - 1
     }
 
-    /// Increase the row(column) capacity to the given value.
+    /// Increase the row capacity to the given value.
     /// If matrix has a bigger capacity, it is not shrunk.
     pub fn increase_capacity_to(&mut self, capacity: usize) {
         if capacity <= self.capacity() {
@@ -50,7 +46,6 @@ impl CSIndexMask {
 
         trace!("resized to: {}", capacity);
         let nnz = self.nnz();
-        self.offset_mask.increase_capacity_to(capacity);
         self.offsets.resize(capacity + 1, nnz);
     }
 }
@@ -60,7 +55,6 @@ impl IndexMask for CSIndexMask {
         self.indices.clear();
         self.offsets.clear();
         self.offsets.push(0);
-        self.offset_mask.clear();
     }
 
     fn add(&mut self, major: usize, minor: usize) -> (usize, bool) {
@@ -74,7 +68,6 @@ impl IndexMask for CSIndexMask {
         let pos = {
             if idx0 == idx1 {
                 trace!("new major row opened: {}", major);
-                self.offset_mask.add(major);
                 idx0
             } else {
                 self.indices[idx0..idx1].lower_bound(&minor) + idx0
@@ -94,14 +87,10 @@ impl IndexMask for CSIndexMask {
         }
     }
 
-    fn remove(&mut self, major: usize, minor: usize) -> Option<usize> {
+    fn remove(&mut self, major: usize, minor: usize) -> Option<(usize, usize)> {
         if major >= self.capacity() || minor >= self.capacity() {
             return None;
         }
-
-        /*if !self.offset_mask.get(major) {
-            return None;
-        }*/
 
         let idx0 = self.offsets[major];
         let idx1 = self.offsets[major + 1];
@@ -113,11 +102,8 @@ impl IndexMask for CSIndexMask {
             for offset in self.offsets[major + 1..].iter_mut() {
                 *offset -= 1;
             }
-            if self.offsets[major] == self.offsets[major + 1] {
-                trace!("major row cleared: {}", major);
-                self.offset_mask.remove(major);
-            }
-            Some(pos)
+            let cnt = self.offsets[major + 1] - self.offsets[major];
+            Some((pos, cnt))
         } else {
             None
         }
@@ -127,10 +113,6 @@ impl IndexMask for CSIndexMask {
         if major >= self.capacity() || minor >= self.capacity() {
             return None;
         }
-
-        /*if !self.offset_mask.get(major) {
-            return None;
-        }*/
 
         let idx0 = self.offsets[major];
         let idx1 = self.offsets[major + 1];

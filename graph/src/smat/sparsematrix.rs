@@ -1,8 +1,10 @@
+use bitset::{BitIter, BitMask, BitSetLike};
+
 /// Sparse (Square) Row matrix to manage the indices of the non-zero items
 pub trait IndexMask {
     fn clear(&mut self);
     fn add(&mut self, major: usize, minor: usize) -> (usize, bool);
-    fn remove(&mut self, major: usize, minor: usize) -> Option<usize>;
+    fn remove(&mut self, major: usize, minor: usize) -> Option<(usize, usize)>;
     fn get(&self, major: usize, minor: usize) -> Option<usize>;
 }
 
@@ -22,6 +24,7 @@ pub trait Store {
 /// Sparse (Square) Row matrix
 pub struct SparseMatrix<M: IndexMask, S: Store> {
     nnz: usize,
+    outer_mask: BitMask,
     mask: M,
     store: S,
 }
@@ -31,6 +34,7 @@ impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
         SparseMatrix {
             nnz: 0,
             mask: mask,
+            outer_mask: BitMask::new(),
             store: store,
         }
     }
@@ -42,6 +46,7 @@ impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
     pub fn clear(&mut self) {
         self.mask.clear();
         self.store.clear();
+        self.outer_mask.clear();
         self.nnz = 0;
     }
 
@@ -50,38 +55,89 @@ impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
         if b {
             Some(self.store.replace(pos, value))
         } else {
-            self.nnz += 1;
             self.store.insert(pos, value);
+            self.outer_mask.add(r);
+            self.nnz += 1;
             None
         }
     }
 
     pub fn remove(&mut self, r: usize, c: usize) -> Option<S::Item> {
         match self.mask.remove(r, c) {
-            Some(pos) => {
+            Some((data_index, minor_count)) => {
                 self.nnz -= 1;
-                Some(self.store.remove(pos))
+                if minor_count == 0 {
+                    self.outer_mask.remove(r);
+                }
+                Some(self.store.remove(data_index))
             }
             None => None,
         }
     }
 
     pub fn get(&self, r: usize, c: usize) -> Option<&S::Item> {
-        match self.mask.get(r, c) {
-            Some(pos) => Some(self.store.get(pos)),
-            None => None,
+        if !self.outer_mask.get(r) {
+            None
+        } else {
+            match self.mask.get(r, c) {
+                Some(pos) => Some(self.store.get(pos)),
+                None => None,
+            }
         }
     }
 
     pub fn get_mut(&mut self, r: usize, c: usize) -> Option<&mut S::Item> {
-        match self.mask.get(r, c) {
-            Some(pos) => Some(self.store.get_mut(pos)),
-            None => None,
+        if !self.outer_mask.get(r) {
+            None
+        } else {
+            match self.mask.get(r, c) {
+                Some(pos) => Some(self.store.get_mut(pos)),
+                None => None,
+            }
         }
     }
 
     pub fn entry<'a>(&'a mut self, r: usize, c: usize) -> Entry<'a, M, S> {
         Entry::new(self, r, c)
+    }
+
+    pub fn outer_iter<'a>(&'a self) -> OuterIter<'a, M, S> {
+        OuterIter::new(self)
+    }
+}
+
+/// Outer iterate over the non-zero items.
+pub struct OuterIter<'a, M, S>
+where
+    M: 'a + IndexMask,
+    S: 'a + Store,
+{
+    iterator: BitIter<'a, BitMask>,
+    mat: *const SparseMatrix<M, S>,
+}
+
+impl<'a, M, S> OuterIter<'a, M, S>
+where
+    M: 'a + IndexMask,
+    S: 'a + Store,
+{
+    crate fn new<'b>(mat: &'b SparseMatrix<M, S>) -> OuterIter<'b, M, S> {
+        let mat_ptr = mat as *const _;
+        OuterIter {
+            iterator: mat.outer_mask.iter(),
+            mat: mat_ptr,
+        }
+    }
+}
+
+impl<'a, M, S> Iterator for OuterIter<'a, M, S>
+where
+    M: 'a + IndexMask,
+    S: 'a + Store,
+{
+    type Item = usize;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator.next()
     }
 }
 

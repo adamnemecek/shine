@@ -4,6 +4,7 @@ mod sparsevector;
 mod unitstore;
 
 pub mod join;
+pub mod join2;
 
 pub use self::densestore::*;
 pub use self::hashstore::*;

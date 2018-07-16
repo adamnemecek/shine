@@ -207,4 +207,15 @@ fn svec_join() {
         assert_eq!(t1.get(18), Some(&54));
         assert_eq!(t1.get(31), Some(&31));
     }
+
+    trace!("merge and create 2");
+    {
+        let mut t1 = new_dvec::<Data>();
+        use join2::*;
+
+        for (id, d1, mut d2) in (&v1, &mut v2).join().iter() {
+            t1.entry(id).acquire(*d1);
+            *d2 -= *d1;
+        }
+    }
 }

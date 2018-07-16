@@ -1,9 +1,6 @@
 use std::mem;
 
-use bitset::{BitBlockFast, BitIter, BitSetFast, BitSetLike};
-
-pub type BitMaskBlock = BitBlockFast;
-pub type BitMask = BitSetFast;
+use bitset::{BitIter, BitMask, BitSetLike};
 
 pub trait Store {
     type Item;
