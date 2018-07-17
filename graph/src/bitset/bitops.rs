@@ -8,9 +8,8 @@ macro_rules! max {
     ($x: expr, $($z: expr),+) => (cmp::max($x, max!($($z),*)));
 }
 
-
 /// Macro to define AND operation on N BitSetLike object
-macro_rules! bitop_and {    
+macro_rules! bitop_and {
     (($op_fun: ident, $op: ident) => ($($arg: ident),*)) => {
         /// Struct to perform bitwise AND of BitSetLike objects
         #[allow(non_snake_case)]
@@ -27,7 +26,7 @@ macro_rules! bitop_and {
             B: BitBlock,
             $($arg: 'a + BitSetLike<Bits = B>),*
         {
-            /// Creaes a bitwise AND of BitSetLike objects. 
+            /// Creaes a bitwise AND of BitSetLike objects.
             /// Mainly for internal use, prefer $op_fun instead.
             #[allow(non_snake_case)]
             pub fn new($($arg: &'a $arg),*) -> Self {
@@ -79,16 +78,15 @@ bitop_and!{ (and7, And7) => (S0,S1,S2,S3,S4,S5,S6) }
 bitop_and!{ (and8, And8) => (S0,S1,S2,S3,S4,S5,S6,S7) }
 bitop_and!{ (and9, And9) => (S0,S1,S2,S3,S4,S5,S6,S7,S8) }
 
-pub type BitAnd<'a,B,L,R> = And2<'a,B,L,R>;
-pub fn and<'a, B, L,R>(left: &'a L, right: &'a R) -> And2<'a, B, L,R>
-        where
-            B: BitBlock,
-            L: 'a + BitSetLike<Bits = B>,
-            R: 'a + BitSetLike<Bits = B>,
+pub type BitAnd<'a, B, L, R> = And2<'a, B, L, R>;
+pub fn and<'a, B, L, R>(left: &'a L, right: &'a R) -> And2<'a, B, L, R>
+where
+    B: BitBlock,
+    L: 'a + BitSetLike<Bits = B>,
+    R: 'a + BitSetLike<Bits = B>,
 {
-    and2(left,right)
+    and2(left, right)
 }
-
 
 /// Macro to define OR operation on N BitSetLike object
 macro_rules! bitop_or {
@@ -108,7 +106,7 @@ macro_rules! bitop_or {
             B: BitBlock,
             $($arg: 'a + BitSetLike<Bits = B>),*
         {
-            /// Creaes a bitwise OR of BitSetLike objects. 
+            /// Creaes a bitwise OR of BitSetLike objects.
             /// Mainly for internal use, prefer $op_fun instead.
             #[allow(non_snake_case)]
             pub fn new($($arg: &'a $arg),*) -> Self {
@@ -160,12 +158,12 @@ bitop_or!{ (or7, Or7) => (S0,S1,S2,S3,S4,S5,S6) }
 bitop_or!{ (or8, Or8) => (S0,S1,S2,S3,S4,S5,S6,S7) }
 bitop_or!{ (or9, Or9) => (S0,S1,S2,S3,S4,S5,S6,S7,S8) }
 
-pub type Or<'a,B,L,R> = Or2<'a,B,L,R>;
-pub fn or<'a, B, L,R>(left: &'a L, right: &'a R) -> Or2<'a, B, L,R>
-        where
-            B: BitBlock,
-            L: 'a + BitSetLike<Bits = B>,
-            R: 'a + BitSetLike<Bits = B>,
+pub type Or<'a, B, L, R> = Or2<'a, B, L, R>;
+pub fn or<'a, B, L, R>(left: &'a L, right: &'a R) -> Or2<'a, B, L, R>
+where
+    B: BitBlock,
+    L: 'a + BitSetLike<Bits = B>,
+    R: 'a + BitSetLike<Bits = B>,
 {
-    or2(left,right)
+    or2(left, right)
 }
