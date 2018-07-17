@@ -1,11 +1,9 @@
 use std::mem;
-use std::ops;
 
-use bitset::{bitops, BitIter, BitSetLike};
-use svec::join::JoinMask2;
-use svec::{SparseVector, Store};
+use bitset::{bitops, BitIter, BitMaskBlock, BitSetLike};
+use svec::{Access, Store};
 
-pub trait Joinable {
+pub trait Joinable<'a> {
     type Item;
     type Join: Join<Item = Self::Item>;
     fn join(self) -> Self::Join;
@@ -48,23 +46,25 @@ where
     }
 }
 
-pub struct JoinRW<'a, S1, S2>
+pub struct Join3<'a, A1, A2, A3>
 where
-    S1: 'a + Store,
-    S2: 'a + Store,
+    A1: 'a + Access<'a>,
+    A2: 'a + Access<'a>,
+    A3: 'a + Access<'a>,
 {
-    mask: JoinMask2<'a>,
-    value: (&'a S1, &'a mut S2),
+    mask: bitops::And3<'a, BitMaskBlock, A1::Mask, A2::Mask, A3::Mask>,
+    value: (A1::Store, A2::Store, A3::Store),
 }
 
-impl<'a, S1, S2> Join for JoinRW<'a, S1, S2>
+impl<'a, A1, A2, A3> Join for Join3<'a, A1, A2, A3>
 where
-    S1: 'a + Store,
-    S2: 'a + Store,
+    A1: 'a + Access<'a>,
+    A2: 'a + Access<'a>,
+    A3: 'a + Access<'a>,
 {
-    type Item = (usize, &'a S1::Item, &'a mut S2::Item);
-    type Mask = JoinMask2<'a>;
-    type Store = (&'a S1, &'a mut S2);
+    type Item = (usize, A1::Item, A2::Item, A3::Item);
+    type Mask = bitops::And3<'a, BitMaskBlock, A1::Mask, A2::Mask, A3::Mask>;
+    type Store = (A1::Store, A2::Store, A3::Store);
 
     fn open(&mut self) -> (&Self::Mask, &mut Self::Store) {
         (&self.mask, &mut self.value)
@@ -74,25 +74,30 @@ where
         unsafe {
             (
                 idx,
-                mem::transmute(store.0.get(idx)),
-                mem::transmute(store.1.get_mut(idx)),
+                A1::get(&mut store.0, idx),
+                A2::get(&mut store.1, idx),
+                A3::get(&mut store.2, idx),
             )
         }
     }
 }
 
-impl<'a, S1, S2> Joinable for (&'a SparseVector<S1>, &'a mut SparseVector<S2>)
+impl<'a, A1, A2, A3> Joinable<'a> for (A1, A2, A3)
 where
-    S1: 'a + Store,
-    S2: 'a + Store,
+    A1: 'a + Access<'a>,
+    A2: 'a + Access<'a>,
+    A3: 'a + Access<'a>,
 {
-    type Item = (usize, &'a S1::Item, &'a mut S2::Item);
-    type Join = JoinRW<'a, S1, S2>;
+    type Item = (usize, A1::Item, A2::Item, A3::Item);
+    type Join = Join3<'a, A1, A2, A3>;
 
     fn join(self) -> Self::Join {
-        JoinRW {
-            mask: bitops::and2(&self.0.mask, &self.1.mask),
-            value: (&self.0.store, &mut self.1.store),
+        let (m0, s0) = self.0.open();
+        let (m1, s1) = self.1.open();
+        let (m2, s2) = self.2.open();
+        Join3 {
+            mask: bitops::and3(m0, m1, m2),
+            value: (s0, s1, s2),
         }
     }
 }
