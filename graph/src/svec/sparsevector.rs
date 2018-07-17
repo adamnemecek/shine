@@ -1,6 +1,6 @@
 use std::mem;
 
-use bitset::{BitIter, BitMask, BitMaskBlock, BitSetLike};
+use bitset::{BitIter, BitMask, BitSetLike};
 
 pub trait Store {
     type Item;
@@ -15,64 +15,6 @@ pub trait Store {
     fn get_mut(&mut self, idx: usize) -> &mut Self::Item;
 }
 
-pub trait Access<'a> {
-    type Store: 'a;
-    type Item: 'a;
-    type Mask: 'a + BitSetLike<Bits = BitMaskBlock>;
-
-    fn open(&'a mut self) -> (&'a Self::Mask, Self::Store);
-    fn get(store: &mut Self::Store, idx: usize) -> Self::Item;
-}
-
-/// Wrapper for sparse vector to access non-mutable items.
-pub struct Read<'a, S: 'a + Store>(crate &'a SparseVector<S>);
-impl<'a, S: 'a + Store> Access<'a> for Read<'a, S> {
-    type Store = &'a S;
-    type Item = &'a S::Item;
-    type Mask = BitMask;
-
-    fn open(&'a mut self) -> (&'a Self::Mask, Self::Store) {
-        (&self.0.mask, &self.0.store)
-    }
-
-    fn get(store: &mut Self::Store, idx: usize) -> Self::Item {
-        store.get(idx)
-    }
-}
-
-/// Wrapper for sparse vector to access mutable items.
-pub struct Write<'a, S: 'a + Store>(crate &'a mut SparseVector<S>);
-impl<'a, S: 'a + Store> Access<'a> for Write<'a, S> {
-    type Store = &'a mut S;
-    type Item = &'a mut S::Item;
-    type Mask = BitMask;
-
-    fn open(&'a mut self) -> (&'a Self::Mask, Self::Store) {
-        (&self.0.mask, &mut self.0.store)
-    }
-
-    fn get(store: &mut Self::Store, idx: usize) -> Self::Item {
-        unsafe { mem::transmute(store.get_mut(idx)) }
-    }
-}
-
-/// Wrapper for sparse vector to access/add/remove items.
-pub struct Create<'a, S: 'a + Store>(crate &'a mut SparseVector<S>, BitMask);
-impl<'a, S: 'a + Store> Access<'a> for Create<'a, S> {
-    type Store = &'a mut SparseVector<S>;
-    type Item = Entry<'a, S>;
-    type Mask = BitMask; //BitSetTrue;
-
-    fn open(&'a mut self) -> (&'a Self::Mask, Self::Store) {
-        (&self.1, self.0)
-    }
-
-    fn get(store: &mut Self::Store, idx: usize) -> Self::Item {
-        store.entry(idx)
-    }
-}
-
-/// Sparse Vector
 pub struct SparseVector<S: Store> {
     crate nnz: usize,
     crate mask: BitMask,
@@ -151,18 +93,6 @@ impl<S: Store> SparseVector<S> {
 
     pub fn entry<'a>(&'a mut self, idx: usize) -> Entry<'a, S> {
         Entry::new(self, idx)
-    }
-
-    pub fn read<'a>(&'a self) -> Read<'a, S> {
-        Read(self)
-    }
-
-    pub fn write<'a>(&'a mut self) -> Write<'a, S> {
-        Write(self)
-    }
-
-    pub fn create<'a>(&'a mut self) -> Create<'a, S> {
-        Create(self, BitMask::new())
     }
 
     pub fn iter<'a>(&'a self) -> Iter<'a, S> {
