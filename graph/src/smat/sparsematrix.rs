@@ -1,4 +1,5 @@
-use bitset::{BitIter, BitMask, BitSetLike};
+use bitmask::BitMask;
+use bitset::{BitIter, BitSetLike};
 
 /// Sparse (Square) Row matrix to manage the indices of the non-zero items
 pub trait IndexMask {

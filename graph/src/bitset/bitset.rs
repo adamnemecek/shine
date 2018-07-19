@@ -192,8 +192,3 @@ pub type BitSetu16 = BitSet<u16>;
 pub type BitSetu32 = BitSet<u32>;
 pub type BitSetu64 = BitSet<u64>;
 pub type BitSetu128 = BitSet<u128>;
-
-/// The "fastest" bitset for graph algorithms
-/// TODO: banchmark and select the optimal.
-pub type BitMaskBlock = u32;
-pub type BitMask = BitSet<BitMaskBlock>;

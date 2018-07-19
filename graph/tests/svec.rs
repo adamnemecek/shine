@@ -133,6 +133,8 @@ fn svec_stress() {
 fn svec_join() {
     let _ = env_logger::try_init();
 
+    use join::*;
+
     let mut v1 = new_dvec::<Data>();
     let mut v2 = new_dvec::<Data>();
 
@@ -150,7 +152,19 @@ fn svec_join() {
     v2.add(31, 31);
     v2.add(32, 32);
 
-    trace!("merge and create tag");
+    for (id, e) in v1.read().iter() {
+        println!("read({}) = {:?}", id, e);
+    }
+
+    for (id, e) in v1.write().iter() {
+        println!("write({}) = {:?}", id, e);
+    }
+
+    /*for (id, e) in v1.create().iter() {
+        println!("create({}) = {:?}", id, e);
+    }*/
+
+    /*trace!("merge and create tag");
     {
         let mut t1 = new_tvec();
 
@@ -217,5 +231,5 @@ fn svec_join() {
             d3.acquire(*d1);
             *d2 -= *d1;
         }
-    }
+    }*/
 }

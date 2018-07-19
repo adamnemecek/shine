@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bitset::BitMask;
+use bitmask::BitMask;
 use smat::IndexMask;
 
 /// Compressed Sparse (Square) Row matrix.

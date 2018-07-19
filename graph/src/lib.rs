@@ -2,7 +2,8 @@
 #![feature(vec_resize_with)]
 #![feature(log_syntax, trace_macros)]
 #![feature(crate_visibility_modifier)]
-#![feature(custom_attribute)]
+//#![feature(custom_attribute)]
+#![feature(tool_attributes)]
 
 #[macro_use]
 extern crate log;
@@ -11,6 +12,7 @@ extern crate num_traits;
 
 extern crate shine_store as store;
 
+pub mod bitmask;
 pub mod bitset;
 pub mod smat;
 pub mod svec;
