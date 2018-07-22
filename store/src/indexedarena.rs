@@ -139,6 +139,12 @@ impl<T> IndexedArena<T> {
     }
 }
 
+impl<T> Default for IndexedArena<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> ops::Index<usize> for IndexedArena<T> {
     type Output = T;
 
@@ -178,7 +184,7 @@ impl<T> fmt::Debug for IndexedArena<T> {
         )?;
 
         write!(f, "[ ")?;
-        for v in self.items.iter() {
+        for v in &self.items {
             match v {
                 Entry::Vacant(id) => {
                     write!(f, "{} ", id)?;
@@ -189,7 +195,7 @@ impl<T> fmt::Debug for IndexedArena<T> {
             }
         }
         writeln!(f, "]")?;
-        writeln!(f, "")?;
+        writeln!(f)?;
         Ok(())
     }
 }

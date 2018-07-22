@@ -21,6 +21,12 @@ impl<T> ArenaStore<T> {
     }
 }
 
+impl<T> Default for ArenaStore<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Store for ArenaStore<T> {
     type Item = T;
 

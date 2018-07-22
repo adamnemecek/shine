@@ -50,6 +50,12 @@ impl CSIndexMask {
     }
 }
 
+impl Default for CSIndexMask {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IndexMask for CSIndexMask {
     fn clear(&mut self) {
         self.indices.clear();

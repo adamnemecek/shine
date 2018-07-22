@@ -1,5 +1,5 @@
 use bitmask::BitMask;
-use bitset::{BitIter, BitSetLike};
+use bits::{BitIter, BitSetLike};
 
 /// Sparse (Square) Row matrix to manage the indices of the non-zero items
 pub trait IndexMask {
@@ -34,9 +34,9 @@ impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
     pub fn new(mask: M, store: S) -> Self {
         SparseMatrix {
             nnz: 0,
-            mask: mask,
+            mask,
             outer_mask: BitMask::new(),
-            store: store,
+            store,
         }
     }
 
@@ -98,11 +98,11 @@ impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
         }
     }
 
-    pub fn entry<'a>(&'a mut self, r: usize, c: usize) -> Entry<'a, M, S> {
+    pub fn entry(&mut self, r: usize, c: usize) -> Entry<M, S> {
         Entry::new(self, r, c)
     }
 
-    pub fn outer_iter<'a>(&'a self) -> OuterIter<'a, M, S> {
+    pub fn outer_iter(&self) -> OuterIter<M, S> {
         OuterIter::new(self)
     }
 }
@@ -158,11 +158,11 @@ where
     M: 'a + IndexMask,
     S: 'a + Store,
 {
-    crate fn new<'b>(store: &'b mut SparseMatrix<M, S>, r: usize, c: usize) -> Entry<'b, M, S> {
+    crate fn new(store: &mut SparseMatrix<M, S>, r: usize, c: usize) -> Entry<M, S> {
         Entry {
             id: (r, c),
             data: store.get_mut(r, c).map(|d| d as *mut _),
-            store: store,
+            store,
         }
     }
 
@@ -173,7 +173,7 @@ where
 
     // Acquire the mutable non-zero data at the given slot.
     /// If data is zero the provided default value is used.
-    pub fn acquire<'b>(&'b mut self, item: S::Item) -> &'b mut S::Item {
+    pub fn acquire(&mut self, item: S::Item) -> &mut S::Item {
         self.acquire_with(|| item)
     }
 
@@ -186,7 +186,7 @@ where
 
     /// Acquire the mutable non-zero data at the given slot.
     /// If data is zero the non-zero value is created by the f function
-    pub fn acquire_with<'b, F: FnOnce() -> S::Item>(&'b mut self, f: F) -> &'b mut S::Item {
+    pub fn acquire_with<F: FnOnce() -> S::Item>(&mut self, f: F) -> &mut S::Item {
         if self.data.is_none() {
             self.store.add(self.id.0, self.id.1, f());
             self.data = self.store.get_mut(self.id.0, self.id.1).map(|d| d as *mut _);
@@ -202,7 +202,7 @@ where
     M: 'a + IndexMask,
     S: 'a + Store<Item = I>,
 {
-    pub fn acquire_default<'b>(&'b mut self) -> &'b mut S::Item {
+    pub fn acquire_default(&mut self) -> &mut S::Item {
         self.acquire_with(Default::default)
     }
 }

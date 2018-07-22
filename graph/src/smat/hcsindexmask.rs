@@ -29,6 +29,12 @@ impl HCSIndexMask {
     }
 }
 
+impl Default for HCSIndexMask {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IndexMask for HCSIndexMask {
     fn clear(&mut self) {
         self.indices.clear();

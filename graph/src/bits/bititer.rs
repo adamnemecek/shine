@@ -1,6 +1,6 @@
 use num_traits::{One, Zero};
 
-use bitset::{BitBlock, BitSetLike, MAX_LEVEL};
+use bits::{BitBlock, BitSetLike, MAX_LEVEL};
 
 /// Iterator over the set bits.
 pub struct BitIter<'a, B: 'a + BitSetLike> {
@@ -12,9 +12,9 @@ pub struct BitIter<'a, B: 'a + BitSetLike> {
 }
 
 impl<'a, B: BitSetLike> BitIter<'a, B> {
-    pub fn new<'b>(bitset: &'b B) -> BitIter<'b, B> {
+    pub fn new(bitset: &B) -> BitIter<B> {
         let mut iter = BitIter {
-            bitset: bitset,
+            bitset,
             masks: [B::Bits::zero(); MAX_LEVEL],
             prefixes: [0; MAX_LEVEL],
         };
@@ -32,7 +32,7 @@ impl<'a, B: BitSetLike> BitIter<'a, B> {
         loop {
             while self.masks[level].is_zero() {
                 // no bits in this block, move upward
-                level = level + 1;
+                level += 1;
                 if level >= lc {
                     // top reached and no more bits were found
                     return None;
@@ -52,7 +52,7 @@ impl<'a, B: BitSetLike> BitIter<'a, B> {
                 // bottom reached, prefix is the index of the set bit
                 return Some(prefix);
             }
-            level = level - 1;
+            level -= 1;
             self.masks[level] = self.bitset.get_block(level, prefix);
             self.prefixes[level] = prefix;
         }

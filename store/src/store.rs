@@ -166,9 +166,7 @@ unsafe impl<D> Sync for Store<D> {}
 impl<D> Store<D> {
     pub fn new() -> Store<D> {
         Store {
-            shared: RwLock::new(SharedData {
-                resources: Vec::new(),
-            }),
+            shared: RwLock::new(SharedData { resources: Vec::new() }),
             exclusive: Mutex::new(ExclusiveData {
                 arena: StableArena::new(),
                 requests: Vec::new(),
@@ -190,7 +188,7 @@ impl<D> Store<D> {
     }
 
     /// Returns a read locked access
-    pub fn read<'a>(&'a self) -> ReadGuard<'a, D> {
+    pub fn read(&self) -> ReadGuard<D> {
         let shared = self.shared.try_read().unwrap();
 
         ReadGuard {
@@ -200,14 +198,17 @@ impl<D> Store<D> {
     }
 
     /// Returns a write locked access
-    pub fn write<'a>(&'a self) -> WriteGuard<'a, D> {
+    pub fn write(&self) -> WriteGuard<D> {
         let shared = self.shared.try_write().unwrap();
         let exclusive = self.exclusive.lock().unwrap();
 
-        WriteGuard {
-            shared: shared,
-            exclusive: exclusive,
-        }
+        WriteGuard { shared, exclusive }
+    }
+}
+
+impl<D> Default for Store<D> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -317,11 +318,7 @@ impl<'a, D: 'a> WriteGuard<'a, D> {
     /// In other words, remove all unreferenced resources such that f(&mut data) returns true.
     pub fn drain_unused_filtered<F: FnMut(&mut D) -> bool>(&mut self, mut filter: F) {
         let exclusive = &mut *self.exclusive;
-        Self::drain_impl(
-            &mut exclusive.arena,
-            &mut self.shared.resources,
-            &mut filter,
-        );
+        Self::drain_impl(&mut exclusive.arena, &mut self.shared.resources, &mut filter);
         Self::drain_impl(&mut exclusive.arena, &mut exclusive.requests, &mut filter);
     }
 

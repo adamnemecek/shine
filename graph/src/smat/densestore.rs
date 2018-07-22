@@ -18,6 +18,12 @@ impl<T> DenseStore<T> {
     }
 }
 
+impl<T> Default for DenseStore<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Store for DenseStore<T> {
     type Item = T;
 

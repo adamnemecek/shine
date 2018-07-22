@@ -13,6 +13,6 @@ extern crate num_traits;
 extern crate shine_store as store;
 
 pub mod bitmask;
-pub mod bitset;
+pub mod bits;
 pub mod smat;
 pub mod svec;

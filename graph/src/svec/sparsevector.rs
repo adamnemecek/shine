@@ -2,8 +2,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
 use bitmask::{BitMask, BitMaskTrue};
-use bitset::{BitIter, BitSetLike};
-use svec::{DenseStore, HashStore, UnitStore};
+use bits::{BitIter, BitSetLike};
+use svec::join::{Create, Read, Write};
 
 pub trait Store {
     type Item;
@@ -18,29 +18,28 @@ pub trait Store {
     fn get_mut(&mut self, idx: usize) -> &mut Self::Item;
 }
 
-pub struct SparseVector<S>
-where
-    S: Store,
-{
-    nnz: usize,
-    mask: BitMask,
-    store: S,
+/// Sparse Vector
+pub struct SparseVector<S: Store> {
+    crate nnz: usize,
+    crate mask: BitMask,
+    crate store: S,
 }
 
-impl<S> SparseVector<S>
-where
-    S: Store,
-{
+impl<S: Store> SparseVector<S> {
     pub fn new(mask: BitMask, store: S) -> Self {
-        SparseVector {
-            nnz: 0,
-            mask: mask,
-            store: store,
-        }
+        SparseVector { nnz: 0, mask, store }
+    }
+
+    pub fn get_mask(&self) -> &BitMask {
+        &self.mask
     }
 
     pub fn nnz(&self) -> usize {
         self.nnz
+    }
+
+    pub fn is_zero(&self) -> bool {
+        self.nnz == 0
     }
 
     pub fn clear(&mut self) {
@@ -57,6 +56,10 @@ where
         } else {
             Some(self.store.replace(idx, value))
         }
+    }
+
+    pub fn add_with<F: FnOnce() -> S::Item>(&mut self, idx: usize, f: F) -> Option<S::Item> {
+        self.add(idx, f())
     }
 
     pub fn remove(&mut self, idx: usize) -> Option<S::Item> {
@@ -96,38 +99,46 @@ where
         }
     }
 
-    pub fn entry<'a>(&'a mut self, idx: usize) -> Entry<'a, S> {
+    pub fn entry(&mut self, idx: usize) -> Entry<S> {
         Entry::new(self, idx)
     }
 
-    pub fn iter<'a>(&'a self) -> Iter<'a, S> {
-        Iter::new(self)
+    pub fn read(&self) -> Read<S> {
+        Read(&self.mask, &self.store)
     }
 
-    pub fn iter_mut<'a>(&'a mut self) -> IterMut<'a, S> {
-        IterMut::new(self)
+    pub fn write(&mut self) -> Write<S> {
+        Write(&self.mask, &mut self.store)
     }
 
-    pub fn get_mask(&self) -> &BitMask {
-        &self.mask
+    pub fn create(&mut self) -> Create<S> {
+        Create(BitMaskTrue::new(), self)
     }
 
-    pub fn read<'a>(&'a self) -> Read<'a, S> {
-        Read(self)
+    pub fn iter(&self) -> Iter<S> {
+        Iter {
+            iterator: self.mask.iter(),
+            store: &self.store,
+        }
     }
 
-    pub fn write<'a>(&'a mut self) -> Write<'a, S> {
-        Write(self)
-    }
-
-    pub fn create<'a>(&'a mut self) -> Create<'a, S> {
-        Create(self, BitMaskTrue::new())
+    pub fn iter_mut(&mut self) -> IterMut<S> {
+        IterMut {
+            iterator: self.mask.iter(),
+            store: &mut self.store,
+        }
     }
 }
 
-pub struct Read<'a, S: 'a + Store>(crate &'a SparseVector<S>);
-pub struct Write<'a, S: 'a + Store>(crate &'a mut SparseVector<S>);
-pub struct Create<'a, S: 'a + Store>(crate &'a mut SparseVector<S>, crate BitMaskTrue);
+impl<I, S> SparseVector<S>
+where
+    I: Default,
+    S: Store<Item = I>,
+{
+    pub fn add_default(&mut self, idx: usize) -> Option<S::Item> {
+        self.add_with(idx, Default::default)
+    }
+}
 
 /// Iterate over the non-zero (non-mutable) elements of a vector
 pub struct Iter<'a, S>
@@ -136,18 +147,6 @@ where
 {
     iterator: BitIter<'a, BitMask>,
     store: &'a S,
-}
-
-impl<'a, S> Iter<'a, S>
-where
-    S: 'a + Store,
-{
-    fn new<'b>(vec: &'b SparseVector<S>) -> Iter<'b, S> {
-        Iter {
-            iterator: vec.mask.iter(),
-            store: &vec.store,
-        }
-    }
 }
 
 impl<'a, S> Iterator for Iter<'a, S>
@@ -171,18 +170,6 @@ where
     store: &'a mut S,
 }
 
-impl<'a, S> IterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    fn new<'b>(vec: &'b mut SparseVector<S>) -> IterMut<'b, S> {
-        IterMut {
-            iterator: vec.mask.iter(),
-            store: &mut vec.store,
-        }
-    }
-}
-
 impl<'a, S> Iterator for IterMut<'a, S>
 where
     S: 'a + Store,
@@ -201,7 +188,7 @@ pub struct Entry<'a, S>
 where
     S: 'a + Store,
 {
-    id: usize,
+    idx: usize,
     data: Option<*mut S::Item>,
     store: &'a mut SparseVector<S>,
 }
@@ -210,41 +197,46 @@ impl<'a, S> Entry<'a, S>
 where
     S: 'a + Store,
 {
-    fn new<'b>(store: &'b mut SparseVector<S>, idx: usize) -> Entry<'b, S> {
+    crate fn new<'b>(store: &'b mut SparseVector<S>, idx: usize) -> Entry<'b, S> {
         Entry {
-            id: idx,
+            idx,
             data: store.get_mut(idx).map(|d| d as *mut _),
-            store: store,
+            store,
         }
     }
 
+    /// Return the (immutable) non-zero data at the given slot. If data is zero, None is returned.
+    pub fn get(&self) -> Option<&S::Item> {
+        self.data.map(|d| unsafe { &*d })
+    }
+
     /// Return the (mutable) non-zero data at the given slot. If data is zero, None is returned.
-    pub fn get(&mut self) -> Option<&mut S::Item> {
+    pub fn get_mut(&mut self) -> Option<&mut S::Item> {
         self.data.map(|d| unsafe { &mut *d })
     }
 
     // Acquire the mutable non-zero data at the given slot.
     /// If data is zero the provided default value is used.
-    pub fn acquire<'b>(&'b mut self, item: S::Item) -> &'b mut S::Item {
+    pub fn acquire(&mut self, item: S::Item) -> &mut S::Item {
         self.acquire_with(|| item)
     }
 
     pub fn remove(&mut self) -> Option<S::Item> {
         match self.data.take() {
-            Some(_) => self.store.remove(self.id),
+            Some(_) => self.store.remove(self.idx),
             None => None,
         }
     }
 
     /// Acquire the mutable non-zero data at the given slot.
     /// If data is zero the non-zero value is created by the f function
-    pub fn acquire_with<'b, F: FnOnce() -> S::Item>(&'b mut self, f: F) -> &'b mut S::Item {
+    pub fn acquire_with<F: FnOnce() -> S::Item>(&mut self, f: F) -> &mut S::Item {
         if self.data.is_none() {
-            self.store.add(self.id, f());
-            self.data = self.store.get_mut(self.id).map(|d| d as *mut _);
+            self.store.add(self.idx, f());
+            self.data = self.store.get_mut(self.idx).map(|d| d as *mut _);
         }
 
-        self.get().unwrap()
+        self.get_mut().unwrap()
     }
 }
 
@@ -253,7 +245,7 @@ where
     I: Default,
     S: 'a + Store<Item = I>,
 {
-    pub fn acquire_default<'b>(&'b mut self) -> &'b mut S::Item {
+    pub fn acquire_default(&mut self) -> &mut S::Item {
         self.acquire_with(Default::default)
     }
 }
@@ -264,9 +256,11 @@ where
     S: 'a + Store<Item = I>,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{:?}", self.data)
+        write!(f, "{:?}", self.get())
     }
 }
+
+use svec::{DenseStore, HashStore, UnitStore};
 
 pub type SparseDVector<T> = SparseVector<DenseStore<T>>;
 pub fn new_dvec<T>() -> SparseDVector<T> {

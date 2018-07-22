@@ -46,11 +46,11 @@ fn svec_simple_<S: Store<Item = Data>>(mut vector: SparseVector<S>) {
             let mut tmp = vector.entry(16);
             assert_eq!(tmp.get(), None);
             assert_eq!(*tmp.acquire_with(|| 16), 16);
-            assert_eq!(tmp.get(), Some(&mut 16));
+            assert_eq!(tmp.get(), Some(&16));
         }
         assert_eq!(vector.get(16), Some(&16));
         assert_eq!(vector.nnz(), 3);
-        assert_eq!(vector.entry(16).get(), Some(&mut 16));
+        assert_eq!(vector.entry(16).get(), Some(&16));
         assert_eq!(vector.nnz(), 3);
 
         vector.add(17, 17);
@@ -64,7 +64,7 @@ fn svec_simple_<S: Store<Item = Data>>(mut vector: SparseVector<S>) {
         assert_eq!(vector.nnz(), 4);
         {
             let mut tmp = vector.entry(16);
-            assert_eq!(tmp.get(), Some(&mut 16));
+            assert_eq!(tmp.get(), Some(&16));
             assert_eq!(tmp.remove(), Some(16));
             assert_eq!(tmp.get(), None);
         }
@@ -152,17 +152,33 @@ fn svec_join() {
     v2.add(31, 31);
     v2.add(32, 32);
 
-    for (id, e) in v1.read().iter() {
-        println!("read({}) = {:?}", id, e);
+    {
+        let mut join = v2.read();
+        let mut it = join.iter();
+        while let Some((id, e)) = it.next() {
+            println!("read({}) = {:?}", id, e);
+        }
     }
 
-    for (id, e) in v1.write().iter() {
-        println!("write({}) = {:?}", id, e);
+    {
+        let mut join = v2.write();
+        let mut it = join.iter();
+        while let Some((id, e)) = it.next() {
+            *e += 1;
+            println!("write({}) = {:?}", id, e);
+        }
     }
 
-    /*for (id, e) in v1.create().iter() {
-        println!("create({}) = {:?}", id, e);
-    }*/
+    {
+        let mut join = v2.create();
+        let mut it = join.iter();
+        while let Some((id, e)) = it.next() {
+            println!("create({}) = {:?}", id, e);
+            if id > 32 {
+                break;
+            }
+        }
+    }
 
     /*trace!("merge and create tag");
     {
@@ -227,9 +243,11 @@ fn svec_join() {
         let mut t1 = new_dvec::<Data>();
         use join2::*;
 
-        for (id, d1, mut d2, mut d3) in (&v1, &mut v2, &mut t1).join().iter() {
+        for (id, d1, mut d2, mut d3) in (&v1, &mut v2, t1.create()).join().iter() {
             d3.acquire(*d1);
             *d2 -= *d1;
         }
+
+        for (id, d1, mut d2, mut d3) in (v1.read(), v2.write(), t1.create()).join().iter() {}
     }*/
 }

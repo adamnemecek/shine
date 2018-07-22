@@ -1,4 +1,4 @@
-use bitset::{bitconst, bitops, BitSet, BitSetLike};
+use bits::{bitconst, bitops, BitSet, BitSetLike};
 
 /// The "fastest" bitset for graph algorithms
 /// TODO: banchmark and select the optimal.
@@ -7,6 +7,7 @@ pub type BitMask = BitSet<BitMaskBlock>;
 pub type BitMaskTrue = bitconst::BitSetTrue<BitMaskBlock>;
 
 #[rustfmt::skip]
+#[allow(type_alias_bounds)]
 mod ops {
     use super::*;
     

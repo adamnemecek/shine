@@ -2,7 +2,7 @@ use num_traits::{PrimInt, ToPrimitive, Zero};
 use std::fmt;
 use std::marker::PhantomData;
 
-use bitset::BitIter;
+use bits::BitIter;
 
 //todo: use associated const and move it into BitBlock
 pub const MAX_LEVEL: usize = 11;
@@ -42,7 +42,7 @@ impl<B: BitBlock> BitPos<B> {
     pub fn from_pos(pos: usize) -> BitPos<B> {
         BitPos {
             level: 0,
-            pos: pos,
+            pos,
             ph: PhantomData,
         }
     }
@@ -85,7 +85,7 @@ pub trait BitSetLike {
         }
     }
 
-    fn iter<'a>(&'a self) -> BitIter<'a, Self>
+    fn iter(&self) -> BitIter<Self>
     where
         Self: Sized,
     {

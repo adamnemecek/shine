@@ -10,6 +10,12 @@ impl UnitStore {
     }
 }
 
+impl Default for UnitStore {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Store for UnitStore {
     type Item = ();
 

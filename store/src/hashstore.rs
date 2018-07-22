@@ -160,7 +160,7 @@ impl<K: Key, D: From<K>> ExclusiveData<K, D> {
     }
 
     /// Adds a new item to the store
-    fn get_or_add(&mut self, k: K) -> Index<K, D> {
+    fn get_or_add(&mut self, k: &K) -> Index<K, D> {
         let arena = &mut self.arena;
         let entry = self.requests.entry(k.clone()).or_insert_with(|| {
             let new_entry = arena.allocate(Entry {
@@ -212,24 +212,27 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
     }
 
     /// Returns a read locked access
-    pub fn read<'a>(&'a self) -> ReadGuard<'a, K, D> {
+    pub fn read(&self) -> ReadGuard<K, D> {
         let shared = self.shared.try_read().unwrap();
 
         ReadGuard {
-            shared: shared,
+            shared,
             exclusive: &self.exclusive,
         }
     }
 
     /// Returns a write locked access
-    pub fn write<'a>(&'a self) -> WriteGuard<'a, K, D> {
+    pub fn write(&self) -> WriteGuard<K, D> {
         let shared = self.shared.try_write().unwrap();
         let exclusive = self.exclusive.lock().unwrap();
 
-        WriteGuard {
-            shared: shared,
-            exclusive: exclusive,
-        }
+        WriteGuard { shared, exclusive }
+    }
+}
+
+impl<K: Key, D: From<K>> Default for HashStore<K, D> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -278,14 +281,14 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> ReadGuard<'a, K, D> {
         exclusive.get(k)
     }
 
-    pub fn get_or_add(&mut self, k: K) -> Index<K, D> {
-        let index = self.shared.get(&k);
+    pub fn get_or_add(&mut self, k: &K) -> Index<K, D> {
+        let index = self.shared.get(k);
         if !index.is_null() {
             return index;
         }
 
         let mut exclusive = self.exclusive.lock().unwrap();
-        exclusive.get_or_add(k)
+        exclusive.get_or_add(&k)
     }
 
     pub fn at(&self, index: &Index<K, D>) -> &D {
@@ -325,13 +328,13 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
         self.exclusive.get(k)
     }
 
-    pub fn get_or_add(&mut self, k: K) -> Index<K, D> {
-        let index = self.shared.get(&k);
+    pub fn get_or_add(&mut self, k: &K) -> Index<K, D> {
+        let index = self.shared.get(k);
         if !index.is_null() {
             return index;
         }
 
-        self.exclusive.get_or_add(k)
+        self.exclusive.get_or_add(&k)
     }
 
     /// Returns if the store is empty.
@@ -342,9 +345,7 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
     /// Merges the requests into the "active" items
     pub fn finalize_requests(&mut self) {
         // Move all resources into the stored resources
-        self.shared
-            .resources
-            .extend(&mut self.exclusive.requests.drain());
+        self.shared.resources.extend(&mut self.exclusive.requests.drain());
     }
 
     fn drain_impl<F: FnMut(&mut D) -> bool>(
@@ -370,11 +371,7 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
     /// In other words, remove all unreferenced resources such that f(&mut data) returns true.
     pub fn drain_unused_filtered<F: FnMut(&mut D) -> bool>(&mut self, mut filter: F) {
         let exclusive = &mut *self.exclusive;
-        Self::drain_impl(
-            &mut exclusive.arena,
-            &mut self.shared.resources,
-            &mut filter,
-        );
+        Self::drain_impl(&mut exclusive.arena, &mut self.shared.resources, &mut filter);
         Self::drain_impl(&mut exclusive.arena, &mut exclusive.requests, &mut filter);
     }
 

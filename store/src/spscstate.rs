@@ -40,8 +40,7 @@ impl<T: Default> TripleBuffer<T> {
 impl<T> TripleBuffer<T> {
     /// Gets the index of the buffer to produce
     fn get_produce_index(&self) -> usize {
-        let produce_index = (self.flags.load(Ordering::SeqCst) & 0x30) >> 4;
-        produce_index
+        (self.flags.load(Ordering::SeqCst) & 0x30) >> 4
     }
 
     /// Swaps consume and intermediate buffers and resets the new flag.
@@ -59,12 +58,10 @@ impl<T> TripleBuffer<T> {
             // clear the "new" bit and swap the indices of consume and intermediate buffers
             new_flags = (old_flags & 0x30) | ((old_flags & 0x3) << 2) | ((old_flags & 0xC) >> 2);
 
-            match self.flags.compare_exchange(
-                old_flags,
-                new_flags,
-                Ordering::SeqCst,
-                Ordering::Relaxed,
-            ) {
+            match self
+                .flags
+                .compare_exchange(old_flags, new_flags, Ordering::SeqCst, Ordering::Relaxed)
+            {
                 Ok(_) => break,
                 Err(x) => old_flags = x,
             }
@@ -78,15 +75,12 @@ impl<T> TripleBuffer<T> {
         let mut old_flags = self.flags.load(Ordering::Acquire);
         loop {
             // set the "new" bit and swap the indices of produce and intermediate buffers
-            let new_flags =
-                0x40 | ((old_flags & 0xC) << 2) | ((old_flags & 0x30) >> 2) | (old_flags & 0x3);
+            let new_flags = 0x40 | ((old_flags & 0xC) << 2) | ((old_flags & 0x30) >> 2) | (old_flags & 0x3);
 
-            match self.flags.compare_exchange(
-                old_flags,
-                new_flags,
-                Ordering::SeqCst,
-                Ordering::Relaxed,
-            ) {
+            match self
+                .flags
+                .compare_exchange(old_flags, new_flags, Ordering::SeqCst, Ordering::Relaxed)
+            {
                 Ok(_) => break,
                 Err(x) => old_flags = x,
             }

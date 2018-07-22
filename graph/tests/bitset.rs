@@ -10,7 +10,7 @@ use std::collections::HashSet;
 use permutohedron::Heap;
 use rand::Rng;
 
-use shine_graph::bitset::*;
+use shine_graph::bits::{bitops::BitOp, *};
 
 fn check_bitset<'a, B: BitSetLike>(bitset: &'a B, bits: &'a [usize]) {
     assert!(bitset.iter().eq(bits.iter().cloned()));
@@ -184,8 +184,10 @@ fn bitset_ops_<B: BitBlock>() {
 
     check_bitset(&bitops::or(&b1, &b2), &[0, 1, 10, 15, 17, 18]);
     check_bitset(&bitops::or(&b2, &b1), &[0, 1, 10, 15, 17, 18]);
+    check_bitset(&(&b2, &b1).or(), &[0, 1, 10, 15, 17, 18]);
     check_bitset(&bitops::and(&b1, &b2), &[10, 17]);
     check_bitset(&bitops::and(&b2, &b1), &[10, 17]);
+    check_bitset(&(&b2, &b1).and(), &[10, 17]);
 
     b1.add(2357);
     b1.add(2360);

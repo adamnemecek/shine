@@ -35,3 +35,9 @@ impl<T> StableArena<T> {
         self.size == 0
     }
 }
+
+impl<T> Default for StableArena<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}

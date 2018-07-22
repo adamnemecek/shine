@@ -18,11 +18,17 @@ impl<T> DenseStore<T> {
     }
 }
 
+impl<T> Default for DenseStore<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Store for DenseStore<T> {
     type Item = T;
 
     fn clear(&mut self) {
-        for v in self.values.iter_mut() {
+        for v in &mut self.values {
             *v = None;
         }
     }

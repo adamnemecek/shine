@@ -1,11 +1,17 @@
 use std::cmp;
 
-use bitset::{BitBlock, BitSetLike};
+use bits::{BitBlock, BitSetLike};
 
-/// Helper to find max of multiple elements
+/// Helper to find maximum of multiple elements
 macro_rules! max {
     ($x: expr) => ($x);
     ($x: expr, $($z: expr),+) => (cmp::max($x, max!($($z),*)));
+}
+
+/// Helper to find minimum of multiple elements
+macro_rules! min {
+    ($x: expr) => ($x);
+    ($x: expr, $($z: expr),+) => (cmp::min($x, min!($($z),*)));
 }
 
 /// Macro to define AND operation on N BitSetLike object
@@ -29,6 +35,7 @@ macro_rules! bitop_and {
             /// Creaes a bitwise AND of BitSetLike objects.
             /// Mainly for internal use, prefer $op_fun instead.
             #[allow(non_snake_case)]
+            #[allow(too_many_arguments)]
             pub fn new($($arg: &'a $arg),*) -> Self {
                 Self {
                     $($arg: $arg),*
@@ -48,7 +55,7 @@ macro_rules! bitop_and {
             }
 
             fn get_level_count(&self) -> usize {
-                max!($(self.$arg.get_level_count()),*)
+                min!($(self.$arg.get_level_count()),*)
             }
 
             fn get_block(&self, level: usize, block: usize) -> Self::Bits {
@@ -58,6 +65,7 @@ macro_rules! bitop_and {
 
         /// Create a bitwise AND of BitSetLike objects
         #[allow(non_snake_case)]
+        #[allow(too_many_arguments)]
         pub fn $op_fun<'a, B, $($arg),*>($($arg: &'a $arg),*) -> $op<'a, B, $($arg),*>
         where
             B: BitBlock,
@@ -109,6 +117,7 @@ macro_rules! bitop_or {
             /// Creaes a bitwise OR of BitSetLike objects.
             /// Mainly for internal use, prefer $op_fun instead.
             #[allow(non_snake_case)]
+            #[allow(too_many_arguments)]
             pub fn new($($arg: &'a $arg),*) -> Self {
                 Self {
                     $($arg: $arg),*
@@ -138,6 +147,7 @@ macro_rules! bitop_or {
 
         /// Create a bitwise OR of BitSetLike objects
         #[allow(non_snake_case)]
+        #[allow(too_many_arguments)]
         pub fn $op_fun<'a, B, $($arg),*>($($arg: &'a $arg),*) -> $op<'a, B, $($arg),*>
         where
             B: BitBlock,
@@ -145,6 +155,7 @@ macro_rules! bitop_or {
         {
             $op::new($($arg),*)
         }
+
     };
 }
 
@@ -166,4 +177,28 @@ where
     R: 'a + BitSetLike<Bits = B>,
 {
     or2(left, right)
+}
+
+pub trait BitOp<B: BitBlock> {
+    type BitSetAnd: BitSetLike<Bits = B>;
+    fn and(self) -> Self::BitSetAnd;
+
+    type BitSetOr: BitSetLike<Bits = B>;
+    fn or(self) -> Self::BitSetOr;
+}
+
+impl<'a, B: BitBlock, S0, S1> BitOp<B> for (&'a S0, &'a S1)
+where
+    S0: 'a + BitSetLike<Bits = B>,
+    S1: 'a + BitSetLike<Bits = B>,
+{
+    type BitSetAnd = And2<'a, B, S0, S1>;
+    fn and(self) -> Self::BitSetAnd {
+        and2(self.0, self.1)
+    }
+
+    type BitSetOr = Or2<'a, B, S0, S1>;
+    fn or(self) -> Self::BitSetOr {
+        or2(self.0, self.1)
+    }
 }

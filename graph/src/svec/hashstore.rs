@@ -18,6 +18,12 @@ impl<T> HashStore<T> {
     }
 }
 
+impl<T> Default for HashStore<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T> Store for HashStore<T> {
     type Item = T;
 
@@ -38,6 +44,7 @@ impl<T> Store for HashStore<T> {
     }
 
     fn get(&self, idx: usize) -> &Self::Item {
+        #[allow(get_unwrap)]
         self.values.get(&idx).unwrap()
     }
 
