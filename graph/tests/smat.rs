@@ -1,3 +1,5 @@
+#![cfg(ignore)]
+
 extern crate shine_graph;
 #[macro_use]
 extern crate log;

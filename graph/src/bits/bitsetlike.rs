@@ -73,7 +73,29 @@ pub trait BitSetLike {
     fn is_empty(&self) -> bool;
     fn get_level_count(&self) -> usize;
     fn get_block(&self, level: usize, block: usize) -> Self::Bits;
+}
 
+impl<'a, B, T> BitSetLike for &'a T
+where
+    B: BitBlock,
+    T: BitSetLike<Bits = B>,
+{
+    type Bits = B;
+
+    fn is_empty(&self) -> bool {
+        (*self).is_empty()
+    }
+
+    fn get_level_count(&self) -> usize {
+        (*self).get_level_count()
+    }
+
+    fn get_block(&self, level: usize, block: usize) -> Self::Bits {
+        (*self).get_block(level, block)
+    }
+}
+
+pub trait BitSetLikeExt: BitSetLike {
     fn get(&self, pos: usize) -> bool {
         if self.is_empty() {
             false
@@ -110,3 +132,5 @@ pub trait BitSetLike {
         Ok(res)
     }
 }
+
+impl<T: ?Sized> BitSetLikeExt for T where T: BitSetLike {}

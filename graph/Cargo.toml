@@ -15,8 +15,10 @@ num-traits = "*"
 arrayvec = "*"
 
 shine-store = {path = "../store"}
+shine-graph-macro = {path = "../graph-macro"}
 
 [dev-dependencies]
 env_logger = "*"
 rand = "*"
 permutohedron = "*"
+

@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use std::slice;
 
-use bits::{BitBlock, BitPos, BitSetLike, MAX_LEVEL};
+use bits::{BitBlock, BitPos, BitSetLike, BitSetLikeExt, MAX_LEVEL};
 
 /// Hierarchical bitset.
 /// Each level indicates if any bit is set in the subtree.

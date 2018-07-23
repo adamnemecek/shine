@@ -64,7 +64,8 @@ pub trait Join<'a> {
     type Mask: 'a + BitSetLike<Bits = BitMaskBlock>;
     type StoreAccess: 'a + StoreAccess<'a>;
 
-    fn open(&'a mut self) -> (&Self::Mask, Self::StoreAccess);
+    fn into_parts(self) -> (Self::Mask, Self::StoreAccess);
+    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess);
 }
 
 /// Extension methods for Join trait.
@@ -109,7 +110,7 @@ where
     J: 'a + Join<'a>,
 {
     iterator: BitIter<'a, J::Mask>,
-    access: J::StoreAccess,
+    access: &'a mut J::StoreAccess,
 }
 
 impl<'a, J> JoinIter<'a, J>
@@ -117,7 +118,7 @@ where
     J: 'a + Join<'a>,
 {
     pub fn new(join: &'a mut J) -> JoinIter<J> {
-        let (mask, access) = join.open();
+        let (mask, access) = join.parts();
         JoinIter {
             iterator: mask.iter(),
             access,
@@ -139,11 +140,15 @@ impl<'a, S> Join<'a> for Read<'a, S>
 where
     S: Store,
 {
-    type Mask = BitMask;
+    type Mask = AsRef<BitMask>;
     type StoreAccess = &'a S;
 
-    fn open(&'a mut self) -> (&Self::Mask, Self::StoreAccess) {
+    fn into_parts(self) -> (Self::Mask, Self::StoreAccess) {
         (self.0, self.1)
+    }
+
+    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess) {
+        (&self.0, self.1)
     }
 }
 
@@ -157,8 +162,12 @@ where
     type Mask = BitMask;
     type StoreAccess = &'a mut S;
 
-    fn open(&'a mut self) -> (&Self::Mask, Self::StoreAccess) {
+    fn into_parts(self) -> (Self::Mask, Self::StoreAccess) {
         (self.0, self.1)
+    }
+
+    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess) {
+        (&self.0, self.1)
     }
 }
 
@@ -172,7 +181,11 @@ where
     type Mask = BitMaskTrue;
     type StoreAccess = &'a mut SparseVector<S>;
 
-    fn open(&'a mut self) -> (&Self::Mask, Self::StoreAccess) {
+    fn into_parts(self) -> (Self::Mask, Self::StoreAccess) {
+        (self.0, self.1)
+    }
+
+    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess) {
         (&self.0, self.1)
     }
 }
@@ -194,8 +207,12 @@ where
     type Mask = bitops::And2<'a, BitMaskBlock, J0::Mask, J1::Mask>;
     type StoreAccess = &'a mut (J0::StoreAccess, J1::StoreAccess);
 
-    fn open(&'a mut self) -> (&Self::Mask, Self::StoreAccess) {
-        (&self.mask, &mut self.store)
+    fn into_parts(self) -> (Self::Mask, Self::StoreAccess) {
+        (self.0, self.1)
+    }
+
+    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess) {
+        (&self.0, self.1)
     }
 }
 
@@ -213,8 +230,8 @@ where
     type Join = Join2<'a, J0, J1>;
 
     fn join(self) -> Self::Join {
-        let (m0, a0) = self.0.open();
-        let (m1, a1) = self.1.open();
+        let (m0, a0) = self.0.into_parts();
+        let (m1, a1) = self.1.into_parts();
         Join2 {
             mask: bitops::and2(m0, m1),
             store: (a0, a1),

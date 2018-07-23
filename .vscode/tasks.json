@@ -63,6 +63,19 @@
             "problemMatcher": [
                 "$rustc"
             ]
-        }
+        },
+        {
+            "type": "shell",
+            "label": "macros",
+            "command": "cargo",
+            "args": [
+                "build",
+                "-p",
+                "shine-graph-macro",
+            ],
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
     ]
 }
