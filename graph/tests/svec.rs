@@ -183,10 +183,13 @@ fn svec_join() {
         use join::*;
         let mut t1 = new_tvec();
 
-        let mut join = (v2.write(), v1.read()).join();
+        let mut join = (v2.write(), v1.read(), t1.create()).join();
         let mut it = join.iter();
-        while let Some((id, (mut e1, e2 /*, mut e3*/))) = it.next() {
-            println!("join({}) = {:?},{:?}", id, e1, e2 /*, e3*/);
+        while let Some((id, (mut e1, e2, mut e3))) = it.next() {
+            if *e1 % 2 == 1 {
+                e3.acquire_default();
+            }
+            println!("join({}) = {:?},{:?},{:?}", id, e1, e2, e3);
         }
     }
 }

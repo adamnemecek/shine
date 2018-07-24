@@ -154,6 +154,7 @@ where
     S: 'a + Store,
 {
     type Item = (usize, &'a S::Item);
+
     fn next(&mut self) -> Option<Self::Item> {
         self.iterator
             .next()

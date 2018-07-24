@@ -28,7 +28,7 @@ pub fn impl_store_access_tuple(input: TokenStream) -> TokenStream {
 mod joinable;
 #[proc_macro]
 pub fn impl_joinable_tuple(input: TokenStream) -> TokenStream {
-    joinable::impl_joinable_tuple(input)
+    joinable::impl_joinable_tuple_macro(input)
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }

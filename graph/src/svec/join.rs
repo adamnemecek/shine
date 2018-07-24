@@ -95,19 +95,5 @@ pub trait Joinable {
     fn join(self) -> Join<Self::Mask, Self::Store>;
 }
 
-impl<M0, S0, M1, S1> Joinable for (Join<M0, S0>, Join<M1, S1>)
-where
-    M0: BitSetView<Bits = BitMaskBlock>,
-    S0: StoreAccess,
-    M1: BitSetView<Bits = BitMaskBlock>,
-    S1: StoreAccess,
-{
-    type Mask = bitops::And2<BitMaskBlock, M0, M1>;
-    type Store = (S0, S1);
-
-    fn join(self) -> Join<Self::Mask, Self::Store> {
-        let (m0, a0) = self.0.into_parts();
-        let (m1, a1) = self.1.into_parts();
-        Join::new((m0, m1).and(), (a0, a1))
-    }
-}
+use shine_graph_macro::impl_joinable_tuple;
+impl_joinable_tuple!{(2,3,4,5,6,7,8,9,10)}
