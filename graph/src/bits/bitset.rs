@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use std::slice;
 
-use bits::{BitBlock, BitPos, BitSetLike, BitSetLikeExt, MAX_LEVEL};
+use bits::{BitBlock, BitPos, BitSetView, BitSetViewExt, MAX_LEVEL};
 
 /// Hierarchical bitset.
 /// Each level indicates if any bit is set in the subtree.
@@ -164,7 +164,7 @@ impl<B: BitBlock> Default for BitSet<B> {
     }
 }
 
-impl<B: BitBlock> BitSetLike for BitSet<B> {
+impl<B: BitBlock> BitSetView for BitSet<B> {
     type Bits = B;
 
     fn is_empty(&self) -> bool {

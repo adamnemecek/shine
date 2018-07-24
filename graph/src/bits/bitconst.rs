@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use bits::{BitBlock, BitSetLike, MAX_LEVEL};
+use bits::{BitBlock, BitSetView, MAX_LEVEL};
 
 pub struct BitSetTrue<B: BitBlock>(PhantomData<B>);
 
@@ -16,7 +16,7 @@ impl<B: BitBlock> Default for BitSetTrue<B> {
     }
 }
 
-impl<B: BitBlock> BitSetLike for BitSetTrue<B> {
+impl<B: BitBlock> BitSetView for BitSetTrue<B> {
     type Bits = B;
 
     fn is_empty(&self) -> bool {

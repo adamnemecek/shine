@@ -1,35 +1,10 @@
-use num_traits::{PrimInt, ToPrimitive, Zero};
 use std::fmt;
 use std::marker::PhantomData;
 
-use bits::BitIter;
+use bits::{BitBlock, BitIter};
+use num_traits::{ToPrimitive, Zero};
 
-//todo: use associated const and move it into BitBlock
 pub const MAX_LEVEL: usize = 11;
-
-pub trait BitBlock: PrimInt {
-    fn bit_count() -> usize {
-        Self::zero().count_zeros() as usize
-    }
-
-    fn bit_shift() -> usize {
-        Self::bit_count().trailing_zeros() as usize
-    }
-
-    fn bit_mask() -> usize {
-        Self::bit_count() - 1
-    }
-
-    fn trailing_bit_pos(&self) -> usize {
-        self.trailing_zeros() as usize
-    }
-}
-
-impl BitBlock for u8 {}
-impl BitBlock for u16 {}
-impl BitBlock for u32 {}
-impl BitBlock for u64 {}
-impl BitBlock for u128 {}
 
 /// Index a bit at a given level
 pub struct BitPos<B: BitBlock> {
@@ -67,7 +42,7 @@ impl<B: BitBlock> BitPos<B> {
     }
 }
 
-pub trait BitSetLike {
+pub trait BitSetView {
     type Bits: BitBlock;
 
     fn is_empty(&self) -> bool;
@@ -75,10 +50,10 @@ pub trait BitSetLike {
     fn get_block(&self, level: usize, block: usize) -> Self::Bits;
 }
 
-impl<'a, B, T> BitSetLike for &'a T
+impl<'a, B, T> BitSetView for &'a T
 where
     B: BitBlock,
-    T: BitSetLike<Bits = B>,
+    T: BitSetView<Bits = B>,
 {
     type Bits = B;
 
@@ -95,7 +70,7 @@ where
     }
 }
 
-pub trait BitSetLikeExt: BitSetLike {
+pub trait BitSetViewExt: BitSetView {
     fn get(&self, pos: usize) -> bool {
         if self.is_empty() {
             false
@@ -133,4 +108,4 @@ pub trait BitSetLikeExt: BitSetLike {
     }
 }
 
-impl<T: ?Sized> BitSetLikeExt for T where T: BitSetLike {}
+impl<T: ?Sized> BitSetViewExt for T where T: BitSetView {}

@@ -1,5 +1,4 @@
-use hibitset::{BitSet, BitSetLike, BitIter};
-
+use hibitset::{BitIter, BitSet, BitSetView};
 
 /// Helper to drain all the bits in a bitset.
 pub struct DrainBitSetLike<'a> {
@@ -30,7 +29,6 @@ impl<'a> Drop for DrainBitSetLike<'a> {
         unsafe { (*self.bitset).clear() };
     }
 }
-
 
 /// Helper to store empty slots in dense containers.
 pub enum DenseEntry<T> {

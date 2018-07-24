@@ -4,18 +4,17 @@ use syn;
 
 enum Op {
     And,
-    Or
+    Or,
 }
 
 fn bitop_impl(count: usize, op: Op) -> TokenStream {
-    let (type_name, fn_name) = 
-    match op {
-        Op::And => ("And","and"),
-        Op::Or => ("Or","or"),
+    let (type_name, fn_name) = match op {
+        Op::And => ("And", "and"),
+        Op::Or => ("Or", "or"),
     };
 
     let type_ident = syn::Ident::new(&format!("{}{}", type_name, count), Span::call_site());
-    let fn_ident = syn::Ident::new(&format!("{}{}", fn_name, count), Span::call_site());    
+    let fn_ident = syn::Ident::new(&format!("{}{}", fn_name, count), Span::call_site());
 
     let generics: Vec<_> = (0..count)
         .map(|id| syn::Ident::new(&format!("S{}", id), Span::/*def*/call_site()))
@@ -24,16 +23,20 @@ fn bitop_impl(count: usize, op: Op) -> TokenStream {
 
     let members: Vec<_> = (0..count)
         .map(|id| syn::Ident::new(&format!("set_{}", id), Span::/*def*/call_site()))
-       .collect();
+        .collect();
     let members = &members;
 
-    let ( empty, get_level_count, get_block) = {    
-        let (mut empty,mut get_level_count, mut get_block) = {
+    let (empty, get_level_count, get_block) = {
+        let (mut empty, mut get_level_count, mut get_block) = {
             let m = &members[0];
-            (quote!{ self.#m.is_empty() }, quote!{ self.#m.get_level_count() }, quote!{ self.#m.get_block(level, block) })
+            (
+                quote!{ self.#m.is_empty() },
+                quote!{ self.#m.get_level_count() },
+                quote!{ self.#m.get_block(level, block) },
+            )
         };
         let mut i = 1;
-        while i < count {            
+        while i < count {
             let m = &members[i];
 
             match op {
@@ -41,13 +44,13 @@ fn bitop_impl(count: usize, op: Op) -> TokenStream {
                     empty = quote!{ #empty || self.#m.is_empty() };
                     get_level_count = quote!{ cmp::min( self.#m.get_level_count(), #get_level_count ) };
                     get_block = quote!{ #get_block & self.#m.get_block(level, block) };
-                },
-            
+                }
+
                 Op::Or => {
                     empty = quote!{ #empty && self.#m.is_empty() };
                     get_level_count = quote!{ cmp::max( self.#m.get_level_count(), #get_level_count ) };
                     get_block = quote!{ #get_block | self.#m.get_block(level, block) };
-                },
+                }
             }
 
             i += 1;
@@ -60,7 +63,7 @@ fn bitop_impl(count: usize, op: Op) -> TokenStream {
         pub struct #type_ident<B, #(#generics),*>
         where
             B: BitBlock,
-            #(#generics : BitSetLike<Bits = B>,)*
+            #(#generics : BitSetView<Bits = B>,)*
         {
             #(#members: #generics,)*
         }
@@ -68,18 +71,18 @@ fn bitop_impl(count: usize, op: Op) -> TokenStream {
         impl<B, #(#generics),*> #type_ident<B, #(#generics),*>
         where
             B: BitBlock,
-            #(#generics : BitSetLike<Bits = B>,)*
+            #(#generics : BitSetView<Bits = B>,)*
         {
-            /// Creates a bitwise #fn_name of BitSetLike objects.
+            /// Creates a bitwise #fn_name of BitSetView objects.
             pub fn new( #(#members: #generics),* ) -> Self {
                 Self{#(#members,)*}
             }
         }
 
-        impl<B, #(#generics),*> BitSetLike for #type_ident<B, #(#generics),*>
+        impl<B, #(#generics),*> BitSetView for #type_ident<B, #(#generics),*>
         where
             B: BitBlock,
-            #(#generics : BitSetLike<Bits = B>,)*
+            #(#generics : BitSetView<Bits = B>,)*
         {
             type Bits = B;
 
@@ -96,11 +99,11 @@ fn bitop_impl(count: usize, op: Op) -> TokenStream {
             }
         }
 
-        /// Create a bitwise #fn_name of BitSetLike objects
+        /// Create a bitwise #fn_name of BitSetView objects
         pub fn #fn_ident<B, #(#generics),*>( #(#members: #generics),* ) -> #type_ident<B, #(#generics),*>
         where
             B: BitBlock,
-            #(#generics : BitSetLike<Bits = B>,)*
+            #(#generics : BitSetView<Bits = B>,)*
         {
             #type_ident::new(#(#members),*)
         }
@@ -110,7 +113,6 @@ fn bitop_impl(count: usize, op: Op) -> TokenStream {
 }
 
 fn bitop_tuple_impl(count: usize) -> TokenStream {
-
     let and_type = syn::Ident::new(&format!("And{}", count), Span::call_site());
     let or_type = syn::Ident::new(&format!("Or{}", count), Span::call_site());
 
@@ -121,14 +123,14 @@ fn bitop_tuple_impl(count: usize) -> TokenStream {
 
     let index: Vec<_> = (0..count)
         .map(|id| syn::LitInt::new(id as u64, syn::IntSuffix::None, Span::/*def*/call_site()))
-    .collect();
+        .collect();
     let index = &index;
 
     let type_impl = quote!{
-        impl<B, #(#generics),*> BitOp<B> for (#(#generics,)*) 
+        impl<B, #(#generics),*> BitOp<B> for (#(#generics,)*)
         where
             B: BitBlock,
-            #(#generics : BitSetLike<Bits = B>,)*
+            #(#generics : BitSetView<Bits = B>,)*
         {
             type And = #and_type<B, #(#generics),*>;
             fn and(self) -> Self::And {
@@ -150,7 +152,7 @@ pub fn impl_bitops_macro(input: proc_macro::TokenStream) -> Result<TokenStream, 
 
     let mut ops = Vec::new();
 
-    for expr in  tuple.elems {
+    for expr in tuple.elems {
         if let syn::Expr::Lit(expr) = expr {
             if let syn::Lit::Int(lit) = expr.lit {
                 let count = lit.value();
@@ -161,19 +163,20 @@ pub fn impl_bitops_macro(input: proc_macro::TokenStream) -> Result<TokenStream, 
                 ops.push(and_type);
                 ops.push(or_type);
                 ops.push(bitop);
+            } else {
+                /* expr.lit
+                    .span()
+                    .error(format!("Invalid literal, tuple of integers required"))
+                    .emit();*/
             }
-            else {
-                return Err(format!("Invalid literal."));
-            }
-        }
-        else {
-            return Err(format!("Invalid expression."));
+        } else {
+            /*expr.span()
+                .error(format!("Invalid expression, tuple of integers required."))
+                .emit();*/
         }
     }
 
-    Ok(
-        quote!{
-            #(#ops)*
-        }.into()
-    )
+    Ok(quote!{
+        #(#ops)*
+    }.into())
 }

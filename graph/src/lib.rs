@@ -14,8 +14,7 @@ extern crate num_traits;
 extern crate shine_graph_macro;
 extern crate shine_store as store;
 
-//pub mod bitmask;
+pub mod bitmask;
 pub mod bits;
-/*pub mod smat;
+//pub mod smat;
 pub mod svec;
-*/

@@ -8,6 +8,12 @@
             "args": [
                 "build",
             ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            }
             "problemMatcher": [
                 "$rustc"
             ]
@@ -21,6 +27,12 @@
                 "-p",
                 "shine-tools",
             ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            }
             "problemMatcher": [
                 "$rustc"
             ]
@@ -34,6 +46,12 @@
                 "-p",
                 "shine-graph",
             ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            }
             "problemMatcher": [
                 "$rustc"
             ]
@@ -49,6 +67,12 @@
                 "--",
                 "--nocapture",
             ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            }
             "problemMatcher": [
                 "$rustc"
             ]
@@ -60,6 +84,12 @@
             "args": [
                 "clippy",
             ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            }
             "problemMatcher": [
                 "$rustc"
             ]
@@ -73,6 +103,12 @@
                 "-p",
                 "shine-graph-macro",
             ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            }
             "problemMatcher": [
                 "$rustc"
             ]

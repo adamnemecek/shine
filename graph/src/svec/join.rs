@@ -1,240 +1,113 @@
-use std::mem;
-
 use bitmask::{BitMask, BitMaskBlock, BitMaskTrue};
-use bits::{bitops, BitIter, BitSetLike};
-use svec::{Entry, SparseVector, Store};
+use bits::bitops::{self, BitOp};
+use bits::{BitIter, BitSetView, BitSetViewExt};
+use svec::{SparseVector, StoreAccess};
 
-pub trait StoreAccess<'a> {
-    type Item: 'a;
-
-    unsafe fn access(&mut self, idx: usize) -> Self::Item;
-}
-
-impl<'a, S> StoreAccess<'a> for &'a S
+pub struct Join<M, S>
 where
-    S: Store,
+    M: BitSetView<Bits = BitMaskBlock>,
+    S: StoreAccess,
 {
-    type Item = &'a S::Item;
-
-    #[inline]
-    unsafe fn access(&mut self, idx: usize) -> Self::Item {
-        self.get(idx)
-    }
+    mask: M,
+    store: S,
 }
 
-impl<'a, S> StoreAccess<'a> for &'a mut S
+impl<M, S> Join<M, S>
 where
-    S: Store,
+    M: BitSetView<Bits = BitMaskBlock>,
+    S: StoreAccess,
 {
-    type Item = &'a mut S::Item;
-
-    #[inline]
-    unsafe fn access(&mut self, idx: usize) -> Self::Item {
-        mem::transmute(self.get_mut(idx))
-    }
-}
-
-impl<'a, S> StoreAccess<'a> for &'a mut SparseVector<S>
-where
-    S: Store,
-{
-    type Item = Entry<'a, S>;
-
-    #[inline]
-    unsafe fn access(&mut self, idx: usize) -> Self::Item {
-        mem::transmute(self.entry(idx))
-    }
-}
-
-impl<'a, 'b: 'a, A0, A1> StoreAccess<'a> for &'b mut (A0, A1)
-where
-    A0: 'a + StoreAccess<'a>,
-    A1: 'a + StoreAccess<'a>,
-{
-    type Item = (A0::Item, A1::Item);
-
-    #[inline]
-    unsafe fn access(&mut self, idx: usize) -> Self::Item {
-        (self.0.access(idx), self.1.access(idx))
-    }
-}
-
-/// SparseVector like object created by joining SparseVector
-pub trait Join<'a> {
-    type Mask: 'a + BitSetLike<Bits = BitMaskBlock>;
-    type StoreAccess: 'a + StoreAccess<'a>;
-
-    fn into_parts(self) -> (Self::Mask, Self::StoreAccess);
-    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess);
-}
-
-/// Extension methods for Join trait.
-pub trait JoinExt<'a>: Join<'a> {
-    /*fn get_mask(&mut self) -> &Self::Mask {
-        self.open().0
+    pub fn new(mask: M, store: S) -> Self {
+        Self { mask, store }
     }
 
-    fn get_access(&mut self) -> Self::StoreAccess {
-        self.open().1
+    pub fn parts(&mut self) -> (&M, &mut S) {
+        (&self.mask, &mut self.store)
     }
 
-    fn contains(&self, idx: usize) -> bool {
-        self.get_mask().get(idx)
+    pub fn into_parts(self) -> (M, S) {
+        (self.mask, self.store)
     }
 
-    fn get_unchecked(&self, idx: usize) -> <Self::StoreAccess as StoreAccess>::Item {
-        self.get_access().access(idx)
+    pub fn contains(&self, idx: usize) -> bool {
+        self.mask.get(idx)
     }
 
-    fn get(&self, idx: usize) -> Option<<Self::StoreAccess as StoreAccess>::Item> {
-        let (m, a) = self.open();
-        if m.get(idx) {
-            Some(a.access(idx))
+    pub fn get_unchecked(&mut self, idx: usize) -> S::Item {
+        unsafe { self.store.access(idx) }
+    }
+
+    pub fn get(&mut self, idx: usize) -> Option<S::Item> {
+        if self.contains(idx) {
+            Some(self.get_unchecked(idx))
         } else {
             None
         }
     }
-*/
-    fn iter(&'a mut self) -> JoinIter<'a, Self>
+
+    pub fn iter(&mut self) -> JoinIter<M, S>
     where
         Self: Sized,
     {
         JoinIter::new(self)
     }
 }
-impl<'a, T: ?Sized> JoinExt<'a> for T where T: Join<'a> {}
 
 /// Iterate over the non-zero (non-mutable) elements of a vector
-pub struct JoinIter<'a, J>
+pub struct JoinIter<'a, M, S>
 where
-    J: 'a + Join<'a>,
+    M: 'a + BitSetView<Bits = BitMaskBlock>,
+    S: 'a + StoreAccess,
 {
-    iterator: BitIter<'a, J::Mask>,
-    access: &'a mut J::StoreAccess,
+    iterator: BitIter<'a, M>,
+    store: &'a mut S,
 }
 
-impl<'a, J> JoinIter<'a, J>
+impl<'a, M, S> JoinIter<'a, M, S>
 where
-    J: 'a + Join<'a>,
+    M: 'a + BitSetView<Bits = BitMaskBlock>,
+    S: 'a + StoreAccess,
 {
-    pub fn new(join: &'a mut J) -> JoinIter<J> {
-        let (mask, access) = join.parts();
+    pub fn new(join: &'a mut Join<M, S>) -> JoinIter<M, S> {
+        let (mask, store) = join.parts();
         JoinIter {
             iterator: mask.iter(),
-            access,
+            store,
         }
     }
 
     #[allow(should_implement_trait)]
-    pub fn next(&mut self) -> Option<(usize, <J::StoreAccess as StoreAccess<'a>>::Item)> {
-        self.iterator
-            .next()
-            .map(|idx| (idx, unsafe { self.access.access(idx) }))
+    pub fn next(&mut self) -> Option<(usize, S::Item)> {
+        self.iterator.next().map(|idx| (idx, unsafe { self.store.access(idx) }))
     }
 }
 
 /// Wrapper to access non-zero elements immutable of a sparse vector during join.
-pub struct Read<'a, S: 'a + Store>(crate &'a BitMask, crate &'a S);
+pub type Read<'a, S> = Join<&'a BitMask, &'a S>;
+pub type Write<'a, S> = Join<&'a BitMask, &'a mut S>;
+pub type Create<'a, S> = Join<BitMaskTrue, &'a mut SparseVector<S>>;
 
-impl<'a, S> Join<'a> for Read<'a, S>
-where
-    S: Store,
-{
-    type Mask = AsRef<BitMask>;
-    type StoreAccess = &'a S;
+/// Trait to create Join
+pub trait Joinable {
+    type Mask: BitSetView<Bits = BitMaskBlock>;
+    type Store: StoreAccess;
 
-    fn into_parts(self) -> (Self::Mask, Self::StoreAccess) {
-        (self.0, self.1)
-    }
-
-    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess) {
-        (&self.0, self.1)
-    }
+    fn join(self) -> Join<Self::Mask, Self::Store>;
 }
 
-/// Wrapper to access non-zero elements mutablely of a sparse vector during join.
-pub struct Write<'a, S: 'a + Store>(crate &'a BitMask, crate &'a mut S);
-
-impl<'a, S> Join<'a> for Write<'a, S>
+impl<M0, S0, M1, S1> Joinable for (Join<M0, S0>, Join<M1, S1>)
 where
-    S: Store,
+    M0: BitSetView<Bits = BitMaskBlock>,
+    S0: StoreAccess,
+    M1: BitSetView<Bits = BitMaskBlock>,
+    S1: StoreAccess,
 {
-    type Mask = BitMask;
-    type StoreAccess = &'a mut S;
+    type Mask = bitops::And2<BitMaskBlock, M0, M1>;
+    type Store = (S0, S1);
 
-    fn into_parts(self) -> (Self::Mask, Self::StoreAccess) {
-        (self.0, self.1)
-    }
-
-    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess) {
-        (&self.0, self.1)
-    }
-}
-
-/// Wrapper to access entrys of a sparse vector during join.
-pub struct Create<'a, S: 'a + Store>(crate BitMaskTrue, crate &'a mut SparseVector<S>);
-
-impl<'a, S> Join<'a> for Create<'a, S>
-where
-    S: Store,
-{
-    type Mask = BitMaskTrue;
-    type StoreAccess = &'a mut SparseVector<S>;
-
-    fn into_parts(self) -> (Self::Mask, Self::StoreAccess) {
-        (self.0, self.1)
-    }
-
-    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess) {
-        (&self.0, self.1)
-    }
-}
-
-pub struct Join2<'a, J0, J1>
-where
-    J0: 'a + Join<'a>,
-    J1: 'a + Join<'a>,
-{
-    mask: bitops::And2<'a, BitMaskBlock, J0::Mask, J1::Mask>,
-    store: (J0::StoreAccess, J1::StoreAccess),
-}
-
-impl<'a, J0, J1> Join<'a> for Join2<'a, J0, J1>
-where
-    J0: 'a + Join<'a>,
-    J1: 'a + Join<'a>,
-{
-    type Mask = bitops::And2<'a, BitMaskBlock, J0::Mask, J1::Mask>;
-    type StoreAccess = &'a mut (J0::StoreAccess, J1::StoreAccess);
-
-    fn into_parts(self) -> (Self::Mask, Self::StoreAccess) {
-        (self.0, self.1)
-    }
-
-    fn parts(&mut self) -> (&Self::Mask, &mut Self::StoreAccess) {
-        (&self.0, self.1)
-    }
-}
-
-pub trait Joinable<'a> {
-    type Join: 'a;
-
-    fn join(self) -> Self::Join;
-}
-
-impl<'a, J0, J1> Joinable<'a> for (&'a mut J0, &'a mut J1)
-where
-    J0: 'a + Join<'a>,
-    J1: 'a + Join<'a>,
-{
-    type Join = Join2<'a, J0, J1>;
-
-    fn join(self) -> Self::Join {
+    fn join(self) -> Join<Self::Mask, Self::Store> {
         let (m0, a0) = self.0.into_parts();
         let (m1, a1) = self.1.into_parts();
-        Join2 {
-            mask: bitops::and2(m0, m1),
-            store: (a0, a1),
-        }
+        Join::new((m0, m1).and(), (a0, a1))
     }
 }

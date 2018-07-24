@@ -2,21 +2,9 @@ use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
 use bitmask::{BitMask, BitMaskTrue};
-use bits::{BitIter, BitSetLike};
+use bits::{BitIter, BitSetViewExt};
 use svec::join::{Create, Read, Write};
-
-pub trait Store {
-    type Item;
-
-    fn clear(&mut self);
-
-    fn add(&mut self, idx: usize, value: Self::Item);
-    fn replace(&mut self, idx: usize, value: Self::Item) -> Self::Item;
-    fn remove(&mut self, idx: usize) -> Self::Item;
-
-    fn get(&self, idx: usize) -> &Self::Item;
-    fn get_mut(&mut self, idx: usize) -> &mut Self::Item;
-}
+use svec::{Store, StoreAccess};
 
 /// Sparse Vector
 pub struct SparseVector<S: Store> {
@@ -104,15 +92,15 @@ impl<S: Store> SparseVector<S> {
     }
 
     pub fn read(&self) -> Read<S> {
-        Read(&self.mask, &self.store)
+        Read::new(&self.mask, &self.store)
     }
 
     pub fn write(&mut self) -> Write<S> {
-        Write(&self.mask, &mut self.store)
+        Write::new(&self.mask, &mut self.store)
     }
 
     pub fn create(&mut self) -> Create<S> {
-        Create(BitMaskTrue::new(), self)
+        Create::new(BitMaskTrue::new(), self)
     }
 
     pub fn iter(&self) -> Iter<S> {
@@ -127,6 +115,18 @@ impl<S: Store> SparseVector<S> {
             iterator: self.mask.iter(),
             store: &mut self.store,
         }
+    }
+}
+
+impl<'a, S> StoreAccess for &'a mut SparseVector<S>
+where
+    S: Store,
+{
+    type Item = Entry<'a, S>;
+
+    #[inline]
+    unsafe fn access(&mut self, idx: usize) -> Self::Item {
+        mem::transmute(self.entry(idx))
     }
 }
 

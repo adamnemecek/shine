@@ -16,3 +16,19 @@ pub fn impl_bitops(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }
+
+mod storeaccess;
+#[proc_macro]
+pub fn impl_store_access_tuple(input: TokenStream) -> TokenStream {
+    storeaccess::impl_store_access_tuple_macro(input)
+        .unwrap_or_else(|err| panic!("compile_error: {}", err))
+        .into()
+}
+
+mod joinable;
+#[proc_macro]
+pub fn impl_joinable_tuple(input: TokenStream) -> TokenStream {
+    joinable::impl_joinable_tuple(input)
+        .unwrap_or_else(|err| panic!("compile_error: {}", err))
+        .into()
+}

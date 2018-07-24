@@ -1,6 +1,5 @@
-use hibitset::{BitSetLike, BitSetAnd, BitIter};
 use entity::Entity;
-
+use hibitset::{BitIter, BitSetAnd, BitSetView};
 
 pub trait Reference<'a> {
     type Item: 'static + Sync + Send;
@@ -22,7 +21,10 @@ pub trait ComponentRefMut<'a>: Reference<'a> {
 
     fn set(&mut self, value: Self::Item);
 
-    fn acquire(&mut self) -> &mut Self::Item where Self::Item: Default {
+    fn acquire(&mut self) -> &mut Self::Item
+    where
+        Self::Item: Default,
+    {
         self.set(Default::default());
         self.get_unchecked()
     }
@@ -38,17 +40,19 @@ pub trait LinkRefMut<'a>: Reference<'a> {
     fn next(&mut self) -> Option<&mut Self::Item>;
     fn set(&mut self, entity: Entity, value: Self::Item);
 
-    fn acquire(&mut self, entity: Entity) -> &mut Self::Item where Self::Item: Default {
+    fn acquire(&mut self, entity: Entity) -> &mut Self::Item
+    where
+        Self::Item: Default,
+    {
         self.set(entity, Default::default());
         self.next().unwrap()
     }
 }
 
-
 /// Container with mask capability
 pub trait MaskedContainer {
     type Item: 'static + Sync + Send;
-    type Mask: BitSetLike;
+    type Mask: BitSetView;
     type Ref: Reference<'static>;
     // TODO: GAT
     type RefMut: Reference<'static>; // TODO: GAT
@@ -57,11 +61,10 @@ pub trait MaskedContainer {
     fn create_ref_mut<'a>(&'a mut self) -> (&'a Self::Mask, Self::RefMut);
 }
 
-
 pub struct RWJoin2<'a, A, B>
-    where
-        A: 'a + MaskedContainer,
-        B: 'a + MaskedContainer,
+where
+    A: 'a + MaskedContainer,
+    B: 'a + MaskedContainer,
 {
     iter: BitIter<BitSetAnd<&'a A::Mask, &'a B::Mask>>,
     a: A::Ref,
@@ -69,9 +72,9 @@ pub struct RWJoin2<'a, A, B>
 }
 
 impl<'a, A, B> RWJoin2<'a, A, B>
-    where
-        A: 'a + MaskedContainer,
-        B: 'a + MaskedContainer,
+where
+    A: 'a + MaskedContainer,
+    B: 'a + MaskedContainer,
 {
     pub fn new<'b>(a: &'b A, b: &'b mut B) -> RWJoin2<'b, A, B> {
         let a = a.create_ref();
@@ -91,11 +94,10 @@ impl<'a, A, B> RWJoin2<'a, A, B>
                 self.b.reference(entity);
                 Some((entity, &self.a, &mut self.b))
             }
-            None => None
+            None => None,
         }
     }
 }
-
 
 macro_rules! define_join {
 (__inner_and_type $ a: ty, ) => {& 'a $ a};

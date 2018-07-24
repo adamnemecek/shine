@@ -12,7 +12,7 @@ use rand::Rng;
 
 use shine_graph::bits::*;
 
-fn check_bitset<'a, B: BitSetLike>(bitset: &'a B, bits: &'a [usize]) {
+fn check_bitset<'a, B: BitSetView>(bitset: &'a B, bits: &'a [usize]) {
     assert!(bitset.iter().eq(bits.iter().cloned()));
 }
 
@@ -211,12 +211,30 @@ fn bitset_ops_<B: BitBlock>() {
     b3.add(1360);
     b3.add(23600);
 
-    check_bitset(&bitops::or3(&b1, &b2, &b3), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&bitops::or3(&b1, &b3, &b2), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&bitops::or3(&b2, &b1, &b3), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&bitops::or3(&b2, &b3, &b1), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&bitops::or3(&b3, &b1, &b2), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&bitops::or3(&b3, &b2, &b1), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset(
+        &bitops::or3(&b1, &b2, &b3),
+        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
+    );
+    check_bitset(
+        &bitops::or3(&b1, &b3, &b2),
+        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
+    );
+    check_bitset(
+        &bitops::or3(&b2, &b1, &b3),
+        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
+    );
+    check_bitset(
+        &bitops::or3(&b2, &b3, &b1),
+        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
+    );
+    check_bitset(
+        &bitops::or3(&b3, &b1, &b2),
+        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
+    );
+    check_bitset(
+        &bitops::or3(&b3, &b2, &b1),
+        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
+    );
 
     check_bitset(&(&b1, &b2, &b3).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
     check_bitset(&(&b1, &b3, &b2).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);

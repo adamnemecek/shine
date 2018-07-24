@@ -1,4 +1,3 @@
-#![cfg(ignore)]
 extern crate shine_graph;
 #[macro_use]
 extern crate log;
@@ -134,8 +133,6 @@ fn svec_stress() {
 fn svec_join() {
     let _ = env_logger::try_init();
 
-    use join::*;
-
     let mut v1 = new_dvec::<Data>();
     let mut v2 = new_dvec::<Data>();
 
@@ -181,74 +178,15 @@ fn svec_join() {
         }
     }
 
-    /*trace!("merge and create tag");
+    trace!("merge and create tag");
     {
+        use join::*;
         let mut t1 = new_tvec();
 
-        for (id, mut c1, e1) in join::join_create1_r1w0(&mut t1, &v1).iter() {
-            assert_eq!(id, *e1);
-            c1.acquire_default();
+        let mut join = (v2.write(), v1.read()).join();
+        let mut it = join.iter();
+        while let Some((id, (mut e1, e2 /*, mut e3*/))) = it.next() {
+            println!("join({}) = {:?},{:?}", id, e1, e2 /*, e3*/);
         }
-
-        assert_eq!(t1.nnz(), 6);
-        assert!(t1.contains(14));
-        assert!(t1.contains(15));
-        assert!(t1.contains(16));
-        assert!(t1.contains(17));
-        assert!(t1.contains(18));
-        assert!(t1.contains(19));
     }
-
-    trace!("merge and create");
-    {
-        let mut t1 = new_dvec::<Data>();
-
-        for (id, mut c1, e1, e2) in join::join_create1_r2w0(&mut t1, &v1, &v2).iter() {
-            assert_eq!(id, *e1);
-            assert_eq!(id, *e2);
-            assert_eq!(c1.get(), None);
-            c1.acquire_with(|| e1 + e2);
-            let mut v = e1 + e2;
-            assert_eq!(c1.get(), Some(&mut v));
-        }
-
-        assert_eq!(t1.nnz(), 3);
-        assert_eq!(t1.get(14), Some(&28));
-        assert_eq!(t1.get(17), Some(&34));
-        assert_eq!(t1.get(18), Some(&36));
-    }
-
-    trace!("merge and update");
-    {
-        let mut t1 = new_dvec::<Data>();
-
-        t1.add(11, 11);
-        t1.add(17, 17);
-        t1.add(18, 18);
-        t1.add(31, 31);
-
-        assert_eq!(t1.nnz(), 4);
-        for (_id, e1, e2, e3) in join::join_r2w1(&v1, &v2, &mut t1).iter() {
-            *e3 += e1 + e2;
-        }
-
-        assert_eq!(t1.nnz(), 4);
-        assert_eq!(t1.get(11), Some(&11));
-        assert_eq!(t1.get(17), Some(&51));
-        assert_eq!(t1.get(18), Some(&54));
-        assert_eq!(t1.get(31), Some(&31));
-    }
-
-    trace!("merge and create 2");
-    {
-        let mut t1 = new_dvec::<Data>();
-        use join2::*;
-
-        for (id, d1, mut d2, mut d3) in (&v1, &mut v2, t1.create()).join().iter() {
-            d3.acquire(*d1);
-            *d2 -= *d1;
-        }
-
-        for (id, d1, mut d2, mut d3) in (v1.read(), v2.write(), t1.create()).join().iter() {}
-    }*/
 }
