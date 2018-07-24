@@ -54,15 +54,15 @@ fn simple_single_threaded() {
         let mut store = store.read();
         assert!(store.get(&TestDataId(0)).is_null());
 
-        r0 = store.get_or_add(TestDataId(0));
+        r0 = store.get_or_add(&TestDataId(0));
         assert!(store[&r0].0 == format!("id: {}", 0));
 
-        r1 = store.get_or_add(TestDataId(1));
+        r1 = store.get_or_add(&TestDataId(1));
         assert!(store[&r1].0 == format!("id: {}", 1));
         let r11 = store.get(&TestDataId(1));
         assert!(store[&r11].0 == format!("id: {}", 1));
         assert!(r11 == r1);
-        let r12 = store.get_or_add(TestDataId(1));
+        let r12 = store.get_or_add(&TestDataId(1));
         assert!(store[&r12].0 == format!("id: {}", 1));
         assert!(r12 == r1);
     }
@@ -81,7 +81,7 @@ fn simple_single_threaded() {
         assert!(store[&r1].0 == format!("id: {}", 1));
         assert!(store.get(&TestDataId(1)) == r1);
 
-        let r2 = store.get_or_add(TestDataId(2));
+        let r2 = store.get_or_add(&TestDataId(2));
         assert!(store[&r2].0 == format!("id: {}", 2));
     }
 
@@ -160,11 +160,11 @@ fn simple_multi_threaded() {
                 assert!(store.get(&TestDataId(0)).is_null());
 
                 // request 1
-                let r1 = store.get_or_add(TestDataId(1));
+                let r1 = store.get_or_add(&TestDataId(1));
                 assert!(store[&r1].0 == format!("id: {}", 1));
 
                 // request 100 + threadId
-                let r100 = store.get_or_add(TestDataId(100 + i));
+                let r100 = store.get_or_add(&TestDataId(100 + i));
                 assert!(store[&r100].0 == format!("id: {}", 100 + i));
 
                 for _ in 0..100 {
