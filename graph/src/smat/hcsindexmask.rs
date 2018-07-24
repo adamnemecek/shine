@@ -50,6 +50,10 @@ impl IndexMask for HCSIndexMask {
         unimplemented!()
     }
 
+    fn get_range(&self, _major: usize) -> Option<(usize, usize)> {
+        unimplemented!()
+    }
+
     fn get(&self, _major: usize, _minor: usize) -> Option<usize> {
         unimplemented!()
     }

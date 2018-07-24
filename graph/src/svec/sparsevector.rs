@@ -156,9 +156,7 @@ where
     type Item = (usize, &'a S::Item);
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iterator
-            .next()
-            .map(|idx| (idx, unsafe { mem::transmute(self.store.get(idx)) }))
+        self.iterator.next().map(|idx| (idx, self.store.get(idx)))
     }
 }
 

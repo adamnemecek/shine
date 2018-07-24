@@ -1,5 +1,8 @@
+use std::mem;
+use std::ops;
+
 use bitmask::BitMask;
-use bits::BitSetViewExt;
+use bits::{BitIter, BitSetViewExt};
 use smat::Store;
 
 /// Sparse (Square) Row matrix to manage the indices of the non-zero items
@@ -7,6 +10,7 @@ pub trait IndexMask {
     fn clear(&mut self);
     fn add(&mut self, major: usize, minor: usize) -> (usize, bool);
     fn remove(&mut self, major: usize, minor: usize) -> Option<(usize, usize)>;
+    fn get_range(&self, major: usize) -> Option<(usize, usize)>;
     fn get(&self, major: usize, minor: usize) -> Option<usize>;
 }
 
@@ -105,6 +109,36 @@ where
     pub fn entry(&mut self, r: usize, c: usize) -> Entry<M, S> {
         Entry::new(self, r, c)
     }
+
+    pub fn iter(&self) -> Iter<S> {
+        Iter {
+            iterator: (0..self.nnz()),
+            store: &self.store,
+        }
+    }
+
+    pub fn iter_mut(&mut self) -> IterMut<S> {
+        IterMut {
+            iterator: (0..self.nnz()),
+            store: &mut self.store,
+        }
+    }
+
+    pub fn outer_iter(&self) -> OuterIter<M, S> {
+        OuterIter {
+            major_iterator: self.outer_mask.iter(),
+            mask: &self.mask,
+            store: &self.store,
+        }
+    }
+
+    pub fn outer_iter_mut(&mut self) -> OuterIterMut<M, S> {
+        OuterIterMut {
+            major_iterator: self.outer_mask.iter(),
+            mask: &self.mask,
+            store: &mut self.store,
+        }
+    }
 }
 
 impl<T, M, S> SparseMatrix<M, S>
@@ -115,6 +149,163 @@ where
 {
     pub fn add_default(&mut self, r: usize, c: usize) -> Option<S::Item> {
         self.add_with(r, c, Default::default)
+    }
+}
+
+/// Non-mutable view of a column of a sparse matrix.
+pub struct Iter<'a, S>
+where
+    S: 'a + Store,
+{
+    iterator: ops::Range<usize>,
+    store: &'a S,
+}
+
+impl<'a, S> Iterator for Iter<'a, S>
+where
+    S: 'a + Store,
+{
+    type Item = &'a S::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator.next().map(|pos| self.store.get(pos))
+    }
+}
+
+/// Mutable view of a column of a sparse matrix.
+pub struct IterMut<'a, S>
+where
+    S: 'a + Store,
+{
+    iterator: ops::Range<usize>,
+    store: &'a mut S,
+}
+
+impl<'a, S> Iterator for IterMut<'a, S>
+where
+    S: 'a + Store,
+{
+    type Item = &'a mut S::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator
+            .next()
+            .map(|pos| unsafe { mem::transmute(self.store.get_mut(pos)) })
+    }
+}
+
+/// Non-mutable view of a column of a sparse matrix.
+pub struct InnerIter<'a, S>
+where
+    S: 'a + Store,
+{
+    major: usize,
+    minor_iterator: ops::Range<usize>,
+    store: &'a S,
+}
+
+impl<'a, S> Iterator for InnerIter<'a, S>
+where
+    S: 'a + Store,
+{
+    type Item = ((usize, usize), &'a S::Item);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.minor_iterator
+            .next()
+            .map(|pos| ((self.major, pos), self.store.get(pos)))
+    }
+}
+
+/// Mutable view of a column of a sparse matrix.
+pub struct InnerIterMut<'a, S>
+where
+    S: 'a + Store,
+{
+    major: usize,
+    minor_iterator: ops::Range<usize>,
+    store: &'a mut S,
+}
+
+impl<'a, S> Iterator for InnerIterMut<'a, S>
+where
+    S: 'a + Store,
+{
+    type Item = ((usize, usize), &'a mut S::Item);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.minor_iterator
+            .next()
+            .map(|pos| ((self.major, pos), unsafe { mem::transmute(self.store.get_mut(pos)) }))
+    }
+}
+
+pub struct OuterIter<'a, M, S>
+where
+    M: 'a + IndexMask,
+    S: 'a + Store,
+{
+    major_iterator: BitIter<'a, BitMask>,
+    mask: &'a M,
+    store: &'a S,
+}
+
+impl<'a, M, S> Iterator for OuterIter<'a, M, S>
+where
+    M: 'a + IndexMask,
+    S: 'a + Store,
+{
+    type Item = (usize, InnerIter<'a, S>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(major) = self.major_iterator.next() {
+            self.mask.get_range(major).map(|(s, e)| {
+                (
+                    major,
+                    InnerIter {
+                        major,
+                        minor_iterator: (s..e),
+                        store: self.store,
+                    },
+                )
+            })
+        } else {
+            None
+        }
+    }
+}
+
+pub struct OuterIterMut<'a, M, S>
+where
+    M: 'a + IndexMask,
+    S: 'a + Store,
+{
+    major_iterator: BitIter<'a, BitMask>,
+    mask: &'a M,
+    store: &'a mut S,
+}
+
+impl<'a, M, S> Iterator for OuterIterMut<'a, M, S>
+where
+    M: 'a + IndexMask,
+    S: 'a + Store,
+{
+    type Item = (usize, InnerIterMut<'a, S>);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if let Some(major) = self.major_iterator.next() {
+            self.mask.get_range(major).map(|(s, e)| {
+                (major, unsafe {
+                    mem::transmute(InnerIterMut {
+                        major,
+                        minor_iterator: (s..e),
+                        store: self.store,
+                    })
+                })
+            })
+        } else {
+            None
+        }
     }
 }
 

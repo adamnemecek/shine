@@ -115,17 +115,29 @@ impl IndexMask for CSIndexMask {
         }
     }
 
-    fn get(&self, major: usize, minor: usize) -> Option<usize> {
-        if major >= self.capacity() || minor >= self.capacity() {
+    fn get_range(&self, major: usize) -> Option<(usize, usize)> {
+        if major >= self.capacity() {
             return None;
         }
 
         let idx0 = self.offsets[major];
         let idx1 = self.offsets[major + 1];
-        let pos = self.indices[idx0..idx1].lower_bound(&minor) + idx0;
+        Some((idx0, idx1))
+    }
 
-        if pos < idx1 && self.indices[pos] == minor {
-            Some(pos)
+    fn get(&self, major: usize, minor: usize) -> Option<usize> {
+        if minor >= self.capacity() {
+            return None;
+        }
+
+        if let Some((idx0, idx1)) = self.get_range(major) {
+            let pos = self.indices[idx0..idx1].lower_bound(&minor) + idx0;
+
+            if pos < idx1 && self.indices[pos] == minor {
+                Some(pos)
+            } else {
+                None
+            }
         } else {
             None
         }
