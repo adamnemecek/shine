@@ -63,7 +63,7 @@
             "args": [
                 "test",
                 "-p",
-                "shine-store",
+                "shine-graph",
                 "--",
                 "--nocapture",
             ],

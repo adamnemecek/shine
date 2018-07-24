@@ -1,5 +1,6 @@
 use bitmask::BitMask;
-use bits::{BitIter, BitSetView};
+use bits::BitSetViewExt;
+use smat::Store;
 
 /// Sparse (Square) Row matrix to manage the indices of the non-zero items
 pub trait IndexMask {
@@ -9,28 +10,23 @@ pub trait IndexMask {
     fn get(&self, major: usize, minor: usize) -> Option<usize>;
 }
 
-pub trait Store {
-    type Item;
-
-    fn clear(&mut self);
-
-    fn insert(&mut self, idx: usize, value: Self::Item);
-    fn replace(&mut self, idx: usize, value: Self::Item) -> Self::Item;
-    fn remove(&mut self, idx: usize) -> Self::Item;
-
-    fn get(&self, idx: usize) -> &Self::Item;
-    fn get_mut(&mut self, idx: usize) -> &mut Self::Item;
-}
-
 /// Sparse (Square) Row matrix
-pub struct SparseMatrix<M: IndexMask, S: Store> {
+pub struct SparseMatrix<M, S>
+where
+    M: IndexMask,
+    S: Store,
+{
     nnz: usize,
     outer_mask: BitMask,
     mask: M,
     store: S,
 }
 
-impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
+impl<M, S> SparseMatrix<M, S>
+where
+    M: IndexMask,
+    S: Store,
+{
     pub fn new(mask: M, store: S) -> Self {
         SparseMatrix {
             nnz: 0,
@@ -63,6 +59,10 @@ impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
         }
     }
 
+    pub fn add_with<F: FnOnce() -> S::Item>(&mut self, r: usize, c: usize, f: F) -> Option<S::Item> {
+        self.add(r, c, f())
+    }
+
     pub fn remove(&mut self, r: usize, c: usize) -> Option<S::Item> {
         match self.mask.remove(r, c) {
             Some((data_index, minor_count)) => {
@@ -74,6 +74,10 @@ impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
             }
             None => None,
         }
+    }
+
+    pub fn contains(&self, r: usize, c: usize) -> bool {
+        self.outer_mask.get(r) && self.mask.get(r, c).is_some()
     }
 
     pub fn get(&self, r: usize, c: usize) -> Option<&S::Item> {
@@ -101,44 +105,16 @@ impl<M: IndexMask, S: Store> SparseMatrix<M, S> {
     pub fn entry(&mut self, r: usize, c: usize) -> Entry<M, S> {
         Entry::new(self, r, c)
     }
-
-    pub fn outer_iter(&self) -> OuterIter<M, S> {
-        OuterIter::new(self)
-    }
 }
 
-/// Outer iterate over the non-zero items.
-pub struct OuterIter<'a, M, S>
+impl<T, M, S> SparseMatrix<M, S>
 where
-    M: 'a + IndexMask,
-    S: 'a + Store,
+    T: Default,
+    M: IndexMask,
+    S: Store<Item = T>,
 {
-    iterator: BitIter<'a, BitMask>,
-    mat: *const SparseMatrix<M, S>,
-}
-
-impl<'a, M, S> OuterIter<'a, M, S>
-where
-    M: 'a + IndexMask,
-    S: 'a + Store,
-{
-    crate fn new<'b>(mat: &'b SparseMatrix<M, S>) -> OuterIter<'b, M, S> {
-        let mat_ptr = mat as *const _;
-        OuterIter {
-            iterator: mat.outer_mask.iter(),
-            mat: mat_ptr,
-        }
-    }
-}
-
-impl<'a, M, S> Iterator for OuterIter<'a, M, S>
-where
-    M: 'a + IndexMask,
-    S: 'a + Store,
-{
-    type Item = usize;
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next()
+    pub fn add_default(&mut self, r: usize, c: usize) -> Option<S::Item> {
+        self.add_with(r, c, Default::default)
     }
 }
 
@@ -148,7 +124,7 @@ where
     M: 'a + IndexMask,
     S: 'a + Store,
 {
-    id: (usize, usize),
+    idx: (usize, usize),
     data: Option<*mut S::Item>,
     store: &'a mut SparseMatrix<M, S>,
 }
@@ -160,7 +136,7 @@ where
 {
     crate fn new(store: &mut SparseMatrix<M, S>, r: usize, c: usize) -> Entry<M, S> {
         Entry {
-            id: (r, c),
+            idx: (r, c),
             data: store.get_mut(r, c).map(|d| d as *mut _),
             store,
         }
@@ -177,22 +153,22 @@ where
         self.acquire_with(|| item)
     }
 
-    pub fn remove(&mut self) -> Option<S::Item> {
-        match self.data.take() {
-            Some(_) => self.store.remove(self.id.0, self.id.1),
-            None => None,
-        }
-    }
-
     /// Acquire the mutable non-zero data at the given slot.
-    /// If data is zero the non-zero value is created by the f function
+    /// If data is zero the non-zero value is created using the f function
     pub fn acquire_with<F: FnOnce() -> S::Item>(&mut self, f: F) -> &mut S::Item {
         if self.data.is_none() {
-            self.store.add(self.id.0, self.id.1, f());
-            self.data = self.store.get_mut(self.id.0, self.id.1).map(|d| d as *mut _);
+            self.store.add_with(self.idx.0, self.idx.1, f);
+            self.data = self.store.get_mut(self.idx.0, self.idx.1).map(|d| d as *mut _);
         }
 
         self.get().unwrap()
+    }
+
+    pub fn remove(&mut self) -> Option<S::Item> {
+        match self.data.take() {
+            Some(_) => self.store.remove(self.idx.0, self.idx.1),
+            None => None,
+        }
     }
 }
 

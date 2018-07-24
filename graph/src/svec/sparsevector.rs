@@ -130,10 +130,10 @@ where
     }
 }
 
-impl<I, S> SparseVector<S>
+impl<T, S> SparseVector<S>
 where
-    I: Default,
-    S: Store<Item = I>,
+    T: Default,
+    S: Store<Item = T>,
 {
     pub fn add_default(&mut self, idx: usize) -> Option<S::Item> {
         self.add_with(idx, Default::default)
@@ -222,22 +222,22 @@ where
         self.acquire_with(|| item)
     }
 
+    /// Acquire the mutable non-zero data at the given slot.
+    /// If data is zero the non-zero value is created using the f function
+    pub fn acquire_with<F: FnOnce() -> S::Item>(&mut self, f: F) -> &mut S::Item {
+        if self.data.is_none() {
+            self.store.add_with(self.idx, f);
+            self.data = self.store.get_mut(self.idx).map(|d| d as *mut _);
+        }
+
+        self.get_mut().unwrap()
+    }
+
     pub fn remove(&mut self) -> Option<S::Item> {
         match self.data.take() {
             Some(_) => self.store.remove(self.idx),
             None => None,
         }
-    }
-
-    /// Acquire the mutable non-zero data at the given slot.
-    /// If data is zero the non-zero value is created by the f function
-    pub fn acquire_with<F: FnOnce() -> S::Item>(&mut self, f: F) -> &mut S::Item {
-        if self.data.is_none() {
-            self.store.add(self.idx, f());
-            self.data = self.store.get_mut(self.idx).map(|d| d as *mut _);
-        }
-
-        self.get_mut().unwrap()
     }
 }
 

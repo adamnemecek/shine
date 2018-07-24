@@ -16,5 +16,5 @@ extern crate shine_store as store;
 
 pub mod bitmask;
 pub mod bits;
-//pub mod smat;
+pub mod smat;
 pub mod svec;

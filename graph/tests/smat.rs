@@ -1,5 +1,3 @@
-#![cfg(ignore)]
-
 extern crate shine_graph;
 #[macro_use]
 extern crate log;
@@ -108,7 +106,6 @@ fn smat_simple() {
 }
 
 #[test]
-#[ignore]
 fn smat_stress() {
     let _ = env_logger::try_init();
 
