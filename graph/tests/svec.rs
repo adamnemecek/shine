@@ -11,7 +11,7 @@ type Data = usize;
 mod simple {
     use super::*;
 
-    fn test_simple_<S: Store<Item = Data>>(mut vector: SparseVector<S>) {
+    fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
         for i in 0..2 {
             trace!("pass: {}", i);
 
@@ -87,9 +87,9 @@ mod simple {
     fn test_simple() {
         let _ = env_logger::try_init();
 
-        trace!("SparseDVector");
+        trace!("SDVector");
         test_simple_(new_dvec());
-        trace!("SparseHVector");
+        trace!("SHVector");
         test_simple_(new_hvec());
     }
 }
@@ -98,7 +98,7 @@ mod stress {
     use super::*;
     use rand::Rng;
 
-    fn test_stress_<S: Store<Item = Data>>(mut vector: SparseVector<S>, size: usize, cnt: usize) {
+    fn test_stress_<S: Store<Item = Data>>(mut vector: SVector<S>, size: usize, cnt: usize) {
         let mut vc = vec![0; size];
 
         let mut rng = rand::thread_rng();
@@ -128,9 +128,9 @@ mod stress {
         let _ = env_logger::try_init();
 
         for _ in 0..10 {
-            trace!("SparseDVector");
+            trace!("SDVector");
             test_stress_(new_dvec(), 1024, 100000);
-            trace!("SparseHVector");
+            trace!("SHVector");
             test_stress_(new_hvec(), 1024, 100000);
         }
     }
@@ -139,7 +139,7 @@ mod stress {
 mod iter {
     use super::*;
 
-    fn test_iter_<S: Store<Item = Data>>(mut vector: SparseVector<S>) {
+    fn test_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
         assert_eq!(vector.iter().next(), None);
 
         vector.add(14, 14);
@@ -179,9 +179,9 @@ mod iter {
     fn test_iter() {
         let _ = env_logger::try_init();
 
-        trace!("SparseDVector");
+        trace!("SDVector");
         test_iter_(new_dvec::<Data>());
-        trace!("SparseHVector");
+        trace!("SHVector");
         test_iter_(new_hvec::<Data>());
     }
 }

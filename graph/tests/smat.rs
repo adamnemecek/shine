@@ -11,7 +11,7 @@ type Data = (usize, usize);
 mod simple {
     use super::*;
 
-    fn test_simple_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SparseMatrix<M, S>) {
+    fn test_simple_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
         for i in 0..2 {
             trace!("pass: {}", i);
 
@@ -83,7 +83,7 @@ mod stress {
     use super::*;
     use rand::Rng;
 
-    fn test_stress_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SparseMatrix<M, S>, size: usize, cnt: usize) {
+    fn test_stress_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>, size: usize, cnt: usize) {
         let mut mx = vec![vec![0; size]; size];
 
         let mut rng = rand::thread_rng();
@@ -130,7 +130,7 @@ mod stress {
 mod iter {
     use super::*;
 
-    fn test_iter_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SparseMatrix<M, S>) {
+    fn test_iter_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
         assert_eq!(matrix.iter().next(), None);
 
         matrix.add(14, 8, (14, 8));

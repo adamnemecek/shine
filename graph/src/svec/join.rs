@@ -1,7 +1,7 @@
-use bitmask::{BitMask, BitMaskBlock, BitMaskTrue};
+use bitmask::BitMaskBlock;
 use bits::bitops::{self, BitOp};
 use bits::{BitIter, BitSetView, BitSetViewExt};
-use svec::{SparseVector, StoreAccess};
+use svec::StoreAccess;
 
 pub struct Join<M, S>
 where
@@ -81,11 +81,6 @@ where
         self.iterator.next().map(|idx| (idx, unsafe { self.store.access(idx) }))
     }
 }
-
-/// Wrapper to access non-zero elements immutable of a sparse vector during join.
-pub type Read<'a, S> = Join<&'a BitMask, &'a S>;
-pub type Write<'a, S> = Join<&'a BitMask, &'a mut S>;
-pub type Create<'a, S> = Join<BitMaskTrue, &'a mut SparseVector<S>>;
 
 /// Trait to create Join
 pub trait Joinable {

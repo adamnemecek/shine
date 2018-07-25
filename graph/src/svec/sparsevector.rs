@@ -3,19 +3,22 @@ use std::mem;
 
 use bitmask::{BitMask, BitMaskTrue};
 use bits::{BitIter, BitSetViewExt};
-use svec::join::{Create, Read, Write};
-use svec::{Store, StoreAccess};
+use svec::{Join, Store, StoreAccess};
+
+pub type SVectorRead<'a, S> = Join<&'a BitMask, &'a S>;
+pub type SVectorWrite<'a, S> = Join<&'a BitMask, &'a mut S>;
+pub type SVectorCreate<'a, S> = Join<BitMaskTrue, &'a mut SVector<S>>;
 
 /// Sparse Vector
-pub struct SparseVector<S: Store> {
+pub struct SVector<S: Store> {
     crate nnz: usize,
     crate mask: BitMask,
     crate store: S,
 }
 
-impl<S: Store> SparseVector<S> {
+impl<S: Store> SVector<S> {
     pub fn new(mask: BitMask, store: S) -> Self {
-        SparseVector { nnz: 0, mask, store }
+        SVector { nnz: 0, mask, store }
     }
 
     pub fn get_mask(&self) -> &BitMask {
@@ -91,18 +94,6 @@ impl<S: Store> SparseVector<S> {
         Entry::new(self, idx)
     }
 
-    pub fn read(&self) -> Read<S> {
-        Read::new(&self.mask, &self.store)
-    }
-
-    pub fn write(&mut self) -> Write<S> {
-        Write::new(&self.mask, &mut self.store)
-    }
-
-    pub fn create(&mut self) -> Create<S> {
-        Create::new(BitMaskTrue::new(), self)
-    }
-
     pub fn iter(&self) -> Iter<S> {
         Iter {
             iterator: self.mask.iter(),
@@ -116,9 +107,21 @@ impl<S: Store> SparseVector<S> {
             store: &mut self.store,
         }
     }
+
+    pub fn read(&self) -> SVectorRead<S> {
+        SVectorRead::new(&self.mask, &self.store)
+    }
+
+    pub fn write(&mut self) -> SVectorWrite<S> {
+        SVectorWrite::new(&self.mask, &mut self.store)
+    }
+
+    pub fn create(&mut self) -> SVectorCreate<S> {
+        SVectorCreate::new(BitMaskTrue::new(), self)
+    }
 }
 
-impl<'a, S> StoreAccess for &'a mut SparseVector<S>
+impl<'a, S> StoreAccess for &'a mut SVector<S>
 where
     S: Store,
 {
@@ -130,7 +133,7 @@ where
     }
 }
 
-impl<T, S> SparseVector<S>
+impl<T, S> SVector<S>
 where
     T: Default,
     S: Store<Item = T>,
@@ -189,14 +192,14 @@ where
 {
     idx: usize,
     data: Option<*mut S::Item>,
-    store: &'a mut SparseVector<S>,
+    store: &'a mut SVector<S>,
 }
 
 impl<'a, S> Entry<'a, S>
 where
     S: 'a + Store,
 {
-    crate fn new<'b>(store: &'b mut SparseVector<S>, idx: usize) -> Entry<'b, S> {
+    crate fn new<'b>(store: &'b mut SVector<S>, idx: usize) -> Entry<'b, S> {
         Entry {
             idx,
             data: store.get_mut(idx).map(|d| d as *mut _),
@@ -261,17 +264,17 @@ where
 
 use svec::{DenseStore, HashStore, UnitStore};
 
-pub type SparseDVector<T> = SparseVector<DenseStore<T>>;
-pub fn new_dvec<T>() -> SparseDVector<T> {
-    SparseVector::new(BitMask::new(), DenseStore::new())
+pub type SDVector<T> = SVector<DenseStore<T>>;
+pub fn new_dvec<T>() -> SDVector<T> {
+    SVector::new(BitMask::new(), DenseStore::new())
 }
 
-pub type SparseHVector<T> = SparseVector<HashStore<T>>;
-pub fn new_hvec<T>() -> SparseHVector<T> {
-    SparseVector::new(BitMask::new(), HashStore::new())
+pub type SHVector<T> = SVector<HashStore<T>>;
+pub fn new_hvec<T>() -> SHVector<T> {
+    SVector::new(BitMask::new(), HashStore::new())
 }
 
-pub type SparseTVector = SparseVector<UnitStore>;
-pub fn new_tvec() -> SparseTVector {
-    SparseVector::new(BitMask::new(), UnitStore::new())
+pub type STVector = SVector<UnitStore>;
+pub fn new_tvec() -> STVector {
+    SVector::new(BitMask::new(), UnitStore::new())
 }

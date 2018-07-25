@@ -15,7 +15,7 @@ pub trait IndexMask {
 }
 
 /// Sparse (Square) Row matrix
-pub struct SparseMatrix<M, S>
+pub struct SMatrix<M, S>
 where
     M: IndexMask,
     S: Store,
@@ -26,13 +26,13 @@ where
     store: S,
 }
 
-impl<M, S> SparseMatrix<M, S>
+impl<M, S> SMatrix<M, S>
 where
     M: IndexMask,
     S: Store,
 {
     pub fn new(mask: M, store: S) -> Self {
-        SparseMatrix {
+        SMatrix {
             nnz: 0,
             mask,
             outer_mask: BitMask::new(),
@@ -141,7 +141,7 @@ where
     }
 }
 
-impl<T, M, S> SparseMatrix<M, S>
+impl<T, M, S> SMatrix<M, S>
 where
     T: Default,
     M: IndexMask,
@@ -317,7 +317,7 @@ where
 {
     idx: (usize, usize),
     data: Option<*mut S::Item>,
-    store: &'a mut SparseMatrix<M, S>,
+    store: &'a mut SMatrix<M, S>,
 }
 
 impl<'a, M, S> Entry<'a, M, S>
@@ -325,7 +325,7 @@ where
     M: 'a + IndexMask,
     S: 'a + Store,
 {
-    crate fn new(store: &mut SparseMatrix<M, S>, r: usize, c: usize) -> Entry<M, S> {
+    crate fn new(store: &mut SMatrix<M, S>, r: usize, c: usize) -> Entry<M, S> {
         Entry {
             idx: (r, c),
             data: store.get_mut(r, c).map(|d| d as *mut _),
@@ -377,32 +377,32 @@ where
 use smat::{ArenaStore, DenseStore, UnitStore};
 use smat::{CSIndexMask, HCSIndexMask};
 
-pub type SparseDMatrix<T> = SparseMatrix<CSIndexMask, DenseStore<T>>;
-pub fn new_dmat<T>() -> SparseDMatrix<T> {
-    SparseMatrix::new(CSIndexMask::new(), DenseStore::new())
+pub type SDMatrix<T> = SMatrix<CSIndexMask, DenseStore<T>>;
+pub fn new_dmat<T>() -> SDMatrix<T> {
+    SMatrix::new(CSIndexMask::new(), DenseStore::new())
 }
 
-pub type SparseAMatrix<T> = SparseMatrix<CSIndexMask, ArenaStore<T>>;
-pub fn new_amat<T>() -> SparseAMatrix<T> {
-    SparseMatrix::new(CSIndexMask::new(), ArenaStore::new())
+pub type SAMatrix<T> = SMatrix<CSIndexMask, ArenaStore<T>>;
+pub fn new_amat<T>() -> SAMatrix<T> {
+    SMatrix::new(CSIndexMask::new(), ArenaStore::new())
 }
 
-pub type SparseTMatrix = SparseMatrix<CSIndexMask, UnitStore>;
-pub fn new_tmat() -> SparseTMatrix {
-    SparseMatrix::new(CSIndexMask::new(), UnitStore::new())
+pub type STMatrix = SMatrix<CSIndexMask, UnitStore>;
+pub fn new_tmat() -> STMatrix {
+    SMatrix::new(CSIndexMask::new(), UnitStore::new())
 }
 
-pub type SparseHDMatrix<T> = SparseMatrix<HCSIndexMask, DenseStore<T>>;
-pub fn new_hdmat<T>() -> SparseHDMatrix<T> {
-    SparseMatrix::new(HCSIndexMask::new(), DenseStore::new())
+pub type SHDMatrix<T> = SMatrix<HCSIndexMask, DenseStore<T>>;
+pub fn new_hdmat<T>() -> SHDMatrix<T> {
+    SMatrix::new(HCSIndexMask::new(), DenseStore::new())
 }
 
-pub type SparseHAMatrix<T> = SparseMatrix<HCSIndexMask, ArenaStore<T>>;
-pub fn new_hamat<T>() -> SparseHAMatrix<T> {
-    SparseMatrix::new(HCSIndexMask::new(), ArenaStore::new())
+pub type SHAMatrix<T> = SMatrix<HCSIndexMask, ArenaStore<T>>;
+pub fn new_hamat<T>() -> SHAMatrix<T> {
+    SMatrix::new(HCSIndexMask::new(), ArenaStore::new())
 }
 
-pub type SparseHTMatrix = SparseMatrix<HCSIndexMask, UnitStore>;
-pub fn new_htmat() -> SparseHTMatrix {
-    SparseMatrix::new(HCSIndexMask::new(), UnitStore::new())
+pub type SHTMatrix = SMatrix<HCSIndexMask, UnitStore>;
+pub fn new_htmat() -> SHTMatrix {
+    SMatrix::new(HCSIndexMask::new(), UnitStore::new())
 }
