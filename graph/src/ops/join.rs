@@ -1,7 +1,7 @@
 use bitmask::BitMaskBlock;
 use bits::bitops::{self, BitOp};
 use bits::{BitIter, BitSetView, BitSetViewExt};
-use svec::StoreAccess;
+use ops::StoreAccess;
 
 pub struct Join<M, S>
 where
@@ -76,7 +76,7 @@ where
         }
     }
 
-    #[allow(should_implement_trait)]
+    #[cfg_attr(feature = "cargo-clippy", allow(should_implement_trait))]
     pub fn next(&mut self) -> Option<(usize, S::Item)> {
         self.iterator.next().map(|idx| (idx, unsafe { self.store.access(idx) }))
     }

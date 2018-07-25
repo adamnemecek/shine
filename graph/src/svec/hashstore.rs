@@ -44,7 +44,7 @@ impl<T> Store for HashStore<T> {
     }
 
     fn get(&self, idx: usize) -> &Self::Item {
-        #[allow(get_unwrap)]
+        #[cfg_attr(feature = "cargo-clippy", allow(get_unwrap))]
         self.values.get(&idx).unwrap()
     }
 

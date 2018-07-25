@@ -83,6 +83,8 @@
             "command": "cargo",
             "args": [
                 "clippy",
+                "-p",
+                "shine-graph",
             ],
             "presentation": {
                 "echo": true,

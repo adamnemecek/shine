@@ -3,7 +3,8 @@ use std::mem;
 
 use bitmask::{BitMask, BitMaskTrue};
 use bits::{BitIter, BitSetViewExt};
-use svec::{Join, Store, StoreAccess};
+use ops::{Join, StoreAccess};
+use svec::Store;
 
 pub type SVectorRead<'a, S> = Join<&'a BitMask, &'a S>;
 pub type SVectorWrite<'a, S> = Join<&'a BitMask, &'a mut S>;

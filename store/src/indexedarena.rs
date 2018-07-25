@@ -37,13 +37,13 @@ impl<T> IndexedArena<T> {
     pub fn reserve(&mut self, capacity: usize) {
         trace!("Increment capacity by {}", capacity);
 
-        let start = self.items.len();
+        let start_length = self.items.len();
         if capacity > 0 {
             self.items.reserve_exact(capacity);
         }
         let capacity = self.items.capacity();
         unsafe { self.items.set_len(capacity) };
-        for id in (start..self.items.len()).rev() {
+        for id in (start_length..self.items.len()).rev() {
             assert!(if let Entry::Vacant(_) = self.free_head {
                 true
             } else {
