@@ -110,14 +110,14 @@ where
         Entry::new(self, r, c)
     }
 
-    pub fn iter(&self) -> Iter<S> {
+    pub fn data_iter(&self) -> Iter<S> {
         Iter {
             iterator: (0..self.nnz()),
             store: &self.store,
         }
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<S> {
+    pub fn data_iter_mut(&mut self) -> IterMut<S> {
         IterMut {
             iterator: (0..self.nnz()),
             store: &mut self.store,

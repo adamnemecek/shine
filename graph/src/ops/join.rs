@@ -34,7 +34,7 @@ where
     }
 
     pub fn get_unchecked(&mut self, idx: usize) -> S::Item {
-        unsafe { self.store.access(idx) }
+        self.store.access(idx)
     }
 
     pub fn get(&mut self, idx: usize) -> Option<S::Item> {
@@ -78,7 +78,7 @@ where
 
     #[cfg_attr(feature = "cargo-clippy", allow(should_implement_trait))]
     pub fn next(&mut self) -> Option<(usize, S::Item)> {
-        self.iterator.next().map(|idx| (idx, unsafe { self.store.access(idx) }))
+        self.iterator.next().map(|idx| (idx, self.store.access(idx)))
     }
 }
 

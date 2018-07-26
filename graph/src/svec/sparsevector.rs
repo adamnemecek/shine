@@ -95,15 +95,15 @@ impl<S: Store> SVector<S> {
         Entry::new(self, idx)
     }
 
-    pub fn iter(&self) -> Iter<S> {
-        Iter {
+    pub fn data_iter(&self) -> DataIter<S> {
+        DataIter {
             iterator: self.mask.iter(),
             store: &self.store,
         }
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<S> {
-        IterMut {
+    pub fn data_iter_mut(&mut self) -> DataIterMut<S> {
+        DataIterMut {
             iterator: self.mask.iter(),
             store: &mut self.store,
         }
@@ -129,8 +129,8 @@ where
     type Item = Entry<'a, S>;
 
     #[inline]
-    unsafe fn access(&mut self, idx: usize) -> Self::Item {
-        mem::transmute(self.entry(idx))
+    fn access(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute(self.entry(idx)) } // GAT
     }
 }
 
@@ -145,7 +145,7 @@ where
 }
 
 /// Iterate over the non-zero (non-mutable) elements of a vector
-pub struct Iter<'a, S>
+pub struct DataIter<'a, S>
 where
     S: 'a + Store,
 {
@@ -153,19 +153,19 @@ where
     store: &'a S,
 }
 
-impl<'a, S> Iterator for Iter<'a, S>
+impl<'a, S> Iterator for DataIter<'a, S>
 where
     S: 'a + Store,
 {
-    type Item = (usize, &'a S::Item);
+    type Item = &'a S::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next().map(|idx| (idx, self.store.get(idx)))
+        self.iterator.next().map(|idx| self.store.get(idx))
     }
 }
 
 /// Iterate over the non-zero (mutable) elements of a vector
-pub struct IterMut<'a, S>
+pub struct DataIterMut<'a, S>
 where
     S: 'a + Store,
 {
@@ -173,16 +173,16 @@ where
     store: &'a mut S,
 }
 
-impl<'a, S> Iterator for IterMut<'a, S>
+impl<'a, S> Iterator for DataIterMut<'a, S>
 where
     S: 'a + Store,
 {
-    type Item = (usize, &'a mut S::Item);
+    type Item = &'a mut S::Item;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iterator
             .next()
-            .map(|idx| (idx, unsafe { mem::transmute(self.store.get_mut(idx)) }))
+            .map(|idx| unsafe { mem::transmute(self.store.get_mut(idx)) }) // GAT
     }
 }
 

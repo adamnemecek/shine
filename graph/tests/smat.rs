@@ -121,7 +121,7 @@ fn test_stress() {
 }
 
 fn test_iter_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
-    assert_eq!(matrix.iter().next(), None);
+    assert_eq!(matrix.data_iter().next(), None);
 
     matrix.add(14, 8, (14, 8));
     matrix.add(147, 8, (147, 8));
@@ -132,7 +132,7 @@ fn test_iter_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
     trace!("iterate 1st");
     {
         let mut s = String::new();
-        for e in matrix.iter() {
+        for e in matrix.data_iter() {
             s = format!("{},({},{})", s, e.0, e.1);
         }
         assert_eq!(s, ",(1,2),(1,3),(14,2),(14,8),(147,8)");
@@ -141,7 +141,7 @@ fn test_iter_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
     trace!("iterate mut");
     {
         let mut s = String::new();
-        for mut e in matrix.iter_mut() {
+        for mut e in matrix.data_iter_mut() {
             e.1 += 1;
             s = format!("{},({},{})", s, e.0, e.1);
         }
@@ -151,7 +151,7 @@ fn test_iter_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
     trace!("iterate 2nd");
     {
         let mut s = String::new();
-        for e in matrix.iter() {
+        for e in matrix.data_iter() {
             s = format!("{},({},{})", s, e.0, e.1);
         }
         assert_eq!(s, ",(1,3),(1,4),(14,3),(14,9),(147,9)");

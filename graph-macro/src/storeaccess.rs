@@ -21,7 +21,7 @@ fn store_access_tuple_impl(count: usize) -> TokenStream {
             type Item = (#(#generics::Item,)*);
 
             #[inline]
-            unsafe fn access(&mut self, idx: usize) -> Self::Item {
+            fn access(&mut self, idx: usize) -> Self::Item {
                 (#(self.#index.access(idx),)*)
             }
         }

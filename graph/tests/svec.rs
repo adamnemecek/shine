@@ -130,7 +130,7 @@ fn test_stress() {
 }
 
 fn test_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
-    assert_eq!(vector.iter().next(), None);
+    assert_eq!(vector.data_iter().next(), None);
 
     vector.add(14, 14);
     vector.add(147, 147);
@@ -139,29 +139,29 @@ fn test_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
     trace!("iterate 1st");
     {
         let mut s = String::new();
-        for (id, e) in vector.iter() {
-            s = format!("{},({},{})", s, id, e);
+        for e in vector.data_iter() {
+            s = format!("{},{}", s, e);
         }
-        assert_eq!(s, ",(14,14),(18,18),(147,147)");
+        assert_eq!(s, ",14,18,147");
     }
 
     trace!("iterate mut");
     {
         let mut s = String::new();
-        for (id, e) in vector.iter_mut() {
+        for e in vector.data_iter_mut() {
             *e *= 2;
-            s = format!("{},({},{})", s, id, e);
+            s = format!("{},{}", s, e);
         }
-        assert_eq!(s, ",(14,28),(18,36),(147,294)");
+        assert_eq!(s, ",28,36,294");
     }
 
     trace!("iterate 2nd");
     {
         let mut s = String::new();
-        for (id, e) in vector.iter() {
-            s = format!("{},({},{})", s, id, e);
+        for e in vector.data_iter() {
+            s = format!("{},{}", s, e);
         }
-        assert_eq!(s, ",(14,28),(18,36),(147,294)");
+        assert_eq!(s, ",28,36,294");
     }
 }
 

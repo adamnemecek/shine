@@ -13,6 +13,7 @@ log = "*"
 lazy_static = "*"
 num-traits = "*"
 arrayvec = "*"
+streaming-iterator = "*"
 
 shine-store = {path = "../store"}
 shine-graph-macro = {path = "../graph-macro"}

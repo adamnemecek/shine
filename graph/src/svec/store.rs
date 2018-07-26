@@ -22,7 +22,7 @@ where
     type Item = &'a S::Item;
 
     #[inline]
-    unsafe fn access(&mut self, idx: usize) -> Self::Item {
+    fn access(&mut self, idx: usize) -> Self::Item {
         self.get(idx)
     }
 }
@@ -34,7 +34,7 @@ where
     type Item = &'a mut S::Item;
 
     #[inline]
-    unsafe fn access(&mut self, idx: usize) -> Self::Item {
-        mem::transmute(self.get_mut(idx))
+    fn access(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute(self.get_mut(idx)) } // GAT
     }
 }
