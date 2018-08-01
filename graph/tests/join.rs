@@ -37,6 +37,13 @@ fn test_svec_join() {
         let mut s = String::new();
         v2.read().for_each(|id, e| {
             s = format!("{},{}={:?}", s, id, e);
+
+            // it's safe to get a read while another read is in progress
+            let mut s2 = String::new();
+            v2.read().for_each(|id, e| {
+                s2 = format!("{},{}={:?}", s2, id, e);
+            });
+            assert_eq!(s2, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
         });
         assert_eq!(s, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
     }
