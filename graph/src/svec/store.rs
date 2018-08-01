@@ -1,6 +1,6 @@
 use std::mem;
 
-use ops::StoreAccess;
+use VectorStore;
 
 pub trait Store {
     type Item;
@@ -15,7 +15,7 @@ pub trait Store {
     fn get_mut(&mut self, idx: usize) -> &mut Self::Item;
 }
 
-impl<'a, S> StoreAccess for &'a S
+impl<'a, S> VectorStore for &'a S
 where
     S: Store,
 {
@@ -27,7 +27,7 @@ where
     }
 }
 
-impl<'a, S> StoreAccess for &'a mut S
+impl<'a, S> VectorStore for &'a mut S
 where
     S: Store,
 {

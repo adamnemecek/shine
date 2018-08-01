@@ -1,28 +1,23 @@
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
-use bitmask::{BitMask, BitMaskTrue};
 use bits::{BitIter, BitSetViewExt};
-use ops::{Join, StoreAccess};
 use svec::Store;
-
-pub type SVectorRead<'a, S> = Join<&'a BitMask, &'a S>;
-pub type SVectorWrite<'a, S> = Join<&'a BitMask, &'a mut S>;
-pub type SVectorCreate<'a, S> = Join<BitMaskTrue, &'a mut SVector<S>>;
+use {SparseVector, VectorMask, VectorMaskTrue, VectorStore};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
     crate nnz: usize,
-    crate mask: BitMask,
+    crate mask: VectorMask,
     crate store: S,
 }
 
 impl<S: Store> SVector<S> {
-    pub fn new(mask: BitMask, store: S) -> Self {
+    pub fn new(mask: VectorMask, store: S) -> Self {
         SVector { nnz: 0, mask, store }
     }
 
-    pub fn get_mask(&self) -> &BitMask {
+    pub fn get_mask(&self) -> &VectorMask {
         &self.mask
     }
 
@@ -109,28 +104,16 @@ impl<S: Store> SVector<S> {
         }
     }
 
-    pub fn read(&self) -> SVectorRead<S> {
-        SVectorRead::new(&self.mask, &self.store)
+    pub fn read(&self) -> SparseVector<&VectorMask, &S> {
+        SparseVector::from_parts(&self.mask, &self.store)
     }
 
-    pub fn write(&mut self) -> SVectorWrite<S> {
-        SVectorWrite::new(&self.mask, &mut self.store)
+    pub fn write(&mut self) -> SparseVector<&VectorMask, &mut S> {
+        SparseVector::from_parts(&self.mask, &mut self.store)
     }
 
-    pub fn create(&mut self) -> SVectorCreate<S> {
-        SVectorCreate::new(BitMaskTrue::new(), self)
-    }
-}
-
-impl<'a, S> StoreAccess for &'a mut SVector<S>
-where
-    S: Store,
-{
-    type Item = Entry<'a, S>;
-
-    #[inline]
-    fn access(&mut self, idx: usize) -> Self::Item {
-        unsafe { mem::transmute(self.entry(idx)) } // GAT
+    pub fn create(&mut self) -> SparseVector<VectorMaskTrue, &mut Self> {
+        SparseVector::from_parts(VectorMaskTrue::new(), self)
     }
 }
 
@@ -144,12 +127,24 @@ where
     }
 }
 
+impl<'a, S> VectorStore for &'a mut SVector<S>
+where
+    S: Store,
+{
+    type Item = Entry<'a, S>;
+
+    #[inline]
+    fn access(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute(self.entry(idx)) } // GAT
+    }
+}
+
 /// Iterate over the non-zero (non-mutable) elements of a vector
 pub struct DataIter<'a, S>
 where
     S: 'a + Store,
 {
-    iterator: BitIter<'a, BitMask>,
+    iterator: BitIter<'a, VectorMask>,
     store: &'a S,
 }
 
@@ -169,7 +164,7 @@ pub struct DataIterMut<'a, S>
 where
     S: 'a + Store,
 {
-    iterator: BitIter<'a, BitMask>,
+    iterator: BitIter<'a, VectorMask>,
     store: &'a mut S,
 }
 
@@ -267,15 +262,15 @@ use svec::{DenseStore, HashStore, UnitStore};
 
 pub type SDVector<T> = SVector<DenseStore<T>>;
 pub fn new_dvec<T>() -> SDVector<T> {
-    SVector::new(BitMask::new(), DenseStore::new())
+    SVector::new(VectorMask::new(), DenseStore::new())
 }
 
 pub type SHVector<T> = SVector<HashStore<T>>;
 pub fn new_hvec<T>() -> SHVector<T> {
-    SVector::new(BitMask::new(), HashStore::new())
+    SVector::new(VectorMask::new(), HashStore::new())
 }
 
 pub type STVector = SVector<UnitStore>;
 pub fn new_tvec() -> STVector {
-    SVector::new(BitMask::new(), UnitStore::new())
+    SVector::new(VectorMask::new(), UnitStore::new())
 }

@@ -1,41 +1,32 @@
 use std::mem;
 use std::ops;
 
-use bitmask::BitMask;
 use bits::{BitIter, BitSetViewExt};
 use smat::Store;
-
-/// Sparse (Square) Row matrix to manage the indices of the non-zero items
-pub trait IndexMask {
-    fn clear(&mut self);
-    fn add(&mut self, major: usize, minor: usize) -> (usize, bool);
-    fn remove(&mut self, major: usize, minor: usize) -> Option<(usize, usize)>;
-    fn get_range(&self, major: usize) -> Option<(usize, usize)>;
-    fn get(&self, major: usize, minor: usize) -> Option<usize>;
-}
+use {MatrixMask, VectorMask};
 
 /// Sparse (Square) Row matrix
 pub struct SMatrix<M, S>
 where
-    M: IndexMask,
+    M: MatrixMask,
     S: Store,
 {
     nnz: usize,
-    outer_mask: BitMask,
+    outer_mask: VectorMask,
     mask: M,
     store: S,
 }
 
 impl<M, S> SMatrix<M, S>
 where
-    M: IndexMask,
+    M: MatrixMask,
     S: Store,
 {
     pub fn new(mask: M, store: S) -> Self {
         SMatrix {
             nnz: 0,
             mask,
-            outer_mask: BitMask::new(),
+            outer_mask: VectorMask::new(),
             store,
         }
     }
@@ -144,7 +135,7 @@ where
 impl<T, M, S> SMatrix<M, S>
 where
     T: Default,
-    M: IndexMask,
+    M: MatrixMask,
     S: Store<Item = T>,
 {
     pub fn add_default(&mut self, r: usize, c: usize) -> Option<S::Item> {
@@ -242,17 +233,17 @@ where
 
 pub struct OuterIter<'a, M, S>
 where
-    M: 'a + IndexMask,
+    M: 'a + MatrixMask,
     S: 'a + Store,
 {
-    major_iterator: BitIter<'a, BitMask>,
+    major_iterator: BitIter<'a, VectorMask>,
     mask: &'a M,
     store: &'a S,
 }
 
 impl<'a, M, S> Iterator for OuterIter<'a, M, S>
 where
-    M: 'a + IndexMask,
+    M: 'a + MatrixMask,
     S: 'a + Store,
 {
     type Item = (usize, InnerIter<'a, S>);
@@ -277,17 +268,17 @@ where
 
 pub struct OuterIterMut<'a, M, S>
 where
-    M: 'a + IndexMask,
+    M: 'a + MatrixMask,
     S: 'a + Store,
 {
-    major_iterator: BitIter<'a, BitMask>,
+    major_iterator: BitIter<'a, VectorMask>,
     mask: &'a M,
     store: &'a mut S,
 }
 
 impl<'a, M, S> Iterator for OuterIterMut<'a, M, S>
 where
-    M: 'a + IndexMask,
+    M: 'a + MatrixMask,
     S: 'a + Store,
 {
     type Item = (usize, InnerIterMut<'a, S>);
@@ -312,7 +303,7 @@ where
 /// Entry to a slot in a sparse vector.
 pub struct Entry<'a, M, S>
 where
-    M: 'a + IndexMask,
+    M: 'a + MatrixMask,
     S: 'a + Store,
 {
     idx: (usize, usize),
@@ -322,7 +313,7 @@ where
 
 impl<'a, M, S> Entry<'a, M, S>
 where
-    M: 'a + IndexMask,
+    M: 'a + MatrixMask,
     S: 'a + Store,
 {
     crate fn new(store: &mut SMatrix<M, S>, r: usize, c: usize) -> Entry<M, S> {
@@ -366,7 +357,7 @@ where
 impl<'a, I, M, S> Entry<'a, M, S>
 where
     I: Default,
-    M: 'a + IndexMask,
+    M: 'a + MatrixMask,
     S: 'a + Store<Item = I>,
 {
     pub fn acquire_default(&mut self) -> &mut S::Item {
@@ -375,34 +366,34 @@ where
 }
 
 use smat::{ArenaStore, DenseStore, UnitStore};
-use smat::{CSIndexMask, HCSIndexMask};
+use smat::{CSMatrixMask, HCSMatrixMask};
 
-pub type SDMatrix<T> = SMatrix<CSIndexMask, DenseStore<T>>;
+pub type SDMatrix<T> = SMatrix<CSMatrixMask, DenseStore<T>>;
 pub fn new_dmat<T>() -> SDMatrix<T> {
-    SMatrix::new(CSIndexMask::new(), DenseStore::new())
+    SMatrix::new(CSMatrixMask::new(), DenseStore::new())
 }
 
-pub type SAMatrix<T> = SMatrix<CSIndexMask, ArenaStore<T>>;
+pub type SAMatrix<T> = SMatrix<CSMatrixMask, ArenaStore<T>>;
 pub fn new_amat<T>() -> SAMatrix<T> {
-    SMatrix::new(CSIndexMask::new(), ArenaStore::new())
+    SMatrix::new(CSMatrixMask::new(), ArenaStore::new())
 }
 
-pub type STMatrix = SMatrix<CSIndexMask, UnitStore>;
+pub type STMatrix = SMatrix<CSMatrixMask, UnitStore>;
 pub fn new_tmat() -> STMatrix {
-    SMatrix::new(CSIndexMask::new(), UnitStore::new())
+    SMatrix::new(CSMatrixMask::new(), UnitStore::new())
 }
 
-pub type SHDMatrix<T> = SMatrix<HCSIndexMask, DenseStore<T>>;
+pub type SHDMatrix<T> = SMatrix<HCSMatrixMask, DenseStore<T>>;
 pub fn new_hdmat<T>() -> SHDMatrix<T> {
-    SMatrix::new(HCSIndexMask::new(), DenseStore::new())
+    SMatrix::new(HCSMatrixMask::new(), DenseStore::new())
 }
 
-pub type SHAMatrix<T> = SMatrix<HCSIndexMask, ArenaStore<T>>;
+pub type SHAMatrix<T> = SMatrix<HCSMatrixMask, ArenaStore<T>>;
 pub fn new_hamat<T>() -> SHAMatrix<T> {
-    SMatrix::new(HCSIndexMask::new(), ArenaStore::new())
+    SMatrix::new(HCSMatrixMask::new(), ArenaStore::new())
 }
 
-pub type SHTMatrix = SMatrix<HCSIndexMask, UnitStore>;
+pub type SHTMatrix = SMatrix<HCSMatrixMask, UnitStore>;
 pub fn new_htmat() -> SHTMatrix {
-    SMatrix::new(HCSIndexMask::new(), UnitStore::new())
+    SMatrix::new(HCSMatrixMask::new(), UnitStore::new())
 }

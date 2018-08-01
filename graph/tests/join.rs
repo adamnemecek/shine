@@ -6,6 +6,7 @@ extern crate rand;
 
 use shine_graph::ops::*;
 use shine_graph::svec::*;
+use shine_graph::*;
 
 #[test]
 fn test_svec_join() {
@@ -33,41 +34,37 @@ fn test_svec_join() {
 
     trace!("join - read");
     {
-        let mut join = v2.read();
-        let mut it = join.iter();
         let mut s = String::new();
-        while let Some((id, e)) = it.next() {
+        v2.read().for_each(|id, e| {
             s = format!("{},{}={:?}", s, id, e);
-        }
+        });
         assert_eq!(s, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
     }
 
     trace!("join - write");
     {
-        let mut join = v2.write();
-        let mut it = join.iter();
         let mut s = String::new();
-        while let Some((id, e)) = it.next() {
+        v2.write().for_each(|id, e| {
             *e += 1;
             s = format!("{},{}={:?}", s, id, e);
-        }
+        });
         assert_eq!(s, ",3=4,11=12,14=15,17=18,18=19,31=32,32=33");
     }
 
     trace!("join - create");
     {
-        let mut join = v1.create();
-        let mut it = join.iter();
         let mut s = String::new();
-        while let Some((id, mut e)) = it.next() {
+        v1.create().for_each_until(|id, mut e| {
             if id % 2 == 0 {
                 e.acquire(id);
             }
             s = format!("{},{}={:?}", s, id, e);
             if id >= 6 {
-                break;
+                false
+            } else {
+                true
             }
-        }
+        });
         assert_eq!(s, ",0=Some(0),1=None,2=Some(2),3=Some(3),4=Some(4),5=None,6=Some(6)");
     }
 
@@ -75,18 +72,18 @@ fn test_svec_join() {
     {
         let mut t1 = new_tvec();
 
-        let mut join = (v1.read(), v2.write(), t1.create()).join();
-        let mut it = join.iter();
         let mut s1 = String::new();
         let mut s2 = String::new();
-        while let Some((id, (e1, e2, mut e3))) = it.next() {
-            s1 = format!("{},{}", s1, id);
-            *e2 += 1;
-            if *e1 % 2 == 1 {
-                e3.acquire_default();
-            }
-            s2 = format!("{},({:?},{:?},{:?})", s2, e1, e2, e3);
-        }
+        (v1.read(), v2.write(), t1.create())
+            .join()
+            .for_each(|id, (e1, e2, mut e3)| {
+                s1 = format!("{},{}", s1, id);
+                *e2 += 1;
+                if *e1 % 2 == 1 {
+                    e3.acquire_default();
+                }
+                s2 = format!("{},({:?},{:?},{:?})", s2, e1, e2, e3);
+            });
 
         assert_eq!(s1, ",3,14,17,18");
         assert_eq!(s2, ",(3,5,Some(())),(14,16,None),(17,19,Some(())),(18,20,None)");

@@ -14,8 +14,18 @@ extern crate num_traits;
 extern crate shine_graph_macro;
 extern crate shine_store as store;
 
-pub mod bitmask;
 pub mod bits;
 pub mod ops;
 pub mod smat;
 pub mod svec;
+
+mod sparsevector;
+
+mod matrixmask;
+mod vectormask;
+mod vectorstore;
+
+pub use self::matrixmask::*;
+pub use self::sparsevector::*;
+pub use self::vectormask::*;
+pub use self::vectorstore::*;

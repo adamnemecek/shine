@@ -2,23 +2,18 @@ use proc_macro;
 use proc_macro2::{Span, TokenStream};
 use syn;
 
-fn joinable_tuple_impl(count: usize) -> TokenStream {
+fn joinable_for_tuple_impl(count: usize) -> TokenStream {
     let and_type = syn::Ident::new(&format!("And{}", count), Span::/*def*/call_site());
+
+    let generics_j: Vec<_> = (0..count)
+        .map(|id| syn::Ident::new(&format!("J{}", id), Span::/*def*/call_site()))
+        .collect();
+    let generics_j = &generics_j;
 
     let generics_m: Vec<_> = (0..count)
         .map(|id| syn::Ident::new(&format!("m{}", id), Span::/*def*/call_site()))
         .collect();
     let generics_m = &generics_m;
-
-    let generics_mt: Vec<_> = (0..count)
-        .map(|id| syn::Ident::new(&format!("M{}", id), Span::/*def*/call_site()))
-        .collect();
-    let generics_mt = &generics_mt;
-
-    let generics_st: Vec<_> = (0..count)
-        .map(|id| syn::Ident::new(&format!("S{}", id), Span::/*def*/call_site()))
-        .collect();
-    let generics_st = &generics_st;
 
     let generics_s: Vec<_> = (0..count)
         .map(|id| syn::Ident::new(&format!("s{}", id), Span::/*def*/call_site()))
@@ -31,16 +26,18 @@ fn joinable_tuple_impl(count: usize) -> TokenStream {
     let index = &index;
 
     let type_impl = quote!{
-        impl<#(#generics_mt, #generics_st),*> Joinable for (#(Join<#generics_mt, #generics_st>,)*)
+        /// Implement Joinable for tuple of SparseVectorLike
+        impl<#(#generics_j),*> Joinable for (#(#generics_j,)*)
         where
-            #(#generics_mt: BitSetView<Bits = BitMaskBlock>, #generics_st: StoreAccess),*
+            #(#generics_j: SparseVectorLike),*
         {
-            type Mask = bitops::#and_type<BitMaskBlock, #(#generics_mt),*>;
-            type Store = (#(#generics_st,)*);
+            type Join = SparseVector<
+                bitops::#and_type<VectorMaskBlock, #(<#generics_j as SparseVectorLike>::Mask),*>,
+                (#(<#generics_j as SparseVectorLike>::Store,)*)>;
 
-            fn join(self) -> Join<Self::Mask, Self::Store> {
+            fn join(self) -> Self::Join {
                 #(let (#generics_m, #generics_s) = self.#index.into_parts();)*
-                Join::new((#(#generics_m),*).and(), (#(#generics_s),*))
+                SparseVector::from_parts((#(#generics_m),*).and(), (#(#generics_s),*))
             }
         }
     };
@@ -48,7 +45,7 @@ fn joinable_tuple_impl(count: usize) -> TokenStream {
     type_impl
 }
 
-pub fn impl_joinable_tuple_macro(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
+pub fn impl_joinable_for_tuple_macro(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
     let tuple: syn::ExprTuple = syn::parse(input).map_err(|err| format!("Tuple expected, {}", err))?;
 
     let mut gen = Vec::new();
@@ -58,7 +55,7 @@ pub fn impl_joinable_tuple_macro(input: proc_macro::TokenStream) -> Result<Token
             if let syn::Lit::Int(lit) = expr.lit {
                 let count = lit.value();
 
-                let tuple_impl = joinable_tuple_impl(count as usize);
+                let tuple_impl = joinable_for_tuple_impl(count as usize);
                 gen.push(tuple_impl);
             } else {
                 /* expr.lit

@@ -6,11 +6,11 @@ extern crate rand;
 
 use rand::Rng;
 
-use shine_graph::smat::*;
+use shine_graph::{smat::*, *};
 
 type Data = (usize, usize);
 
-fn test_simple_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
+fn test_simple_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
     for i in 0..2 {
         trace!("pass: {}", i);
 
@@ -77,7 +77,7 @@ fn test_simple() {
     test_simple_(new_amat::<Data>());
 }
 
-fn test_stress_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>, size: usize, cnt: usize) {
+fn test_stress_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>, size: usize, cnt: usize) {
     let mut mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
@@ -120,7 +120,7 @@ fn test_stress() {
     }
 }
 
-fn test_iter_<M: IndexMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
+fn test_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
     assert_eq!(matrix.data_iter().next(), None);
 
     matrix.add(14, 8, (14, 8));

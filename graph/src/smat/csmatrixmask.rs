@@ -1,11 +1,11 @@
 use store::stdext::SliceOrdExt;
 
-use smat::IndexMask;
+use MatrixMask;
 
 /// Compressed Sparse (Square) Row matrix.
 /// Its a variant of the CSR data structure where a dense vector is
 ///  used to store the offset for the occupied rows.
-pub struct CSIndexMask {
+pub struct CSMatrixMask {
     // Offsets of the start in the indices(data) vector for each row
     offsets: Vec<usize>,
 
@@ -13,17 +13,17 @@ pub struct CSIndexMask {
     indices: Vec<usize>,
 }
 
-impl CSIndexMask {
-    /// Creates a new CSIndexMask with the given capacity
-    pub fn new_with_capacity(major_capacity: usize, nnz_capacity: usize) -> CSIndexMask {
-        CSIndexMask {
+impl CSMatrixMask {
+    /// Creates a new CSMatrixMask with the given capacity
+    pub fn new_with_capacity(major_capacity: usize, nnz_capacity: usize) -> CSMatrixMask {
+        CSMatrixMask {
             offsets: vec![0usize; major_capacity + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
     }
 
-    /// Creates an empty CSIndexMask
-    pub fn new() -> CSIndexMask {
+    /// Creates an empty CSMatrixMask
+    pub fn new() -> CSMatrixMask {
         Self::new_with_capacity(0, 0)
     }
 
@@ -50,13 +50,13 @@ impl CSIndexMask {
     }
 }
 
-impl Default for CSIndexMask {
+impl Default for CSMatrixMask {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl IndexMask for CSIndexMask {
+impl MatrixMask for CSMatrixMask {
     fn clear(&mut self) {
         self.indices.clear();
         self.offsets.clear();

@@ -2,7 +2,7 @@ use proc_macro;
 use proc_macro2::{Span, TokenStream};
 use syn;
 
-fn store_access_tuple_impl(count: usize) -> TokenStream {
+fn vector_store_for_tuple(count: usize) -> TokenStream {
     let generics: Vec<_> = (0..count)
         .map(|id| syn::Ident::new(&format!("A{}", id), Span::/*def*/call_site()))
         .collect();
@@ -14,9 +14,11 @@ fn store_access_tuple_impl(count: usize) -> TokenStream {
     let index = &index;
 
     let type_impl = quote!{
-        impl<'a, 'b: 'a, #(#generics),*> StoreAccess for (#(#generics,)*)
+        /// Implement VectorStore for tuple of VectorStore
+        /// The Item is a tuple of the Items made of the underlying VectorStore
+        impl<'a, 'b: 'a, #(#generics),*> VectorStore for (#(#generics,)*)
         where
-            #(#generics: 'a + StoreAccess),*
+            #(#generics: 'a + VectorStore),*
         {
             type Item = (#(#generics::Item,)*);
 
@@ -30,7 +32,7 @@ fn store_access_tuple_impl(count: usize) -> TokenStream {
     type_impl
 }
 
-pub fn impl_store_access_tuple_macro(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
+pub fn impl_vector_store_for_tuple_macro(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
     let tuple: syn::ExprTuple = syn::parse(input).map_err(|err| format!("Tuple expected, {}", err))?;
 
     let mut gen = Vec::new();
@@ -40,7 +42,7 @@ pub fn impl_store_access_tuple_macro(input: proc_macro::TokenStream) -> Result<T
             if let syn::Lit::Int(lit) = expr.lit {
                 let count = lit.value();
 
-                let tuple_impl = store_access_tuple_impl(count as usize);
+                let tuple_impl = vector_store_for_tuple(count as usize);
                 gen.push(tuple_impl);
             } else {
                 /* expr.lit

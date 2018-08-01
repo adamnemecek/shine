@@ -1,45 +1,41 @@
 use std::collections::HashMap;
 
-use bitmask::BitMask;
-use smat::IndexMask;
+use MatrixMask;
 
 /// Compressed Sparse (Square) Row matrix.
 /// Its a variant of the CSR data structure where a HashMap is
 ///  used to store the offset for the occupied rows.
 #[allow(dead_code)]
-pub struct HCSIndexMask {
-    outer_mask: BitMask,
+pub struct HCSMatrixMask {
     offsets: HashMap<usize, usize>,
     indices: Vec<usize>,
 }
 
-impl HCSIndexMask {
-    /// Creates a new HCSIndexMask with the given
-    pub fn new_with_capacity(major_capacity: usize, nnz_capacity: usize) -> HCSIndexMask {
-        HCSIndexMask {
-            outer_mask: BitMask::new_with_capacity(major_capacity),
+impl HCSMatrixMask {
+    /// Creates a new HCSMatrixMask with the given
+    pub fn new_with_capacity(nnz_capacity: usize) -> HCSMatrixMask {
+        HCSMatrixMask {
             offsets: HashMap::new(), //new_with_capacity(nnz_capacity),
             indices: Vec::with_capacity(nnz_capacity),
         }
     }
 
-    /// Creates an empty HCSIndexMask
-    pub fn new() -> HCSIndexMask {
-        Self::new_with_capacity(0, 0)
+    /// Creates an empty HCSMatrixMask
+    pub fn new() -> HCSMatrixMask {
+        Self::new_with_capacity(0)
     }
 }
 
-impl Default for HCSIndexMask {
+impl Default for HCSMatrixMask {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl IndexMask for HCSIndexMask {
+impl MatrixMask for HCSMatrixMask {
     fn clear(&mut self) {
         self.indices.clear();
         self.offsets.clear();
-        self.outer_mask.clear();
     }
 
     fn add(&mut self, _major: usize, _minor: usize) -> (usize, bool) {
