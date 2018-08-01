@@ -2,8 +2,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
 use bits::{BitIter, BitSetViewExt};
-use svec::Store;
-use {SparseVector, VectorMask, VectorMaskTrue, VectorStore};
+use ops::Join;
+use svec::{Store, StoreView, VectorMask, VectorMaskTrue};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
@@ -104,16 +104,16 @@ impl<S: Store> SVector<S> {
         }
     }
 
-    pub fn read(&self) -> SparseVector<&VectorMask, &S> {
-        SparseVector::from_parts(&self.mask, &self.store)
+    pub fn read(&self) -> Join<&VectorMask, &S> {
+        Join::from_parts(&self.mask, &self.store)
     }
 
-    pub fn write(&mut self) -> SparseVector<&VectorMask, &mut S> {
-        SparseVector::from_parts(&self.mask, &mut self.store)
+    pub fn write(&mut self) -> Join<&VectorMask, &mut S> {
+        Join::from_parts(&self.mask, &mut self.store)
     }
 
-    pub fn create(&mut self) -> SparseVector<VectorMaskTrue, &mut Self> {
-        SparseVector::from_parts(VectorMaskTrue::new(), self)
+    pub fn create(&mut self) -> Join<VectorMaskTrue, &mut Self> {
+        Join::from_parts(VectorMaskTrue::new(), self)
     }
 }
 
@@ -127,7 +127,7 @@ where
     }
 }
 
-impl<'a, S> VectorStore for &'a mut SVector<S>
+impl<'a, S> StoreView for &'a mut SVector<S>
 where
     S: Store,
 {

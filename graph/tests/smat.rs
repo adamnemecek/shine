@@ -6,7 +6,7 @@ extern crate rand;
 
 use rand::Rng;
 
-use shine_graph::{smat::*, *};
+use shine_graph::smat::*;
 
 type Data = (usize, usize);
 

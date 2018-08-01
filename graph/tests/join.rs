@@ -6,7 +6,6 @@ extern crate rand;
 
 use shine_graph::ops::*;
 use shine_graph::svec::*;
-use shine_graph::*;
 
 #[test]
 fn test_svec_join() {

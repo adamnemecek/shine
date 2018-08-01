@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use MatrixMask;
+use smat::MatrixMask;
 
 /// Compressed Sparse (Square) Row matrix.
 /// Its a variant of the CSR data structure where a HashMap is

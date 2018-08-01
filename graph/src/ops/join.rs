@@ -1,28 +1,49 @@
 use bits::bitops::{self, BitOp};
-use {SparseVector, SparseVectorLike, VectorMaskBlock};
+use bits::BitSetView;
+use svec::{StoreView, VectorMaskBlock, VectorView};
 
 /// Trait to create Join
 pub trait Joinable {
-    type Join: SparseVectorLike;
+    type Join: VectorView;
 
     fn join(self) -> Self::Join;
 }
-/*
-impl<J0, J1> Joinable for (J0, J1)
-where
-    J0: SparseVectorLike,
-    J1: SparseVectorLike,
-{
-    type Join = SparseVector<
-        bitops::And2<VectorMaskBlock, <J0 as SparseVectorLike>::Mask, <J1 as SparseVectorLike>::Mask>,
-        (<J0 as SparseVectorLike>::Store, <J1 as SparseVectorLike>::Store),
-    >;
 
-    fn join(self) -> Self::Join {
-        let ((m0, s0), (m1, s1)) = (self.0.into_parts(), self.1.into_parts());
-        SparseVector::from_parts((m0, m1).and(), (s0, s1))
+pub struct Join<M, S>
+where
+    M: BitSetView<Bits = VectorMaskBlock>,
+    S: StoreView,
+{
+    mask: M,
+    store: S,
+}
+
+impl<M, S> Join<M, S>
+where
+    M: BitSetView<Bits = VectorMaskBlock>,
+    S: StoreView,
+{
+    pub fn from_parts(mask: M, store: S) -> Self {
+        Self { mask, store }
     }
-}*/
+}
+
+impl<M, S> VectorView for Join<M, S>
+where
+    M: BitSetView<Bits = VectorMaskBlock>,
+    S: StoreView,
+{
+    type Mask = M;
+    type Store = S;
+
+    fn parts(&mut self) -> (&M, &mut S) {
+        (&self.mask, &mut self.store)
+    }
+
+    fn into_parts(self) -> (M, S) {
+        (self.mask, self.store)
+    }
+}
 
 use shine_graph_macro::impl_joinable_for_tuple;
 impl_joinable_for_tuple!{(2,3,4,5,6,7,8,9,10)}

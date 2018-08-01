@@ -16,10 +16,10 @@ pub fn impl_bitops(input: TokenStream) -> TokenStream {
         .into()
 }
 
-mod vectorstore;
+mod storeview;
 #[proc_macro]
-pub fn impl_vector_store_for_tuple(input: TokenStream) -> TokenStream {
-    vectorstore::impl_vector_store_for_tuple_macro(input)
+pub fn impl_store_view_for_tuple(input: TokenStream) -> TokenStream {
+    storeview::impl_store_view_for_tuple_macro(input)
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }

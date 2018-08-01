@@ -26,18 +26,18 @@ fn joinable_for_tuple_impl(count: usize) -> TokenStream {
     let index = &index;
 
     let type_impl = quote!{
-        /// Implement Joinable for tuple of SparseVectorLike
+        /// Implement Joinable for tuple of VectorView
         impl<#(#generics_j),*> Joinable for (#(#generics_j,)*)
         where
-            #(#generics_j: SparseVectorLike),*
+            #(#generics_j: VectorView),*
         {
-            type Join = SparseVector<
-                bitops::#and_type<VectorMaskBlock, #(<#generics_j as SparseVectorLike>::Mask),*>,
-                (#(<#generics_j as SparseVectorLike>::Store,)*)>;
+            type Join = Join<
+                bitops::#and_type<VectorMaskBlock, #(<#generics_j as VectorView>::Mask),*>,
+                (#(<#generics_j as VectorView>::Store,)*)>;
 
             fn join(self) -> Self::Join {
                 #(let (#generics_m, #generics_s) = self.#index.into_parts();)*
-                SparseVector::from_parts((#(#generics_m),*).and(), (#(#generics_s),*))
+                Join::from_parts((#(#generics_m),*).and(), (#(#generics_s),*))
             }
         }
     };

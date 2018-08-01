@@ -2,8 +2,8 @@ use std::mem;
 use std::ops;
 
 use bits::{BitIter, BitSetViewExt};
-use smat::Store;
-use {MatrixMask, VectorMask};
+use smat::{MatrixMask, Store};
+use svec::VectorMask;
 
 /// Sparse (Square) Row matrix
 pub struct SMatrix<M, S>

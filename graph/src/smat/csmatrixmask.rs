@@ -1,6 +1,6 @@
 use store::stdext::SliceOrdExt;
 
-use MatrixMask;
+use smat::MatrixMask;
 
 /// Compressed Sparse (Square) Row matrix.
 /// Its a variant of the CSR data structure where a dense vector is
