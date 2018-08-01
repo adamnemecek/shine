@@ -4,14 +4,24 @@ pub mod indexbinding;
 pub mod texturebinding;
 pub mod programbinding;
 
+mod vertexbuffer;
+mod indexbuffer;
+mod shaderprogram;
+
 use core::*;
+
 pub use gl;
 pub use gl::types::*;
 pub use self::utils::*;
-pub use self::vertexbinding::VertexBinding;
-pub use self::indexbinding::IndexBinding;
-pub use self::programbinding::ProgramBinding;
-pub use self::texturebinding::TextureBinding;
+pub use self::vertexbinding::*;
+pub use self::indexbinding::*;
+pub use self::programbinding::*;
+pub use self::texturebinding::*;
+
+pub use self::indexbuffer::*;
+pub use self::vertexbuffer::*;
+pub use self::shaderprogram::*;
+
 
 /// Structure to manage the GL state machine at a low level.
 ///

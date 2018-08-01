@@ -4,45 +4,58 @@
 use types::*;
 use error::*;
 use framework::*;
+use resources::*;
 
-/// Implements the view dependent aspect of an application.
+
+/// Trait to control window behavior in during view callbacks
+pub trait WindowControl {
+    /// Requests to close the window.
+    fn close(&mut self);
+
+    /*
+    /// Requests toresize the window the window.
+    fn resize(&mut self, size: Size);
+    */
+}
+
+/// Trait the view dependent aspect of an application.
 pub trait View: 'static {
-    /// TBD.
-    type R: 'static;
-
-    /// Handles the surface lost event.
-    ///
-    /// Window still has the OS resources, but will be released soon after this call.
-    fn on_surface_lost(&mut self, window: &mut Window<R=Self::R>);
+    /// Type to manage render resources.
+    type Resources: Resources;
 
     /// Handles the surface ready event.
     ///
     /// Window has create all the OS resources.
-    fn on_surface_ready(&mut self, window: &mut Window<R=Self::R>);
+    fn on_surface_ready(&mut self, ctl: &mut WindowControl, r: &mut Self::Resources);
+
+    /// Handles the surface lost event.
+    ///
+    /// Window still has the OS resources, but will be released soon after this call.
+    fn on_surface_lost(&mut self, ctl: &mut WindowControl, r: &mut Self::Resources);
 
     /// Handles the surface size or other config change.
     ///
     /// Window has create all the OS resources.
-    fn on_surface_changed(&mut self, window: &mut Window<R=Self::R>);
+    fn on_surface_changed(&mut self, ctl: &mut WindowControl, r: &mut Self::Resources);
 
     /// Handles update requests.
-    fn on_update(&mut self);
+    fn on_update(&mut self, ctl: &mut WindowControl, r: &mut Self::Resources);
 
     /// Handles render requests.
     ///
-    /// Rendering can be triggered manually by calling the render function of window or
+    /// Rendering is triggered manually by calling the render function of the window or
     /// by the system if paint event handing is enabled.
-    fn on_render(&mut self, window: &mut Window<R=Self::R>);
+    fn on_render(&mut self, ctl: &mut WindowControl, r: &mut Self::Resources);
 
     /// Handles key down and up events.
-    fn on_key(&mut self, window: &mut Window<R=Self::R>, scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool);
+    fn on_key(&mut self, ctl: &mut WindowControl, r: &mut Self::Resources, scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool);
 }
 
 
 /// Trait for window abstraction.
 pub trait Window {
-    /// TBD.
-    type R: 'static;
+    /// Type to manage render resources.
+    type Resources: Resources;
 
     /// Requests to close the window.
     ///

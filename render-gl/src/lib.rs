@@ -12,6 +12,8 @@ extern crate gdi32;
 #[cfg(target_os = "windows")]
 extern crate user32;
 
+extern crate arrayvec;
+
 extern crate dragorust_render_core as core;
 extern crate dragorust_store as store;
 

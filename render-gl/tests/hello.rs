@@ -9,29 +9,32 @@ struct SimpleView {
 }
 
 impl View for SimpleView {
-    fn on_surface_lost(&mut self, _win: &mut Window) {}
+    type Resources = GLResources;
 
-    fn on_surface_ready(&mut self, _win: &mut Window) {}
+    fn on_surface_ready(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {}
 
-    fn on_surface_changed(&mut self, _win: &mut Window) {}
+    fn on_surface_lost(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {}
 
-    fn on_update(&mut self) {
+    fn on_surface_changed(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {}
+
+    fn on_update(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {
         self.t += 0.01;
         if self.t >= 1.0 {
             self.t = 0.0
         }
     }
 
-    fn on_render(&mut self, _win: &mut Window) {
+    fn on_render(&mut self, _ctl: &mut WindowControl, _r: &mut Self::Resources) {
         use render::lowlevel::*;
 
         gl!(ClearColor(0.0, 0.0, self.t, 1.0));
         gl!(Clear(gl::COLOR_BUFFER_BIT));
     }
 
-    fn on_key(&mut self, win: &mut Window, _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
+    fn on_key(&mut self, ctl: &mut WindowControl, _r: &mut Self::Resources,
+              _scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
         match virtual_key {
-            Some(VirtualKeyCode::Escape) if !is_down => { win.close(); }
+            Some(VirtualKeyCode::Escape) if !is_down => { ctl.close(); }
             _ => {}
         }
     }

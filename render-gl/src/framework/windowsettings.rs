@@ -177,7 +177,7 @@ impl PlatformWindowBuilder for WindowSettings<GLExtraWindowSettings> {
     /// # Errors
     ///
     /// This function will return an error if the backend cannot create the window
-    fn build<V: View<R=GLResources>>(&self, engine: &PlatformEngine, view: V) -> Result<PlatformWindow, Error> {
+    fn build<V: View<Resources=GLResources>>(&self, engine: &PlatformEngine, view: V) -> Result<PlatformWindow, Error> {
         let view = Rc::new(RefCell::new(view));
         GLWindow::new_boxed(self, engine.platform(), view)
     }

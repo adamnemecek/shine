@@ -282,6 +282,18 @@ enum WindowState {
     Closed,
 }
 
+pub struct GLWindowControl {
+    hwnd: winapi::HWND,
+}
+
+impl WindowControl for GLWindowControl {
+    fn close(&mut self) {
+        unsafe {
+            user32::PostMessageW(self.hwnd, winapi::WM_CLOSE, 0, 0);
+        }
+    }
+}
+
 /// Structure to store platform dependent data associated to a Window.
 pub struct GLWindow {
     hwnd: winapi::HWND,
@@ -290,12 +302,14 @@ pub struct GLWindow {
     position: Position,
     context: GLContext,
     ll: LowLevel,
+    control: GLWindowControl,
+    resources: GLResources,
 
-    view: Rc<RefCell<View<R=GLResources>>>,
+    view: Rc<RefCell<View<Resources=GLResources>>>,
 }
 
 impl GLWindow {
-    pub fn new_boxed(settings: &PlatformWindowSettings, engine: &GLEngine, view: Rc<RefCell<View<R=GLResources>>>) -> Result<Box<GLWindow>, Error> {
+    pub fn new_boxed(settings: &PlatformWindowSettings, engine: &GLEngine, view: Rc<RefCell<View<Resources=GLResources>>>) -> Result<Box<GLWindow>, Error> {
         // create OS window
         let app_instance = engine.get_instance();
 
@@ -339,6 +353,8 @@ impl GLWindow {
             position: Position { x: 0, y: 0 },
             context: context,
             ll: LowLevel::new(),
+            control: GLWindowControl { hwnd: hwnd },
+            resources: GLResources {},
 
             view: view,
         });
@@ -363,9 +379,7 @@ impl GLWindow {
     }
 
     pub fn close(&mut self) {
-        unsafe {
-            user32::PostMessageW(self.hwnd, winapi::WM_CLOSE, 0, 0);
-        }
+        self.control.close();
     }
 
     pub fn is_closed(&self) -> bool {
@@ -387,8 +401,7 @@ impl GLWindow {
     }
 
     pub fn update_view(&mut self) {
-        let view = self.view.clone();
-        view.borrow_mut().on_update(/*self*/);
+        self.view.borrow_mut().on_update(&mut self.control, &mut self.resources);
     }
 
     fn start_render(&mut self) -> Result<(), Error> {
@@ -410,12 +423,7 @@ impl GLWindow {
     pub fn render(&mut self) -> Result<(), Error> {
         if self.is_ready_to_render() {
             try!(self.start_render());
-            {
-                let view = self.view.clone();
-                let mut win = unsafe { Box::from_raw(self as *mut GLWindow) };
-                view.borrow_mut().on_render(&mut win);
-                mem::forget(win);
-            }
+            self.view.borrow_mut().on_render(&mut self.control, &mut self.resources);
             try!(self.end_render());
         }
         Ok(())
@@ -427,6 +435,22 @@ impl GLWindow {
 
     pub fn get_ll(&mut self) -> &mut LowLevel {
         &mut self.ll
+    }
+
+    fn handle_surface_ready(&mut self) {
+        self.view.borrow_mut().on_surface_ready(&mut self.control, &mut self.resources);
+    }
+
+    fn handle_surface_lost(&mut self) {
+        self.view.borrow_mut().on_surface_lost(&mut self.control, &mut self.resources);
+    }
+
+    fn handle_surface_changed(&mut self) {
+        self.view.borrow_mut().on_surface_changed(&mut self.control, &mut self.resources);
+    }
+
+    fn handle_key(&mut self, scan_code: ScanCode, virtual_key: Option<VirtualKeyCode>, is_down: bool) {
+        self.view.borrow_mut().on_key(&mut self.control, &mut self.resources, scan_code, virtual_key, is_down);
     }
 
     /// Static function to handle os messages.
@@ -445,10 +469,7 @@ impl GLWindow {
             win_messages::WM_DR_WINDOW_CREATED => {
                 win.state = WindowState::Open;
                 if win.start_render().is_ok() {
-                    {
-                        let view = win.view.clone();
-                        view.borrow_mut().on_surface_ready(&mut win);
-                    }
+                    win.handle_surface_ready();
                     win.end_render().unwrap();
                 }
             }
@@ -456,10 +477,7 @@ impl GLWindow {
             winapi::WM_CLOSE => {
                 win.state = WindowState::WaitingClose;
                 if win.start_render().is_ok() {
-                    {
-                        let view = win.view.clone();
-                        view.borrow_mut().on_surface_lost(&mut win);
-                    }
+                    win.handle_surface_lost();
                     win.end_render().unwrap();
                 }
             }
@@ -488,10 +506,7 @@ impl GLWindow {
                 }
                 win.ll.set_screen_size(size);
                 if win.start_render().is_ok() {
-                    {
-                        let view = win.view.clone();
-                        view.borrow_mut().on_surface_changed(&mut win);
-                    }
+                    win.handle_surface_changed();
                     win.end_render().unwrap();
                 }
 
@@ -511,10 +526,7 @@ impl GLWindow {
                     result = None;
                 } else {
                     let (sc, vkey) = vkeycode_to_element(wparam, lparam);
-                    {
-                        let view = win.view.clone();
-                        view.borrow_mut().on_key(&mut win, sc, vkey, true);
-                    }
+                    win.handle_key(sc, vkey, true);
                     result = Some(0);
                 }
             }
@@ -525,10 +537,7 @@ impl GLWindow {
                     result = None;
                 } else {
                     let (sc, vkey) = vkeycode_to_element(wparam, lparam);
-                    {
-                        let view = win.view.clone();
-                        view.borrow_mut().on_key(&mut win, sc, vkey, false);
-                    }
+                    win.handle_key(sc, vkey, false);
                     result = Some(0);
                 }
             }
