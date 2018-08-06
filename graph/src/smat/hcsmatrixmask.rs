@@ -46,11 +46,15 @@ impl MatrixMask for HCSMatrixMask {
         unimplemented!()
     }
 
-    fn get_range(&self, _major: usize) -> Option<(usize, usize)> {
+    fn get_pos_range(&self, _major: usize) -> Option<(usize, usize)> {
         unimplemented!()
     }
 
-    fn get(&self, _major: usize, _minor: usize) -> Option<usize> {
+    fn get_pos(&self, _major: usize, _minor: usize) -> Option<usize> {
+        unimplemented!()
+    }
+
+    fn get_column(&self, _pos: usize) -> usize {
         unimplemented!()
     }
 }

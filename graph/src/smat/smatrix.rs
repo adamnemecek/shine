@@ -1,9 +1,11 @@
 use std::mem;
 use std::ops;
 
-use bits::{BitIter, BitSetViewExt};
+use bits::BitSetViewExt;
+use ops::JVector;
 use smat::{MatrixMask, Store};
-use svec::VectorMask;
+use smat::{RowCreate, RowRead, RowWrite};
+use svec::{VectorMask, VectorMaskTrue};
 
 /// Sparse (Square) Row matrix
 pub struct SMatrix<M, S>
@@ -12,7 +14,7 @@ where
     S: Store,
 {
     nnz: usize,
-    outer_mask: VectorMask,
+    row_mask: VectorMask,
     mask: M,
     store: S,
 }
@@ -26,7 +28,7 @@ where
         SMatrix {
             nnz: 0,
             mask,
-            outer_mask: VectorMask::new(),
+            row_mask: VectorMask::new(),
             store,
         }
     }
@@ -38,7 +40,7 @@ where
     pub fn clear(&mut self) {
         self.mask.clear();
         self.store.clear();
-        self.outer_mask.clear();
+        self.row_mask.clear();
         self.nnz = 0;
     }
 
@@ -48,7 +50,7 @@ where
             Some(self.store.replace(pos, value))
         } else {
             self.store.insert(pos, value);
-            self.outer_mask.add(r);
+            self.row_mask.add(r);
             self.nnz += 1;
             None
         }
@@ -63,7 +65,7 @@ where
             Some((data_index, minor_count)) => {
                 self.nnz -= 1;
                 if minor_count == 0 {
-                    self.outer_mask.remove(r);
+                    self.row_mask.remove(r);
                 }
                 Some(self.store.remove(data_index))
             }
@@ -72,14 +74,14 @@ where
     }
 
     pub fn contains(&self, r: usize, c: usize) -> bool {
-        self.outer_mask.get(r) && self.mask.get(r, c).is_some()
+        self.row_mask.get(r) && self.mask.get_pos(r, c).is_some()
     }
 
     pub fn get(&self, r: usize, c: usize) -> Option<&S::Item> {
-        if !self.outer_mask.get(r) {
+        if !self.row_mask.get(r) {
             None
         } else {
-            match self.mask.get(r, c) {
+            match self.mask.get_pos(r, c) {
                 Some(pos) => Some(self.store.get(pos)),
                 None => None,
             }
@@ -87,10 +89,10 @@ where
     }
 
     pub fn get_mut(&mut self, r: usize, c: usize) -> Option<&mut S::Item> {
-        if !self.outer_mask.get(r) {
+        if !self.row_mask.get(r) {
             None
         } else {
-            match self.mask.get(r, c) {
+            match self.mask.get_pos(r, c) {
                 Some(pos) => Some(self.store.get_mut(pos)),
                 None => None,
             }
@@ -101,34 +103,42 @@ where
         Entry::new(self, r, c)
     }
 
-    pub fn data_iter(&self) -> Iter<S> {
-        Iter {
+    pub fn data_iter(&self) -> DataIter<S> {
+        DataIter {
             iterator: (0..self.nnz()),
             store: &self.store,
         }
     }
 
-    pub fn data_iter_mut(&mut self) -> IterMut<S> {
-        IterMut {
+    pub fn data_iter_mut(&mut self) -> DataIterMut<S> {
+        DataIterMut {
             iterator: (0..self.nnz()),
             store: &mut self.store,
         }
     }
 
-    pub fn outer_iter(&self) -> OuterIter<M, S> {
-        OuterIter {
-            major_iterator: self.outer_mask.iter(),
-            mask: &self.mask,
-            store: &self.store,
-        }
+    pub fn row_read(&self) -> JVector<&VectorMask, RowRead<M, S>> {
+        JVector::from_parts(
+            &self.row_mask,
+            RowRead {
+                mask: &self.mask,
+                store: &self.store,
+            },
+        )
     }
 
-    pub fn outer_iter_mut(&mut self) -> OuterIterMut<M, S> {
-        OuterIterMut {
-            major_iterator: self.outer_mask.iter(),
-            mask: &self.mask,
-            store: &mut self.store,
-        }
+    pub fn row_write(&mut self) -> JVector<&VectorMask, RowWrite<M, S>> {
+        JVector::from_parts(
+            &self.row_mask,
+            RowWrite {
+                mask: &self.mask,
+                store: &mut self.store,
+            },
+        )
+    }
+
+    pub fn row_create(&mut self) -> JVector<VectorMaskTrue, RowCreate<M, S>> {
+        JVector::from_parts(VectorMaskTrue::new(), RowCreate { store: self })
     }
 }
 
@@ -140,163 +150,6 @@ where
 {
     pub fn add_default(&mut self, r: usize, c: usize) -> Option<S::Item> {
         self.add_with(r, c, Default::default)
-    }
-}
-
-/// Non-mutable view of a column of a sparse matrix.
-pub struct Iter<'a, S>
-where
-    S: 'a + Store,
-{
-    iterator: ops::Range<usize>,
-    store: &'a S,
-}
-
-impl<'a, S> Iterator for Iter<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = &'a S::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next().map(|pos| self.store.get(pos))
-    }
-}
-
-/// Mutable view of a column of a sparse matrix.
-pub struct IterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    iterator: ops::Range<usize>,
-    store: &'a mut S,
-}
-
-impl<'a, S> Iterator for IterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = &'a mut S::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator
-            .next()
-            .map(|pos| unsafe { mem::transmute(self.store.get_mut(pos)) })
-    }
-}
-
-/// Non-mutable view of a column of a sparse matrix.
-pub struct InnerIter<'a, S>
-where
-    S: 'a + Store,
-{
-    major: usize,
-    minor_iterator: ops::Range<usize>,
-    store: &'a S,
-}
-
-impl<'a, S> Iterator for InnerIter<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = ((usize, usize), &'a S::Item);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.minor_iterator
-            .next()
-            .map(|pos| ((self.major, pos), self.store.get(pos)))
-    }
-}
-
-/// Mutable view of a column of a sparse matrix.
-pub struct InnerIterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    major: usize,
-    minor_iterator: ops::Range<usize>,
-    store: &'a mut S,
-}
-
-impl<'a, S> Iterator for InnerIterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = ((usize, usize), &'a mut S::Item);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.minor_iterator
-            .next()
-            .map(|pos| ((self.major, pos), unsafe { mem::transmute(self.store.get_mut(pos)) }))
-    }
-}
-
-pub struct OuterIter<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    major_iterator: BitIter<'a, VectorMask>,
-    mask: &'a M,
-    store: &'a S,
-}
-
-impl<'a, M, S> Iterator for OuterIter<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    type Item = (usize, InnerIter<'a, S>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(major) = self.major_iterator.next() {
-            self.mask.get_range(major).map(|(s, e)| {
-                (
-                    major,
-                    InnerIter {
-                        major,
-                        minor_iterator: (s..e),
-                        store: self.store,
-                    },
-                )
-            })
-        } else {
-            None
-        }
-    }
-}
-
-pub struct OuterIterMut<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    major_iterator: BitIter<'a, VectorMask>,
-    mask: &'a M,
-    store: &'a mut S,
-}
-
-impl<'a, M, S> Iterator for OuterIterMut<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    type Item = (usize, InnerIterMut<'a, S>);
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(major) = self.major_iterator.next() {
-            self.mask.get_range(major).map(|(s, e)| {
-                (major, unsafe {
-                    mem::transmute(InnerIterMut {
-                        major,
-                        minor_iterator: (s..e),
-                        store: self.store,
-                    })
-                })
-            })
-        } else {
-            None
-        }
     }
 }
 
@@ -362,6 +215,48 @@ where
 {
     pub fn acquire_default(&mut self) -> &mut S::Item {
         self.acquire_with(Default::default)
+    }
+}
+
+/// Non-mutable view of a column of a sparse matrix.
+pub struct DataIter<'a, S>
+where
+    S: 'a + Store,
+{
+    iterator: ops::Range<usize>,
+    store: &'a S,
+}
+
+impl<'a, S> Iterator for DataIter<'a, S>
+where
+    S: 'a + Store,
+{
+    type Item = &'a S::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator.next().map(|pos| self.store.get(pos))
+    }
+}
+
+/// Mutable view of a column of a sparse matrix.
+pub struct DataIterMut<'a, S>
+where
+    S: 'a + Store,
+{
+    iterator: ops::Range<usize>,
+    store: &'a mut S,
+}
+
+impl<'a, S> Iterator for DataIterMut<'a, S>
+where
+    S: 'a + Store,
+{
+    type Item = &'a mut S::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator
+            .next()
+            .map(|pos| unsafe { mem::transmute(self.store.get_mut(pos)) })
     }
 }
 

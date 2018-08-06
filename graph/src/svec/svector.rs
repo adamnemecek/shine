@@ -2,8 +2,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
 use bits::{BitIter, BitSetViewExt};
-use ops::Join;
-use svec::{Store, StoreView, VectorMask, VectorMaskTrue};
+use ops::{JVector, VectorJoin, VectorJoinStore, VectorMerge};
+use svec::{Store, VectorMask, VectorMaskTrue};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
@@ -104,16 +104,28 @@ impl<S: Store> SVector<S> {
         }
     }
 
-    pub fn read(&self) -> Join<&VectorMask, &S> {
-        Join::from_parts(&self.mask, &self.store)
+    pub fn read(&self) -> JVector<&VectorMask, &S> {
+        JVector::from_parts(&self.mask, &self.store)
     }
 
-    pub fn write(&mut self) -> Join<&VectorMask, &mut S> {
-        Join::from_parts(&self.mask, &mut self.store)
+    pub fn write(&mut self) -> JVector<&VectorMask, &mut S> {
+        JVector::from_parts(&self.mask, &mut self.store)
     }
 
-    pub fn create(&mut self) -> Join<VectorMaskTrue, &mut Self> {
-        Join::from_parts(VectorMaskTrue::new(), self)
+    pub fn create(&mut self) -> JVector<VectorMaskTrue, WrapCreate<S>> {
+        JVector::from_parts(VectorMaskTrue::new(), WrapCreate { store: self })
+    }
+
+    pub fn merge_read(&self) -> &Self {
+        self
+    }
+
+    pub fn merge_write(&mut self) -> &mut Self {
+        self
+    }
+
+    pub fn merge_create(&mut self) -> WrapCreate<S> {
+        WrapCreate { store: self }
     }
 }
 
@@ -127,7 +139,85 @@ where
     }
 }
 
-impl<'a, S> StoreView for &'a mut SVector<S>
+impl<'a, S> VectorJoin for &'a SVector<S>
+where
+    S: Store,
+{
+    type Mask = &'a VectorMask;
+    type Store = &'a S;
+
+    fn parts(&mut self) -> (&Self::Mask, &mut Self::Store) {
+        unimplemented!()
+    }
+
+    fn into_parts(self) -> (Self::Mask, Self::Store) {
+        (&self.mask, &self.store)
+    }
+}
+
+impl<'a, S> VectorMerge for &'a SVector<S>
+where
+    S: Store,
+{
+    type Item = &'a S::Item;
+
+    fn contains(&self, idx: usize) -> bool {
+        self.mask.get(idx)
+    }
+
+    fn lower_bound_index(&self, idx: usize) -> Option<usize> {
+        self.mask.lower_bound(idx)
+    }
+
+    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
+        (*self).get_unchecked(idx)
+    }
+
+    fn get(&mut self, idx: usize) -> Option<Self::Item> {
+        if self.contains(idx) {
+            Some(self.get_unchecked(idx))
+        } else {
+            None
+        }
+    }
+}
+
+impl<'a, S> VectorMerge for &'a mut SVector<S>
+where
+    S: Store,
+{
+    type Item = &'a mut S::Item;
+
+    fn contains(&self, idx: usize) -> bool {
+        self.mask.get(idx)
+    }
+
+    fn lower_bound_index(&self, idx: usize) -> Option<usize> {
+        self.mask.lower_bound(idx)
+    }
+
+    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute((*self).get_mut_unchecked(idx)) } // GAT
+    }
+
+    fn get(&mut self, idx: usize) -> Option<Self::Item> {
+        if self.contains(idx) {
+            Some(self.get_unchecked(idx))
+        } else {
+            None
+        }
+    }
+}
+
+/// Wrapper to allow Entry based join and merge for SVector
+pub struct WrapCreate<'a, S>
+where
+    S: 'a + Store,
+{
+    store: &'a mut SVector<S>,
+}
+
+impl<'a, S> VectorJoinStore for WrapCreate<'a, S>
 where
     S: Store,
 {
@@ -135,7 +225,30 @@ where
 
     #[inline]
     fn access(&mut self, idx: usize) -> Self::Item {
-        unsafe { mem::transmute(self.entry(idx)) } // GAT
+        unsafe { mem::transmute(self.store.entry(idx)) } // GAT
+    }
+}
+
+impl<'a, S> VectorMerge for WrapCreate<'a, S>
+where
+    S: Store,
+{
+    type Item = Entry<'a, S>;
+
+    fn contains(&self, _idx: usize) -> bool {
+        true
+    }
+
+    fn lower_bound_index(&self, idx: usize) -> Option<usize> {
+        Some(idx)
+    }
+
+    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute(self.store.entry(idx)) } // GAT
+    }
+
+    fn get(&mut self, idx: usize) -> Option<Self::Item> {
+        Some(self.get_unchecked(idx))
     }
 }
 

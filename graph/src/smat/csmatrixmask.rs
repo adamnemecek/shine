@@ -15,9 +15,9 @@ pub struct CSMatrixMask {
 
 impl CSMatrixMask {
     /// Creates a new CSMatrixMask with the given capacity
-    pub fn new_with_capacity(major_capacity: usize, nnz_capacity: usize) -> CSMatrixMask {
+    pub fn new_with_capacity(row_capacity: usize, nnz_capacity: usize) -> CSMatrixMask {
         CSMatrixMask {
-            offsets: vec![0usize; major_capacity + 1],
+            offsets: vec![0usize; row_capacity + 1],
             indices: Vec::with_capacity(nnz_capacity),
         }
     }
@@ -63,77 +63,77 @@ impl MatrixMask for CSMatrixMask {
         self.offsets.push(0);
     }
 
-    fn add(&mut self, major: usize, minor: usize) -> (usize, bool) {
-        let capacity = if major > minor { major + 1 } else { minor + 1 };
+    fn add(&mut self, row: usize, column: usize) -> (usize, bool) {
+        let capacity = if row > column { row + 1 } else { column + 1 };
         if capacity > self.capacity() {
             self.increase_capacity_to(capacity);
         }
 
-        let idx0 = self.offsets[major];
-        let idx1 = self.offsets[major + 1];
+        let idx0 = self.offsets[row];
+        let idx1 = self.offsets[row + 1];
         let pos = {
             if idx0 == idx1 {
-                trace!("new major row opened: {}", major);
+                trace!("new row opened: {}", row);
                 idx0
             } else {
-                self.indices[idx0..idx1].lower_bound(&minor) + idx0
+                self.indices[idx0..idx1].lower_bound(&column) + idx0
             }
         };
 
-        if pos < idx1 && self.indices[pos] == minor {
+        if pos < idx1 && self.indices[pos] == column {
             trace!("item replaced at: {}", pos);
             (pos, true)
         } else {
             trace!("item added at: {}", pos);
-            self.indices.insert(pos, minor);
-            for offset in self.offsets[major + 1..].iter_mut() {
+            self.indices.insert(pos, column);
+            for offset in self.offsets[row + 1..].iter_mut() {
                 *offset += 1;
             }
             (pos, false)
         }
     }
 
-    fn remove(&mut self, major: usize, minor: usize) -> Option<(usize, usize)> {
-        if major >= self.capacity() || minor >= self.capacity() {
+    fn remove(&mut self, row: usize, column: usize) -> Option<(usize, usize)> {
+        if row >= self.capacity() || column >= self.capacity() {
             return None;
         }
 
-        let idx0 = self.offsets[major];
-        let idx1 = self.offsets[major + 1];
-        let pos = self.indices[idx0..idx1].lower_bound(&minor) + idx0;
+        let idx0 = self.offsets[row];
+        let idx1 = self.offsets[row + 1];
+        let pos = self.indices[idx0..idx1].lower_bound(&column) + idx0;
 
-        if pos < idx1 && self.indices[pos] == minor {
+        if pos < idx1 && self.indices[pos] == column {
             trace!("item removed at: {}", pos);
             self.indices.remove(pos);
-            for offset in self.offsets[major + 1..].iter_mut() {
+            for offset in self.offsets[row + 1..].iter_mut() {
                 *offset -= 1;
             }
-            let cnt = self.offsets[major + 1] - self.offsets[major];
+            let cnt = self.offsets[row + 1] - self.offsets[row];
             Some((pos, cnt))
         } else {
             None
         }
     }
 
-    fn get_range(&self, major: usize) -> Option<(usize, usize)> {
-        if major >= self.capacity() {
+    fn get_pos_range(&self, row: usize) -> Option<(usize, usize)> {
+        if row >= self.capacity() {
             return None;
         }
 
-        let idx0 = self.offsets[major];
-        let idx1 = self.offsets[major + 1];
+        let idx0 = self.offsets[row];
+        let idx1 = self.offsets[row + 1];
         Some((idx0, idx1))
     }
 
-    fn get(&self, major: usize, minor: usize) -> Option<usize> {
-        if minor >= self.capacity() {
+    fn get_pos(&self, row: usize, column: usize) -> Option<usize> {
+        if column >= self.capacity() {
             return None;
         }
 
-        if let Some((idx0, idx1)) = self.get_range(major) {
-            let pos = self.indices[idx0..idx1].lower_bound(&minor) + idx0;
+        if let Some((idx0, idx1)) = self.get_pos_range(row) {
+            let pos = self.indices[idx0..idx1].lower_bound(&column) + idx0;
 
-            if pos < idx1 && self.indices[pos] == minor {
+            if pos < idx1 && self.indices[pos] == column {
                 Some(pos)
             } else {
                 None
@@ -141,5 +141,9 @@ impl MatrixMask for CSMatrixMask {
         } else {
             None
         }
+    }
+
+    fn get_column(&self, pos: usize) -> usize {
+        self.indices[pos]
     }
 }

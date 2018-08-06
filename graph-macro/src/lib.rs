@@ -16,18 +16,18 @@ pub fn impl_bitops(input: TokenStream) -> TokenStream {
         .into()
 }
 
-mod storeview;
+mod vectorjoinstore;
 #[proc_macro]
-pub fn impl_store_view_for_tuple(input: TokenStream) -> TokenStream {
-    storeview::impl_store_view_for_tuple_macro(input)
+pub fn impl_vector_join_store_for_tuple(input: TokenStream) -> TokenStream {
+    vectorjoinstore::impl_vector_join_store_for_tuple_macro(input)
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }
 
-mod joinable;
+mod intovectorjoin;
 #[proc_macro]
-pub fn impl_joinable_for_tuple(input: TokenStream) -> TokenStream {
-    joinable::impl_joinable_for_tuple_macro(input)
+pub fn impl_into_vector_join_for_tuple(input: TokenStream) -> TokenStream {
+    intovectorjoin::impl_into_vector_join_for_tuple_macro(input)
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }

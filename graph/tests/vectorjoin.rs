@@ -81,7 +81,7 @@ fn test_svec_join() {
         let mut s1 = String::new();
         let mut s2 = String::new();
         (v1.read(), v2.write(), t1.create())
-            .join()
+            .into_join()
             .for_each(|id, (e1, e2, mut e3)| {
                 s1 = format!("{},{}", s1, id);
                 *e2 += 1;

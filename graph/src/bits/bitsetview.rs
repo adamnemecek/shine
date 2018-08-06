@@ -82,6 +82,10 @@ pub trait BitSetViewExt: BitSetView {
         }
     }
 
+    fn lower_bound(&self, _pos: usize) -> Option<usize> {
+        unimplemented!()
+    }
+
     fn iter(&self) -> BitIter<Self>
     where
         Self: Sized,

@@ -2,7 +2,7 @@ use proc_macro;
 use proc_macro2::{Span, TokenStream};
 use syn;
 
-fn joinable_for_tuple_impl(count: usize) -> TokenStream {
+fn into_vector_join_for_tuple_impl(count: usize) -> TokenStream {
     let and_type = syn::Ident::new(&format!("And{}", count), Span::/*def*/call_site());
 
     let generics_j: Vec<_> = (0..count)
@@ -26,18 +26,18 @@ fn joinable_for_tuple_impl(count: usize) -> TokenStream {
     let index = &index;
 
     let type_impl = quote!{
-        /// Implement Joinable for tuple of VectorView
-        impl<#(#generics_j),*> Joinable for (#(#generics_j,)*)
+        /// Implement IntoVectorJoin for tuple of VectorJoin
+        impl<#(#generics_j),*> IntoVectorJoin for (#(#generics_j,)*)
         where
-            #(#generics_j: VectorView),*
+            #(#generics_j: VectorJoin),*
         {
-            type Join = Join<
-                bitops::#and_type<VectorMaskBlock, #(<#generics_j as VectorView>::Mask),*>,
-                (#(<#generics_j as VectorView>::Store,)*)>;
+            type Join = JVector<
+                bitops::#and_type<VectorMaskBlock, #(<#generics_j as VectorJoin>::Mask),*>,
+                (#(<#generics_j as VectorJoin>::Store,)*)>;
 
-            fn join(self) -> Self::Join {
+            fn into_join(self) -> Self::Join {
                 #(let (#generics_m, #generics_s) = self.#index.into_parts();)*
-                Join::from_parts((#(#generics_m),*).and(), (#(#generics_s),*))
+                JVector::from_parts((#(#generics_m),*).and(), (#(#generics_s),*))
             }
         }
     };
@@ -45,7 +45,7 @@ fn joinable_for_tuple_impl(count: usize) -> TokenStream {
     type_impl
 }
 
-pub fn impl_joinable_for_tuple_macro(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
+pub fn impl_into_vector_join_for_tuple_macro(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
     let tuple: syn::ExprTuple = syn::parse(input).map_err(|err| format!("Tuple expected, {}", err))?;
 
     let mut gen = Vec::new();
@@ -55,7 +55,7 @@ pub fn impl_joinable_for_tuple_macro(input: proc_macro::TokenStream) -> Result<T
             if let syn::Lit::Int(lit) = expr.lit {
                 let count = lit.value();
 
-                let tuple_impl = joinable_for_tuple_impl(count as usize);
+                let tuple_impl = into_vector_join_for_tuple_impl(count as usize);
                 gen.push(tuple_impl);
             } else {
                 /* expr.lit
