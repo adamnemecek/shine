@@ -2,7 +2,7 @@ use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
 use bits::{BitIter, BitSetViewExt};
-use ops::{JVector, VectorJoin, VectorJoinStore, VectorMerge};
+use ops::{JVector, VectorJoin, VectorJoinStore};
 use svec::{Store, VectorMask, VectorMaskTrue};
 
 /// Sparse Vector
@@ -116,7 +116,7 @@ impl<S: Store> SVector<S> {
         JVector::from_parts(VectorMaskTrue::new(), WrapCreate { store: self })
     }
 
-    pub fn merge_read(&self) -> &Self {
+    /*pub fn merge_read(&self) -> &Self {
         self
     }
 
@@ -126,7 +126,7 @@ impl<S: Store> SVector<S> {
 
     pub fn merge_create(&mut self) -> WrapCreate<S> {
         WrapCreate { store: self }
-    }
+    }*/
 }
 
 impl<T, S> SVector<S>
@@ -155,7 +155,7 @@ where
     }
 }
 
-impl<'a, S> VectorMerge for &'a SVector<S>
+/*impl<'a, S> VectorMerge for &'a SVector<S>
 where
     S: Store,
 {
@@ -208,7 +208,7 @@ where
         }
     }
 }
-
+*/
 /// Wrapper to allow Entry based join and merge for SVector
 pub struct WrapCreate<'a, S>
 where
@@ -229,7 +229,7 @@ where
     }
 }
 
-impl<'a, S> VectorMerge for WrapCreate<'a, S>
+/*impl<'a, S> VectorMerge for WrapCreate<'a, S>
 where
     S: Store,
 {
@@ -251,7 +251,7 @@ where
         Some(self.get_unchecked(idx))
     }
 }
-
+*/
 /// Iterate over the non-zero (non-mutable) elements of a vector
 pub struct DataIter<'a, S>
 where

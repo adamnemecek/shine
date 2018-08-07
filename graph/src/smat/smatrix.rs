@@ -117,12 +117,12 @@ where
         }
     }
 
-    pub fn row_read(&self) -> JVector<&VectorMask, RowRead<M, S>> {
+    pub fn row_read(&mut self) -> JVector<&VectorMask, RowRead<M, S>> {
         JVector::from_parts(
             &self.row_mask,
             RowRead {
                 mask: &self.mask,
-                store: &self.store,
+                store: &mut self.store,
             },
         )
     }
@@ -150,6 +150,48 @@ where
 {
     pub fn add_default(&mut self, r: usize, c: usize) -> Option<S::Item> {
         self.add_with(r, c, Default::default)
+    }
+}
+
+/// Non-mutable view of a column of a sparse matrix.
+pub struct DataIter<'a, S>
+where
+    S: 'a + Store,
+{
+    iterator: ops::Range<usize>,
+    store: &'a S,
+}
+
+impl<'a, S> Iterator for DataIter<'a, S>
+where
+    S: 'a + Store,
+{
+    type Item = &'a S::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator.next().map(|pos| self.store.get(pos))
+    }
+}
+
+/// Mutable view of a column of a sparse matrix.
+pub struct DataIterMut<'a, S>
+where
+    S: 'a + Store,
+{
+    iterator: ops::Range<usize>,
+    store: &'a mut S,
+}
+
+impl<'a, S> Iterator for DataIterMut<'a, S>
+where
+    S: 'a + Store,
+{
+    type Item = &'a mut S::Item;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator
+            .next()
+            .map(|pos| unsafe { mem::transmute(self.store.get_mut(pos)) })
     }
 }
 
@@ -215,48 +257,6 @@ where
 {
     pub fn acquire_default(&mut self) -> &mut S::Item {
         self.acquire_with(Default::default)
-    }
-}
-
-/// Non-mutable view of a column of a sparse matrix.
-pub struct DataIter<'a, S>
-where
-    S: 'a + Store,
-{
-    iterator: ops::Range<usize>,
-    store: &'a S,
-}
-
-impl<'a, S> Iterator for DataIter<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = &'a S::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next().map(|pos| self.store.get(pos))
-    }
-}
-
-/// Mutable view of a column of a sparse matrix.
-pub struct DataIterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    iterator: ops::Range<usize>,
-    store: &'a mut S,
-}
-
-impl<'a, S> Iterator for DataIterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = &'a mut S::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator
-            .next()
-            .map(|pos| unsafe { mem::transmute(self.store.get_mut(pos)) })
     }
 }
 

@@ -82,7 +82,15 @@ pub trait BitSetViewExt: BitSetView {
         }
     }
 
-    fn lower_bound(&self, _pos: usize) -> Option<usize> {
+    fn lower_bound(&self, pos: usize) -> Option<usize> {
+        if self.is_empty() {
+            None
+        } else {
+            let idx = BitPos::from_pos(pos);
+            let (block_pos, _, mask) = idx.bit_detail();
+            let block = self.get_block(0, block_pos);
+            !(block & mask).is_zero()
+        }
         unimplemented!()
     }
 
