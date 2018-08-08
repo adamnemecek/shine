@@ -125,7 +125,7 @@ impl<B: BitBlock> BitSet<B> {
 
         // update levels
         while idx.level < level_count && self.set_level(&idx) {
-            idx.next_level();
+            idx.level_up();
         }
         false
     }
@@ -144,7 +144,7 @@ impl<B: BitBlock> BitSet<B> {
 
         // update levels
         while idx.level < level_count && self.unset_level(&idx) {
-            idx.next_level();
+            idx.level_up();
         }
         true
     }

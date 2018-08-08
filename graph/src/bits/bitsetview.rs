@@ -1,8 +1,8 @@
+use bits::{BitBlock, BitIter};
+use num_traits::{One, ToPrimitive, Zero};
 use std::fmt;
 use std::marker::PhantomData;
-
-use bits::{BitBlock, BitIter};
-use num_traits::{ToPrimitive, Zero};
+use std::ops::Not;
 
 pub const MAX_LEVEL: usize = 11;
 
@@ -22,11 +22,23 @@ impl<B: BitBlock> BitPos<B> {
         }
     }
 
-    ///Advance index to the next level
+    /// Ascend tree and move index to point to the parent node
     #[inline(always)]
-    pub fn next_level(&mut self) {
+    pub fn level_up(&mut self) {
         self.pos >>= B::bit_shift();
         self.level += 1;
+    }
+
+    /// Descend the tree to point the given child block
+    #[inline(always)]
+    pub fn level_down_at(&mut self, child: usize) -> bool {
+        self.pos = ((self.pos >> B::bit_shift()) | child) << B::bit_shift();
+        if self.level > 0 {
+            self.level -= 1;
+            true
+        } else {
+            false
+        }
     }
 
     /// Get the position of the bit in the slice.
@@ -83,15 +95,37 @@ pub trait BitSetViewExt: BitSetView {
     }
 
     fn lower_bound(&self, pos: usize) -> Option<usize> {
-        if self.is_empty() {
-            None
-        } else {
-            let idx = BitPos::from_pos(pos);
-            let (block_pos, _, mask) = idx.bit_detail();
-            let block = self.get_block(0, block_pos);
-            !(block & mask).is_zero()
+        if self.get(pos) {
+            return Some(pos);
         }
-        unimplemented!()
+
+        let lc = self.get_level_count();
+        println!("{}", self.to_levels_string().unwrap());
+        let mut idx = BitPos::<Self::Bits>::from_pos(pos);
+        loop {
+            let mut block; // remaining bits of the current block
+            while {
+                let (block_pos, _, mask) = idx.bit_detail();
+                let mask = (mask - Self::Bits::one() + mask).not();
+                block = self.get_block(idx.level, block_pos) & mask;
+                block
+            }.is_zero()
+            {
+                // no bits in this block, move upward
+                idx.level_up();
+                if idx.level >= lc {
+                    // top reached and no more bits were found
+                    return None;
+                }
+            }
+
+            // move downward
+            let child = block.trailing_bit_pos();
+            if !idx.level_down_at(child) {
+                // bottom reached, we have the next index
+                return Some(idx.pos);
+            }
+        }
     }
 
     fn iter(&self) -> BitIter<Self>
