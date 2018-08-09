@@ -304,7 +304,7 @@ fn test_ops_<B: BitBlock>() {
     assert_eq!((&b2, &b1).and().lower_bound(2361), None);
 
     assert_eq!((&b2, &b1).or().lower_bound(0), Some(0));
-    assert_eq!((&b2, &b1).or().lower_bound(10), Some(15));
+    assert_eq!((&b2, &b1).or().lower_bound(11), Some(15));
     assert_eq!((&b2, &b1).or().lower_bound(15), Some(15));
     assert_eq!((&b2, &b1).or().lower_bound(16), Some(17));
     assert_eq!((&b2, &b1).or().lower_bound(2358), Some(2360));

@@ -26,10 +26,10 @@ impl<B: BitBlock> BitPos<B> {
         }
     }
 
-    #[inline(always)]
+    //#[inline(always)]
     pub fn pos(&self) -> usize {
         assert!(self.level == 0, "position make sense on level 0 only");
-        self.block << B::bit_shift() + self.offset
+        (self.block << B::bit_shift()) + self.offset
     }
 
     #[inline(always)]
@@ -54,7 +54,12 @@ impl<B: BitBlock> BitPos<B> {
 
     #[inline(always)]
     pub fn set_offset(&mut self, offset: usize) {
-        assert!(offset < B::bit_mask(), "Offset is too bif {}/{}", offset, B::bit_mask());
+        assert!(
+            offset <= B::bit_mask(),
+            "Offset is too bif {}/{}",
+            offset,
+            B::bit_mask()
+        );
         self.offset = offset;
     }
 
@@ -141,8 +146,6 @@ pub trait BitSetViewExt: BitSetView {
             return None;
         }
 
-        println!("{}", self.to_levels_string().unwrap());
-
         let mut idx = BitPos::from_pos(pos, self.get_level_count());
         let block = self.get_block(idx.level(), idx.block());
         if !(block & idx.mask()).is_zero() {
@@ -151,6 +154,7 @@ pub trait BitSetViewExt: BitSetView {
 
         // remaining bits of the current block
         let mut masked_block = block & idx.prefix_mask().not();
+
         loop {
             while masked_block.is_zero() {
                 // no bits in this block, move upward
@@ -169,6 +173,7 @@ pub trait BitSetViewExt: BitSetView {
                 // bottom reached, we have the next index
                 return Some(idx.pos());
             }
+            masked_block = self.get_block(idx.level(), idx.block());
         }
     }
 
