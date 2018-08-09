@@ -94,18 +94,17 @@ impl<B: BitBlock> BitSet<B> {
     // Sets a bit of the given level and return if the modification has
     /// effect on the parent levels (block changed from zero to non-zero)
     fn set_level(&mut self, idx: &BitPos<B>) -> bool {
-        let (block_pos, _, mask) = idx.bit_detail();
-        let block = &mut self.get_level_mut(idx.level)[block_pos];
+        let block = &mut self.get_level_mut(idx.level())[idx.block()];
         let changed = block.is_zero();
-        *block = *block | mask;
+        *block = *block | idx.mask();
         changed
     }
 
     /// Clears a bit of the given level and return if the modification has
     /// effect on the parent levels (block changed from non-zero to zero)
     fn unset_level(&mut self, idx: &BitPos<B>) -> bool {
-        let (block_pos, _, mask) = idx.bit_detail();
-        let block = &mut self.get_level_mut(idx.level)[block_pos];
+        let block = &mut self.get_level_mut(idx.level())[idx.block()];
+        let mask = idx.mask();
         let changed = *block == mask;
         *block = *block & !mask;
         changed
@@ -115,8 +114,7 @@ impl<B: BitBlock> BitSet<B> {
         if self.capacity <= pos {
             self.increase_capacity_to(pos + 1);
         }
-        let level_count = self.get_level_count();
-        let mut idx = BitPos::from_pos(pos);
+        let mut idx = BitPos::from_pos(pos, self.get_level_count());
 
         if self.get(pos) {
             // bit already set
@@ -124,9 +122,7 @@ impl<B: BitBlock> BitSet<B> {
         }
 
         // update levels
-        while idx.level < level_count && self.set_level(&idx) {
-            idx.level_up();
-        }
+        while self.set_level(&idx) && idx.level_up() {}
         false
     }
 
@@ -134,8 +130,7 @@ impl<B: BitBlock> BitSet<B> {
         if self.capacity <= pos {
             return false;
         }
-        let level_count = self.get_level_count();
-        let mut idx = BitPos::from_pos(pos);
+        let mut idx = BitPos::from_pos(pos, self.get_level_count());
 
         if !self.get(pos) {
             // bit already cleared
@@ -143,9 +138,7 @@ impl<B: BitBlock> BitSet<B> {
         }
 
         // update levels
-        while idx.level < level_count && self.unset_level(&idx) {
-            idx.level_up();
-        }
+        while self.unset_level(&idx) && idx.level_up() {}
         true
     }
 
