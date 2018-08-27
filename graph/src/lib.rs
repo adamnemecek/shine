@@ -2,9 +2,6 @@
 #![feature(vec_resize_with)]
 #![feature(log_syntax, trace_macros)]
 #![feature(crate_visibility_modifier)]
-//#![feature(custom_attribute)]
-#![feature(tool_attributes)]
-#![feature(use_extern_macros)]
 
 #[macro_use]
 extern crate log;

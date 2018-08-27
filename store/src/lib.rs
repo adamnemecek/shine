@@ -1,7 +1,5 @@
-#![feature(iterator_for_each)]
 #![feature(align_offset)]
 #![feature(drain_filter)]
-#![feature(attr_literals)]
 
 #[macro_use]
 extern crate lazy_static;

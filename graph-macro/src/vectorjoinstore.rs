@@ -23,8 +23,8 @@ fn vector_join_store_for_tuple(count: usize) -> TokenStream {
             type Item = (#(#generics::Item,)*);
 
             #[inline]
-            fn access(&mut self, idx: usize) -> Self::Item {
-                (#(self.#index.access(idx),)*)
+            fn get_unchecked(&mut self, idx: usize) -> Self::Item {
+                (#(self.#index.get_unchecked(idx),)*)
             }
         }
     };

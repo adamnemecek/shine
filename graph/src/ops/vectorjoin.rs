@@ -4,7 +4,7 @@ use svec::VectorMaskBlock;
 pub trait VectorJoinStore {
     type Item;
 
-    fn access(&mut self, idx: usize) -> Self::Item;
+    fn get_unchecked(&mut self, idx: usize) -> Self::Item;
 }
 
 use shine_graph_macro::impl_vector_join_store_for_tuple;
@@ -23,13 +23,10 @@ pub trait VectorJoinExt: VectorJoin {
         self.parts().0.get(idx)
     }
 
-    fn get_unchecked(&mut self, idx: usize) -> <Self::Store as VectorJoinStore>::Item {
-        self.parts().1.access(idx)
-    }
-
     fn get(&mut self, idx: usize) -> Option<<Self::Store as VectorJoinStore>::Item> {
-        if self.contains(idx) {
-            Some(self.get_unchecked(idx))
+        let (mask, store) = self.parts();
+        if mask.get(idx) {
+            Some(store.get_unchecked(idx))
         } else {
             None
         }
@@ -88,6 +85,6 @@ where
 {
     #[cfg_attr(feature = "cargo-clippy", allow(should_implement_trait))]
     pub fn next(&mut self) -> Option<(usize, <V::Store as VectorJoinStore>::Item)> {
-        self.iterator.next().map(|idx| (idx, self.store.access(idx)))
+        self.iterator.next().map(|idx| (idx, self.store.get_unchecked(idx)))
     }
 }

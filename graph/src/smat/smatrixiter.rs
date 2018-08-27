@@ -98,7 +98,7 @@ where
 {
     type Item = (); //ColumnIter<'a, M,S>;
 
-    fn access(&mut self, idx: usize) -> Self::Item {
+    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
         unimplemented!()
     }
 }
@@ -119,7 +119,7 @@ where
 {
     type Item = (); //ColumnIter<'a, M,S>;
 
-    fn access(&mut self, idx: usize) -> Self::Item {
+    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
         unimplemented!()
     }
 }
@@ -139,7 +139,7 @@ where
 {
     type Item = (); //ColumnIter<'a, M,S>;
 
-    fn access(&mut self, idx: usize) -> Self::Item {
+    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
         unimplemented!()
     }
 }

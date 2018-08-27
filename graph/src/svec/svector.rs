@@ -1,9 +1,8 @@
 use std::fmt::{self, Debug, Formatter};
-use std::mem;
 
-use bits::{BitIter, BitSetViewExt};
-use ops::{JVector, VectorJoin, VectorJoinStore, VectorMerge};
-use svec::{Store, VectorMask, VectorMaskTrue};
+use bits::BitSetViewExt;
+use ops::JVector;
+use svec::{DataIter, DataIterMut, Store, VectorMask, VectorMaskTrue};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
@@ -91,17 +90,11 @@ impl<S: Store> SVector<S> {
     }
 
     pub fn data_iter(&self) -> DataIter<S> {
-        DataIter {
-            iterator: self.mask.iter(),
-            store: &self.store,
-        }
+        DataIter::new(self.mask.iter(), &self.store)
     }
 
     pub fn data_iter_mut(&mut self) -> DataIterMut<S> {
-        DataIterMut {
-            iterator: self.mask.iter(),
-            store: &mut self.store,
-        }
+        DataIterMut::new(self.mask.iter(), &mut self.store)
     }
 
     pub fn read(&self) -> JVector<&VectorMask, &S> {
@@ -136,161 +129,6 @@ where
 {
     pub fn add_default(&mut self, idx: usize) -> Option<S::Item> {
         self.add_with(idx, Default::default)
-    }
-}
-
-impl<'a, S> VectorJoin for &'a SVector<S>
-where
-    S: Store,
-{
-    type Mask = &'a VectorMask;
-    type Store = &'a S;
-
-    fn parts(&mut self) -> (&Self::Mask, &mut Self::Store) {
-        unimplemented!()
-    }
-
-    fn into_parts(self) -> (Self::Mask, Self::Store) {
-        (&self.mask, &self.store)
-    }
-}
-
-impl<'a, S> VectorMerge for &'a SVector<S>
-where
-    S: Store,
-{
-    type Item = &'a S::Item;
-
-    fn contains(&self, idx: usize) -> bool {
-        self.mask.get(idx)
-    }
-
-    fn lower_bound_index(&self, idx: usize) -> Option<usize> {
-        self.mask.lower_bound(idx)
-    }
-
-    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
-        (*self).get_unchecked(idx)
-    }
-
-    fn get(&mut self, idx: usize) -> Option<Self::Item> {
-        if self.contains(idx) {
-            Some(self.get_unchecked(idx))
-        } else {
-            None
-        }
-    }
-}
-
-impl<'a, S> VectorMerge for &'a mut SVector<S>
-where
-    S: Store,
-{
-    type Item = &'a mut S::Item;
-
-    fn contains(&self, idx: usize) -> bool {
-        self.mask.get(idx)
-    }
-
-    fn lower_bound_index(&self, idx: usize) -> Option<usize> {
-        self.mask.lower_bound(idx)
-    }
-
-    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
-        unsafe { mem::transmute((*self).get_mut_unchecked(idx)) } // GAT
-    }
-
-    fn get(&mut self, idx: usize) -> Option<Self::Item> {
-        if self.contains(idx) {
-            Some(self.get_unchecked(idx))
-        } else {
-            None
-        }
-    }
-}
-
-/// Wrapper to allow Entry based join and merge for SVector
-pub struct WrapCreate<'a, S>
-where
-    S: 'a + Store,
-{
-    store: &'a mut SVector<S>,
-}
-
-impl<'a, S> VectorJoinStore for WrapCreate<'a, S>
-where
-    S: Store,
-{
-    type Item = Entry<'a, S>;
-
-    #[inline]
-    fn access(&mut self, idx: usize) -> Self::Item {
-        unsafe { mem::transmute(self.store.entry(idx)) } // GAT
-    }
-}
-
-impl<'a, S> VectorMerge for WrapCreate<'a, S>
-where
-    S: Store,
-{
-    type Item = Entry<'a, S>;
-
-    fn contains(&self, _idx: usize) -> bool {
-        true
-    }
-
-    fn lower_bound_index(&self, idx: usize) -> Option<usize> {
-        Some(idx)
-    }
-
-    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
-        unsafe { mem::transmute(self.store.entry(idx)) } // GAT
-    }
-
-    fn get(&mut self, idx: usize) -> Option<Self::Item> {
-        Some(self.get_unchecked(idx))
-    }
-}
-
-/// Iterate over the non-zero (non-mutable) elements of a vector
-pub struct DataIter<'a, S>
-where
-    S: 'a + Store,
-{
-    iterator: BitIter<'a, VectorMask>,
-    store: &'a S,
-}
-
-impl<'a, S> Iterator for DataIter<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = &'a S::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next().map(|idx| self.store.get(idx))
-    }
-}
-
-/// Iterate over the non-zero (mutable) elements of a vector
-pub struct DataIterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    iterator: BitIter<'a, VectorMask>,
-    store: &'a mut S,
-}
-
-impl<'a, S> Iterator for DataIterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = &'a mut S::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator
-            .next()
-            .map(|idx| unsafe { mem::transmute(self.store.get_mut(idx)) }) // GAT
     }
 }
 
@@ -369,6 +207,14 @@ where
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{:?}", self.get())
     }
+}
+
+/// Wrapper to allow Entry based modification of the SVector
+pub struct WrapCreate<'a, S>
+where
+    S: 'a + Store,
+{
+    crate store: &'a mut SVector<S>,
 }
 
 use svec::{DenseStore, HashStore, UnitStore};

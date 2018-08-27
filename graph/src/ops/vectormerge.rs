@@ -7,7 +7,13 @@ pub trait VectorMerge {
 
     fn get_unchecked(&mut self, idx: usize) -> Self::Item;
 
-    fn get(&mut self, idx: usize) -> Option<Self::Item>;
+    fn get(&mut self, idx: usize) -> Option<Self::Item> {
+        if self.contains(idx) {
+            Some(self.get_unchecked(idx))
+        } else {
+            None
+        }
+    }
 }
 
 /// Iterate over the non-zero (non-mutable) elements of a vector

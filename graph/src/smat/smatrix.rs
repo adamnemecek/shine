@@ -1,9 +1,6 @@
-use std::mem;
-use std::ops;
-
 use bits::BitSetViewExt;
 use ops::JVector;
-use smat::{MatrixMask, Store};
+use smat::{DataIter, DataIterMut, MatrixMask, Store};
 use smat::{RowCreate, RowRead, RowWrite};
 use svec::{VectorMask, VectorMaskTrue};
 
@@ -104,17 +101,11 @@ where
     }
 
     pub fn data_iter(&self) -> DataIter<S> {
-        DataIter {
-            iterator: (0..self.nnz()),
-            store: &self.store,
-        }
+        DataIter::new(0..self.nnz(), &self.store)
     }
 
     pub fn data_iter_mut(&mut self) -> DataIterMut<S> {
-        DataIterMut {
-            iterator: (0..self.nnz()),
-            store: &mut self.store,
-        }
+        DataIterMut::new(0..self.nnz(), &mut self.store)
     }
 
     pub fn row_read(&self) -> JVector<&VectorMask, RowRead<M, S>> {
@@ -215,48 +206,6 @@ where
 {
     pub fn acquire_default(&mut self) -> &mut S::Item {
         self.acquire_with(Default::default)
-    }
-}
-
-/// Non-mutable view of a column of a sparse matrix.
-pub struct DataIter<'a, S>
-where
-    S: 'a + Store,
-{
-    iterator: ops::Range<usize>,
-    store: &'a S,
-}
-
-impl<'a, S> Iterator for DataIter<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = &'a S::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next().map(|pos| self.store.get(pos))
-    }
-}
-
-/// Mutable view of a column of a sparse matrix.
-pub struct DataIterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    iterator: ops::Range<usize>,
-    store: &'a mut S,
-}
-
-impl<'a, S> Iterator for DataIterMut<'a, S>
-where
-    S: 'a + Store,
-{
-    type Item = &'a mut S::Item;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.iterator
-            .next()
-            .map(|pos| unsafe { mem::transmute(self.store.get_mut(pos)) })
     }
 }
 
