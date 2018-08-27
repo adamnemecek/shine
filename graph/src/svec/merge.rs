@@ -9,11 +9,11 @@ where
 {
     type Item = &'a S::Item;
 
-    fn contains(&self, idx: usize) -> bool {
+    fn contains(&mut self, idx: usize) -> bool {
         self.mask.get(idx)
     }
 
-    fn lower_bound_index(&self, idx: usize) -> Option<usize> {
+    fn lower_bound_index(&mut self, idx: usize) -> Option<usize> {
         self.mask.lower_bound(idx)
     }
 
@@ -28,11 +28,11 @@ where
 {
     type Item = &'a mut S::Item;
 
-    fn contains(&self, idx: usize) -> bool {
+    fn contains(&mut self, idx: usize) -> bool {
         self.mask.get(idx)
     }
 
-    fn lower_bound_index(&self, idx: usize) -> Option<usize> {
+    fn lower_bound_index(&mut self, idx: usize) -> Option<usize> {
         self.mask.lower_bound(idx)
     }
 
@@ -47,11 +47,11 @@ where
 {
     type Item = Entry<'a, S>;
 
-    fn contains(&self, _idx: usize) -> bool {
+    fn contains(&mut self, _idx: usize) -> bool {
         true
     }
 
-    fn lower_bound_index(&self, idx: usize) -> Option<usize> {
+    fn lower_bound_index(&mut self, idx: usize) -> Option<usize> {
         Some(idx)
     }
 

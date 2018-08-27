@@ -6,8 +6,10 @@
             "type": "cppvsdbg",
             "request": "launch",
             //"program": "${workspaceRoot}/target/debug/${workspaceRootFolderName}",
-            "program": "${workspaceRoot}/target/debug/smat-c97262045085e92d.exe",
-            "args": [],
+            "program": "${workspaceRoot}/target/debug/deps/bitset-c3dc8ee09697867d.exe",
+            "args": [
+                "--nocapture"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
             "externalConsole": true

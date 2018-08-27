@@ -1,12 +1,12 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
-use std::ops;
+//use std::ops;
 //use std::mem;
 
 use ops::VectorJoinStore;
 use smat::{MatrixMask, SMatrix, Store};
-
+/*
 /// Non-mutable view of a column of a sparse matrix.
 pub struct ColumnIter<'a, M, S>
 where
@@ -32,7 +32,7 @@ where
             .map(|col| ((self.row, self.mask.get_column(col)), self.store.get(col)))
     }
 }
-
+*/
 /*
 /// Mutable view of a column of a sparse matrix.
 pub struct ColumnIterMut<'a, S>
@@ -96,10 +96,10 @@ where
     M: 'a + MatrixMask,
     S: 'a + Store,
 {
-    type Item = (); //ColumnIter<'a, M,S>;
+    type Item = (usize, usize); //ColumnIter<'a, M,S>;
 
     fn get_unchecked(&mut self, idx: usize) -> Self::Item {
-        unimplemented!()
+        self.mask.get_pos_range(idx).unwrap()
     }
 }
 
@@ -117,10 +117,10 @@ where
     M: 'a + MatrixMask,
     S: 'a + Store,
 {
-    type Item = (); //ColumnIter<'a, M,S>;
+    type Item = (usize, usize); //ColumnIter<'a, M,S>;
 
     fn get_unchecked(&mut self, idx: usize) -> Self::Item {
-        unimplemented!()
+        self.mask.get_pos_range(idx).unwrap()
     }
 }
 
@@ -137,10 +137,10 @@ where
     M: 'a + MatrixMask,
     S: 'a + Store,
 {
-    type Item = (); //ColumnIter<'a, M,S>;
+    type Item = (usize, usize); //ColumnIter<'a, M,S>;
 
     fn get_unchecked(&mut self, idx: usize) -> Self::Item {
-        unimplemented!()
+        (0, usize::max_value())
     }
 }
 /*

@@ -1,44 +1,104 @@
-use std::fmt;
-use std::marker::PhantomData;
-
 use bits::{BitBlock, BitIter};
 use num_traits::{ToPrimitive, Zero};
+use std::fmt;
+use std::marker::PhantomData;
+use std::ops::Not;
 
 pub const MAX_LEVEL: usize = 11;
 
 /// Index a bit at a given level
 pub struct BitPos<B: BitBlock> {
-    pub level: usize,
-    pub pos: usize,
+    level_count: usize,
+    level: usize,
+    block: usize,
+    offset: usize,
     ph: PhantomData<B>,
 }
 
 impl<B: BitBlock> BitPos<B> {
-    pub fn from_pos(pos: usize) -> BitPos<B> {
+    pub fn from_pos(pos: usize, level_count: usize) -> BitPos<B> {
         BitPos {
+            level_count: level_count,
             level: 0,
-            pos,
+            block: pos >> B::bit_shift(),
+            offset: pos & B::bit_mask(),
             ph: PhantomData,
         }
     }
 
-    ///Advance index to the next level
-    #[inline(always)]
-    pub fn next_level(&mut self) {
-        self.pos >>= B::bit_shift();
-        self.level += 1;
+    //#[inline(always)]
+    pub fn pos(&self) -> usize {
+        assert!(self.level == 0, "position make sense on level 0 only");
+        (self.block << B::bit_shift()) + self.offset
     }
 
-    /// Get the position of the bit in the slice.
-    /// The items of the tuple in order:
-    ///  - index of the block in the dense storage
-    ///  - the position of the bit within the block
-    ///  - the mask of the block where only the bit pointed by the index is set.
     #[inline(always)]
-    pub fn bit_detail(&self) -> (usize, usize, B) {
-        let block_pos = self.pos >> B::bit_shift();
-        let bit_pos = self.pos & B::bit_mask();
-        (block_pos, bit_pos, B::one() << bit_pos)
+    pub fn level(&self) -> usize {
+        self.level
+    }
+
+    #[inline(always)]
+    pub fn block(&self) -> usize {
+        self.block
+    }
+
+    #[inline(always)]
+    pub fn set_block(&mut self, block: usize) {
+        self.block = block;
+    }
+
+    #[inline(always)]
+    pub fn offset(&self) -> usize {
+        self.offset
+    }
+
+    #[inline(always)]
+    pub fn set_offset(&mut self, offset: usize) {
+        assert!(
+            offset <= B::bit_mask(),
+            "Offset is too bif {}/{}",
+            offset,
+            B::bit_mask()
+        );
+        self.offset = offset;
+    }
+
+    #[inline(always)]
+    pub fn mask(&self) -> B {
+        B::one() << self.offset
+    }
+
+    // Bit mask of a block that contains all the bits not after the offset
+    #[inline(always)]
+    pub fn prefix_mask(&self) -> B {
+        let mask = self.mask();
+        mask - B::one() + mask
+    }
+
+    /// Ascend tree and move index to point to the parent node
+    #[inline(always)]
+    pub fn level_up(&mut self) -> bool {
+        self.level += 1;
+        if self.level < self.level_count {
+            self.offset = self.block & B::bit_mask();
+            self.block = self.block >> B::bit_shift();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Descend the tree to point the first bit of the child block
+    //#[inline(always)]
+    pub fn level_down(&mut self) -> bool {
+        if self.level > 0 {
+            self.level -= 1;
+            self.block = self.block << B::bit_shift() | self.offset;
+            self.offset = 0;
+            true
+        } else {
+            false
+        }
     }
 }
 
@@ -75,15 +135,46 @@ pub trait BitSetViewExt: BitSetView {
         if self.is_empty() {
             false
         } else {
-            let idx = BitPos::from_pos(pos);
-            let (block_pos, _, mask) = idx.bit_detail();
-            let block = self.get_block(0, block_pos);
-            !(block & mask).is_zero()
+            let idx = BitPos::from_pos(pos, self.get_level_count());
+            let block = self.get_block(idx.level(), idx.block());
+            !(block & idx.mask()).is_zero()
         }
     }
 
-    fn lower_bound(&self, _pos: usize) -> Option<usize> {
-        unimplemented!()
+    fn lower_bound(&self, pos: usize) -> Option<usize> {
+        if self.is_empty() {
+            return None;
+        }
+
+        let mut idx = BitPos::from_pos(pos, self.get_level_count());
+        let block = self.get_block(idx.level(), idx.block());
+        if !(block & idx.mask()).is_zero() {
+            return Some(pos);
+        }
+
+        // remaining bits of the current block
+        let mut masked_block = block & idx.prefix_mask().not();
+
+        loop {
+            while masked_block.is_zero() {
+                // no bits in this block, move upward
+                if !idx.level_up() {
+                    // top reached and no more bits were found
+                    return None;
+                }
+                let block = self.get_block(idx.level(), idx.block());
+                masked_block = block & idx.prefix_mask().not();
+            }
+
+            // move downward
+            let offset = masked_block.trailing_bit_pos();
+            idx.set_offset(offset);
+            if !idx.level_down() {
+                // bottom reached, we have the next index
+                return Some(idx.pos());
+            }
+            masked_block = self.get_block(idx.level(), idx.block());
+        }
     }
 
     fn iter(&self) -> BitIter<Self>

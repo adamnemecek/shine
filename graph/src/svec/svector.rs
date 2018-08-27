@@ -109,7 +109,7 @@ impl<S: Store> SVector<S> {
         JVector::from_parts(VectorMaskTrue::new(), WrapCreate { store: self })
     }
 
-    pub fn merge_read(&self) -> &Self {
+    /*pub fn merge_read(&self) -> &Self {
         self
     }
 
@@ -119,7 +119,7 @@ impl<S: Store> SVector<S> {
 
     pub fn merge_create(&mut self) -> WrapCreate<S> {
         WrapCreate { store: self }
-    }
+    }*/
 }
 
 impl<T, S> SVector<S>

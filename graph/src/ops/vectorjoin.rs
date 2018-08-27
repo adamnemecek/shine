@@ -1,4 +1,5 @@
 use bits::{BitIter, BitSetView, BitSetViewExt};
+use ops::VectorMerge;
 use svec::VectorMaskBlock;
 
 pub trait VectorJoinStore {
@@ -67,8 +68,26 @@ pub trait VectorJoinExt: VectorJoin {
         }
     }
 }
-
 impl<T: ?Sized> VectorJoinExt for T where T: VectorJoin {}
+
+impl<T: ?Sized> VectorMerge for T
+where
+    T: VectorJoin,
+{
+    type Item = <<T as VectorJoin>::Store as VectorJoinStore>::Item;
+
+    fn contains(&mut self, idx: usize) -> bool {
+        self.parts().0.get(idx)
+    }
+
+    fn lower_bound_index(&mut self, idx: usize) -> Option<usize> {
+        self.parts().0.lower_bound(idx)
+    }
+
+    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
+        self.parts().1.get_unchecked(idx)
+    }
+}
 
 /// Iterate over the non-zero (non-mutable) elements of a vector
 pub struct VectorJoinIter<'a, V>

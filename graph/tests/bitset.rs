@@ -236,10 +236,22 @@ fn test_ops_<B: BitBlock>() {
 
     use bitops::BitOp;
 
+    //assert_eq!(b2.lower_bound(0), None);
+    //assert_eq!(b2.lower_bound(1), None);
+
     b1.add(0);
     b1.add(10);
     b1.add(17);
     b1.add(18);
+
+    //assert_eq!(b1.lower_bound(0), Some(0));
+    assert_eq!(b1.lower_bound(1), Some(10));
+    assert_eq!(b1.lower_bound(10), Some(10));
+    assert_eq!(b1.lower_bound(11), Some(17));
+    assert_eq!(b1.lower_bound(17), Some(17));
+    assert_eq!(b1.lower_bound(18), Some(18));
+    assert_eq!(b1.lower_bound(19), None);
+    assert_eq!(b1.lower_bound(12249), None);
 
     check_bitset(&bitops::or2(&b1, &b2), &[0, 10, 17, 18]);
     check_bitset(&bitops::or2(&b2, &b1), &[0, 10, 17, 18]);
@@ -250,6 +262,16 @@ fn test_ops_<B: BitBlock>() {
     b2.add(10);
     b2.add(15);
     b2.add(17);
+
+    assert_eq!(b2.lower_bound(0), Some(1));
+    assert_eq!(b2.lower_bound(1), Some(1));
+    assert_eq!(b2.lower_bound(2), Some(10));
+    assert_eq!(b2.lower_bound(10), Some(10));
+    assert_eq!(b2.lower_bound(11), Some(15));
+    assert_eq!(b2.lower_bound(15), Some(15));
+    assert_eq!(b2.lower_bound(16), Some(17));
+    assert_eq!(b2.lower_bound(17), Some(17));
+    assert_eq!(b2.lower_bound(18), None);
 
     check_bitset(&bitops::or2(&b1, &b2), &[0, 1, 10, 15, 17, 18]);
     check_bitset(&bitops::or2(&b2, &b1), &[0, 1, 10, 15, 17, 18]);
@@ -272,6 +294,22 @@ fn test_ops_<B: BitBlock>() {
     check_bitset(&bitops::or2(&b2, &b1), &[0, 1, 10, 15, 17, 18, 2357, 2360]);
     check_bitset(&bitops::and2(&b1, &b2), &[10, 17, 2360]);
     check_bitset(&bitops::and2(&b2, &b1), &[10, 17, 2360]);
+
+    assert_eq!((&b2, &b1).and().lower_bound(0), Some(10));
+    assert_eq!((&b2, &b1).and().lower_bound(10), Some(10));
+    assert_eq!((&b2, &b1).and().lower_bound(11), Some(17));
+    assert_eq!((&b2, &b1).and().lower_bound(17), Some(17));
+    assert_eq!((&b2, &b1).and().lower_bound(18), Some(2360));
+    assert_eq!((&b2, &b1).and().lower_bound(2360), Some(2360));
+    assert_eq!((&b2, &b1).and().lower_bound(2361), None);
+
+    assert_eq!((&b2, &b1).or().lower_bound(0), Some(0));
+    assert_eq!((&b2, &b1).or().lower_bound(11), Some(15));
+    assert_eq!((&b2, &b1).or().lower_bound(15), Some(15));
+    assert_eq!((&b2, &b1).or().lower_bound(16), Some(17));
+    assert_eq!((&b2, &b1).or().lower_bound(2358), Some(2360));
+    assert_eq!((&b2, &b1).or().lower_bound(2360), Some(2360));
+    assert_eq!((&b2, &b1).or().lower_bound(2361), None);
 
     let mut b3 = BitSet::<B>::new();
     b3.add(2360);

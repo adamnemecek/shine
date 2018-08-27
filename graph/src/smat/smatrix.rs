@@ -108,12 +108,12 @@ where
         DataIterMut::new(0..self.nnz(), &mut self.store)
     }
 
-    pub fn row_read(&self) -> JVector<&VectorMask, RowRead<M, S>> {
+    pub fn row_read(&mut self) -> JVector<&VectorMask, RowRead<M, S>> {
         JVector::from_parts(
             &self.row_mask,
             RowRead {
                 mask: &self.mask,
-                store: &self.store,
+                store: &mut self.store,
             },
         )
     }
