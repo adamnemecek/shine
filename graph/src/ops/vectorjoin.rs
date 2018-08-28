@@ -33,7 +33,7 @@ pub trait VectorJoinExt: VectorJoin {
         }
     }
 
-    fn iter(&mut self) -> VectorJoinIter<Self>
+    fn join(&mut self) -> VectorJoinIter<Self>
     where
         Self: Sized,
     {
@@ -44,23 +44,23 @@ pub trait VectorJoinExt: VectorJoin {
         }
     }
 
-    fn for_each<F>(&mut self, mut f: F)
+    fn join_all<F>(&mut self, mut f: F)
     where
         F: FnMut(usize, <Self::Store as VectorJoinStore>::Item),
         Self: Sized,
     {
-        let mut it = self.iter();
+        let mut it = self.join();
         while let Some((id, e)) = it.next() {
             f(id, e);
         }
     }
 
-    fn for_each_until<F>(&mut self, mut f: F)
+    fn join_until<F>(&mut self, mut f: F)
     where
         F: FnMut(usize, <Self::Store as VectorJoinStore>::Item) -> bool,
         Self: Sized,
     {
-        let mut it = self.iter();
+        let mut it = self.join();
         while let Some((id, e)) = it.next() {
             if !f(id, e) {
                 break;

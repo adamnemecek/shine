@@ -16,6 +16,40 @@ pub trait VectorMergeExt: VectorMerge {
             None
         }
     }
+
+    fn merge(&mut self) -> VectorMergeIter<Self>
+    where
+        Self: Sized,
+    {
+        VectorMergeIter {
+            idx: self.lower_bound_index(0),
+            store: self,
+        }
+    }
+
+    fn merge_all<F>(&mut self, mut f: F)
+    where
+        F: FnMut(usize, <Self as VectorMerge>::Item),
+        Self: Sized,
+    {
+        let mut it = self.merge();
+        while let Some((id, e)) = it.next() {
+            f(id, e);
+        }
+    }
+
+    fn merge_until<F>(&mut self, mut f: F)
+    where
+        F: FnMut(usize, <Self as VectorMerge>::Item) -> bool,
+        Self: Sized,
+    {
+        let mut it = self.merge();
+        while let Some((id, e)) = it.next() {
+            if !f(id, e) {
+                break;
+            }
+        }
+    }
 }
 impl<T: ?Sized> VectorMergeExt for T where T: VectorMerge {}
 

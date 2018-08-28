@@ -1,7 +1,6 @@
 use bits::BitSetViewExt;
 use ops::JVector;
 use smat::{DataIter, DataIterMut, MatrixMask, Store};
-use smat::{RowCreate, RowRead, RowWrite};
 use svec::{VectorMask, VectorMaskTrue};
 
 /// Sparse (Square) Row matrix
@@ -108,29 +107,53 @@ where
         DataIterMut::new(0..self.nnz(), &mut self.store)
     }
 
-    pub fn row_read(&mut self) -> JVector<&VectorMask, RowRead<M, S>> {
+    pub fn row_read(&mut self) -> JVector<&VectorMask, WrapRowRead<M, S>> {
         JVector::from_parts(
             &self.row_mask,
-            RowRead {
+            WrapRowRead {
                 mask: &self.mask,
                 store: &mut self.store,
             },
         )
     }
 
-    pub fn row_write(&mut self) -> JVector<&VectorMask, RowWrite<M, S>> {
+    pub fn row_write(&mut self) -> JVector<&VectorMask, WrapRowWrite<M, S>> {
         JVector::from_parts(
             &self.row_mask,
-            RowWrite {
+            WrapRowWrite {
                 mask: &self.mask,
                 store: &mut self.store,
             },
         )
     }
 
-    pub fn row_create(&mut self) -> JVector<VectorMaskTrue, RowCreate<M, S>> {
-        JVector::from_parts(VectorMaskTrue::new(), RowCreate { store: self })
+    pub fn row_create(&mut self) -> JVector<VectorMaskTrue, WrapRowCreate<M, S>> {
+        JVector::from_parts(VectorMaskTrue::new(), WrapRowCreate { store: self })
     }
+
+    /*pub fn column_read(&mut self) -> JVector<&VectorMask, WrapColumnRead<M, S>> {
+        JVector::from_parts(
+            &self.row_mask,
+            WrapColumnRead {
+                mask: &self.mask,
+                store: &mut self.store,
+            },
+        )
+    }
+
+    pub fn column_write(&mut self) -> JVector<&VectorMask, WrapColumnWrite<M, S>> {
+        JVector::from_parts(
+            &self.row_mask,
+            WrapColumnWrite {
+                mask: &self.mask,
+                store: &mut self.store,
+            },
+        )
+    }
+
+    pub fn column_create(&mut self) -> JVector<VectorMaskTrue, WrapColumnCreate<M, S>> {
+        JVector::from_parts(VectorMaskTrue::new(), WrapColumnCreate { store: self })
+    }*/
 }
 
 impl<T, M, S> SMatrix<M, S>
@@ -209,35 +232,61 @@ where
     }
 }
 
-use smat::{ArenaStore, DenseStore, UnitStore};
-use smat::{CSMatrixMask, HCSMatrixMask};
-
-pub type SDMatrix<T> = SMatrix<CSMatrixMask, DenseStore<T>>;
-pub fn new_dmat<T>() -> SDMatrix<T> {
-    SMatrix::new(CSMatrixMask::new(), DenseStore::new())
+/// Wrapper to allow row-wise enumeration of references to the SMatrix elements
+pub struct WrapRowRead<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    crate mask: &'a M,
+    crate store: &'a S,
 }
 
-pub type SAMatrix<T> = SMatrix<CSMatrixMask, ArenaStore<T>>;
-pub fn new_amat<T>() -> SAMatrix<T> {
-    SMatrix::new(CSMatrixMask::new(), ArenaStore::new())
+/// Wrapper to allow row-wise enumeration of mutable references to the SMatrix elements
+pub struct WrapRowWrite<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    crate mask: &'a M,
+    crate store: &'a mut S,
 }
 
-pub type STMatrix = SMatrix<CSMatrixMask, UnitStore>;
-pub fn new_tmat() -> STMatrix {
-    SMatrix::new(CSMatrixMask::new(), UnitStore::new())
+/// Wrapper to allow row-wise enumeration of entities to the SMatrix elements
+pub struct WrapRowCreate<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    crate store: &'a mut SMatrix<M, S>,
+}
+/*
+/// Wrapper to allow column-wise enumeration of references to the SMatrix elements
+pub struct WrapColumnRead<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    crate mask: &'a M,
+    crate store: &'a S,
 }
 
-pub type SHDMatrix<T> = SMatrix<HCSMatrixMask, DenseStore<T>>;
-pub fn new_hdmat<T>() -> SHDMatrix<T> {
-    SMatrix::new(HCSMatrixMask::new(), DenseStore::new())
+/// Wrapper to allow column-wise enumeration of mutable references to the SMatrix elements
+pub struct WrapColumnWrite<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    crate mask: &'a M,
+    crate store: &'a mut S,
 }
 
-pub type SHAMatrix<T> = SMatrix<HCSMatrixMask, ArenaStore<T>>;
-pub fn new_hamat<T>() -> SHAMatrix<T> {
-    SMatrix::new(HCSMatrixMask::new(), ArenaStore::new())
+/// Wrapper to allow column-wise enumeration of entities to the SMatrix elements
+pub struct WrapColumnCreate<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    crate store: &'a mut SMatrix<M, S>,
 }
-
-pub type SHTMatrix = SMatrix<HCSMatrixMask, UnitStore>;
-pub fn new_htmat() -> SHTMatrix {
-    SMatrix::new(HCSMatrixMask::new(), UnitStore::new())
-}
+*/

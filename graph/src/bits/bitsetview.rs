@@ -202,5 +202,4 @@ pub trait BitSetViewExt: BitSetView {
         Ok(res)
     }
 }
-
 impl<T: ?Sized> BitSetViewExt for T where T: BitSetView {}

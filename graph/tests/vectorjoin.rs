@@ -35,12 +35,12 @@ fn test_svec_join() {
     trace!("join - read");
     {
         let mut s = String::new();
-        v2.read().for_each(|id, e| {
+        v2.read().join_all(|id, e| {
             s = format!("{},{}={:?}", s, id, e);
 
             // it's safe to get a read while another read is in progress
             let mut s2 = String::new();
-            v2.read().for_each(|id, e| {
+            v2.read().join_all(|id, e| {
                 s2 = format!("{},{}={:?}", s2, id, e);
             });
             assert_eq!(s2, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
@@ -51,7 +51,7 @@ fn test_svec_join() {
     trace!("join - write");
     {
         let mut s = String::new();
-        v2.write().for_each(|id, e| {
+        v2.write().join_all(|id, e| {
             *e += 1;
             s = format!("{},{}={:?}", s, id, e);
         });
@@ -61,7 +61,7 @@ fn test_svec_join() {
     trace!("join - create");
     {
         let mut s = String::new();
-        v1.create().for_each_until(|id, mut e| {
+        v1.create().join_until(|id, mut e| {
             if id % 2 == 0 {
                 e.acquire(id);
             }
@@ -83,7 +83,7 @@ fn test_svec_join() {
         let mut s2 = String::new();
         (v1.read(), v2.write(), t1.create())
             .into_join()
-            .for_each(|id, (e1, e2, mut e3)| {
+            .join_all(|id, (e1, e2, mut e3)| {
                 s1 = format!("{},{}", s1, id);
                 *e2 += 1;
                 if *e1 % 2 == 1 {
@@ -134,21 +134,21 @@ fn test_vec_mat_join() {
 
     trace!("vec read, mat read");
     {
-        (v1.read(), m1.row_read()).into_join().for_each(|id, e| {
+        (v1.read(), m1.row_read()).into_join().join_all(|id, e| {
             println!(" {}, {:?}", id, e);
         })
     }
 
     trace!("vec read, mat write");
     {
-        (v1.read(), m1.row_write()).into_join().for_each(|id, e| {
+        (v1.read(), m1.row_write()).into_join().join_all(|id, e| {
             println!("{}, {:?}", id, e);
         })
     }
 
     trace!("vec read, mat create");
     {
-        (v1.read(), m1.row_create()).into_join().for_each(|id, e| {
+        (v1.read(), m1.row_create()).into_join().join_all(|id, e| {
             println!("{}, {:?}", id, e);
         })
     }

@@ -120,7 +120,7 @@ fn test_stress() {
     }
 }
 
-fn test_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
+fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
     assert_eq!(matrix.data_iter().next(), None);
 
     matrix.add(14, 8, (14, 8));
@@ -159,11 +159,11 @@ fn test_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
 }
 
 #[test]
-fn test_iter() {
+fn test_data_iter() {
     let _ = env_logger::try_init();
 
     trace!("SparseDMatrix/CSMatrix");
-    test_iter_(new_dmat::<Data>());
+    test_data_iter_(new_dmat::<Data>());
     trace!("SparseAMatrix/CSMatrix");
-    test_iter_(new_amat::<Data>());
+    test_data_iter_(new_amat::<Data>());
 }

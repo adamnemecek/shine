@@ -129,7 +129,7 @@ fn test_stress() {
     }
 }
 
-fn test_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
+fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
     assert_eq!(vector.data_iter().next(), None);
 
     vector.add(14, 14);
@@ -166,11 +166,11 @@ fn test_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
 }
 
 #[test]
-fn test_iter() {
+fn test_data_iter() {
     let _ = env_logger::try_init();
 
     trace!("SDVector");
-    test_iter_(new_dvec::<Data>());
+    test_data_iter_(new_dvec::<Data>());
     trace!("SHVector");
-    test_iter_(new_hvec::<Data>());
+    test_data_iter_(new_hvec::<Data>());
 }
