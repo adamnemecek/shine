@@ -1,6 +1,6 @@
 {
     "debug.allowBreakpointsEverywhere": true,
     "editor.formatOnSave": true,
-    "rust-client.updateOnStartup": true,
+    "rust-client.updateOnStartup": false,
     "rust.cfg_test": true,
 }

@@ -1,30 +1,35 @@
 pub trait VectorMerge {
     type Item;
 
-    fn contains(&mut self, idx: usize) -> bool;
+    /// Move to the next valid index that is not less than the provided idx
+    fn advance_to(&mut self, idx: usize);
 
-    fn lower_bound_index(&mut self, idx: usize) -> Option<usize>;
+    /// Return the current index, or None if merge is over
+    fn current_index(&mut self) -> Option<usize>;
 
-    fn get_unchecked(&mut self, idx: usize) -> Self::Item;
+    /// Return the current value, or None if merge is over
+    fn current(&mut self) -> Option<Self::Item>;
 }
 
 pub trait VectorMergeExt: VectorMerge {
-    fn get(&mut self, idx: usize) -> Option<Self::Item> {
-        if self.contains(idx) {
-            Some(self.get_unchecked(idx))
-        } else {
-            None
-        }
+    /// Return the current (index, value) pair, or None if merge is over.
+    fn get(&mut self) -> Option<(usize, Self::Item)> {
+        let idx = match self.current_index() {
+            None => return None,
+            Some(idx) => idx,
+        };
+        Some((idx, self.current().unwrap()))
     }
 
-    fn merge(&mut self) -> VectorMergeIter<Self>
-    where
-        Self: Sized,
-    {
-        VectorMergeIter {
-            idx: self.lower_bound_index(0),
-            store: self,
-        }
+    /// Advance the merge to the next valid item.
+    #[allow(clippy::should_implement_trait)]
+    fn next(&mut self) -> Option<(usize, Self::Item)> {
+        let idx = match self.current_index() {
+            Some(idx) => idx + 1,
+            None => return None,
+        };
+        self.advance_to(idx);
+        self.get()
     }
 
     fn merge_all<F>(&mut self, mut f: F)
@@ -32,8 +37,7 @@ pub trait VectorMergeExt: VectorMerge {
         F: FnMut(usize, <Self as VectorMerge>::Item),
         Self: Sized,
     {
-        let mut it = self.merge();
-        while let Some((id, e)) = it.next() {
+        while let Some((id, e)) = self.next() {
             f(id, e);
         }
     }
@@ -43,8 +47,7 @@ pub trait VectorMergeExt: VectorMerge {
         F: FnMut(usize, <Self as VectorMerge>::Item) -> bool,
         Self: Sized,
     {
-        let mut it = self.merge();
-        while let Some((id, e)) = it.next() {
+        while let Some((id, e)) = self.next() {
             if !f(id, e) {
                 break;
             }
@@ -53,22 +56,11 @@ pub trait VectorMergeExt: VectorMerge {
 }
 impl<T: ?Sized> VectorMergeExt for T where T: VectorMerge {}
 
-/// Iterate over the non-zero (non-mutable) elements of a vector
-pub struct VectorMergeIter<'a, V>
-where
-    V: 'a + VectorMerge,
-{
-    idx: Option<usize>,
-    store: &'a mut V,
-}
+/// Trait to create Merge
+pub trait IntoVectorMerge {
+    type Merge: VectorMerge;
 
-impl<'a, V> VectorMergeIter<'a, V>
-where
-    V: 'a + VectorMerge,
-{
-    #[cfg_attr(feature = "cargo-clippy", allow(should_implement_trait))]
-    pub fn next(&mut self) -> Option<(usize, V::Item)> {
-        self.idx = self.store.lower_bound_index(self.idx.map_or(0, |idx| idx + 1));
-        self.idx.map(|idx| (idx, self.store.get_unchecked(idx)))
-    }
+    fn into_merge(self) -> Self::Merge;
 }
+//use shine_graph_macro::impl_vector_merge_for_tuple;
+//impl_vector_merge_for_tuple!{(2,3,4,5,6,7,8,9,10)}

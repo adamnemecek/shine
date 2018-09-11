@@ -18,7 +18,7 @@ pub struct BitPos<B: BitBlock> {
 impl<B: BitBlock> BitPos<B> {
     pub fn from_pos(pos: usize, level_count: usize) -> BitPos<B> {
         BitPos {
-            level_count: level_count,
+            level_count,
             level: 0,
             block: pos >> B::bit_shift(),
             offset: pos & B::bit_mask(),
@@ -81,7 +81,7 @@ impl<B: BitBlock> BitPos<B> {
         self.level += 1;
         if self.level < self.level_count {
             self.offset = self.block & B::bit_mask();
-            self.block = self.block >> B::bit_shift();
+            self.block >>= B::bit_shift();
             true
         } else {
             false
@@ -177,7 +177,7 @@ pub trait BitSetViewExt: BitSetView {
         }
     }
 
-    fn iter(&self) -> BitIter<Self>
+    fn iter(&self) -> BitIter<&Self>
     where
         Self: Sized,
     {

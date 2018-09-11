@@ -1,109 +1,63 @@
-use bits::{BitIter, BitSetView, BitSetViewExt};
-use ops::VectorMerge;
+use bits::{BitIter, BitSetView};
 use svec::VectorMaskBlock;
+use traits::ExclusiveAccess;
 
-pub trait VectorJoinStore {
-    type Item;
-
-    fn get_unchecked(&mut self, idx: usize) -> Self::Item;
-}
-
-use shine_graph_macro::impl_vector_join_store_for_tuple;
-impl_vector_join_store_for_tuple!{(1,2,3,4,5,6,7,8,9,10)}
-
-pub trait VectorJoin {
+/// Trait to create Join from other.
+pub trait IntoVectorJoin {
     type Mask: BitSetView<Bits = VectorMaskBlock>;
-    type Store: VectorJoinStore;
+    type Store: ExclusiveAccess<usize>;
 
-    fn parts(&mut self) -> (&Self::Mask, &mut Self::Store);
-    fn into_parts(self) -> (Self::Mask, Self::Store);
+    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store>;
 }
 
-pub trait VectorJoinExt: VectorJoin {
-    fn contains(&mut self, idx: usize) -> bool {
-        self.parts().0.get(idx)
+/// Iterator like trait that perform the join.
+pub struct VectorJoin<M, S>
+where
+    M: BitSetView<Bits = VectorMaskBlock>,
+    S: ExclusiveAccess<usize>,
+{
+    iterator: BitIter<M>,
+    store: S,
+}
+
+/// Extension methods for VectorJoin.
+impl<M, S> VectorJoin<M, S>
+where
+    M: BitSetView<Bits = VectorMaskBlock>,
+    S: ExclusiveAccess<usize>,
+{
+    pub fn new(iterator: BitIter<M>, store: S) -> VectorJoin<M, S> {
+        VectorJoin { iterator, store }
     }
 
-    fn get(&mut self, idx: usize) -> Option<<Self::Store as VectorJoinStore>::Item> {
-        let (mask, store) = self.parts();
-        if mask.get(idx) {
-            Some(store.get_unchecked(idx))
-        } else {
-            None
-        }
+    #[allow(clippy::should_implement_trait)]
+    pub fn next(&mut self) -> Option<(usize, <S as ExclusiveAccess<usize>>::Item)> {
+        let idx = match self.iterator.next() {
+            None => return None,
+            Some(idx) => idx,
+        };
+        Some((idx, self.store.get(idx)))
     }
 
-    fn join(&mut self) -> VectorJoinIter<Self>
+    pub fn join_all<F>(&mut self, mut f: F)
     where
+        F: FnMut(usize, <S as ExclusiveAccess<usize>>::Item),
         Self: Sized,
     {
-        let (mask, store) = self.parts();
-        VectorJoinIter {
-            iterator: mask.iter(),
-            store,
-        }
-    }
-
-    fn join_all<F>(&mut self, mut f: F)
-    where
-        F: FnMut(usize, <Self::Store as VectorJoinStore>::Item),
-        Self: Sized,
-    {
-        let mut it = self.join();
-        while let Some((id, e)) = it.next() {
+        while let Some((id, e)) = self.next() {
             f(id, e);
         }
     }
 
-    fn join_until<F>(&mut self, mut f: F)
+    pub fn join_until<F>(&mut self, mut f: F)
     where
-        F: FnMut(usize, <Self::Store as VectorJoinStore>::Item) -> bool,
+        F: FnMut(usize, <S as ExclusiveAccess<usize>>::Item) -> bool,
         Self: Sized,
     {
-        let mut it = self.join();
-        while let Some((id, e)) = it.next() {
+        while let Some((id, e)) = self.next() {
             if !f(id, e) {
                 break;
             }
         }
-    }
-}
-impl<T: ?Sized> VectorJoinExt for T where T: VectorJoin {}
-
-impl<T: ?Sized> VectorMerge for T
-where
-    T: VectorJoin,
-{
-    type Item = <<T as VectorJoin>::Store as VectorJoinStore>::Item;
-
-    fn contains(&mut self, idx: usize) -> bool {
-        self.parts().0.get(idx)
-    }
-
-    fn lower_bound_index(&mut self, idx: usize) -> Option<usize> {
-        self.parts().0.lower_bound(idx)
-    }
-
-    fn get_unchecked(&mut self, idx: usize) -> Self::Item {
-        self.parts().1.get_unchecked(idx)
-    }
-}
-
-/// Iterate over the non-zero (non-mutable) elements of a vector
-pub struct VectorJoinIter<'a, V>
-where
-    V: 'a + VectorJoin,
-{
-    iterator: BitIter<'a, V::Mask>,
-    store: &'a mut V::Store,
-}
-
-impl<'a, V> VectorJoinIter<'a, V>
-where
-    V: 'a + VectorJoin,
-{
-    #[cfg_attr(feature = "cargo-clippy", allow(should_implement_trait))]
-    pub fn next(&mut self) -> Option<(usize, <V::Store as VectorJoinStore>::Item)> {
-        self.iterator.next().map(|idx| (idx, self.store.get_unchecked(idx)))
     }
 }

@@ -31,3 +31,11 @@ pub fn impl_into_vector_join_for_tuple(input: TokenStream) -> TokenStream {
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }
+
+mod vectormerge;
+#[proc_macro]
+pub fn impl_vector_merge_for_tuple(input: TokenStream) -> TokenStream {
+    vectormerge::impl_vector_merge_for_tuple_macro(input)
+        .unwrap_or_else(|err| panic!("compile_error: {}", err))
+        .into()
+}

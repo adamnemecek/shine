@@ -260,7 +260,7 @@ where
 {
     crate store: &'a mut SMatrix<M, S>,
 }
-/*
+
 /// Wrapper to allow column-wise enumeration of references to the SMatrix elements
 pub struct WrapColumnRead<'a, M, S>
 where
@@ -289,4 +289,3 @@ where
 {
     crate store: &'a mut SMatrix<M, S>,
 }
-*/

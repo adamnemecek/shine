@@ -1,5 +1,5 @@
-use bits::BitSetView;
-use ops::{VectorJoin, VectorJoinStore};
+use bits::{bitops, bitops::BitOp, BitSetView};
+use ops::{IntoVectorJoin, VectorJoin, VectorJoinStore};
 use svec::VectorMaskBlock;
 
 /// Joined Vector
@@ -38,3 +38,6 @@ where
         (self.mask, self.store)
     }
 }
+
+use shine_graph_macro::impl_into_vector_join_for_tuple;
+impl_into_vector_join_for_tuple!{(2,3,4,5,6,7,8,9,10)}

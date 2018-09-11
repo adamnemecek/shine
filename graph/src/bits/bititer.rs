@@ -3,16 +3,16 @@ use num_traits::{One, Zero};
 use bits::{BitBlock, BitSetView, MAX_LEVEL};
 
 /// Iterator over the set bits.
-pub struct BitIter<'a, B: 'a + BitSetView> {
-    bitset: &'a B,
+pub struct BitIter<B: BitSetView> {
+    bitset: B,
     // masked block for each level, consumed bits are cleared
     masks: [B::Bits; MAX_LEVEL],
     // index prefix for each level
     prefixes: [usize; MAX_LEVEL],
 }
 
-impl<'a, B: BitSetView> BitIter<'a, B> {
-    pub fn new(bitset: &B) -> BitIter<B> {
+impl<B: BitSetView> BitIter<B> {
+    pub fn new(bitset: B) -> BitIter<B> {
         let mut iter = BitIter {
             bitset,
             masks: [B::Bits::zero(); MAX_LEVEL],
@@ -59,7 +59,7 @@ impl<'a, B: BitSetView> BitIter<'a, B> {
     }
 }
 
-impl<'a, B: BitSetView> Iterator for BitIter<'a, B> {
+impl<B: BitSetView> Iterator for BitIter<B> {
     type Item = usize;
 
     fn next(&mut self) -> Option<Self::Item> {

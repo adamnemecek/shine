@@ -1,8 +1,9 @@
-use std::fmt::{self, Debug, Formatter};
-
 use bits::BitSetViewExt;
-use ops::JVector;
+use ops::{IntoVectorJoin, VectorJoin};
+use std::fmt::{self, Debug, Formatter};
+use std::mem;
 use svec::{DataIter, DataIterMut, Store, VectorMask, VectorMaskTrue};
+use traits::ExclusiveAccess;
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
@@ -97,16 +98,25 @@ impl<S: Store> SVector<S> {
         DataIterMut::new(self.mask.iter(), &mut self.store)
     }
 
-    pub fn read(&self) -> JVector<&VectorMask, &S> {
-        JVector::from_parts(&self.mask, &self.store)
+    pub fn read(&self) -> WrapRead<S> {
+        WrapRead {
+            mask: &self.mask,
+            store: &self.store,
+        }
     }
 
-    pub fn write(&mut self) -> JVector<&VectorMask, &mut S> {
-        JVector::from_parts(&self.mask, &mut self.store)
+    pub fn write(&mut self) -> WrapWrite<S> {
+        WrapWrite {
+            mask: &self.mask,
+            store: &mut self.store,
+        }
     }
 
-    pub fn create(&mut self) -> JVector<VectorMaskTrue, WrapCreate<S>> {
-        JVector::from_parts(VectorMaskTrue::new(), WrapCreate { store: self })
+    pub fn create(&mut self) -> WrapCreate<S> {
+        WrapCreate {
+            mask: VectorMaskTrue::new(),
+            store: self,
+        }
     }
 
     /*pub fn merge_read(&self) -> &Self {
@@ -129,6 +139,17 @@ where
 {
     pub fn add_default(&mut self, idx: usize) -> Option<S::Item> {
         self.add_with(idx, Default::default)
+    }
+}
+
+impl<'a, S> ExclusiveAccess<usize> for &'a mut SVector<S>
+where
+    S: Store,
+{
+    type Item = Entry<'a, S>;
+
+    fn get(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute(self.entry(idx)) } // GAT
     }
 }
 
@@ -209,10 +230,65 @@ where
     }
 }
 
-/// Wrapper to allow Entry based modification of the SVector
+/// Wrapper to allow immutable access to the elments of an SVector in join and merge oprations.
+pub struct WrapRead<'a, S>
+where
+    S: 'a + Store,
+{
+    mask: &'a VectorMask,
+    store: &'a S,
+}
+
+impl<'a, S> IntoVectorJoin for WrapRead<'a, S>
+where
+    S: 'a + Store,
+{
+    type Mask = &'a VectorMask;
+    type Store = &'a S;
+
+    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
+        VectorJoin::new(self.mask.iter(), self.store)
+    }
+}
+
+/// Wrapper to allow mutable access to the elments of an SVector in join and merge oprations.
+pub struct WrapWrite<'a, S>
+where
+    S: 'a + Store,
+{
+    mask: &'a VectorMask,
+    store: &'a mut S,
+}
+
+impl<'a, S> IntoVectorJoin for WrapWrite<'a, S>
+where
+    S: 'a + Store,
+{
+    type Mask = &'a VectorMask;
+    type Store = &'a mut S;
+
+    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
+        VectorJoin::new(self.mask.iter(), unsafe { mem::transmute(self.store) }) // GAT
+    }
+}
+
+/// Wrapper to allow Entry based access to the elments of an SVector in join and merge oprations.
 pub struct WrapCreate<'a, S>
 where
     S: 'a + Store,
 {
+    crate mask: VectorMaskTrue,
     crate store: &'a mut SVector<S>,
+}
+
+impl<'a, S> IntoVectorJoin for WrapCreate<'a, S>
+where
+    S: 'a + Store,
+{
+    type Mask = &'a VectorMaskTrue;
+    type Store = &'a mut SVector<S>;
+
+    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
+        VectorJoin::new(self.mask.iter(), unsafe { mem::transmute(self.store) }) // GAT
+    }
 }
