@@ -5,3 +5,6 @@ pub trait ExclusiveAccess<I> {
 
     fn get(&mut self, idx: I) -> Self::Item;
 }
+
+use shine_graph_macro::impl_exclusiveaccess_for_exclusiveaccess_tuple;
+impl_exclusiveaccess_for_exclusiveaccess_tuple!{(2,3,4,5,6,7,8,9,10)}

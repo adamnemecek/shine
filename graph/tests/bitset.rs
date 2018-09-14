@@ -12,8 +12,8 @@ use rand::Rng;
 
 use shine_graph::bits::*;
 
-fn check_bitset<'a, B: BitSetView>(bitset: &'a B, bits: &'a [usize]) {
-    assert!(bitset.iter().eq(bits.iter().cloned()));
+fn check_bitset<'a, B: BitSetView>(bitset: B, bits: &'a [usize]) {
+    assert!(bitset.into_iter().eq(bits.iter().cloned()));
 }
 
 fn simple_bitorder<'a, B: 'a + BitBlock>(bitset: &'a mut BitSet<B>, order: &'a [usize], bits: &'a [usize]) {
@@ -29,7 +29,9 @@ fn simple_bitorder<'a, B: 'a + BitBlock>(bitset: &'a mut BitSet<B>, order: &'a [
     }
 
     trace!("iterate bits");
-    check_bitset(bitset, bits);
+    {
+        check_bitset(&*bitset, bits);
+    }
 
     trace!("remove bits one-by-one");
     for i in 0..order.len() {
@@ -50,14 +52,14 @@ fn test_clear_<B: BitBlock>() {
         assert!(!bitset.get(123));
         assert!(!bitset.remove(123));
         assert!(!bitset.get(123));
-        assert!(bitset.iter().next().is_none());
+        assert!((&bitset).into_iter().next().is_none());
 
         assert!(!bitset.add(123));
         assert!(!bitset.is_empty());
         assert!(bitset.get(123));
         assert!(bitset.add(123));
         assert!(bitset.get(123));
-        assert!(bitset.iter().eq([123].iter().cloned()));
+        assert!((&bitset).into_iter().eq([123].iter().cloned()));
 
         bitset.clear();
     }
@@ -253,6 +255,13 @@ fn test_ops_<B: BitBlock>() {
     assert_eq!(b1.lower_bound(19), None);
     assert_eq!(b1.lower_bound(12249), None);
 
+    // check with move
+    check_bitset(bitops::or2(&b1, &b2), &[0, 10, 17, 18]);
+    check_bitset(bitops::or2(&b2, &b1), &[0, 10, 17, 18]);
+    check_bitset(bitops::and2(&b1, &b2), &[]);
+    check_bitset(bitops::and2(&b2, &b1), &[]);
+
+    // check with reference
     check_bitset(&bitops::or2(&b1, &b2), &[0, 10, 17, 18]);
     check_bitset(&bitops::or2(&b2, &b1), &[0, 10, 17, 18]);
     check_bitset(&bitops::and2(&b1, &b2), &[]);
@@ -273,27 +282,27 @@ fn test_ops_<B: BitBlock>() {
     assert_eq!(b2.lower_bound(17), Some(17));
     assert_eq!(b2.lower_bound(18), None);
 
-    check_bitset(&bitops::or2(&b1, &b2), &[0, 1, 10, 15, 17, 18]);
-    check_bitset(&bitops::or2(&b2, &b1), &[0, 1, 10, 15, 17, 18]);
-    check_bitset(&(&b2, &b1).or(), &[0, 1, 10, 15, 17, 18]);
-    check_bitset(&bitops::and2(&b1, &b2), &[10, 17]);
-    check_bitset(&bitops::and2(&b2, &b1), &[10, 17]);
-    check_bitset(&(&b2, &b1).and(), &[10, 17]);
+    check_bitset(bitops::or2(&b1, &b2), &[0, 1, 10, 15, 17, 18]);
+    check_bitset(bitops::or2(&b2, &b1), &[0, 1, 10, 15, 17, 18]);
+    check_bitset((&b2, &b1).or(), &[0, 1, 10, 15, 17, 18]);
+    check_bitset(bitops::and2(&b1, &b2), &[10, 17]);
+    check_bitset(bitops::and2(&b2, &b1), &[10, 17]);
+    check_bitset((&b2, &b1).and(), &[10, 17]);
 
     b1.add(2357);
     b1.add(2360);
 
-    check_bitset(&bitops::or2(&b1, &b2), &[0, 1, 10, 15, 17, 18, 2357, 2360]);
-    check_bitset(&bitops::or2(&b2, &b1), &[0, 1, 10, 15, 17, 18, 2357, 2360]);
-    check_bitset(&bitops::and2(&b1, &b2), &[10, 17]);
-    check_bitset(&bitops::and2(&b2, &b1), &[10, 17]);
+    check_bitset(bitops::or2(&b1, &b2), &[0, 1, 10, 15, 17, 18, 2357, 2360]);
+    check_bitset(bitops::or2(&b2, &b1), &[0, 1, 10, 15, 17, 18, 2357, 2360]);
+    check_bitset(bitops::and2(&b1, &b2), &[10, 17]);
+    check_bitset(bitops::and2(&b2, &b1), &[10, 17]);
 
     b2.add(2360);
 
-    check_bitset(&bitops::or2(&b1, &b2), &[0, 1, 10, 15, 17, 18, 2357, 2360]);
-    check_bitset(&bitops::or2(&b2, &b1), &[0, 1, 10, 15, 17, 18, 2357, 2360]);
-    check_bitset(&bitops::and2(&b1, &b2), &[10, 17, 2360]);
-    check_bitset(&bitops::and2(&b2, &b1), &[10, 17, 2360]);
+    check_bitset(bitops::or2(&b1, &b2), &[0, 1, 10, 15, 17, 18, 2357, 2360]);
+    check_bitset(bitops::or2(&b2, &b1), &[0, 1, 10, 15, 17, 18, 2357, 2360]);
+    check_bitset(bitops::and2(&b1, &b2), &[10, 17, 2360]);
+    check_bitset(bitops::and2(&b2, &b1), &[10, 17, 2360]);
 
     assert_eq!((&b2, &b1).and().lower_bound(0), Some(10));
     assert_eq!((&b2, &b1).and().lower_bound(10), Some(10));
@@ -317,42 +326,42 @@ fn test_ops_<B: BitBlock>() {
     b3.add(23600);
 
     check_bitset(
-        &bitops::or3(&b1, &b2, &b3),
+        bitops::or3(&b1, &b2, &b3),
         &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
     );
     check_bitset(
-        &bitops::or3(&b1, &b3, &b2),
+        bitops::or3(&b1, &b3, &b2),
         &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
     );
     check_bitset(
-        &bitops::or3(&b2, &b1, &b3),
+        bitops::or3(&b2, &b1, &b3),
         &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
     );
     check_bitset(
-        &bitops::or3(&b2, &b3, &b1),
+        bitops::or3(&b2, &b3, &b1),
         &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
     );
     check_bitset(
-        &bitops::or3(&b3, &b1, &b2),
+        bitops::or3(&b3, &b1, &b2),
         &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
     );
     check_bitset(
-        &bitops::or3(&b3, &b2, &b1),
+        bitops::or3(&b3, &b2, &b1),
         &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
     );
 
-    check_bitset(&(&b1, &b2, &b3).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&(&b1, &b3, &b2).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&(&b2, &b1, &b3).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&(&b2, &b3, &b1).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&(&b3, &b1, &b2).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
-    check_bitset(&(&b3, &b2, &b1).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset((&b1, &b2, &b3).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset((&b1, &b3, &b2).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset((&b2, &b1, &b3).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset((&b2, &b3, &b1).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset((&b3, &b1, &b2).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset((&b3, &b2, &b1).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
 
-    check_bitset(&bitops::and3(&b1, &b2, &b3), &[2360]);
-    check_bitset(&(&b1, &b2, &b3).and(), &[2360]);
+    check_bitset(bitops::and3(&b1, &b2, &b3), &[2360]);
+    check_bitset((&b1, &b2, &b3).and(), &[2360]);
 
     // bitsets are moved
-    check_bitset(&(b1, b2, b3).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset((b1, b2, b3).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
 }
 
 #[test]

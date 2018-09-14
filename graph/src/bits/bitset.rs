@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 use std::slice;
 
-use bits::{BitBlock, BitPos, BitSetView, BitSetViewExt, MAX_LEVEL};
+use bits::{BitBlock, BitIter, BitPos, BitSetView, BitSetViewExt, MAX_LEVEL};
 
 /// Hierarchical bitset.
 /// Each level indicates if any bit is set in the subtree.
@@ -183,6 +183,33 @@ impl<B: BitBlock> BitSetView for BitSet<B> {
         }
     }
 }
+
+/*impl<B: BitBlock> IntoIterator for BitSet<B> {
+    type Item = usize;
+    type IntoIter = BitIter<Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.into_iterator()
+    }
+}
+
+impl<'a, B: BitBlock> IntoIterator for &'a BitSet<B> {
+    type Item = usize;
+    type IntoIter = BitIter<Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.into_iterator()
+    }
+}
+
+impl<'a, B: BitBlock> IntoIterator for &'a mut BitSet<B> {
+    type Item = usize;
+    type IntoIter = BitIter<Self>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.into_iterator()
+    }
+}*/
 
 pub type BitSetu8 = BitSet<u8>;
 pub type BitSetu16 = BitSet<u16>;

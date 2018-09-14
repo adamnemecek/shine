@@ -99,6 +99,45 @@ fn bitop_impl(count: usize, op: Op) -> TokenStream {
             }
         }
 
+        impl<B, #(#generics),*> IntoIterator for #type_ident<B, #(#generics),*>
+        where
+            B: BitBlock,
+            #(#generics : BitSetView<Bits = B>,)*
+        {
+            type Item = usize;
+            type IntoIter = BitIter<Self>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                BitIter::new(self)
+            }
+        }
+
+        impl<'a, B, #(#generics),*> IntoIterator for &'a #type_ident<B, #(#generics),*>
+        where
+            B: BitBlock,
+            #(#generics : BitSetView<Bits = B>,)*
+        {
+            type Item = usize;
+            type IntoIter = BitIter<Self>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                BitIter::new(self)
+            }
+        }
+
+        impl<'a, B, #(#generics),*> IntoIterator for &'a mut #type_ident<B, #(#generics),*>
+        where
+            B: BitBlock,
+            #(#generics : BitSetView<Bits = B>,)*
+        {
+            type Item = usize;
+            type IntoIter = BitIter<Self>;
+
+            fn into_iter(self) -> Self::IntoIter {
+                BitIter::new(self)
+            }
+        }
+
         /// Create a bitwise #fn_name of BitSetView objects
         pub fn #fn_ident<B, #(#generics),*>( #(#members: #generics),* ) -> #type_ident<B, #(#generics),*>
         where

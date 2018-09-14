@@ -102,6 +102,7 @@ impl<B: BitBlock> BitPos<B> {
     }
 }
 
+/// BitSet behavior to get the value of the stored bits.
 pub trait BitSetView {
     type Bits: BitBlock;
 
@@ -110,26 +111,7 @@ pub trait BitSetView {
     fn get_block(&self, level: usize, block: usize) -> Self::Bits;
 }
 
-impl<'a, B, T> BitSetView for &'a T
-where
-    B: BitBlock,
-    T: BitSetView<Bits = B>,
-{
-    type Bits = B;
-
-    fn is_empty(&self) -> bool {
-        (*self).is_empty()
-    }
-
-    fn get_level_count(&self) -> usize {
-        (*self).get_level_count()
-    }
-
-    fn get_block(&self, level: usize, block: usize) -> Self::Bits {
-        (*self).get_block(level, block)
-    }
-}
-
+/// BitSetView extension functions
 pub trait BitSetViewExt: BitSetView {
     fn get(&self, pos: usize) -> bool {
         if self.is_empty() {
@@ -184,6 +166,13 @@ pub trait BitSetViewExt: BitSetView {
         BitIter::new(self)
     }
 
+    fn into_iter(self) -> BitIter<Self>
+    where
+        Self: Sized,
+    {
+        BitIter::new(self)
+    }
+
     fn to_levels_string(&self) -> Result<String, fmt::Error> {
         use std::fmt::Write;
         let mut res = String::new();
@@ -203,3 +192,43 @@ pub trait BitSetViewExt: BitSetView {
     }
 }
 impl<T: ?Sized> BitSetViewExt for T where T: BitSetView {}
+
+impl<'a, B, T> BitSetView for &'a T
+where
+    B: BitBlock,
+    T: BitSetView<Bits = B>,
+{
+    type Bits = B;
+
+    fn is_empty(&self) -> bool {
+        (**self).is_empty()
+    }
+
+    fn get_level_count(&self) -> usize {
+        (**self).get_level_count()
+    }
+
+    fn get_block(&self, level: usize, block: usize) -> Self::Bits {
+        (**self).get_block(level, block)
+    }
+}
+
+impl<'a, B, T> BitSetView for &'a mut T
+where
+    B: BitBlock,
+    T: BitSetView<Bits = B>,
+{
+    type Bits = B;
+
+    fn is_empty(&self) -> bool {
+        (**self).is_empty()
+    }
+
+    fn get_level_count(&self) -> usize {
+        (**self).get_level_count()
+    }
+
+    fn get_block(&self, level: usize, block: usize) -> Self::Bits {
+        (**self).get_block(level, block)
+    }
+}

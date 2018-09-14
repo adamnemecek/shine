@@ -1,4 +1,4 @@
-use bits::{BitBlock, BitSetView};
+use bits::{BitBlock, BitIter, BitSetView};
 use std::cmp;
 
 pub trait BitOp<B: BitBlock> {

@@ -91,11 +91,11 @@ impl<S: Store> SVector<S> {
     }
 
     pub fn data_iter(&self) -> DataIter<S> {
-        DataIter::new(self.mask.iter(), &self.store)
+        DataIter::new((&self.mask).into_iter(), &self.store)
     }
 
     pub fn data_iter_mut(&mut self) -> DataIterMut<S> {
-        DataIterMut::new(self.mask.iter(), &mut self.store)
+        DataIterMut::new((&self.mask).into_iter(), &mut self.store)
     }
 
     pub fn read(&self) -> WrapRead<S> {
@@ -246,8 +246,8 @@ where
     type Mask = &'a VectorMask;
     type Store = &'a S;
 
-    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
-        VectorJoin::new(self.mask.iter(), self.store)
+    fn into_parts(self) -> (Self::Mask, Self::Store) {
+        (self.mask, self.store)
     }
 }
 
@@ -267,8 +267,8 @@ where
     type Mask = &'a VectorMask;
     type Store = &'a mut S;
 
-    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
-        VectorJoin::new(self.mask.iter(), unsafe { mem::transmute(self.store) }) // GAT
+    fn into_parts(self) -> (Self::Mask, Self::Store) {
+        (self.mask, unsafe { mem::transmute(self.store) }) // GAT
     }
 }
 
@@ -285,10 +285,10 @@ impl<'a, S> IntoVectorJoin for WrapCreate<'a, S>
 where
     S: 'a + Store,
 {
-    type Mask = &'a VectorMaskTrue;
+    type Mask = VectorMaskTrue;
     type Store = &'a mut SVector<S>;
 
-    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
-        VectorJoin::new(self.mask.iter(), unsafe { mem::transmute(self.store) }) // GAT
+    fn into_parts(self) -> (Self::Mask, Self::Store) {
+        (self.mask, unsafe { mem::transmute(self.store) }) // GAT
     }
 }

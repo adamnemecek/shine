@@ -16,26 +16,19 @@ pub fn impl_bitops(input: TokenStream) -> TokenStream {
         .into()
 }
 
-mod vectorjoinstore;
+mod exclusiveaccess_tuple;
 #[proc_macro]
-pub fn impl_vector_join_store_for_tuple(input: TokenStream) -> TokenStream {
-    vectorjoinstore::impl_vector_join_store_for_tuple_macro(input)
+pub fn impl_exclusiveaccess_for_exclusiveaccess_tuple(input: TokenStream) -> TokenStream {
+    exclusiveaccess_tuple::impl_exclusiveaccess_for_exclusiveaccess_tuple(input)
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }
-
-mod intovectorjoin;
-#[proc_macro]
-pub fn impl_into_vector_join_for_tuple(input: TokenStream) -> TokenStream {
-    intovectorjoin::impl_into_vector_join_for_tuple_macro(input)
-        .unwrap_or_else(|err| panic!("compile_error: {}", err))
-        .into()
-}
-
+/*
 mod vectormerge;
 #[proc_macro]
-pub fn impl_vector_merge_for_tuple(input: TokenStream) -> TokenStream {
-    vectormerge::impl_vector_merge_for_tuple_macro(input)
+pub fn impl_vectorjoinstore_for_vectorjoinstore_tuple(input: TokenStream) -> TokenStream {
+    vectormerge::macro_vectorjoinstore_for_vectorjoinstore_tuple(input)
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }
+*/
