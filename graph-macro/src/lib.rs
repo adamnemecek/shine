@@ -23,12 +23,11 @@ pub fn impl_exclusiveaccess_for_exclusiveaccess_tuple(input: TokenStream) -> Tok
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }
-/*
-mod vectormerge;
+
+mod intovectorjoin_tuple;
 #[proc_macro]
-pub fn impl_vectorjoinstore_for_vectorjoinstore_tuple(input: TokenStream) -> TokenStream {
-    vectormerge::macro_vectorjoinstore_for_vectorjoinstore_tuple(input)
+pub fn impl_intovectorjoin_for_intovectorjoin_tuple(input: TokenStream) -> TokenStream {
+    intovectorjoin_tuple::impl_intovectorjoin_for_intovectorjoin_tuple(input)
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }
-*/

@@ -1,4 +1,4 @@
-use bits::{bitops, BitIter, BitSetView, BitSetViewExt};
+use bits::{bitops, bitops::BitOp, BitIter, BitSetView, BitSetViewExt};
 use svec::VectorMaskBlock;
 use traits::ExclusiveAccess;
 
@@ -91,21 +91,6 @@ where
         }
     }
 }
-/*
-impl<G0, G1, G2> IntoVectorJoin for (G0, G1, G2)
-where
-    G0: IntoVectorJoin,
-    G1: IntoVectorJoin,
-    G2: IntoVectorJoin,
-{
-    type Mask = bitops::And3<VectorMaskBlock, G0::Mask, G1::Mask, G2::Mask>;
-    type Store = (G0::Store, G1::Store, G2::Store);
 
-    fn into_parts(self) -> (Self::Mask, Self::Store) {
-        let ((m0, s0), (m1, s1), (m2, s2)) = (self.0.into_parts(), self.1.into_parts(), self.2.into_parts());
-        ((m0, m1, m2).and().into_iterator(), store: (s0, s1, s2))
-    }
-}*/
-
-//use shine_graph_macro::impl_intovectorjoin_for_intovectorjoin_tuple;
-//impl_intovectorjoin_for_intovectorjoin_tuple!{(2,3,4,5,6,7,8,9,10)}
+use shine_graph_macro::impl_intovectorjoin_for_intovectorjoin_tuple;
+impl_intovectorjoin_for_intovectorjoin_tuple!{(2,3,4,5,6,7,8,9,10)}

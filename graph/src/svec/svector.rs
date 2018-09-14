@@ -1,5 +1,5 @@
 use bits::BitSetViewExt;
-use ops::{IntoVectorJoin, VectorJoin};
+use ops::IntoVectorJoin;
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use svec::{DataIter, DataIterMut, Store, VectorMask, VectorMaskTrue};

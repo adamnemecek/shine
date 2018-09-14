@@ -1,6 +1,6 @@
 use std::marker::PhantomData;
 
-use bits::{BitBlock, BitIter, BitSetView, MAX_LEVEL};
+use bits::{BitBlock, BitSetView, MAX_LEVEL};
 
 pub struct BitSetTrue<B: BitBlock>(PhantomData<B>);
 
@@ -29,32 +29,5 @@ impl<B: BitBlock> BitSetView for BitSetTrue<B> {
 
     fn get_block(&self, _level: usize, _block: usize) -> B {
         B::max_value()
-    }
-}
-
-impl<B: BitBlock> IntoIterator for BitSetTrue<B> {
-    type Item = usize;
-    type IntoIter = BitIter<Self>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        BitIter::new(self)
-    }
-}
-
-impl<'a, B: BitBlock> IntoIterator for &'a BitSetTrue<B> {
-    type Item = usize;
-    type IntoIter = BitIter<Self>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        BitIter::new(self)
-    }
-}
-
-impl<'a, B: BitBlock> IntoIterator for &'a mut BitSetTrue<B> {
-    type Item = usize;
-    type IntoIter = BitIter<Self>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        BitIter::new(self)
     }
 }
