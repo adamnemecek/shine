@@ -47,7 +47,7 @@ fn test_svec_merge() {
         assert_eq!(s, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
     }
 
-    /*trace!("merge - write");
+    trace!("merge - write");
     {
         let mut s = String::new();
         v2.write().merge_all(|id, e| {
@@ -55,9 +55,9 @@ fn test_svec_merge() {
             s = format!("{},{}={:?}", s, id, e);
         });
         assert_eq!(s, ",3=4,11=12,14=15,17=18,18=19,31=32,32=33");
-    }*/
+    }
 
-    /*trace!("merge - create");
+    trace!("merge - create");
     {
         let mut s = String::new();
         v1.create().merge_until(|id, mut e| {
@@ -72,9 +72,9 @@ fn test_svec_merge() {
             }
         });
         assert_eq!(s, ",0=Some(0),1=None,2=Some(2),3=Some(3),4=Some(4),5=None,6=Some(6)");
-    }*/
+    }
 
-    /*trace!("merge 3");
+    /* trace!("merge 3");
     {
         let mut t1 = new_tvec();
 

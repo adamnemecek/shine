@@ -26,6 +26,11 @@ impl<B: BitSetView> BitIter<B> {
         iter
     }
 
+    // Get back the underling bitset
+    pub fn into_bitset(self) -> B {
+        self.bitset
+    }
+
     fn step(&mut self) -> Option<usize> {
         let lc = self.bitset.get_level_count();
         let mut level = 0;

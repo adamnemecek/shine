@@ -2,7 +2,7 @@ use proc_macro;
 use proc_macro2::{Span, TokenStream};
 use syn;
 
-fn impl_exclusiveaccess_for_tuple(count: usize) -> TokenStream {
+fn impl_indexexcl_for_tuple(count: usize) -> TokenStream {
     let generics: Vec<_> = (0..count)
         .map(|id| syn::Ident::new(&format!("A{}", id), Span::/*def*/call_site()))
         .collect();
@@ -14,18 +14,18 @@ fn impl_exclusiveaccess_for_tuple(count: usize) -> TokenStream {
     let index = &index;
 
     let type_impl = quote!{
-        /// Implement ExclusiveAccess for tuple of ExclusiveAccess
-        /// The Item is a tuple of the Items made of the Items of the underlying ExclusiveAccess
-        impl<'a, 'b: 'a, I, #(#generics),*> ExclusiveAccess<I> for (#(#generics,)*)
+        /// Implement IndexExcl for tuple of IndexExcl
+        /// The Item is a tuple of the Items made of the Items of the underlying InexExcl
+        impl<'a, 'b: 'a, I, #(#generics),*> IndexExcl<I> for (#(#generics,)*)
         where
             I: Copy,
-            #(#generics: 'a + ExclusiveAccess<I>),*
+            #(#generics: 'a + IndexExcl<I>),*
         {
             type Item = (#(#generics::Item,)*);
 
             #[inline]
-            fn get(&mut self, idx: I) -> Self::Item {
-                (#(self.#index.get(idx),)*)
+            fn index(&mut self, idx: I) -> Self::Item {
+                (#(self.#index.index(idx),)*)
             }
         }
     };
@@ -33,7 +33,7 @@ fn impl_exclusiveaccess_for_tuple(count: usize) -> TokenStream {
     type_impl
 }
 
-pub fn impl_exclusiveaccess_for_exclusiveaccess_tuple(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
+pub fn impl_indexexcl_for_indexexcl_tuple(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
     let tuple: syn::ExprTuple = syn::parse(input).map_err(|err| format!("Tuple expected, {}", err))?;
 
     let mut gen = Vec::new();
@@ -43,7 +43,7 @@ pub fn impl_exclusiveaccess_for_exclusiveaccess_tuple(input: proc_macro::TokenSt
             if let syn::Lit::Int(lit) = expr.lit {
                 let count = lit.value();
 
-                let tuple_impl = impl_exclusiveaccess_for_tuple(count as usize);
+                let tuple_impl = impl_indexexcl_for_tuple(count as usize);
                 gen.push(tuple_impl);
             } else {
                 /*expr.lit

@@ -35,9 +35,9 @@ fn impl_intovectorjoin_for_tuple(count: usize) -> TokenStream {
             type Mask = bitops::#op_type<VectorMaskBlock, #(#generics::Mask),*>;
             type Store = (#(#generics::Store,)*);
 
-            fn into_parts(self) -> (Self::Mask, Self::Store) {
+            fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
                 let (#((#masks, #stores),)*) = (#(self.#index.into_parts(),)*);
-                ((#(#masks,)*).and(), (#(#stores,)*))
+                VectorJoin::new_from_mask((#(#masks,)*).and(), (#(#stores,)*))
             }
         }
     };

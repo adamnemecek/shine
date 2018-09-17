@@ -1,31 +1,28 @@
 use bits::{bitops, bitops::BitOp, BitIter, BitSetView, BitSetViewExt};
 use svec::VectorMaskBlock;
-use traits::ExclusiveAccess;
+use traits::IndexExcl;
 
 /// Trait to create VectorJoin
 pub trait IntoVectorJoin {
     type Mask: BitSetView<Bits = VectorMaskBlock>;
-    type Store: ExclusiveAccess<usize>;
+    type Store: IndexExcl<usize>;
 
-    fn into_parts(self) -> (Self::Mask, Self::Store);
+    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store>;
 }
 
 /// Extension methods for IntoVectorJoin
 pub trait IntoVectorJoinExt: IntoVectorJoin {
-    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store>
+    fn into_parts(self) -> (Self::Mask, Self::Store)
     where
         Self: Sized,
     {
-        let (mask, store) = self.into_parts();
-        VectorJoin {
-            iterator: mask.into_iter(),
-            store: store,
-        }
+        let join = self.into_join();
+        (join.iterator.into_bitset(), join.store)
     }
 
     fn join_all<F>(self, f: F)
     where
-        F: FnMut(usize, <<Self as IntoVectorJoin>::Store as ExclusiveAccess<usize>>::Item),
+        F: FnMut(usize, <<Self as IntoVectorJoin>::Store as IndexExcl<usize>>::Item),
         Self: Sized,
     {
         self.into_join().join_all(f);
@@ -33,7 +30,7 @@ pub trait IntoVectorJoinExt: IntoVectorJoin {
 
     fn join_until<F>(self, f: F)
     where
-        F: FnMut(usize, <<Self as IntoVectorJoin>::Store as ExclusiveAccess<usize>>::Item) -> bool,
+        F: FnMut(usize, <<Self as IntoVectorJoin>::Store as IndexExcl<usize>>::Item) -> bool,
         Self: Sized,
     {
         self.into_join().join_until(f);
@@ -46,7 +43,7 @@ impl<T: ?Sized> IntoVectorJoinExt for T where T: IntoVectorJoin {}
 pub struct VectorJoin<M, S>
 where
     M: BitSetView<Bits = VectorMaskBlock>,
-    S: ExclusiveAccess<usize>,
+    S: IndexExcl<usize>,
 {
     iterator: BitIter<M>,
     store: S,
@@ -56,24 +53,31 @@ where
 impl<M, S> VectorJoin<M, S>
 where
     M: BitSetView<Bits = VectorMaskBlock>,
-    S: ExclusiveAccess<usize>,
+    S: IndexExcl<usize>,
 {
     pub fn new(iterator: BitIter<M>, store: S) -> VectorJoin<M, S> {
         VectorJoin { iterator, store }
     }
 
+    pub fn new_from_mask(mask: M, store: S) -> VectorJoin<M, S> {
+        VectorJoin {
+            iterator: mask.into_iter(),
+            store,
+        }
+    }
+
     #[allow(clippy::should_implement_trait)]
-    pub fn next(&mut self) -> Option<(usize, <S as ExclusiveAccess<usize>>::Item)> {
+    pub fn next(&mut self) -> Option<(usize, <S as IndexExcl<usize>>::Item)> {
         let idx = match self.iterator.next() {
             None => return None,
             Some(idx) => idx,
         };
-        Some((idx, self.store.get(idx)))
+        Some((idx, self.store.index(idx)))
     }
 
     pub fn join_all<F>(&mut self, mut f: F)
     where
-        F: FnMut(usize, <S as ExclusiveAccess<usize>>::Item),
+        F: FnMut(usize, <S as IndexExcl<usize>>::Item),
     {
         while let Some((id, e)) = self.next() {
             f(id, e);
@@ -82,7 +86,7 @@ where
 
     pub fn join_until<F>(&mut self, mut f: F)
     where
-        F: FnMut(usize, <S as ExclusiveAccess<usize>>::Item) -> bool,
+        F: FnMut(usize, <S as IndexExcl<usize>>::Item) -> bool,
     {
         while let Some((id, e)) = self.next() {
             if !f(id, e) {

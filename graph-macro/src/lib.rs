@@ -16,10 +16,10 @@ pub fn impl_bitops(input: TokenStream) -> TokenStream {
         .into()
 }
 
-mod exclusiveaccess_tuple;
+mod indexexcl_tuple;
 #[proc_macro]
-pub fn impl_exclusiveaccess_for_exclusiveaccess_tuple(input: TokenStream) -> TokenStream {
-    exclusiveaccess_tuple::impl_exclusiveaccess_for_exclusiveaccess_tuple(input)
+pub fn impl_indexexcl_for_indexexcl_tuple(input: TokenStream) -> TokenStream {
+    indexexcl_tuple::impl_indexexcl_for_indexexcl_tuple(input)
         .unwrap_or_else(|err| panic!("compile_error: {}", err))
         .into()
 }

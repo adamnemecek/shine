@@ -1,9 +1,9 @@
 use bits::BitSetViewExt;
-use ops::IntoVectorJoin;
+use ops::{IntoVectorJoin, IntoVectorMerge, VectorJoin, VectorMerge};
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use svec::{DataIter, DataIterMut, Store, VectorMask, VectorMaskTrue};
-use traits::ExclusiveAccess;
+use traits::{IndexExcl, IndexLowerBound};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
@@ -19,6 +19,11 @@ impl<S: Store> SVector<S> {
 
     pub fn get_mask(&self) -> &VectorMask {
         &self.mask
+    }
+
+    /// The last known valid index
+    pub fn capacity(&self) -> usize {
+        self.mask.capacity()
     }
 
     pub fn nnz(&self) -> usize {
@@ -99,37 +104,16 @@ impl<S: Store> SVector<S> {
     }
 
     pub fn read(&self) -> WrapRead<S> {
-        WrapRead {
-            mask: &self.mask,
-            store: &self.store,
-        }
+        WrapRead { vec: self }
     }
 
     pub fn write(&mut self) -> WrapWrite<S> {
-        WrapWrite {
-            mask: &self.mask,
-            store: &mut self.store,
-        }
+        WrapWrite { vec: self }
     }
 
     pub fn create(&mut self) -> WrapCreate<S> {
-        WrapCreate {
-            mask: VectorMaskTrue::new(),
-            store: self,
-        }
+        WrapCreate { vec: self }
     }
-
-    /*pub fn merge_read(&self) -> &Self {
-        self
-    }
-
-    pub fn merge_write(&mut self) -> &mut Self {
-        self
-    }
-
-    pub fn merge_create(&mut self) -> WrapCreate<S> {
-        WrapCreate { store: self }
-    }*/
 }
 
 impl<T, S> SVector<S>
@@ -139,17 +123,6 @@ where
 {
     pub fn add_default(&mut self, idx: usize) -> Option<S::Item> {
         self.add_with(idx, Default::default)
-    }
-}
-
-impl<'a, S> ExclusiveAccess<usize> for &'a mut SVector<S>
-where
-    S: Store,
-{
-    type Item = Entry<'a, S>;
-
-    fn get(&mut self, idx: usize) -> Self::Item {
-        unsafe { mem::transmute(self.entry(idx)) } // GAT
     }
 }
 
@@ -235,10 +208,32 @@ pub struct WrapRead<'a, S>
 where
     S: 'a + Store,
 {
-    mask: &'a VectorMask,
-    store: &'a S,
+    vec: &'a SVector<S>,
 }
 
+impl<'a, S> IndexExcl<usize> for WrapRead<'a, S>
+where
+    S: Store,
+{
+    type Item = &'a S::Item;
+
+    #[inline]
+    fn index(&mut self, idx: usize) -> Self::Item {
+        self.vec.store.get(idx)
+    }
+}
+
+impl<'a, S> IndexLowerBound<usize> for WrapRead<'a, S>
+where
+    S: Store,
+{
+    #[inline]
+    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
+        self.vec.mask.lower_bound(idx)
+    }
+}
+
+/// Consume the Wrapper and creates a VectorJoin from the mask and store parts.
 impl<'a, S> IntoVectorJoin for WrapRead<'a, S>
 where
     S: 'a + Store,
@@ -246,8 +241,20 @@ where
     type Mask = &'a VectorMask;
     type Store = &'a S;
 
-    fn into_parts(self) -> (Self::Mask, Self::Store) {
-        (self.mask, self.store)
+    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
+        VectorJoin::new_from_mask(&self.vec.mask, &self.vec.store)
+    }
+}
+
+/// Create a VectorMerge. The wrapping is preserved, no need to split the mask and store parts.
+impl<'a, S> IntoVectorMerge for WrapRead<'a, S>
+where
+    S: 'a + Store,
+{
+    type Store = Self;
+
+    fn into_merge(self) -> VectorMerge<Self::Store> {
+        VectorMerge::new(0..self.vec.capacity(), self)
     }
 }
 
@@ -256,10 +263,32 @@ pub struct WrapWrite<'a, S>
 where
     S: 'a + Store,
 {
-    mask: &'a VectorMask,
-    store: &'a mut S,
+    vec: &'a mut SVector<S>,
 }
 
+impl<'a, S> IndexExcl<usize> for WrapWrite<'a, S>
+where
+    S: Store,
+{
+    type Item = &'a mut S::Item;
+
+    #[inline]
+    fn index(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute(self.vec.store.get_mut(idx)) } // GAT
+    }
+}
+
+impl<'a, S> IndexLowerBound<usize> for WrapWrite<'a, S>
+where
+    S: Store,
+{
+    #[inline]
+    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
+        self.vec.mask.lower_bound(idx)
+    }
+}
+
+/// Consume the Wrapper and creates a VectorJoin from the mask and store parts.
 impl<'a, S> IntoVectorJoin for WrapWrite<'a, S>
 where
     S: 'a + Store,
@@ -267,8 +296,20 @@ where
     type Mask = &'a VectorMask;
     type Store = &'a mut S;
 
-    fn into_parts(self) -> (Self::Mask, Self::Store) {
-        (self.mask, unsafe { mem::transmute(self.store) }) // GAT
+    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
+        VectorJoin::new_from_mask(&self.vec.mask, &mut self.vec.store)
+    }
+}
+
+/// Create a VectorMerge. The wrapping is preserved, no need to split the mask and store parts.
+impl<'a, S> IntoVectorMerge for WrapWrite<'a, S>
+where
+    S: 'a + Store,
+{
+    type Store = Self;
+
+    fn into_merge(self) -> VectorMerge<Self::Store> {
+        VectorMerge::new(0..self.vec.capacity(), self)
     }
 }
 
@@ -277,18 +318,51 @@ pub struct WrapCreate<'a, S>
 where
     S: 'a + Store,
 {
-    crate mask: VectorMaskTrue,
-    crate store: &'a mut SVector<S>,
+    vec: &'a mut SVector<S>,
 }
 
+impl<'a, S> IndexExcl<usize> for WrapCreate<'a, S>
+where
+    S: Store,
+{
+    type Item = Entry<'a, S>;
+
+    fn index(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute(self.vec.entry(idx)) } // GAT
+    }
+}
+
+impl<'a, S> IndexLowerBound<usize> for WrapCreate<'a, S>
+where
+    S: Store,
+{
+    #[inline]
+    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
+        Some(idx)
+    }
+}
+
+/// Create a VectorJoin. The wrapping is preserved and a constant true filter is provided as the mask.
 impl<'a, S> IntoVectorJoin for WrapCreate<'a, S>
 where
     S: 'a + Store,
 {
     type Mask = VectorMaskTrue;
-    type Store = &'a mut SVector<S>;
+    type Store = Self;
 
-    fn into_parts(self) -> (Self::Mask, Self::Store) {
-        (self.mask, unsafe { mem::transmute(self.store) }) // GAT
+    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
+        VectorJoin::new_from_mask(VectorMaskTrue::new(), self)
+    }
+}
+
+/// Create a VectorMerge. The wrapping is preserved, no need to split the mask and store parts.
+impl<'a, S> IntoVectorMerge for WrapCreate<'a, S>
+where
+    S: 'a + Store,
+{
+    type Store = Self;
+
+    fn into_merge(self) -> VectorMerge<Self::Store> {
+        VectorMerge::new(0..self.vec.capacity(), self)
     }
 }
