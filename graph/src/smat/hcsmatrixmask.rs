@@ -1,13 +1,12 @@
+use smat::{DataPosition, DataRange, MatrixMask};
 use std::collections::HashMap;
-
-use smat::MatrixMask;
 
 /// Compressed Sparse (Square) Row matrix.
 /// Its a variant of the CSR data structure where a HashMap is
-///  used to store the offset for the occupied rows.
+///  used to store the data ranges for the occupied rows.
 #[allow(dead_code)]
 pub struct HCSMatrixMask {
-    offsets: HashMap<usize, usize>,
+    offsets: HashMap<usize, DataRange>,
     indices: Vec<usize>,
 }
 
@@ -38,23 +37,23 @@ impl MatrixMask for HCSMatrixMask {
         self.offsets.clear();
     }
 
-    fn add(&mut self, _major: usize, _minor: usize) -> (usize, bool) {
+    fn add(&mut self, _major: usize, _minor: usize) -> (DataPosition, bool) {
         unimplemented!()
     }
 
-    fn remove(&mut self, _major: usize, _minor: usize) -> Option<(usize, usize)> {
+    fn remove(&mut self, _major: usize, _minor: usize) -> Option<(DataPosition, DataRange)> {
         unimplemented!()
     }
 
-    fn get_pos_range(&self, _major: usize) -> Option<(usize, usize)> {
+    fn get_data_range(&self, _major: usize) -> DataRange {
         unimplemented!()
     }
 
-    fn get_pos(&self, _major: usize, _minor: usize) -> Option<usize> {
+    fn lower_bound_column_position(&self, _column: usize, _range: DataRange) -> Option<(usize, DataPosition)> {
         unimplemented!()
     }
 
-    fn get_column(&self, _pos: usize) -> usize {
+    fn get_column_index(&self, _pos: DataPosition) -> usize {
         unimplemented!()
     }
 }

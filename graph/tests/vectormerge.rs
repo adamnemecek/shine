@@ -47,20 +47,20 @@ fn test_svec_merge() {
         assert_eq!(s, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
     }
 
-    trace!("merge - write");
+    trace!("merge - update");
     {
         let mut s = String::new();
-        v2.write().merge_all(|id, e| {
+        v2.update().merge_all(|id, e| {
             *e += 1;
             s = format!("{},{}={:?}", s, id, e);
         });
         assert_eq!(s, ",3=4,11=12,14=15,17=18,18=19,31=32,32=33");
     }
 
-    trace!("merge - create");
+    trace!("merge - write");
     {
         let mut s = String::new();
-        v1.create().merge_until(|id, mut e| {
+        v1.write().merge_until(|id, mut e| {
             if id % 2 == 0 {
                 e.acquire(id);
             }
@@ -74,13 +74,13 @@ fn test_svec_merge() {
         assert_eq!(s, ",0=Some(0),1=None,2=Some(2),3=Some(3),4=Some(4),5=None,6=Some(6)");
     }
 
-    /* trace!("merge 3");
+    trace!("merge 3");
     {
         let mut t1 = new_tvec();
 
         let mut index_string = String::new();
         let mut whole_string = String::new();
-        (v1.read(), v2.write(), t1.create()).merge_all(|id, (e1, e2, mut e3)| {
+        (v1.read(), v2.update(), t1.write()).merge_all(|id, (e1, e2, mut e3)| {
             index_string = format!("{},{}", index_string, id);
             *e2 += 1;
             if *e1 % 2 == 1 {
@@ -92,7 +92,7 @@ fn test_svec_merge() {
         assert_eq!(index_string, ",3,14,17,18");
         assert_eq!(
             whole_string,
-            ",(3,7,Some(())),(14,18,None),(17,21,Some(())),(18,22,None)"
+            ",(3,5,Some(())),(14,16,None),(17,19,Some(())),(18,20,None)"
         );
-    }*/
+    }
 }

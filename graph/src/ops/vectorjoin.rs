@@ -7,17 +7,20 @@ pub trait IntoVectorJoin {
     type Mask: BitSetView<Bits = VectorMaskBlock>;
     type Store: IndexExcl<usize>;
 
-    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store>;
+    fn into_parts(self) -> (Self::Mask, Self::Store);
 }
 
 /// Extension methods for IntoVectorJoin
 pub trait IntoVectorJoinExt: IntoVectorJoin {
-    fn into_parts(self) -> (Self::Mask, Self::Store)
+    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store>
     where
         Self: Sized,
     {
-        let join = self.into_join();
-        (join.iterator.into_bitset(), join.store)
+        let (mask, store) = self.into_parts();
+        VectorJoin {
+            iterator: mask.into_iter(),
+            store: store,
+        }
     }
 
     fn join_all<F>(self, f: F)
@@ -55,17 +58,6 @@ where
     M: BitSetView<Bits = VectorMaskBlock>,
     S: IndexExcl<usize>,
 {
-    pub fn new(iterator: BitIter<M>, store: S) -> VectorJoin<M, S> {
-        VectorJoin { iterator, store }
-    }
-
-    pub fn new_from_mask(mask: M, store: S) -> VectorJoin<M, S> {
-        VectorJoin {
-            iterator: mask.into_iter(),
-            store,
-        }
-    }
-
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<(usize, <S as IndexExcl<usize>>::Item)> {
         let idx = match self.iterator.next() {

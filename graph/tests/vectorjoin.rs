@@ -47,20 +47,20 @@ fn test_svec_join() {
         assert_eq!(s, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
     }
 
-    trace!("join - write");
+    trace!("join - update");
     {
         let mut s = String::new();
-        v2.write().join_all(|id, e| {
+        v2.update().join_all(|id, e| {
             *e += 1;
             s = format!("{},{}={:?}", s, id, e);
         });
         assert_eq!(s, ",3=4,11=12,14=15,17=18,18=19,31=32,32=33");
     }
 
-    trace!("join - create");
+    trace!("join - write");
     {
         let mut s = String::new();
-        v1.create().join_until(|id, mut e| {
+        v1.write().join_until(|id, mut e| {
             if id % 2 == 0 {
                 e.acquire(id);
             }
@@ -80,7 +80,7 @@ fn test_svec_join() {
 
         let mut index_string = String::new();
         let mut whole_string = String::new();
-        (v1.read(), v2.write(), t1.create()).join_all(|id, (e1, e2, mut e3)| {
+        (v1.read(), v2.update(), t1.write()).join_all(|id, (e1, e2, mut e3)| {
             index_string = format!("{},{}", index_string, id);
             *e2 += 1;
             if *e1 % 2 == 1 {

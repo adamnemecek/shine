@@ -1,4 +1,3 @@
-#![cfg(off)]
 extern crate shine_graph;
 #[macro_use]
 extern crate log;
@@ -6,6 +5,7 @@ extern crate env_logger;
 extern crate rand;
 
 use shine_graph::ops::*;
+use shine_graph::smat::*;
 use shine_graph::svec::*;
 
 #[test]
@@ -43,24 +43,49 @@ fn test_vec_mat_join() {
     v2.add(31, 31);
     v2.add(32, 32);
 
-    trace!("vec read, mat read");
+    {
+        let row = m1.read_row(1);
+        row.merge_all(|id, e| println!("{}", e));
+    }
+
+    {
+        let row = m1.read_row(1000);
+        row.merge_all(|id, e| println!("{}", e));
+    }
+
+    {
+        let row = m1.update_row(3);
+        row.merge_all(|id, e| println!("{}", e));
+    }
+
+    {
+        let row = m1.read_row(17);
+        row.merge_all(|id, e| println!("{}", e));
+    }
+
+    {
+        let row = m1.read_row(23);
+        row.merge_all(|id, e| println!("{}", e));
+    }
+
+    /*trace!("vec read, mat read");
     {
         (v1.read(), m1.row_read()).join_all(|id, e| {
             println!(" {}, {:?}", id, e);
         })
-    }
+    }*/
 
-    trace!("vec read, mat write");
+    /*trace!("vec read, mat update");
+    {
+        (v1.read(), m1.row_update()).join_all(|id, e| {
+            println!("{}, {:?}", id, e);
+        })
+    }*/
+
+    /*trace!("vec read, mat write");
     {
         (v1.read(), m1.row_write()).join_all(|id, e| {
             println!("{}, {:?}", id, e);
         })
-    }
-
-    trace!("vec read, mat create");
-    {
-        (v1.read(), m1.row_create()).join_all(|id, e| {
-            println!("{}, {:?}", id, e);
-        })
-    }
+    }*/
 }

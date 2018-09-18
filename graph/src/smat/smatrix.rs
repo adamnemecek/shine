@@ -1,6 +1,7 @@
 use bits::BitSetViewExt;
-use ops::JVector;
-use smat::{DataIter, DataIterMut, MatrixMask, Store};
+use ops::IntoVectorJoin;
+use smat::{DataIter, DataIterMut, DataPosition, DataRange, MatrixMask, MatrixMaskExt, RowRead, RowUpdate, Store};
+use std::marker::PhantomData;
 use svec::{VectorMask, VectorMaskTrue};
 
 /// Sparse (Square) Row matrix
@@ -43,9 +44,9 @@ where
     pub fn add(&mut self, r: usize, c: usize, value: S::Item) -> Option<S::Item> {
         let (pos, b) = self.mask.add(r, c);
         if b {
-            Some(self.store.replace(pos, value))
+            Some(self.store.replace(pos.into(), value))
         } else {
-            self.store.insert(pos, value);
+            self.store.insert(pos.into(), value);
             self.row_mask.add(r);
             self.nnz += 1;
             None
@@ -58,27 +59,27 @@ where
 
     pub fn remove(&mut self, r: usize, c: usize) -> Option<S::Item> {
         match self.mask.remove(r, c) {
-            Some((data_index, minor_count)) => {
+            Some((data_index, DataRange(row_start, row_end))) => {
                 self.nnz -= 1;
-                if minor_count == 0 {
+                if row_start == row_end {
                     self.row_mask.remove(r);
                 }
-                Some(self.store.remove(data_index))
+                Some(self.store.remove(data_index.into()))
             }
             None => None,
         }
     }
 
     pub fn contains(&self, r: usize, c: usize) -> bool {
-        self.row_mask.get(r) && self.mask.get_pos(r, c).is_some()
+        self.row_mask.get(r) && self.mask.get_data_position(r, c).is_some()
     }
 
     pub fn get(&self, r: usize, c: usize) -> Option<&S::Item> {
         if !self.row_mask.get(r) {
             None
         } else {
-            match self.mask.get_pos(r, c) {
-                Some(pos) => Some(self.store.get(pos)),
+            match self.mask.get_data_position(r, c) {
+                Some(DataPosition(pos)) => Some(self.store.get(pos)),
                 None => None,
             }
         }
@@ -88,8 +89,8 @@ where
         if !self.row_mask.get(r) {
             None
         } else {
-            match self.mask.get_pos(r, c) {
-                Some(pos) => Some(self.store.get_mut(pos)),
+            match self.mask.get_data_position(r, c) {
+                Some(DataPosition(pos)) => Some(self.store.get_mut(pos)),
                 None => None,
             }
         }
@@ -107,53 +108,47 @@ where
         DataIterMut::new(0..self.nnz(), &mut self.store)
     }
 
-    pub fn row_read(&mut self) -> JVector<&VectorMask, WrapRowRead<M, S>> {
-        JVector::from_parts(
-            &self.row_mask,
-            WrapRowRead {
-                mask: &self.mask,
-                store: &mut self.store,
-            },
-        )
+    pub fn row_read(&self) -> WrapRowRead<M, S> {
+        WrapRowRead { mat: self }
     }
 
-    pub fn row_write(&mut self) -> JVector<&VectorMask, WrapRowWrite<M, S>> {
-        JVector::from_parts(
-            &self.row_mask,
-            WrapRowWrite {
-                mask: &self.mask,
-                store: &mut self.store,
-            },
-        )
+    pub fn row_update(&mut self) -> WrapRowUpdate<M, S> {
+        WrapRowUpdate { mat: self }
     }
 
-    pub fn row_create(&mut self) -> JVector<VectorMaskTrue, WrapRowCreate<M, S>> {
-        JVector::from_parts(VectorMaskTrue::new(), WrapRowCreate { store: self })
+    pub fn row_write(&mut self) -> WrapRowWrite<M, S> {
+        WrapRowWrite { mat: self }
     }
 
-    /*pub fn column_read(&mut self) -> JVector<&VectorMask, WrapColumnRead<M, S>> {
-        JVector::from_parts(
-            &self.row_mask,
-            WrapColumnRead {
-                mask: &self.mask,
-                store: &mut self.store,
-            },
-        )
+    pub fn column_read(&self) -> WrapColumnRead<M, S> {
+        WrapColumnRead { mat: self }
     }
 
-    pub fn column_write(&mut self) -> JVector<&VectorMask, WrapColumnWrite<M, S>> {
-        JVector::from_parts(
-            &self.row_mask,
-            WrapColumnWrite {
-                mask: &self.mask,
-                store: &mut self.store,
-            },
-        )
+    pub fn column_update(&mut self) -> WrapColumnUpdate<M, S> {
+        WrapColumnUpdate { mat: self }
     }
 
-    pub fn column_create(&mut self) -> JVector<VectorMaskTrue, WrapColumnCreate<M, S>> {
-        JVector::from_parts(VectorMaskTrue::new(), WrapColumnCreate { store: self })
-    }*/
+    pub fn column_write(&mut self) -> WrapColumnWrite<M, S> {
+        WrapColumnWrite { mat: self }
+    }
+
+    pub fn update_row(&mut self, r: usize) -> RowUpdate<M, S> {
+        let data_range = self.mask.get_data_range(r);
+        RowUpdate {
+            mask: &self.mask,
+            store: &mut self.store,
+            data_range,
+        }
+    }
+
+    pub fn read_row(&self, r: usize) -> RowRead<M, S> {
+        let data_range = self.mask.get_data_range(r);
+        RowRead {
+            mask: &self.mask,
+            store: &self.store,
+            data_range,
+        }
+    }
 }
 
 impl<T, M, S> SMatrix<M, S>
@@ -232,60 +227,56 @@ where
     }
 }
 
-/// Wrapper to allow row-wise enumeration of references to the SMatrix elements
+/// Wrapper to allow immutable access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
 pub struct WrapRowRead<'a, M, S>
 where
     M: 'a + MatrixMask,
     S: 'a + Store,
 {
-    crate mask: &'a M,
-    crate store: &'a S,
+    mat: &'a SMatrix<M, S>,
 }
 
-/// Wrapper to allow row-wise enumeration of mutable references to the SMatrix elements
+/// Wrapper to allow mutable access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
+pub struct WrapRowUpdate<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    mat: &'a mut SMatrix<M, S>,
+}
+
+/// Wrapper to allow Entry based access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
 pub struct WrapRowWrite<'a, M, S>
 where
     M: 'a + MatrixMask,
     S: 'a + Store,
 {
-    crate mask: &'a M,
-    crate store: &'a mut S,
+    mat: &'a mut SMatrix<M, S>,
 }
 
-/// Wrapper to allow row-wise enumeration of entities to the SMatrix elements
-pub struct WrapRowCreate<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    crate store: &'a mut SMatrix<M, S>,
-}
-
-/// Wrapper to allow column-wise enumeration of references to the SMatrix elements
+/// Wrapper to allow immutable access to the elments of an SMatrix in column-major order. Used for join and merge oprations.
 pub struct WrapColumnRead<'a, M, S>
 where
     M: 'a + MatrixMask,
     S: 'a + Store,
 {
-    crate mask: &'a M,
-    crate store: &'a S,
+    mat: &'a SMatrix<M, S>,
 }
 
-/// Wrapper to allow column-wise enumeration of mutable references to the SMatrix elements
+/// Wrapper to allow mutable access to the elments of an SMatrix in column-major order. Used for join and merge oprations.
+pub struct WrapColumnUpdate<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    mat: &'a mut SMatrix<M, S>,
+}
+
+/// Wrapper to allow Entry based access to the elments of an SMatrix in column-major order. Used for join and merge oprations.
 pub struct WrapColumnWrite<'a, M, S>
 where
     M: 'a + MatrixMask,
     S: 'a + Store,
 {
-    crate mask: &'a M,
-    crate store: &'a mut S,
-}
-
-/// Wrapper to allow column-wise enumeration of entities to the SMatrix elements
-pub struct WrapColumnCreate<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    crate store: &'a mut SMatrix<M, S>,
+    mat: &'a mut SMatrix<M, S>,
 }

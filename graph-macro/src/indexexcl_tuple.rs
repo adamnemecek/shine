@@ -16,10 +16,10 @@ fn impl_indexexcl_for_tuple(count: usize) -> TokenStream {
     let type_impl = quote!{
         /// Implement IndexExcl for tuple of IndexExcl
         /// The Item is a tuple of the Items made of the Items of the underlying InexExcl
-        impl<'a, 'b: 'a, I, #(#generics),*> IndexExcl<I> for (#(#generics,)*)
+        impl<I, #(#generics),*> IndexExcl<I> for (#(#generics,)*)
         where
             I: Copy,
-            #(#generics: 'a + IndexExcl<I>),*
+            #(#generics: IndexExcl<I>),*
         {
             type Item = (#(#generics::Item,)*);
 

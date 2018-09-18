@@ -1,6 +1,5 @@
+use smat::{DataPosition, DataRange, MatrixMask};
 use store::stdext::SliceOrdExt;
-
-use smat::MatrixMask;
 
 /// Compressed Sparse (Square) Row matrix.
 /// Its a variant of the CSR data structure where a dense vector is
@@ -63,7 +62,7 @@ impl MatrixMask for CSMatrixMask {
         self.offsets.push(0);
     }
 
-    fn add(&mut self, row: usize, column: usize) -> (usize, bool) {
+    fn add(&mut self, row: usize, column: usize) -> (DataPosition, bool) {
         let capacity = if row > column { row + 1 } else { column + 1 };
         if capacity > self.capacity() {
             self.increase_capacity_to(capacity);
@@ -82,18 +81,18 @@ impl MatrixMask for CSMatrixMask {
 
         if pos < idx1 && self.indices[pos] == column {
             trace!("item replaced at: {}", pos);
-            (pos, true)
+            (DataPosition(pos), true)
         } else {
             trace!("item added at: {}", pos);
             self.indices.insert(pos, column);
             for offset in self.offsets[row + 1..].iter_mut() {
                 *offset += 1;
             }
-            (pos, false)
+            (DataPosition(pos), false)
         }
     }
 
-    fn remove(&mut self, row: usize, column: usize) -> Option<(usize, usize)> {
+    fn remove(&mut self, row: usize, column: usize) -> Option<(DataPosition, DataRange)> {
         if row >= self.capacity() || column >= self.capacity() {
             return None;
         }
@@ -108,42 +107,38 @@ impl MatrixMask for CSMatrixMask {
             for offset in self.offsets[row + 1..].iter_mut() {
                 *offset -= 1;
             }
-            let cnt = self.offsets[row + 1] - self.offsets[row];
-            Some((pos, cnt))
+            Some((DataPosition(pos), DataRange(self.offsets[row], self.offsets[row + 1])))
         } else {
             None
         }
     }
 
-    fn get_pos_range(&self, row: usize) -> Option<(usize, usize)> {
-        if row >= self.capacity() {
-            return None;
+    fn get_data_range(&self, row: usize) -> DataRange {
+        let cap = self.capacity();
+        if row >= cap {
+            // return an empty range
+            DataRange(usize::max_value(), usize::max_value())
+        } else {
+            let idx0 = self.offsets[row];
+            let idx1 = self.offsets[row + 1];
+            DataRange(idx0, idx1)
         }
-
-        let idx0 = self.offsets[row];
-        let idx1 = self.offsets[row + 1];
-        Some((idx0, idx1))
     }
 
-    fn get_pos(&self, row: usize, column: usize) -> Option<usize> {
-        if column >= self.capacity() {
+    fn lower_bound_column_position(&self, column: usize, range: DataRange) -> Option<(usize, DataPosition)> {
+        let DataRange(range_start, range_end) = range;
+        if range_start >= range_end {
             return None;
         }
-
-        if let Some((idx0, idx1)) = self.get_pos_range(row) {
-            let pos = self.indices[idx0..idx1].lower_bound(&column) + idx0;
-
-            if pos < idx1 && self.indices[pos] == column {
-                Some(pos)
-            } else {
-                None
-            }
+        let pos = self.indices[range_start..range_end].lower_bound(&column) + range_start;
+        if pos < range_end {
+            Some((self.indices[pos], pos.into()))
         } else {
             None
         }
     }
 
-    fn get_column(&self, pos: usize) -> usize {
-        self.indices[pos]
+    fn get_column_index(&self, pos: DataPosition) -> usize {
+        self.indices[usize::from(pos)]
     }
 }

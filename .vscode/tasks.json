@@ -64,6 +64,8 @@
                 "test",
                 "-p",
                 "shine-graph",
+                "--test",
+                "matrixjoin"
                 "--",
                 "--nocapture",
             ],

@@ -3,6 +3,7 @@ mod csmatrixmask;
 mod densestore;
 mod hcsmatrixmask;
 mod matrixmask;
+mod rowiter;
 mod smatrix;
 mod store;
 mod unitstore;
@@ -10,15 +11,13 @@ mod unitstore;
 /// Trait implementations to iterate ower the stored data
 mod dataiter;
 /// Trait implementations to make an SVector joinable
-mod join;
-
 pub use self::arenastore::*;
 pub use self::csmatrixmask::*;
 pub use self::dataiter::*;
 pub use self::densestore::*;
 pub use self::hcsmatrixmask::*;
-pub use self::join::*;
 pub use self::matrixmask::*;
+pub use self::rowiter::*;
 pub use self::smatrix::*;
 pub use self::store::*;
 pub use self::unitstore::*;

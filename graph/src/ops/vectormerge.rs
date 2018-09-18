@@ -5,11 +5,19 @@ use traits::{IndexExcl, IndexLowerBound};
 pub trait IntoVectorMerge {
     type Store: IndexLowerBound<usize>;
 
-    fn into_merge(self) -> VectorMerge<Self::Store>;
+    fn into_parts(self) -> (Range<usize>, Self::Store);
 }
 
 /// Extension methods for IntoVectorMerge
 pub trait IntoVectorMergeExt: IntoVectorMerge {
+    fn into_merge(self) -> VectorMerge<Self::Store>
+    where
+        Self: Sized,
+    {
+        let (remaining_range, store) = self.into_parts();
+        VectorMerge { remaining_range, store }
+    }
+
     fn merge_all<F>(self, f: F)
     where
         F: FnMut(usize, <<Self as IntoVectorMerge>::Store as IndexExcl<usize>>::Item),
@@ -34,7 +42,7 @@ pub struct VectorMerge<S>
 where
     S: IndexLowerBound<usize>,
 {
-    iterator: Range<usize>,
+    remaining_range: Range<usize>,
     store: S,
 }
 
@@ -43,16 +51,12 @@ impl<S> VectorMerge<S>
 where
     S: IndexLowerBound<usize>,
 {
-    pub fn new(iterator: Range<usize>, store: S) -> VectorMerge<S> {
-        VectorMerge { iterator, store }
-    }
-
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<(usize, <S as IndexExcl<usize>>::Item)> {
-        let next = self.store.lower_bound(self.iterator.start);
+        let next = self.store.lower_bound(self.remaining_range.start);
         match next {
             Some(idx) => {
-                self.iterator.start = idx + 1;
+                self.remaining_range.start = idx + 1;
                 Some((idx, self.store.index(idx)))
             }
             None => return None,
@@ -79,3 +83,22 @@ where
         }
     }
 }
+
+impl<A0, A1, A2> IntoVectorMerge for (A0, A1, A2)
+where
+    A0: IntoVectorMerge,
+    A1: IntoVectorMerge,
+    A2: IntoVectorMerge,
+{
+    type Store = (A0::Store, A1::Store, A2::Store);
+
+    fn into_parts(self) -> (Range<usize>, Self::Store) {
+        let ((r0, s0), (r1, s1), (r2, s2)) = (self.0.into_parts(), self.1.into_parts(), self.2.into_parts());
+        let range =
+            *[r0.start, r1.start, r2.start].iter().max().unwrap()..*[r0.end, r1.end, r2.end].iter().min().unwrap();
+        (range, (s0, s1, s2))
+    }
+}
+
+//use shine_graph_macro::impl_intovectormerge_for_intovectormerge_tuple;
+//impl_intovectormerge_for_intovectormerge_tuple!{(2,3,4,5,6,7,8,9,10)}

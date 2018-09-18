@@ -1,15 +1,16 @@
 use bits::BitSetViewExt;
-use ops::{IntoVectorJoin, IntoVectorMerge, VectorJoin, VectorMerge};
+use ops::{IntoVectorJoin, IntoVectorMerge};
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
+use std::ops::Range;
 use svec::{DataIter, DataIterMut, Store, VectorMask, VectorMaskTrue};
 use traits::{IndexExcl, IndexLowerBound};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
-    crate nnz: usize,
-    crate mask: VectorMask,
-    crate store: S,
+    nnz: usize,
+    mask: VectorMask,
+    store: S,
 }
 
 impl<S: Store> SVector<S> {
@@ -107,12 +108,12 @@ impl<S: Store> SVector<S> {
         WrapRead { vec: self }
     }
 
-    pub fn write(&mut self) -> WrapWrite<S> {
-        WrapWrite { vec: self }
+    pub fn update(&mut self) -> WrapUpdate<S> {
+        WrapUpdate { vec: self }
     }
 
-    pub fn create(&mut self) -> WrapCreate<S> {
-        WrapCreate { vec: self }
+    pub fn write(&mut self) -> WrapWrite<S> {
+        WrapWrite { vec: self }
     }
 }
 
@@ -241,8 +242,8 @@ where
     type Mask = &'a VectorMask;
     type Store = &'a S;
 
-    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
-        VectorJoin::new_from_mask(&self.vec.mask, &self.vec.store)
+    fn into_parts(self) -> (Self::Mask, Self::Store) {
+        (&self.vec.mask, &self.vec.store)
     }
 }
 
@@ -253,20 +254,20 @@ where
 {
     type Store = Self;
 
-    fn into_merge(self) -> VectorMerge<Self::Store> {
-        VectorMerge::new(0..self.vec.capacity(), self)
+    fn into_parts(self) -> (Range<usize>, Self::Store) {
+        (0..self.vec.capacity(), self)
     }
 }
 
 /// Wrapper to allow mutable access to the elments of an SVector in join and merge oprations.
-pub struct WrapWrite<'a, S>
+pub struct WrapUpdate<'a, S>
 where
     S: 'a + Store,
 {
     vec: &'a mut SVector<S>,
 }
 
-impl<'a, S> IndexExcl<usize> for WrapWrite<'a, S>
+impl<'a, S> IndexExcl<usize> for WrapUpdate<'a, S>
 where
     S: Store,
 {
@@ -278,7 +279,7 @@ where
     }
 }
 
-impl<'a, S> IndexLowerBound<usize> for WrapWrite<'a, S>
+impl<'a, S> IndexLowerBound<usize> for WrapUpdate<'a, S>
 where
     S: Store,
 {
@@ -289,39 +290,39 @@ where
 }
 
 /// Consume the Wrapper and creates a VectorJoin from the mask and store parts.
-impl<'a, S> IntoVectorJoin for WrapWrite<'a, S>
+impl<'a, S> IntoVectorJoin for WrapUpdate<'a, S>
 where
     S: 'a + Store,
 {
     type Mask = &'a VectorMask;
     type Store = &'a mut S;
 
-    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
-        VectorJoin::new_from_mask(&self.vec.mask, &mut self.vec.store)
+    fn into_parts(self) -> (Self::Mask, Self::Store) {
+        (&self.vec.mask, &mut self.vec.store)
     }
 }
 
 /// Create a VectorMerge. The wrapping is preserved, no need to split the mask and store parts.
-impl<'a, S> IntoVectorMerge for WrapWrite<'a, S>
+impl<'a, S> IntoVectorMerge for WrapUpdate<'a, S>
 where
     S: 'a + Store,
 {
     type Store = Self;
 
-    fn into_merge(self) -> VectorMerge<Self::Store> {
-        VectorMerge::new(0..self.vec.capacity(), self)
+    fn into_parts(self) -> (Range<usize>, Self::Store) {
+        (0..self.vec.capacity(), self)
     }
 }
 
 /// Wrapper to allow Entry based access to the elments of an SVector in join and merge oprations.
-pub struct WrapCreate<'a, S>
+pub struct WrapWrite<'a, S>
 where
     S: 'a + Store,
 {
     vec: &'a mut SVector<S>,
 }
 
-impl<'a, S> IndexExcl<usize> for WrapCreate<'a, S>
+impl<'a, S> IndexExcl<usize> for WrapWrite<'a, S>
 where
     S: Store,
 {
@@ -332,7 +333,7 @@ where
     }
 }
 
-impl<'a, S> IndexLowerBound<usize> for WrapCreate<'a, S>
+impl<'a, S> IndexLowerBound<usize> for WrapWrite<'a, S>
 where
     S: Store,
 {
@@ -343,26 +344,26 @@ where
 }
 
 /// Create a VectorJoin. The wrapping is preserved and a constant true filter is provided as the mask.
-impl<'a, S> IntoVectorJoin for WrapCreate<'a, S>
+impl<'a, S> IntoVectorJoin for WrapWrite<'a, S>
 where
     S: 'a + Store,
 {
     type Mask = VectorMaskTrue;
     type Store = Self;
 
-    fn into_join(self) -> VectorJoin<Self::Mask, Self::Store> {
-        VectorJoin::new_from_mask(VectorMaskTrue::new(), self)
+    fn into_parts(self) -> (Self::Mask, Self::Store) {
+        (VectorMaskTrue::new(), self)
     }
 }
 
 /// Create a VectorMerge. The wrapping is preserved, no need to split the mask and store parts.
-impl<'a, S> IntoVectorMerge for WrapCreate<'a, S>
+impl<'a, S> IntoVectorMerge for WrapWrite<'a, S>
 where
     S: 'a + Store,
 {
     type Store = Self;
 
-    fn into_merge(self) -> VectorMerge<Self::Store> {
-        VectorMerge::new(0..self.vec.capacity(), self)
+    fn into_parts(self) -> (Range<usize>, Self::Store) {
+        (0..self.vec.capacity(), self)
     }
 }
