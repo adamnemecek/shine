@@ -1,8 +1,6 @@
 use bits::BitSetViewExt;
-use ops::IntoVectorJoin;
 use smat::{DataIter, DataIterMut, DataPosition, DataRange, MatrixMask, MatrixMaskExt, RowRead, RowUpdate, Store};
-use std::marker::PhantomData;
-use svec::{VectorMask, VectorMaskTrue};
+use svec::VectorMask;
 
 /// Sparse (Square) Row matrix
 pub struct SMatrix<M, S>
@@ -132,20 +130,20 @@ where
         WrapColumnWrite { mat: self }
     }
 
-    pub fn update_row(&mut self, r: usize) -> RowUpdate<M, S> {
-        let data_range = self.mask.get_data_range(r);
-        RowUpdate {
-            mask: &self.mask,
-            store: &mut self.store,
-            data_range,
-        }
-    }
-
     pub fn read_row(&self, r: usize) -> RowRead<M, S> {
         let data_range = self.mask.get_data_range(r);
         RowRead {
             mask: &self.mask,
             store: &self.store,
+            data_range,
+        }
+    }
+
+    pub fn update_row(&mut self, r: usize) -> RowUpdate<M, S> {
+        let data_range = self.mask.get_data_range(r);
+        RowUpdate {
+            mask: &self.mask,
+            store: &mut self.store,
             data_range,
         }
     }

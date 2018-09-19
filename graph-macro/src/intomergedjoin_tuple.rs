@@ -2,18 +2,16 @@ use proc_macro;
 use proc_macro2::{Span, TokenStream};
 use syn;
 
-fn impl_intovectorjoin_for_tuple(count: usize) -> TokenStream {
-    let op_type = syn::Ident::new(&format!("And{}", count), Span::/*def*/call_site());
-
+fn impl_intomergedjoin_for_tuple(count: usize) -> TokenStream {
     let generics: Vec<_> = (0..count)
         .map(|id| syn::Ident::new(&format!("A{}", id), Span::/*def*/call_site()))
         .collect();
     let generics = &generics;
 
-    let masks: Vec<_> = (0..count)
-        .map(|id| syn::Ident::new(&format!("m{}", id), Span::/*def*/call_site()))
+    let ranges: Vec<_> = (0..count)
+        .map(|id| syn::Ident::new(&format!("r{}", id), Span::/*def*/call_site()))
         .collect();
-    let masks = &masks;
+    let ranges = &ranges;
 
     let stores: Vec<_> = (0..count)
         .map(|id| syn::Ident::new(&format!("s{}", id), Span::/*def*/call_site()))
@@ -26,18 +24,19 @@ fn impl_intovectorjoin_for_tuple(count: usize) -> TokenStream {
     let index = &index;
 
     let type_impl = quote!{
-        /// Implement IntoVectorJoin for tuple of IntoVectorJoin
-        /// The Item is a tuple of the Items made of the Items of the underlying IntoVectorJoin
-        impl<#(#generics),*> IntoVectorJoin for (#(#generics,)*)
+        /// Implement IntoMergedJoin for tuple of IntoMergedJoin
+        /// The Item is a tuple of the Items made of the Items of the underlying IntoMergedJoin
+        impl<#(#generics),*> IntoMergedJoin for (#(#generics,)*)
         where
-            #(#generics: IntoVectorJoin,)*
+            #(#generics: IntoMergedJoin,)*
         {
-            type Mask = bitops::#op_type<VectorMaskBlock, #(#generics::Mask),*>;
             type Store = (#(#generics::Store,)*);
 
-            fn into_parts(self) -> (Self::Mask, Self::Store) {
-                let (#((#masks, #stores),)*) = (#(self.#index.into_parts(),)*);
-                ((#(#masks,)*).and(), (#(#stores,)*))
+            fn into_parts(self) -> (Range<usize>, Self::Store) {
+                let (#((#ranges, #stores),)*) = (#(self.#index.into_parts(),)*);
+                let range =
+                    *[#(#ranges.start),*].iter().max().unwrap()..*[#(#ranges.end),*].iter().min().unwrap();
+                (range, (#(#stores,)*))
             }
         }
     };
@@ -45,7 +44,7 @@ fn impl_intovectorjoin_for_tuple(count: usize) -> TokenStream {
     type_impl
 }
 
-pub fn impl_intovectorjoin_for_intovectorjoin_tuple(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
+pub fn impl_intomergedjoin_for_intomergedjoin_tuple(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
     let tuple: syn::ExprTuple = syn::parse(input).map_err(|err| format!("Tuple expected, {}", err))?;
 
     let mut gen = Vec::new();
@@ -55,7 +54,7 @@ pub fn impl_intovectorjoin_for_intovectorjoin_tuple(input: proc_macro::TokenStre
             if let syn::Lit::Int(lit) = expr.lit {
                 let count = lit.value();
 
-                let tuple_impl = impl_intovectorjoin_for_tuple(count as usize);
+                let tuple_impl = impl_intomergedjoin_for_tuple(count as usize);
                 gen.push(tuple_impl);
             } else {
                 /*expr.lit

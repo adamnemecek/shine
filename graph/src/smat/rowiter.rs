@@ -1,4 +1,4 @@
-use ops::IntoVectorMerge;
+use ops::IntoMergedJoin;
 use smat::{DataPosition, DataRange, MatrixMask, MatrixMaskExt, Store};
 use std::mem;
 use std::ops::Range;
@@ -41,7 +41,7 @@ where
     }
 }
 
-impl<'a, M, S> IntoVectorMerge for RowRead<'a, M, S>
+impl<'a, M, S> IntoMergedJoin for RowRead<'a, M, S>
 where
     M: 'a + MatrixMask,
     S: 'a + Store,
@@ -91,7 +91,7 @@ where
     }
 }
 
-impl<'a, M, S> IntoVectorMerge for RowUpdate<'a, M, S>
+impl<'a, M, S> IntoMergedJoin for RowUpdate<'a, M, S>
 where
     M: 'a + MatrixMask,
     S: 'a + Store,

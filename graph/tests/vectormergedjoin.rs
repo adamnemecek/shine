@@ -1,4 +1,3 @@
-#![cfg(off)]
 extern crate shine_graph;
 #[macro_use]
 extern crate log;
@@ -32,15 +31,15 @@ fn test_svec_merge() {
     v2.add(31, 31);
     v2.add(32, 32);
 
-    trace!("read");
+    trace!("merge - read");
     {
         let mut s = String::new();
-        v2.read().join_all(|id, e| {
+        v2.read().into_merged_join().for_each(|id, e| {
             s = format!("{},{}={:?}", s, id, e);
 
             // it's safe to get a read while another read is in progress
             let mut s2 = String::new();
-            v2.read().into_join().for_each(|id, e| {
+            v2.read().into_merged_join().for_each(|id, e| {
                 s2 = format!("{},{}={:?}", s2, id, e);
             });
             assert_eq!(s2, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
@@ -51,7 +50,7 @@ fn test_svec_merge() {
     trace!("update");
     {
         let mut s = String::new();
-        v2.update().masked_join_all(|id, e| {
+        v2.update().into_merged_join().for_each(|id, e| {
             *e += 1;
             s = format!("{},{}={:?}", s, id, e);
         });
@@ -61,7 +60,7 @@ fn test_svec_merge() {
     trace!("write");
     {
         let mut s = String::new();
-        v1.write().masked_join_until(|id, mut e| {
+        v1.write().into_merged_join().until(|id, mut e| {
             if id % 2 == 0 {
                 e.acquire(id);
             }
@@ -81,14 +80,16 @@ fn test_svec_merge() {
 
         let mut index_string = String::new();
         let mut whole_string = String::new();
-        (v1.read(), v2.update(), t1.write()).masked_join_all(|id, (e1, e2, mut e3)| {
-            index_string = format!("{},{}", index_string, id);
-            *e2 += 1;
-            if *e1 % 2 == 1 {
-                e3.acquire_default();
-            }
-            whole_string = format!("{},({:?},{:?},{:?})", whole_string, e1, e2, e3);
-        });
+        (v1.read(), v2.update(), t1.write())
+            .into_merged_join()
+            .for_each(|id, (e1, e2, mut e3)| {
+                index_string = format!("{},{}", index_string, id);
+                *e2 += 1;
+                if *e1 % 2 == 1 {
+                    e3.acquire_default();
+                }
+                whole_string = format!("{},({:?},{:?},{:?})", whole_string, e1, e2, e3);
+            });
 
         assert_eq!(index_string, ",3,14,17,18");
         assert_eq!(

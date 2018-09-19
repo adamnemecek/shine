@@ -8,7 +8,7 @@ use shine_graph::ops::*;
 use shine_graph::svec::*;
 
 #[test]
-fn test_svec_merge() {
+fn test_svec_join() {
     let _ = env_logger::try_init();
 
     let mut v1 = new_dvec::<usize>();
@@ -31,15 +31,15 @@ fn test_svec_merge() {
     v2.add(31, 31);
     v2.add(32, 32);
 
-    trace!("merge - read");
+    trace!("read");
     {
         let mut s = String::new();
-        v2.read().merge_all(|id, e| {
+        v2.read().into_masked_join().for_each(|id, e| {
             s = format!("{},{}={:?}", s, id, e);
 
             // it's safe to get a read while another read is in progress
             let mut s2 = String::new();
-            v2.read().join_all(|id, e| {
+            v2.read().into_masked_join().for_each(|id, e| {
                 s2 = format!("{},{}={:?}", s2, id, e);
             });
             assert_eq!(s2, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
@@ -47,20 +47,20 @@ fn test_svec_merge() {
         assert_eq!(s, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
     }
 
-    trace!("merge - update");
+    trace!("update");
     {
         let mut s = String::new();
-        v2.update().merge_all(|id, e| {
+        v2.update().into_masked_join().for_each(|id, e| {
             *e += 1;
             s = format!("{},{}={:?}", s, id, e);
         });
         assert_eq!(s, ",3=4,11=12,14=15,17=18,18=19,31=32,32=33");
     }
 
-    trace!("merge - write");
+    trace!("write");
     {
         let mut s = String::new();
-        v1.write().merge_until(|id, mut e| {
+        v1.write().into_masked_join().until(|id, mut e| {
             if id % 2 == 0 {
                 e.acquire(id);
             }
@@ -74,20 +74,22 @@ fn test_svec_merge() {
         assert_eq!(s, ",0=Some(0),1=None,2=Some(2),3=Some(3),4=Some(4),5=None,6=Some(6)");
     }
 
-    trace!("merge 3");
+    trace!("(read,update,write)");
     {
         let mut t1 = new_tvec();
 
         let mut index_string = String::new();
         let mut whole_string = String::new();
-        (v1.read(), v2.update(), t1.write()).merge_all(|id, (e1, e2, mut e3)| {
-            index_string = format!("{},{}", index_string, id);
-            *e2 += 1;
-            if *e1 % 2 == 1 {
-                e3.acquire_default();
-            }
-            whole_string = format!("{},({:?},{:?},{:?})", whole_string, e1, e2, e3);
-        });
+        (v1.read(), v2.update(), t1.write())
+            .into_masked_join()
+            .for_each(|id, (e1, e2, mut e3)| {
+                index_string = format!("{},{}", index_string, id);
+                *e2 += 1;
+                if *e1 % 2 == 1 {
+                    e3.acquire_default();
+                }
+                whole_string = format!("{},({:?},{:?},{:?})", whole_string, e1, e2, e3);
+            });
 
         assert_eq!(index_string, ",3,14,17,18");
         assert_eq!(

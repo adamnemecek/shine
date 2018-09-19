@@ -1,5 +1,7 @@
-mod vectorjoin;
-mod vectormerge;
+mod join;
+mod maskedjoin;
+mod mergedjoin;
 
-pub use self::vectorjoin::*;
-pub use self::vectormerge::*;
+pub use self::join::*;
+pub use self::maskedjoin::*;
+pub use self::mergedjoin::*;

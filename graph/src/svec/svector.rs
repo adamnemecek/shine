@@ -1,5 +1,5 @@
 use bits::BitSetViewExt;
-use ops::{IntoVectorJoin, IntoVectorMerge};
+use ops::{IntoMaskedJoin, IntoMergedJoin};
 use std::fmt::{self, Debug, Formatter};
 use std::mem;
 use std::ops::Range;
@@ -235,7 +235,7 @@ where
 }
 
 /// Consume the Wrapper and creates a VectorJoin from the mask and store parts.
-impl<'a, S> IntoVectorJoin for WrapRead<'a, S>
+impl<'a, S> IntoMaskedJoin for WrapRead<'a, S>
 where
     S: 'a + Store,
 {
@@ -248,7 +248,7 @@ where
 }
 
 /// Create a VectorMerge. The wrapping is preserved, no need to split the mask and store parts.
-impl<'a, S> IntoVectorMerge for WrapRead<'a, S>
+impl<'a, S> IntoMergedJoin for WrapRead<'a, S>
 where
     S: 'a + Store,
 {
@@ -290,7 +290,7 @@ where
 }
 
 /// Consume the Wrapper and creates a VectorJoin from the mask and store parts.
-impl<'a, S> IntoVectorJoin for WrapUpdate<'a, S>
+impl<'a, S> IntoMaskedJoin for WrapUpdate<'a, S>
 where
     S: 'a + Store,
 {
@@ -303,7 +303,7 @@ where
 }
 
 /// Create a VectorMerge. The wrapping is preserved, no need to split the mask and store parts.
-impl<'a, S> IntoVectorMerge for WrapUpdate<'a, S>
+impl<'a, S> IntoMergedJoin for WrapUpdate<'a, S>
 where
     S: 'a + Store,
 {
@@ -344,7 +344,7 @@ where
 }
 
 /// Create a VectorJoin. The wrapping is preserved and a constant true filter is provided as the mask.
-impl<'a, S> IntoVectorJoin for WrapWrite<'a, S>
+impl<'a, S> IntoMaskedJoin for WrapWrite<'a, S>
 where
     S: 'a + Store,
 {
@@ -357,7 +357,7 @@ where
 }
 
 /// Create a VectorMerge. The wrapping is preserved, no need to split the mask and store parts.
-impl<'a, S> IntoVectorMerge for WrapWrite<'a, S>
+impl<'a, S> IntoMergedJoin for WrapWrite<'a, S>
 where
     S: 'a + Store,
 {
