@@ -7,11 +7,8 @@ pub trait IntoMergedJoin {
     type Store: IndexLowerBound<usize>;
 
     fn into_parts(self) -> (Range<usize>, Self::Store);
-}
 
-/// Extension methods for IntoMergedJoin
-pub trait IntoMergedJoinExt: IntoMergedJoin {
-    fn into_merged_join(self) -> MergedJoin<Self::Store>
+    fn into_merge(self) -> MergedJoin<<Self as IntoMergedJoin>::Store>
     where
         Self: Sized,
     {
@@ -19,24 +16,22 @@ pub trait IntoMergedJoinExt: IntoMergedJoin {
         MergedJoin { remaining_range, store }
     }
 
-    /*fn merged_join_all<F>(self, f: F)
+    fn merge_all<F>(self, f: F)
     where
         F: FnMut(usize, <Self::Store as IndexExcl<usize>>::Item),
         Self: Sized,
     {
-        self.into_join().for_each(f);
+        self.into_merge().for_each(f)
     }
 
-    fn merged_join_until<F>(self, f: F)
+    fn merge_until<F>(self, f: F)
     where
         F: FnMut(usize, <Self::Store as IndexExcl<usize>>::Item) -> bool,
         Self: Sized,
     {
-        self.into_join().until(f);
-    }*/
+        self.into_merge().until(f)
+    }
 }
-
-impl<T: ?Sized> IntoMergedJoinExt for T where T: IntoMergedJoin {}
 
 /// Iterator like trait that performs the merge.
 pub struct MergedJoin<S>

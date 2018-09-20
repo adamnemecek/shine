@@ -9,11 +9,8 @@ pub trait IntoMaskedJoin {
     type Store: IndexExcl<usize>;
 
     fn into_parts(self) -> (Self::Mask, Self::Store);
-}
 
-/// Extension methods for IntoMaskedJoin
-pub trait IntoMaskedJoinExt: IntoMaskedJoin {
-    fn into_masked_join(self) -> MaskedJoin<Self::Mask, Self::Store>
+    fn into_join(self) -> MaskedJoin<<Self as IntoMaskedJoin>::Mask, <Self as IntoMaskedJoin>::Store>
     where
         Self: Sized,
     {
@@ -24,24 +21,22 @@ pub trait IntoMaskedJoinExt: IntoMaskedJoin {
         }
     }
 
-    /*fn masked_join_all<F>(self, f: F)
+    fn join_all<F>(self, f: F)
     where
         F: FnMut(usize, <Self::Store as IndexExcl<usize>>::Item),
         Self: Sized,
     {
-        self.into_join().for_each(f);
+        self.into_join().for_each(f)
     }
 
-    fn masked_join_until<F>(self, f: F)
+    fn join_until<F>(self, f: F)
     where
         F: FnMut(usize, <Self::Store as IndexExcl<usize>>::Item) -> bool,
         Self: Sized,
     {
-        self.into_join().until(f);
-    }*/
+        self.into_join().until(f)
+    }
 }
-
-impl<T: ?Sized> IntoMaskedJoinExt for T where T: IntoMaskedJoin {}
 
 /// Iterator like trait that performs the join.
 pub struct MaskedJoin<M, S>

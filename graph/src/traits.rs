@@ -1,3 +1,6 @@
+pub struct Yes;
+pub struct No;
+
 /// Used for indexing operations. It is simmilar to Index and IndexMut but source is captured
 /// mutable allowing exclusive access to the indexed container.
 pub trait IndexExcl<I> {

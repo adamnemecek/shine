@@ -1,4 +1,3 @@
-#![cfg(off)]
 extern crate shine_graph;
 #[macro_use]
 extern crate log;
@@ -9,7 +8,7 @@ use shine_graph::ops::*;
 use shine_graph::svec::*;
 
 #[test]
-fn test_svec_merge() {
+fn test_svec_join() {
     let _ = env_logger::try_init();
 
     let mut v1 = new_dvec::<usize>();
@@ -35,7 +34,7 @@ fn test_svec_merge() {
     trace!("read");
     {
         let mut s = String::new();
-        v2.read().join_all(|id, e| {
+        v2.read().into_join().for_each(|id, e| {
             s = format!("{},{}={:?}", s, id, e);
 
             // it's safe to get a read while another read is in progress
@@ -51,7 +50,7 @@ fn test_svec_merge() {
     trace!("update");
     {
         let mut s = String::new();
-        v2.update().masked_join_all(|id, e| {
+        v2.update().into_join().for_each(|id, e| {
             *e += 1;
             s = format!("{},{}={:?}", s, id, e);
         });
@@ -61,7 +60,7 @@ fn test_svec_merge() {
     trace!("write");
     {
         let mut s = String::new();
-        v1.write().masked_join_until(|id, mut e| {
+        v1.write().into_join().until(|id, mut e| {
             if id % 2 == 0 {
                 e.acquire(id);
             }
@@ -81,14 +80,16 @@ fn test_svec_merge() {
 
         let mut index_string = String::new();
         let mut whole_string = String::new();
-        (v1.read(), v2.update(), t1.write()).masked_join_all(|id, (e1, e2, mut e3)| {
-            index_string = format!("{},{}", index_string, id);
-            *e2 += 1;
-            if *e1 % 2 == 1 {
-                e3.acquire_default();
-            }
-            whole_string = format!("{},({:?},{:?},{:?})", whole_string, e1, e2, e3);
-        });
+        (v1.read(), v2.update(), t1.write())
+            .into_join()
+            .for_each(|id, (e1, e2, mut e3)| {
+                index_string = format!("{},{}", index_string, id);
+                *e2 += 1;
+                if *e1 % 2 == 1 {
+                    e3.acquire_default();
+                }
+                whole_string = format!("{},({:?},{:?},{:?})", whole_string, e1, e2, e3);
+            });
 
         assert_eq!(index_string, ",3,14,17,18");
         assert_eq!(
