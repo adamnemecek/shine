@@ -1,17 +1,18 @@
-extern crate shine_store;
-//#[macro_use] extern crate log;
 extern crate env_logger;
+extern crate shine_store;
+extern crate shine_testutils;
 
 use std::env;
 use std::thread;
 
 use shine_store::spscstate::*;
+use shine_testutils::*;
 
 const ITER_COUNT: i32 = 0x2ffff;
 
 #[test]
 fn single_threaded_logic() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let (p, c) = state_channel();
 
@@ -40,7 +41,7 @@ fn single_threaded_logic() {
 
 #[test]
 fn single_threaded_stress_small_buffer() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let (p, c) = state_channel();
 
@@ -52,7 +53,7 @@ fn single_threaded_stress_small_buffer() {
 
 #[test]
 fn multi_threaded_stress_small_buffer() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     assert!(
         env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
@@ -136,7 +137,7 @@ impl Default for BigData {
 
 #[test]
 fn single_threaded_stress_big_buffer() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let (p, c) = state_channel::<BigData>();
     for x in 0..ITER_COUNT {
@@ -166,7 +167,7 @@ fn single_threaded_stress_big_buffer() {
 
 #[test]
 fn multi_threaded_stress_big_buffer() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     assert!(
         env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",

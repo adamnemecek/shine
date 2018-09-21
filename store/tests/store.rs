@@ -1,4 +1,5 @@
 extern crate shine_store;
+extern crate shine_testutils;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -8,6 +9,7 @@ use std::sync::Arc;
 use std::thread;
 
 use shine_store::store::*;
+use shine_testutils::*;
 
 /// Test resource data
 struct TestData(String);
@@ -28,7 +30,7 @@ impl Drop for TestData {
 
 #[test]
 fn simple_single_threaded() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let store = Store::<TestData>::new();
     let mut r0; // = TestRef::none();
@@ -108,7 +110,7 @@ fn simple_single_threaded() {
 
 #[test]
 fn simple_multi_threaded() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     assert!(
         env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
@@ -157,7 +159,7 @@ fn simple_multi_threaded() {
 
 #[test]
 fn check_lock() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     // single threaded as panic hook is a global resource
     assert!(

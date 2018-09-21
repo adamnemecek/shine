@@ -1,4 +1,5 @@
 extern crate shine_store;
+extern crate shine_testutils;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -11,6 +12,7 @@ use std::cell::Cell;
 use std::mem;
 
 use shine_store::arena::*;
+use shine_testutils::*;
 
 struct DropTracker<'a>(&'a Cell<usize>);
 
@@ -25,7 +27,7 @@ struct Node<'a>(i32, DropTracker<'a>);
 
 #[test]
 fn simple() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let drop_counter = Cell::new(0);
     {
@@ -73,7 +75,7 @@ fn simple() {
 
 #[test]
 fn stress() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let mut data = [1usize, 2, 5, 7, 100, 4000];
 

@@ -1,9 +1,9 @@
-extern crate shine_ecs as ecs;
+#![cfg(off)]
 extern crate env_logger;
+extern crate shine_ecs as ecs;
 //extern crate shred;
 
 use ecs::*;
-
 
 #[derive(Debug)]
 struct Pos {
@@ -46,11 +46,9 @@ impl Link for Spring {
     type StorageCategory = SparseStorage;
 }
 
-
 #[test]
-fn world_simple()
-{
-    let _ = env_logger::try_init();
+fn world_simple() {
+    init_test_logger(module_path!());
 
     let mut world = World::new();
 
@@ -79,17 +77,16 @@ fn world_simple()
                 vel.insert(e, Velocity { x: 0., y: 0., z: 1. });
             }
 
-
             {
-                 let mut iter = RWJoin2::new(&vel, &mut pos);
-                 while let Some(p) = iter.next() {
-                     println!("e:{:?}, p:{:?}, v: {:?}", p.0, p.1, p.2);
-                     /*p.1.x += p.2.x;
+                let mut iter = RWJoin2::new(&vel, &mut pos);
+                while let Some(p) = iter.next() {
+                    println!("e:{:?}, p:{:?}, v: {:?}", p.0, p.1, p.2);
+                    /*p.1.x += p.2.x;
                      p.1.y += p.2.y;
                      p.1.z += p.2.z;*/
-                 }
-             }
-/*
+                }
+            }
+            /*
              {
                  let mut iter = join_wr(&mut pos, spring.backward_view());
                  while let Some(p) = iter.next() {
@@ -113,7 +110,12 @@ fn world_simple()
         }
 
         {
-            let (_e, _p, mut _v, mut _s): (ReadEntities, ReadComponent<Pos>, WriteComponent<Velocity>, WriteLink<Spring>) = world.system_data();
+            let (_e, _p, mut _v, mut _s): (
+                ReadEntities,
+                ReadComponent<Pos>,
+                WriteComponent<Velocity>,
+                WriteLink<Spring>,
+            ) = world.system_data();
         }
     }
 }

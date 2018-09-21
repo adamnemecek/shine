@@ -1,4 +1,5 @@
 extern crate shine_graph;
+extern crate shine_testutils;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -7,10 +8,11 @@ extern crate rand;
 use shine_graph::ops::*;
 use shine_graph::smat::*;
 use shine_graph::svec::*;
+use shine_testutils::*;
 
 #[test]
 fn test_vec_mat_join() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let mut v1 = new_dvec::<usize>();
     let mut v2 = new_dvec::<usize>();

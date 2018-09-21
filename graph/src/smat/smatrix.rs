@@ -101,7 +101,7 @@ where
         }
     }
 
-    pub fn entry(&mut self, r: usize, c: usize) -> Entry<M, S> {
+    pub fn get_entry(&mut self, r: usize, c: usize) -> Entry<M, S> {
         Entry::new(self, r, c)
     }
 

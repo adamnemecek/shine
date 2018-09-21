@@ -21,4 +21,4 @@ shine-graph-macro = {path = "../graph-macro"}
 env_logger = "*"
 rand = "*"
 permutohedron = "*"
-
+shine-testutils = {path = "../testutils"}

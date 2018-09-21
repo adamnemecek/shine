@@ -1,4 +1,5 @@
 extern crate shine_graph;
+extern crate shine_testutils;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -11,6 +12,7 @@ use permutohedron::Heap;
 use rand::Rng;
 
 use shine_graph::bits::*;
+use shine_testutils::*;
 
 fn check_bitset<'a, B: BitSetView>(bitset: B, bits: &'a [usize]) {
     assert!(bitset.into_iter().eq(bits.iter().cloned()));
@@ -67,7 +69,7 @@ fn test_clear_<B: BitBlock>() {
 
 #[test]
 fn test_clear() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     trace!("BitSet - u8");
     test_clear_::<u8>();
@@ -112,7 +114,7 @@ fn test_simple_<B: BitBlock>() {
 
 #[test]
 fn test_simple() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     trace!("BitSet - u8");
     test_simple_::<u8>();
@@ -152,7 +154,7 @@ fn test_stress_<B: BitBlock>(cnt: usize) {
 
 #[test]
 fn test_stress() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     trace!("BitSet - u8");
     test_stress_::<u8>(4096);
@@ -215,7 +217,7 @@ fn test_stress_random_<B: BitBlock>(range: usize, count: usize) {
 
 #[test]
 fn test_random_stress() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let count = 1000;
     let range = 1 << 20;
@@ -366,7 +368,7 @@ fn test_ops_<B: BitBlock>() {
 
 #[test]
 fn test_ops() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     trace!("BitSet - u8");
     test_ops_::<u8>();
@@ -420,7 +422,7 @@ fn test_ops_random_<B: BitBlock>(range: usize, count: usize) {
 
 #[test]
 fn test_ops_random() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let count = 128;
     let range = 1024;

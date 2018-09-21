@@ -1,15 +1,13 @@
 use bits::BitSetViewExt;
-use ops::{IntoJoin, Join};
+use ops::IntoJoin;
 use std::fmt::{self, Debug, Formatter};
-use std::mem;
-use svec::{DataIter, DataIterMut, Store, VectorMask};
-use traits::{IndexExcl, IndexLowerBound};
+use svec::{DataIter, DataIterMut, DrainIter, Store, VectorMask, WrapRead, WrapUpdate, WrapWrite};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
-    nnz: usize,
-    mask: VectorMask,
-    store: S,
+    crate nnz: usize,
+    crate mask: VectorMask,
+    crate store: S,
 }
 
 impl<S: Store> SVector<S> {
@@ -91,16 +89,50 @@ impl<S: Store> SVector<S> {
         }
     }
 
-    pub fn entry(&mut self, idx: usize) -> Entry<S> {
+    pub fn get_entry(&mut self, idx: usize) -> Entry<S> {
         Entry::new(self, idx)
     }
 
+    pub fn first(&self) -> Option<(usize, &S::Item)> {
+        let id = self.mask.lower_bound(0);
+        id.map(|id| (id, self.get_unchecked(id)))
+    }
+
+    pub fn first_mut(&mut self) -> Option<(usize, &mut S::Item)> {
+        match self.mask.lower_bound(0) {
+            Some(id) => Some((id, self.get_mut_unchecked(id))),
+            None => None,
+        }
+    }
+
+    pub fn first_entry(&mut self) -> Option<(usize, Entry<S>)> {
+        match self.mask.lower_bound(0) {
+            Some(id) => Some((id, self.get_entry(id))),
+            None => None,
+        }
+    }
+
     pub fn data_iter(&self) -> DataIter<S> {
-        DataIter::new((&self.mask).into_iter(), &self.store)
+        DataIter {
+            iterator: (&self.mask).into_iter(),
+            store: &self.store,
+        }
     }
 
     pub fn data_iter_mut(&mut self) -> DataIterMut<S> {
-        DataIterMut::new((&self.mask).into_iter(), &mut self.store)
+        DataIterMut {
+            iterator: (&self.mask).into_iter(),
+            store: &mut self.store,
+        }
+    }
+
+    pub fn drain_iter(&mut self) -> DrainIter<S> {
+        let vec_ptr = self as *mut _;
+        DrainIter {
+            vec_ptr,
+            iterator: (&self.mask).into_iter(),
+            store: &mut self.store,
+        }
     }
 
     pub fn read(&self) -> WrapRead<S> {
@@ -126,6 +158,22 @@ where
     }
 }
 
+impl<T, S> Debug for SVector<S>
+where
+    T: Debug,
+    S: Store<Item = T>,
+{
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        write!(f, "[");
+        let mut it = self.read().into_join();
+        while let Some((id, e)) = it.next() {
+            write!(f, "{}={:?}", id, e)?;
+        }
+        write!(f, "]");
+        Ok(())
+    }
+}
+
 /// Entry to a slot in a sparse vector.
 pub struct Entry<'a, S>
 where
@@ -146,6 +194,10 @@ where
             data: store.get_mut(idx).map(|d| d as *mut _),
             store,
         }
+    }
+
+    pub fn index(&self) -> usize {
+        self.idx
     }
 
     /// Return the (immutable) non-zero data at the given slot. If data is zero, None is returned.
@@ -200,122 +252,5 @@ where
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         write!(f, "{:?}", self.get())
-    }
-}
-
-/// Wrapper to allow immutable access to the elments of an SVector in join and merge oprations.
-pub struct WrapRead<'a, S>
-where
-    S: 'a + Store,
-{
-    vec: &'a SVector<S>,
-}
-
-impl<'a, S> IndexExcl<usize> for WrapRead<'a, S>
-where
-    S: Store,
-{
-    type Item = &'a S::Item;
-
-    fn index(&mut self, idx: usize) -> Self::Item {
-        self.vec.store.get(idx)
-    }
-}
-
-impl<'a, S> IndexLowerBound<usize> for WrapRead<'a, S>
-where
-    S: Store,
-{
-    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
-        self.vec.mask.lower_bound(idx)
-    }
-}
-
-impl<'a, S> IntoJoin for WrapRead<'a, S>
-where
-    S: 'a + Store,
-{
-    type Store = Self;
-
-    fn into_join(self) -> Join<Self::Store> {
-        Join::from_parts(0..self.vec.capacity(), self)
-    }
-}
-
-/// Wrapper to allow mutable access to the elments of an SVector in join and merge oprations.
-pub struct WrapUpdate<'a, S>
-where
-    S: 'a + Store,
-{
-    vec: &'a mut SVector<S>,
-}
-
-impl<'a, S> IndexExcl<usize> for WrapUpdate<'a, S>
-where
-    S: Store,
-{
-    type Item = &'a mut S::Item;
-
-    fn index(&mut self, idx: usize) -> Self::Item {
-        unsafe { mem::transmute(self.vec.store.get_mut(idx)) } // GAT
-    }
-}
-
-impl<'a, S> IndexLowerBound<usize> for WrapUpdate<'a, S>
-where
-    S: Store,
-{
-    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
-        self.vec.mask.lower_bound(idx)
-    }
-}
-
-impl<'a, S> IntoJoin for WrapUpdate<'a, S>
-where
-    S: 'a + Store,
-{
-    type Store = Self;
-
-    fn into_join(self) -> Join<Self::Store> {
-        Join::from_parts(0..self.vec.capacity(), self)
-    }
-}
-
-/// Wrapper to allow Entry based access to the elments of an SVector in join and merge oprations.
-pub struct WrapWrite<'a, S>
-where
-    S: 'a + Store,
-{
-    vec: &'a mut SVector<S>,
-}
-
-impl<'a, S> IndexExcl<usize> for WrapWrite<'a, S>
-where
-    S: Store,
-{
-    type Item = Entry<'a, S>;
-
-    fn index(&mut self, idx: usize) -> Self::Item {
-        unsafe { mem::transmute(self.vec.entry(idx)) } // GAT
-    }
-}
-
-impl<'a, S> IndexLowerBound<usize> for WrapWrite<'a, S>
-where
-    S: Store,
-{
-    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
-        Some(idx)
-    }
-}
-
-impl<'a, S> IntoJoin for WrapWrite<'a, S>
-where
-    S: 'a + Store,
-{
-    type Store = Self;
-
-    fn into_join(self) -> Join<Self::Store> {
-        Join::from_parts(0..self.vec.capacity(), self)
     }
 }

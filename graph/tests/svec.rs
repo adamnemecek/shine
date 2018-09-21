@@ -1,4 +1,5 @@
 extern crate shine_graph;
+extern crate shine_testutils;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -7,6 +8,7 @@ extern crate rand;
 use rand::Rng;
 
 use shine_graph::svec::*;
+use shine_testutils::*;
 
 type Data = usize;
 
@@ -40,17 +42,17 @@ fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
         assert_eq!(vector.get(15), Some(&15));
         assert_eq!(vector.nnz(), 2);
 
-        assert_eq!(vector.entry(16).get(), None);
+        assert_eq!(vector.get_entry(16).get(), None);
         assert_eq!(vector.nnz(), 2);
         {
-            let mut tmp = vector.entry(16);
+            let mut tmp = vector.get_entry(16);
             assert_eq!(tmp.get(), None);
             assert_eq!(*tmp.acquire_with(|| 16), 16);
             assert_eq!(tmp.get(), Some(&16));
         }
         assert_eq!(vector.get(16), Some(&16));
         assert_eq!(vector.nnz(), 3);
-        assert_eq!(vector.entry(16).get(), Some(&16));
+        assert_eq!(vector.get_entry(16).get(), Some(&16));
         assert_eq!(vector.nnz(), 3);
 
         vector.add(17, 17);
@@ -63,14 +65,14 @@ fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
         assert_eq!(vector.get(16), Some(&16));
         assert_eq!(vector.nnz(), 4);
         {
-            let mut tmp = vector.entry(16);
+            let mut tmp = vector.get_entry(16);
             assert_eq!(tmp.get(), Some(&16));
             assert_eq!(tmp.remove(), Some(16));
             assert_eq!(tmp.get(), None);
         }
         assert_eq!(vector.nnz(), 3);
         assert_eq!(vector.get(16), None);
-        assert_eq!(vector.entry(16).get(), None);
+        assert_eq!(vector.get_entry(16).get(), None);
         assert_eq!(vector.nnz(), 3);
 
         vector.clear();
@@ -84,7 +86,7 @@ fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
 
 #[test]
 fn test_simple() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     trace!("SDVector");
     test_simple_(new_dvec());
@@ -119,7 +121,7 @@ fn test_stress_<S: Store<Item = Data>>(mut vector: SVector<S>, size: usize, cnt:
 
 #[test]
 fn test_stress() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     for _ in 0..10 {
         trace!("SDVector");
@@ -167,7 +169,7 @@ fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
 
 #[test]
 fn test_data_iter() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     trace!("SDVector");
     test_data_iter_(new_dvec::<Data>());

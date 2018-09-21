@@ -1,4 +1,5 @@
 extern crate shine_graph;
+extern crate shine_testutils;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -7,6 +8,7 @@ extern crate rand;
 use rand::Rng;
 
 use shine_graph::smat::*;
+use shine_testutils::*;
 
 type Data = (usize, usize);
 
@@ -69,7 +71,7 @@ fn test_simple_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>)
 
 #[test]
 fn test_simple() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     trace!("SparseDMatrix");
     test_simple_(new_dmat::<Data>());
@@ -107,7 +109,7 @@ fn test_stress_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>,
 
 #[test]
 fn test_stress() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     trace!("SparseDMatrix - big");
     test_stress_(new_dmat::<Data>(), 1024, 100000);
@@ -160,7 +162,7 @@ fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, 
 
 #[test]
 fn test_data_iter() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     trace!("SparseDMatrix/CSMatrix");
     test_data_iter_(new_dmat::<Data>());

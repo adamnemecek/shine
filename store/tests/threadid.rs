@@ -1,4 +1,5 @@
 extern crate shine_store;
+extern crate shine_testutils;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
@@ -9,10 +10,11 @@ use std::thread;
 use std::time::*;
 
 use shine_store::threadid;
+use shine_testutils::*;
 
 #[test]
 fn thread_count() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     assert!(
         threadid::get_max_thread_count() >= threadid::get_preferred_thread_count(),
@@ -22,7 +24,7 @@ fn thread_count() {
 
 #[test]
 fn alloc_free() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     assert!(
         env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
@@ -60,11 +62,7 @@ fn alloc_free() {
             let mut array = raw_array.clone();
             array.sort();
             array.dedup();
-            assert!(
-                array.len() == len,
-                "There is a thread id duplication: {:?}",
-                *raw_array
-            );
+            assert!(array.len() == len, "There is a thread id duplication: {:?}", *raw_array);
             assert!(
                 array[len - 1] <= max_thread_count,
                 "Thread id exceeds the maximum thread id: {:?}, len: {}",

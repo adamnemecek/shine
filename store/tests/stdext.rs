@@ -1,13 +1,15 @@
 extern crate shine_store;
+extern crate shine_testutils;
 #[macro_use]
 extern crate log;
 extern crate env_logger;
 
 use shine_store::stdext::*;
+use shine_testutils::*;
 
 #[test]
 fn lower_bound() {
-    let _ = env_logger::try_init();
+    init_test_logger(module_path!());
 
     let b: [u32; 0] = [];
     assert_eq!(b.lower_bound(&0), 0);

@@ -72,7 +72,7 @@ impl MatrixMask for CSMatrixMask {
         let idx1 = self.offsets[row + 1];
         let pos = {
             if idx0 == idx1 {
-                trace!("new row opened: {}", row);
+                debug!("new row opened: {}", row);
                 idx0
             } else {
                 self.indices[idx0..idx1].lower_bound(&column) + idx0
@@ -80,10 +80,10 @@ impl MatrixMask for CSMatrixMask {
         };
 
         if pos < idx1 && self.indices[pos] == column {
-            trace!("item replaced at: {}", pos);
+            debug!("item replaced at: {}", pos);
             (DataPosition(pos), true)
         } else {
-            trace!("item added at: {}", pos);
+            debug!("item added at: {}", pos);
             self.indices.insert(pos, column);
             for offset in self.offsets[row + 1..].iter_mut() {
                 *offset += 1;
@@ -102,7 +102,7 @@ impl MatrixMask for CSMatrixMask {
         let pos = self.indices[idx0..idx1].lower_bound(&column) + idx0;
 
         if pos < idx1 && self.indices[pos] == column {
-            trace!("item removed at: {}", pos);
+            debug!("item removed at: {}", pos);
             self.indices.remove(pos);
             for offset in self.offsets[row + 1..].iter_mut() {
                 *offset -= 1;

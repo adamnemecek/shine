@@ -10,11 +10,11 @@ keywords = ["shine", "render", "opengl", "game"]
 [dependencies]
 log = "*"
 shred = "*"
-hibitset = "*"
 itertools = "*"
 
+shine-graph = {path = "../graph"}
 shine-store = {path = "../store"}
-
 
 [dev-dependencies]
 env_logger = "*"
+shine-testutils = {path = "../testutils"}

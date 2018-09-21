@@ -1,8 +1,5 @@
-use shred::{Resources, SystemData, Fetch, FetchMut};
-
 use entity::EntityStore;
-use component::ComponentStore;
-use link::LinkStore;
+use shred::{Fetch, FetchMut, Resources, SystemData};
 
 pub struct World {
     pub resources: Resources,
@@ -19,7 +16,7 @@ impl World {
         world
     }
 
-    pub fn register_component<C>(&mut self)
+    /* pub fn register_component<C>(&mut self)
         where
             C: ComponentStore,
             C::Storage: Default
@@ -57,7 +54,7 @@ impl World {
 
     pub fn links_mut<'a, T: LinkStore>(&'a self) -> FetchMut<'a, <T as LinkStore>::Storage> {
         self.resources.fetch_mut()
-    }
+    }*/
 
     pub fn system_data<'a, T: SystemData<'a>>(&'a self) -> T {
         SystemData::fetch(&self.resources)
