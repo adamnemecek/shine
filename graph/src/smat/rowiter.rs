@@ -1,7 +1,6 @@
-use ops::IntoMergedJoin;
+use ops::{IntoJoin, Join};
 use smat::{DataPosition, DataRange, MatrixMask, MatrixMaskExt, Store};
 use std::mem;
-use std::ops::Range;
 use traits::{IndexExcl, IndexLowerBound};
 
 /// Access a single row in the matrix.
@@ -41,15 +40,15 @@ where
     }
 }
 
-impl<'a, M, S> IntoMergedJoin for RowRead<'a, M, S>
+impl<'a, M, S> IntoJoin for RowRead<'a, M, S>
 where
     M: 'a + MatrixMask,
     S: 'a + Store,
 {
     type Store = Self;
 
-    fn into_parts(self) -> (Range<usize>, Self::Store) {
-        (self.mask.get_column_range(self.data_range), self)
+    fn into_join(self) -> Join<Self::Store> {
+        Join::from_parts(self.mask.get_column_range(self.data_range), self)
     }
 }
 
@@ -91,14 +90,14 @@ where
     }
 }
 
-impl<'a, M, S> IntoMergedJoin for RowUpdate<'a, M, S>
+impl<'a, M, S> IntoJoin for RowUpdate<'a, M, S>
 where
     M: 'a + MatrixMask,
     S: 'a + Store,
 {
     type Store = Self;
 
-    fn into_parts(self) -> (Range<usize>, Self::Store) {
-        (self.mask.get_column_range(self.data_range), self)
+    fn into_join(self) -> Join<Self::Store> {
+        Join::from_parts(self.mask.get_column_range(self.data_range), self)
     }
 }

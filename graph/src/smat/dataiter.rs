@@ -2,7 +2,7 @@ use smat::Store;
 use std::mem;
 use std::ops::Range;
 
-/// Non-mutable view of a column of a sparse matrix.
+/// Immutable iterator over the non-zero items of matrix
 pub struct DataIter<'a, S>
 where
     S: 'a + Store,
@@ -31,7 +31,7 @@ where
     }
 }
 
-/// Mutable view of a column of a sparse matrix.
+/// Mutable iterate over the non-zero items of matrix
 pub struct DataIterMut<'a, S>
 where
     S: 'a + Store,

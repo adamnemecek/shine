@@ -32,22 +32,6 @@ pub fn impl_indexlowerbound_for_indexlowerbound_tuple(input: TokenStream) -> Tok
         .into()
 }
 
-mod intomaskedjoin_tuple;
-#[proc_macro]
-pub fn impl_intomaskedjoin_for_intomaskedjoin_tuple(input: TokenStream) -> TokenStream {
-    intomaskedjoin_tuple::impl_intomaskedjoin_for_intomaskedjoin_tuple(input)
-        .unwrap_or_else(|err| panic!("compile_error: {}", err))
-        .into()
-}
-
-mod intomergedjoin_tuple;
-#[proc_macro]
-pub fn impl_intomergedjoin_for_intomergedjoin_tuple(input: TokenStream) -> TokenStream {
-    intomergedjoin_tuple::impl_intomergedjoin_for_intomergedjoin_tuple(input)
-        .unwrap_or_else(|err| panic!("compile_error: {}", err))
-        .into()
-}
-
 mod intojoin_tuple;
 #[proc_macro]
 pub fn impl_intojoin_for_intojoin_tuple(input: TokenStream) -> TokenStream {

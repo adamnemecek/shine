@@ -1,6 +1,9 @@
 use bits::BitSetViewExt;
+use ops::{IntoJoin, Join};
 use smat::{DataIter, DataIterMut, DataPosition, DataRange, MatrixMask, MatrixMaskExt, RowRead, RowUpdate, Store};
+use std::mem;
 use svec::VectorMask;
+use traits::{IndexExcl, IndexLowerBound};
 
 /// Sparse (Square) Row matrix
 pub struct SMatrix<M, S>
@@ -30,6 +33,10 @@ where
 
     pub fn nnz(&self) -> usize {
         self.nnz
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.row_mask.capacity()
     }
 
     pub fn clear(&mut self) {
@@ -234,6 +241,40 @@ where
     mat: &'a SMatrix<M, S>,
 }
 
+impl<'a, M, S> IndexExcl<usize> for WrapRowRead<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    type Item = RowRead<'a, M, S>;
+
+    fn index(&mut self, idx: usize) -> Self::Item {
+        self.mat.read_row(idx)
+    }
+}
+
+impl<'a, M, S> IndexLowerBound<usize> for WrapRowRead<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
+        self.mat.row_mask.lower_bound(idx)
+    }
+}
+
+impl<'a, M, S> IntoJoin for WrapRowRead<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    type Store = Self;
+
+    fn into_join(self) -> Join<Self::Store> {
+        Join::from_parts(0..self.mat.capacity(), self)
+    }
+}
+
 /// Wrapper to allow mutable access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
 pub struct WrapRowUpdate<'a, M, S>
 where
@@ -241,6 +282,40 @@ where
     S: 'a + Store,
 {
     mat: &'a mut SMatrix<M, S>,
+}
+
+impl<'a, M, S> IndexExcl<usize> for WrapRowUpdate<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    type Item = RowUpdate<'a, M, S>;
+
+    fn index(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute(self.mat.update_row(idx)) } //GAT
+    }
+}
+
+impl<'a, M, S> IndexLowerBound<usize> for WrapRowUpdate<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
+        self.mat.row_mask.lower_bound(idx)
+    }
+}
+
+impl<'a, M, S> IntoJoin for WrapRowUpdate<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    type Store = Self;
+
+    fn into_join(self) -> Join<Self::Store> {
+        Join::from_parts(0..self.mat.capacity(), self)
+    }
 }
 
 /// Wrapper to allow Entry based access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
