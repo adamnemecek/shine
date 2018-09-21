@@ -45,46 +45,46 @@ fn test_vec_mat_join() {
 
     {
         let row = m1.read_row(1);
-        row.into_merge().for_each(|_id, e| println!("{}", e));
+        row.merge_all(|_id, e| println!("{}", e));
     }
 
     {
         let row = m1.read_row(1000);
-        row.into_merge().for_each(|_id, e| println!("{}", e));
+        row.merge_all(|_id, e| println!("{}", e));
     }
 
     {
         let row = m1.update_row(3);
-        row.into_merge().for_each(|_id, e| println!("{}", e));
+        row.merge_all(|_id, e| println!("{}", e));
     }
 
     {
         let row = m1.read_row(17);
-        row.into_merge().for_each(|_id, e| println!("{}", e));
+        row.merge_all(|_id, e| println!("{}", e));
     }
 
     {
         let row = m1.read_row(23);
-        row.into_merge().for_each(|_id, e| println!("{}", e));
+        row.merge_all(|_id, e| println!("{}", e));
     }
 
     trace!("vec read, mat read");
     {
-        (v1.read(), m1.read_row(3)).into_merge().for_each(|id, e| {
+        (v1.read(), m1.read_row(3)).merge_all(|id, e| {
             println!(" {}, {:?}", id, e);
         })
     }
 
     trace!("vec read, mat update");
     {
-        (v1.read(), m1.update_row(3)).into_merge().for_each(|id, e| {
+        (v1.read(), m1.update_row(3)).merge_all(|id, e| {
             println!("{}, {:?}", id, e);
         })
     }
 
     /*trace!("vec read, mat write");
     {
-        (v1.read(), m1.row_write()).into_merge().for_each(|id, e| {
+        (v1.read(), m1.row_write()).merge_all(|id, e| {
             println!("{}, {:?}", id, e);
         })
     }*/
