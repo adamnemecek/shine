@@ -14,7 +14,7 @@ type Data = (usize, usize);
 
 fn test_simple_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
     for i in 0..2 {
-        trace!("pass: {}", i);
+        debug!("pass: {}", i);
 
         assert_eq!(matrix.nnz(), 0);
 
@@ -73,9 +73,9 @@ fn test_simple_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>)
 fn test_simple() {
     init_test_logger(module_path!());
 
-    trace!("SparseDMatrix");
+    debug!("SparseDMatrix");
     test_simple_(new_dmat::<Data>());
-    trace!("SparseAMatrix");
+    debug!("SparseAMatrix");
     test_simple_(new_amat::<Data>());
 }
 
@@ -111,7 +111,7 @@ fn test_stress_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>,
 fn test_stress() {
     init_test_logger(module_path!());
 
-    trace!("SparseDMatrix - big");
+    debug!("SparseDMatrix - big");
     test_stress_(new_dmat::<Data>(), 1024, 100000);
 
     for _ in 0..10 {
@@ -131,7 +131,7 @@ fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, 
     matrix.add(1, 2, (1, 2));
     matrix.add(1, 3, (1, 3));
 
-    trace!("iterate 1st");
+    debug!("iterate 1st");
     {
         let mut s = String::new();
         for e in matrix.data_iter() {
@@ -140,7 +140,7 @@ fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, 
         assert_eq!(s, ",(1,2),(1,3),(14,2),(14,8),(147,8)");
     }
 
-    trace!("iterate mut");
+    debug!("iterate mut");
     {
         let mut s = String::new();
         for mut e in matrix.data_iter_mut() {
@@ -150,7 +150,7 @@ fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, 
         assert_eq!(s, ",(1,3),(1,4),(14,3),(14,9),(147,9)");
     }
 
-    trace!("iterate 2nd");
+    debug!("iterate 2nd");
     {
         let mut s = String::new();
         for e in matrix.data_iter() {
@@ -164,8 +164,8 @@ fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, 
 fn test_data_iter() {
     init_test_logger(module_path!());
 
-    trace!("SparseDMatrix/CSMatrix");
+    debug!("SparseDMatrix/CSMatrix");
     test_data_iter_(new_dmat::<Data>());
-    trace!("SparseAMatrix/CSMatrix");
+    debug!("SparseAMatrix/CSMatrix");
     test_data_iter_(new_amat::<Data>());
 }

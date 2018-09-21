@@ -20,12 +20,29 @@
         },
         {
             "type": "shell",
-            "label": "run test",
+            "label": "run",
+            "command": "cargo",
+            "args": [
+                "run",
+            ],
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "new"
+            },
+            "problemMatcher": [
+                "$rustc"
+            ]
+        },
+        {
+            "type": "shell",
+            "label": "run current test",
             "command": "cargo",
             "args": [
                 "test",
                 "-p",
-                "shine-graph",
+                "shine-store",
                 "--",
                 "--nocapture",
             ],
@@ -41,31 +58,12 @@
         },
         {
             "type": "shell",
-            "label": "clippy",
+            "label": "clippy current",
             "command": "cargo",
             "args": [
                 "clippy",
                 "-p",
                 "shine-graph",
-            ],
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new"
-            }
-            "problemMatcher": [
-                "$rustc"
-            ]
-        },
-        {
-            "type": "shell",
-            "label": "macros",
-            "command": "cargo",
-            "args": [
-                "build",
-                "-p",
-                "shine-graph-macro",
             ],
             "presentation": {
                 "echo": true,

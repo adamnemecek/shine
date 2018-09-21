@@ -33,7 +33,7 @@ fn simple() {
     {
         let mut arena = IndexedArena::new();
 
-        trace!("store");
+        debug!("store");
         assert_eq!(arena.len(), 0);
 
         let (id1, _) = arena.allocate(Node(1, DropTracker(&drop_counter)));
@@ -54,14 +54,14 @@ fn simple() {
         assert_eq!(arena[id4].0, 4);
         assert_eq!(drop_counter.get(), 0);
 
-        trace!("remove");
+        debug!("remove");
         let node3 = arena.deallocate(id3);
         assert_eq!(arena.len(), 3);
         assert_eq!(drop_counter.get(), 0);
         mem::drop(node3);
         assert_eq!(drop_counter.get(), 1);
 
-        trace!("add");
+        debug!("add");
         let (id3, _) = arena.allocate(Node(103, DropTracker(&drop_counter)));
         assert_eq!(arena.len(), 4);
 
@@ -81,7 +81,7 @@ fn stress() {
 
     let mut heap = Heap::new(&mut data);
     while let Some(sizes) = heap.next_permutation() {
-        trace!("permutation {:?}", sizes);
+        debug!("permutation {:?}", sizes);
 
         let drop_counter = Cell::new(0);
         let mut drop_count = 0;
@@ -92,7 +92,7 @@ fn stress() {
                 let rem = cnt / 2;
                 let mut ids = Vec::new();
 
-                trace!("store {}", cnt);
+                debug!("store {}", cnt);
                 for i in 0..cnt {
                     assert_eq!(arena.len(), i);
                     let (id, _) = arena.allocate(Node(i as i32, DropTracker(&drop_counter)));
@@ -103,12 +103,12 @@ fn stress() {
 
                 rand::thread_rng().shuffle(&mut ids);
 
-                trace!("check");
+                debug!("check");
                 for v in ids.iter() {
                     assert_eq!(arena[v.1].0, v.0);
                 }
 
-                trace!("remove half");
+                debug!("remove half");
                 for i in 0..rem {
                     assert_eq!(drop_counter.get(), drop_count + i);
                     assert_eq!(arena.len(), cnt - i);
@@ -119,14 +119,14 @@ fn stress() {
                 assert_eq!(arena.len(), cnt - rem);
                 assert_eq!(drop_counter.get(), drop_count + rem);
 
-                trace!("check");
+                debug!("check");
                 for v in ids.iter() {
                     if v.1 != usize::max_value() {
                         assert_eq!(arena[v.1].0, v.0);
                     }
                 }
 
-                trace!("add back");
+                debug!("add back");
                 for v in ids.iter_mut() {
                     if v.1 == usize::max_value() {
                         let (id, _) = arena.allocate(Node(-v.0, DropTracker(&drop_counter)));
@@ -136,7 +136,7 @@ fn stress() {
                 assert_eq!(arena.len(), ids.len());
                 assert_eq!(drop_counter.get(), drop_count + rem);
 
-                trace!("check");
+                debug!("check");
                 for v in ids.iter() {
                     assert!(arena[v.1].0 == v.0 || arena[v.1].0 == -v.0);
                 }

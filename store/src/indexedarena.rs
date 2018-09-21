@@ -35,7 +35,7 @@ impl<T> IndexedArena<T> {
     }
 
     pub fn reserve(&mut self, capacity: usize) {
-        trace!("Increment capacity by {}", capacity);
+        debug!("Increment capacity by {}", capacity);
 
         let start_length = self.items.len();
         if capacity > 0 {

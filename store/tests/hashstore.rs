@@ -22,7 +22,7 @@ struct TestData(String);
 
 impl TestData {
     fn new(s: String) -> TestData {
-        trace!("creating '{}'", s);
+        debug!("creating '{}'", s);
         TestData(s)
     }
 
@@ -33,7 +33,7 @@ impl TestData {
 
 impl Drop for TestData {
     fn drop(&mut self) {
-        trace!("dropping '{}'", self.0);
+        debug!("dropping '{}'", self.0);
     }
 }
 
@@ -51,7 +51,7 @@ fn simple_single_threaded() {
     let mut r0; // = TestRef::none();
     let mut r1; // = TestRef::none();
 
-    trace!("request 0,1");
+    debug!("request 0,1");
     {
         let mut store = store.read();
         assert!(store.get(&TestDataId(0)).is_null());
@@ -69,13 +69,13 @@ fn simple_single_threaded() {
         assert!(r12 == r1);
     }
 
-    trace!("request process");
+    debug!("request process");
     {
         let mut store = store.write();
         store.finalize_requests();
     }
 
-    trace!("check 0,1, request 2");
+    debug!("check 0,1, request 2");
     {
         let mut store = store.read();
         assert!(store[&r0].0 == format!("id: {}", 0));
@@ -87,7 +87,7 @@ fn simple_single_threaded() {
         assert!(store[&r2].0 == format!("id: {}", 2));
     }
 
-    trace!("drop 2");
+    debug!("drop 2");
     {
         let mut store = store.write();
         store.finalize_requests();
@@ -109,7 +109,7 @@ fn simple_single_threaded() {
         assert!(r1.is_null());
     }
 
-    trace!("drop 1");
+    debug!("drop 1");
     {
         let mut store = store.write();
         store.finalize_requests();
@@ -129,7 +129,7 @@ fn simple_single_threaded() {
         assert!(r0.is_null());
     }
 
-    trace!("drop 0");
+    debug!("drop 0");
     {
         let mut store = store.write();
         store.finalize_requests();

@@ -33,7 +33,7 @@ fn test_svec_join() {
     v2.add(31, 31);
     v2.add(32, 32);
 
-    trace!("read");
+    debug!("read");
     {
         let mut s = String::new();
         v2.read().join_all(|id, e| {
@@ -49,7 +49,7 @@ fn test_svec_join() {
         assert_eq!(s, ",3=3,11=11,14=14,17=17,18=18,31=31,32=32");
     }
 
-    trace!("update");
+    debug!("update");
     {
         let mut s = String::new();
         v2.update().join_all(|id, e| {
@@ -59,7 +59,7 @@ fn test_svec_join() {
         assert_eq!(s, ",3=4,11=12,14=15,17=18,18=19,31=32,32=33");
     }
 
-    trace!("write");
+    debug!("write");
     {
         let mut s = String::new();
         v1.write().join_until(|id, mut e| {
@@ -76,7 +76,7 @@ fn test_svec_join() {
         assert_eq!(s, ",0=Some(0),1=None,2=Some(2),3=Some(3),4=Some(4),5=None,6=Some(6)");
     }
 
-    trace!("(read,update,write)");
+    debug!("(read,update,write)");
     {
         let mut t1 = new_tvec();
 

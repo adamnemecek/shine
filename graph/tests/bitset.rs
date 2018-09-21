@@ -71,15 +71,15 @@ fn test_clear_<B: BitBlock>() {
 fn test_clear() {
     init_test_logger(module_path!());
 
-    trace!("BitSet - u8");
+    debug!("clear - u8");
     test_clear_::<u8>();
-    trace!("BitSet - u16");
+    debug!("clear - u16");
     test_clear_::<u16>();
-    trace!("BitSet - u32");
+    debug!("clear - u32");
     test_clear_::<u32>();
-    trace!("BitSet - u64");
+    debug!("clear - u64");
     test_clear_::<u64>();
-    trace!("BitSet - u128");
+    debug!("clear - u128");
     test_clear_::<u128>();
 }
 
@@ -116,22 +116,22 @@ fn test_simple_<B: BitBlock>() {
 fn test_simple() {
     init_test_logger(module_path!());
 
-    trace!("BitSet - u8");
+    debug!("simple u8");
     test_simple_::<u8>();
-    trace!("BitSet - u16");
+    debug!("simple u16");
     test_simple_::<u16>();
-    trace!("BitSet - u32");
+    debug!("simple u32");
     test_simple_::<u32>();
-    trace!("BitSet - u64");
+    debug!("simple u64");
     test_simple_::<u64>();
-    trace!("BitSet - u128");
+    debug!("simple u128");
     test_simple_::<u128>();
 }
 
 fn test_stress_<B: BitBlock>(cnt: usize) {
     let mut bitset = BitSet::<B>::new();
 
-    trace!("set one bit");
+    debug!("set one bit");
     for i in 0..cnt {
         assert!(!bitset.get(i));
         assert!(!bitset.add(i));
@@ -143,7 +143,7 @@ fn test_stress_<B: BitBlock>(cnt: usize) {
         assert!(!bitset.get(i));
     }
 
-    trace!("set all bits");
+    debug!("set all bits");
     for i in 0..cnt {
         assert!(!bitset.add(i));
         for j in 0..cnt {
@@ -156,15 +156,15 @@ fn test_stress_<B: BitBlock>(cnt: usize) {
 fn test_stress() {
     init_test_logger(module_path!());
 
-    trace!("BitSet - u8");
+    debug!("stress - u8");
     test_stress_::<u8>(4096);
-    trace!("BitSet - u16");
+    debug!("stress - u16");
     test_stress_::<u16>(512);
-    trace!("BitSet - u32");
+    debug!("stress - u32");
     test_stress_::<u32>(512);
-    trace!("BitSet - u64");
+    debug!("stress - u64");
     test_stress_::<u64>(512);
-    trace!("BitSet - u128");
+    debug!("stress - u128");
     test_stress_::<u128>(4096);
 }
 
@@ -175,7 +175,7 @@ fn test_stress_random_<B: BitBlock>(range: usize, count: usize) {
     let mut bitset = BitSet::<B>::new();
     let mut expected = HashSet::<usize>::new();
 
-    trace!("add bits");
+    debug!("add bits");
     {
         for i in 0..bits.len() {
             let bi = bits[i];
@@ -187,14 +187,14 @@ fn test_stress_random_<B: BitBlock>(range: usize, count: usize) {
         }
     }
 
-    trace!("iterate after insertion");
+    debug!("iterate after insertion");
     {
         let mut expected: Vec<usize> = expected.iter().cloned().collect();
         expected.sort();
         check_bitset(&bitset, &expected);
     }
 
-    trace!("remove half of the bits");
+    debug!("remove half of the bits");
     {
         let l = bits.len() / 2;
         for i in 0..l {
@@ -207,7 +207,7 @@ fn test_stress_random_<B: BitBlock>(range: usize, count: usize) {
         }
     }
 
-    trace!("iterate after removal");
+    debug!("iterate after removal");
     {
         let mut expected: Vec<usize> = expected.iter().cloned().collect();
         expected.sort();
@@ -222,15 +222,15 @@ fn test_random_stress() {
     let count = 1000;
     let range = 1 << 20;
 
-    trace!("BitSet - u8");
+    debug!("random stress - u8");
     test_stress_random_::<u8>(range, count);
-    trace!("BitSet - u16");
+    debug!("random stress - u16");
     test_stress_random_::<u16>(range, count);
-    trace!("BitSet - u32");
+    debug!("random stress - u32");
     test_stress_random_::<u32>(range, count);
-    trace!("BitSet - u64");
+    debug!("random stress - u64");
     test_stress_random_::<u64>(range, count);
-    trace!("BitSet - u128");
+    debug!("random stress - u128");
     test_stress_random_::<u128>(range, count);
 }
 
@@ -370,15 +370,15 @@ fn test_ops_<B: BitBlock>() {
 fn test_ops() {
     init_test_logger(module_path!());
 
-    trace!("BitSet - u8");
+    debug!("ops - u8");
     test_ops_::<u8>();
-    trace!("BitSet - u16");
+    debug!("ops - u16");
     test_ops_::<u16>();
-    trace!("BitSet - u32");
+    debug!("ops - u32");
     test_ops_::<u32>();
-    trace!("BitSet - u64");
+    debug!("ops - u64");
     test_ops_::<u64>();
-    trace!("BitSet - u128");
+    debug!("ops - u128");
     test_ops_::<u128>();
 }
 
@@ -390,7 +390,7 @@ fn test_ops_random_<B: BitBlock>(range: usize, count: usize) {
     let mut bitset2 = BitSet::<B>::new();
     let mut set2 = HashSet::<usize>::new();
 
-    trace!("set random bits");
+    debug!("set random bits");
     {
         for _ in 0..count {
             let b1 = rng.gen_range(0, range);
@@ -403,7 +403,7 @@ fn test_ops_random_<B: BitBlock>(range: usize, count: usize) {
         }
     }
 
-    trace!("iterate or");
+    debug!("iterate or");
     {
         let mut expected: Vec<usize> = set1.union(&set2).cloned().collect();
         expected.sort();
@@ -411,7 +411,7 @@ fn test_ops_random_<B: BitBlock>(range: usize, count: usize) {
         check_bitset(&bitops::or2(&bitset2, &bitset1), &expected);
     }
 
-    trace!("iterate and");
+    debug!("iterate and");
     {
         let mut expected: Vec<usize> = set1.intersection(&set2).cloned().collect();
         expected.sort();
@@ -427,14 +427,14 @@ fn test_ops_random() {
     let count = 128;
     let range = 1024;
 
-    trace!("BitSet - u8");
+    debug!("ops random - u8");
     test_ops_random_::<u8>(range, count);
-    trace!("BitSet - u16");
+    debug!("ops random - u16");
     test_ops_random_::<u16>(range, count);
-    trace!("BitSet - u32");
+    debug!("ops random - u32");
     test_ops_random_::<u32>(range, count);
-    trace!("BitSet - u64");
+    debug!("ops random - u64");
     test_ops_random_::<u64>(range, count);
-    trace!("BitSet - u128");
+    debug!("ops random - u128");
     test_ops_random_::<u128>(range, count);
 }

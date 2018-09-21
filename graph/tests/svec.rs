@@ -14,7 +14,7 @@ type Data = usize;
 
 fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
     for i in 0..2 {
-        trace!("pass: {}", i);
+        debug!("pass: {}", i);
 
         assert_eq!(vector.nnz(), 0);
 
@@ -88,9 +88,9 @@ fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
 fn test_simple() {
     init_test_logger(module_path!());
 
-    trace!("SDVector");
+    debug!("SDVector");
     test_simple_(new_dvec());
-    trace!("SHVector");
+    debug!("SHVector");
     test_simple_(new_hvec());
 }
 
@@ -138,7 +138,7 @@ fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
     vector.add(147, 147);
     vector.add(18, 18);
 
-    trace!("iterate 1st");
+    debug!("iterate 1st");
     {
         let mut s = String::new();
         for e in vector.data_iter() {
@@ -147,7 +147,7 @@ fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
         assert_eq!(s, ",14,18,147");
     }
 
-    trace!("iterate mut");
+    debug!("iterate mut");
     {
         let mut s = String::new();
         for e in vector.data_iter_mut() {
@@ -157,7 +157,7 @@ fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
         assert_eq!(s, ",28,36,294");
     }
 
-    trace!("iterate 2nd");
+    debug!("iterate 2nd");
     {
         let mut s = String::new();
         for e in vector.data_iter() {
@@ -171,8 +171,8 @@ fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
 fn test_data_iter() {
     init_test_logger(module_path!());
 
-    trace!("SDVector");
+    debug!("SDVector");
     test_data_iter_(new_dvec::<Data>());
-    trace!("SHVector");
+    debug!("SHVector");
     test_data_iter_(new_hvec::<Data>());
 }

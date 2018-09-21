@@ -77,11 +77,9 @@ impl EntityStore {
         }
         self.count += 1;
 
-        trace!(
+        debug!(
             "create id: {}, count: {}, max: {}",
-            id,
-            self.count,
-            self.max_entity_count
+            id, self.count, self.max_entity_count
         );
 
         Entity { id: id }
@@ -102,11 +100,9 @@ impl EntityStore {
         self.killed.add_default(entity.id);
         self.raised.remove(entity.id);
 
-        trace!(
+        debug!(
             "release id: {}, count: {}, max: {}",
-            entity.id,
-            self.count,
-            self.max_entity_count
+            entity.id, self.count, self.max_entity_count
         );
     }
 
