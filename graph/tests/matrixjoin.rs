@@ -13,6 +13,7 @@ fn test_vec_mat_join() {
     let _ = env_logger::try_init();
 
     let mut v1 = new_dvec::<usize>();
+    let mut v2 = new_dvec::<usize>();
     let mut m1 = new_amat::<usize>();
 
     v1.add(3, 3);
@@ -23,6 +24,9 @@ fn test_vec_mat_join() {
     v1.add(17, 17);
     v1.add(18, 18);
     v1.add(19, 19);
+
+    v2.add(3, 3);
+    v2.add(17, 17);
 
     m1.add(3, 4, 34);
     m1.add(3, 5, 35);
@@ -131,5 +135,19 @@ fn test_vec_mat_join() {
     });
     assert_eq!(s,
         ", (, (3,4, 4 -> 36), (3,5, 5 -> 37), (3,6, 6 -> 38)), (, (14,14, 15 -> 1415), (14,17, 16 -> 1418)), (, (17,1, 18 -> 173), (17,7, 19 -> 179))"
+    );
+
+    trace!("vec read, mat read, vec read");
+    let mut s = String::new();
+    (v1.read(), m1.row_read(), v2.read()).join_all(|id1, (v, r, v2)| {
+        let mut s2 = String::new();
+        r.join_all(|id2, e| {
+            s2 = format!("{}, ({},{}, ({},{}) -> {:?})", s2, id1, id2, v, v2, e);
+        });
+        s = format!("{}, ({})", s, s2);
+    });
+    assert_eq!(
+        s,
+        ", (, (3,4, (6,3) -> 36), (3,5, (6,3) -> 37), (3,6, (6,3) -> 38)), (, (17,1, (19,17) -> 173), (17,7, (19,17) -> 179))"
     );
 }
