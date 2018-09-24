@@ -5,8 +5,8 @@ pub fn new_dvec<T>() -> SDVector<T> {
     SVector::new(VectorMask::new(), DenseStore::new())
 }
 
-pub type SHVector<T> = SVector<HashStore<T>>;
-pub fn new_hvec<T>() -> SHVector<T> {
+pub type SSVector<T> = SVector<HashStore<T>>;
+pub fn new_hvec<T>() -> SSVector<T> {
     SVector::new(VectorMask::new(), HashStore::new())
 }
 

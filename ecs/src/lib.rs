@@ -8,9 +8,10 @@ extern crate shine_graph as graph;
 extern crate shine_store as store;
 extern crate shred;
 
+mod component;
 mod entity;
-
 mod world;
 
+pub use self::component::*;
 pub use self::entity::*;
 pub use self::world::*;

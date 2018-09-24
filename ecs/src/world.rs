@@ -1,3 +1,4 @@
+use component::{Component, ComponentDescriptor, ComponentStore};
 use entity::EntityStore;
 use shred::{Fetch, FetchMut, Resources, SystemData};
 
@@ -16,22 +17,6 @@ impl World {
         world
     }
 
-    /* pub fn register_component<C>(&mut self)
-        where
-            C: ComponentStore,
-            C::Storage: Default
-    {
-        self.resources.insert::<C::Storage>(Default::default());
-    }
-
-    pub fn register_link<L>(&mut self)
-        where
-            L: LinkStore,
-            L::Storage: Default
-    {
-        self.resources.insert::<L::Storage>(Default::default());
-    }
-
     pub fn entities<'a>(&'a self) -> Fetch<'a, EntityStore> {
         self.resources.fetch()
     }
@@ -40,19 +25,31 @@ impl World {
         self.resources.fetch_mut()
     }
 
-    pub fn components<'a, T: ComponentStore>(&'a self) -> Fetch<'a, <T as ComponentStore>::Storage> {
+    pub fn register_component<C: ComponentDescriptor>(&mut self) {
+        self.resources.insert::<ComponentStore<C>>(Default::default());
+    }
+
+    pub fn components<'a, C: ComponentDescriptor>(&'a self) -> Fetch<'a, ComponentStore<C>> {
         self.resources.fetch()
     }
 
-    pub fn components_mut<'a, T: ComponentStore>(&'a self) -> FetchMut<'a, <T as ComponentStore>::Storage> {
+    pub fn components_mut<'a, C: ComponentDescriptor>(&'a self) -> FetchMut<'a, ComponentStore<C>> {
         self.resources.fetch_mut()
     }
 
-    pub fn links<'a, T: LinkStore>(&'a self) -> Fetch<'a, <T as LinkStore>::Storage> {
+    /*pub fn register_link<L>(&mut self)
+        where
+            L: LinkStore,
+            L::Store: Default
+    {
+        self.resources.insert::<L::Store>(Default::default());
+    }
+
+    pub fn links<'a, T: LinkStore>(&'a self) -> Fetch<'a, <T as LinkStore>::Store> {
         self.resources.fetch()
     }
 
-    pub fn links_mut<'a, T: LinkStore>(&'a self) -> FetchMut<'a, <T as LinkStore>::Storage> {
+    pub fn links_mut<'a, T: LinkStore>(&'a self) -> FetchMut<'a, <T as LinkStore>::Store> {
         self.resources.fetch_mut()
     }*/
 

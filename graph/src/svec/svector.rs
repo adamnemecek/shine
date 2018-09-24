@@ -158,6 +158,15 @@ where
     }
 }
 
+impl<S> Default for SVector<S>
+where
+    S: Default + Store,
+{
+    fn default() -> SVector<S> {
+        SVector::new(VectorMask::new(), Default::default())
+    }
+}
+
 impl<T, S> Debug for SVector<S>
 where
     T: Debug,
