@@ -39,10 +39,15 @@
             "type": "shell",
             "label": "run current test",
             "command": "cargo",
+            "options": {
+                "env": {
+                    "RUST_TEST_THREADS": "1",
+                }
+            },
             "args": [
                 "test",
                 "-p",
-                "shine-store",
+                "shine-ecs",
                 "--",
                 "--nocapture",
             ],

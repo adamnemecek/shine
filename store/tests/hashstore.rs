@@ -22,7 +22,7 @@ struct TestData(String);
 
 impl TestData {
     fn new(s: String) -> TestData {
-        debug!("creating '{}'", s);
+        trace!("creating '{}'", s);
         TestData(s)
     }
 
@@ -33,7 +33,7 @@ impl TestData {
 
 impl Drop for TestData {
     fn drop(&mut self) {
-        debug!("dropping '{}'", self.0);
+        trace!("dropping '{}'", self.0);
     }
 }
 

@@ -81,7 +81,7 @@ fn stress() {
 
     let mut heap = Heap::new(&mut data);
     while let Some(sizes) = heap.next_permutation() {
-        debug!("permutation {:?}", sizes);
+        trace!("permutation {:?}", sizes);
 
         let drop_counter = Cell::new(0);
         let mut drop_count = 0;
@@ -92,7 +92,7 @@ fn stress() {
                 let rem = cnt / 2;
                 let mut ids = Vec::new();
 
-                debug!("store {}", cnt);
+                trace!("store {}", cnt);
                 for i in 0..cnt {
                     assert_eq!(arena.len(), i);
                     let (id, _) = arena.allocate(Node(i as i32, DropTracker(&drop_counter)));
@@ -103,12 +103,12 @@ fn stress() {
 
                 rand::thread_rng().shuffle(&mut ids);
 
-                debug!("check");
+                trace!("check");
                 for v in ids.iter() {
                     assert_eq!(arena[v.1].0, v.0);
                 }
 
-                debug!("remove half");
+                trace!("remove half");
                 for i in 0..rem {
                     assert_eq!(drop_counter.get(), drop_count + i);
                     assert_eq!(arena.len(), cnt - i);
@@ -119,14 +119,14 @@ fn stress() {
                 assert_eq!(arena.len(), cnt - rem);
                 assert_eq!(drop_counter.get(), drop_count + rem);
 
-                debug!("check");
+                trace!("check");
                 for v in ids.iter() {
                     if v.1 != usize::max_value() {
                         assert_eq!(arena[v.1].0, v.0);
                     }
                 }
 
-                debug!("add back");
+                trace!("add back");
                 for v in ids.iter_mut() {
                     if v.1 == usize::max_value() {
                         let (id, _) = arena.allocate(Node(-v.0, DropTracker(&drop_counter)));
@@ -136,7 +136,7 @@ fn stress() {
                 assert_eq!(arena.len(), ids.len());
                 assert_eq!(drop_counter.get(), drop_count + rem);
 
-                debug!("check");
+                trace!("check");
                 for v in ids.iter() {
                     assert!(arena[v.1].0 == v.0 || arena[v.1].0 == -v.0);
                 }

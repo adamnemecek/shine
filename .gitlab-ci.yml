@@ -5,6 +5,7 @@
   script:
     - cargo test --verbose --jobs 1 -p shine-store
     - cargo test --verbose --jobs 1 -p shine-graph
+    - cargo test --verbose --jobs 1 -p shine-ecs
 
 nightly:cargo:
   image: rustdocker/rust:nightly
