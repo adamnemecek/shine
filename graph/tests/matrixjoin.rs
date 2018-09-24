@@ -100,7 +100,7 @@ fn test_vec_mat_join() {
 
     debug!("vec read, mat read");
     let mut s = String::new();
-    (v1.read(), m1.row_read()).join_all(|id1, (v, r)| {
+    (v1.read(), m1.read()).join_all(|id1, (v, r)| {
         let mut s2 = String::new();
         r.join_all(|id2, e| {
             s2 = format!("{}, ({},{}, {} -> {:?})", s2, id1, id2, v, e);
@@ -113,7 +113,7 @@ fn test_vec_mat_join() {
 
     debug!("vec read, mat update");
     let mut s = String::new();
-    (v1.read(), m1.row_update()).join_all(|id1, (v, r)| {
+    (v1.read(), m1.update()).join_all(|id1, (v, r)| {
         let mut s2 = String::new();
         r.join_all(|id2, e| {
             *e += 1;
@@ -127,7 +127,7 @@ fn test_vec_mat_join() {
 
     debug!("vec update, mat read");
     let mut s = String::new();
-    (v1.update(), m1.row_read()).join_all(|id1, (v, r)| {
+    (v1.update(), m1.read()).join_all(|id1, (v, r)| {
         let mut s2 = String::new();
         r.join_all(|id2, e| {
             *v += 1;
@@ -141,7 +141,7 @@ fn test_vec_mat_join() {
 
     debug!("vec read, mat read, vec read");
     let mut s = String::new();
-    (v1.read(), m1.row_read(), v2.read()).join_all(|id1, (v, r, v2)| {
+    (v1.read(), m1.read(), v2.read()).join_all(|id1, (v, r, v2)| {
         let mut s2 = String::new();
         r.join_all(|id2, e| {
             s2 = format!("{}, ({},{}, ({},{}) -> {:?})", s2, id1, id2, v, v2, e);
@@ -151,5 +151,23 @@ fn test_vec_mat_join() {
     assert_eq!(
         s,
         ", (, (3,4, (6,3) -> 36), (3,5, (6,3) -> 37), (3,6, (6,3) -> 38)), (, (17,1, (19,17) -> 173), (17,7, (19,17) -> 179))"
+    );
+
+    debug!("vec write, mat write");
+    let mut s = String::new();
+    (v1.write(), m1.write()).join_until(|id1, (v, r)| {
+        let mut s2 = String::new();
+        r.join_until(|id2, e| {
+            s2 = format!("{}, ({},{}, {:?} -> {:?})", s2, id1, id2, v, e);
+            id2 < 5
+        });
+        s = format!("{}, ({})", s, s2);
+        id1 < 3
+    });
+    assert_eq!(s,
+        ", (, (0,0, None -> None), (0,1, None -> None), (0,2, None -> None), (0,3, None -> None), (0,4, None -> None), (0,5, None -> None))\
+        , (, (1,0, None -> None), (1,1, None -> None), (1,2, None -> None), (1,3, None -> None), (1,4, None -> None), (1,5, None -> None))\
+        , (, (2,0, None -> None), (2,1, None -> None), (2,2, None -> None), (2,3, None -> None), (2,4, None -> None), (2,5, None -> None))\
+        , (, (3,0, Some(6) -> None), (3,1, Some(6) -> None), (3,2, Some(6) -> None), (3,3, Some(6) -> None), (3,4, Some(6) -> Some(36)), (3,5, Some(6) -> Some(37)))"
     );
 }

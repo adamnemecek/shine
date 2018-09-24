@@ -1,7 +1,7 @@
 use bits::BitSetViewExt;
 use ops::IntoJoin;
 use std::fmt::{self, Debug, Formatter};
-use svec::{DataIter, DataIterMut, DrainIter, Store, VectorMask, WrapRead, WrapUpdate, WrapWrite};
+use svec::{DataIter, DataIterMut, DrainIter, Entry, Store, VectorMask, WrapRead, WrapUpdate, WrapWrite};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
@@ -171,86 +171,5 @@ where
         }
         write!(f, "]");
         Ok(())
-    }
-}
-
-/// Entry to a slot in a sparse vector.
-pub struct Entry<'a, S>
-where
-    S: 'a + Store,
-{
-    idx: usize,
-    data: Option<*mut S::Item>,
-    store: &'a mut SVector<S>,
-}
-
-impl<'a, S> Entry<'a, S>
-where
-    S: 'a + Store,
-{
-    crate fn new<'b>(store: &'b mut SVector<S>, idx: usize) -> Entry<'b, S> {
-        Entry {
-            idx,
-            data: store.get_mut(idx).map(|d| d as *mut _),
-            store,
-        }
-    }
-
-    pub fn index(&self) -> usize {
-        self.idx
-    }
-
-    /// Return the (immutable) non-zero data at the given slot. If data is zero, None is returned.
-    pub fn get(&self) -> Option<&S::Item> {
-        self.data.map(|d| unsafe { &*d })
-    }
-
-    /// Return the (mutable) non-zero data at the given slot. If data is zero, None is returned.
-    pub fn get_mut(&mut self) -> Option<&mut S::Item> {
-        self.data.map(|d| unsafe { &mut *d })
-    }
-
-    // Acquire the mutable non-zero data at the given slot.
-    /// If data is zero the provided default value is used.
-    pub fn acquire(&mut self, item: S::Item) -> &mut S::Item {
-        self.acquire_with(|| item)
-    }
-
-    /// Acquire the mutable non-zero data at the given slot.
-    /// If data is zero the non-zero value is created using the f function
-    pub fn acquire_with<F: FnOnce() -> S::Item>(&mut self, f: F) -> &mut S::Item {
-        if self.data.is_none() {
-            self.store.add_with(self.idx, f);
-            self.data = self.store.get_mut(self.idx).map(|d| d as *mut _);
-        }
-
-        self.get_mut().unwrap()
-    }
-
-    pub fn remove(&mut self) -> Option<S::Item> {
-        match self.data.take() {
-            Some(_) => self.store.remove(self.idx),
-            None => None,
-        }
-    }
-}
-
-impl<'a, I, S> Entry<'a, S>
-where
-    I: Default,
-    S: 'a + Store<Item = I>,
-{
-    pub fn acquire_default(&mut self) -> &mut S::Item {
-        self.acquire_with(Default::default)
-    }
-}
-
-impl<'a, I, S> Debug for Entry<'a, S>
-where
-    I: Debug,
-    S: 'a + Store<Item = I>,
-{
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "{:?}", self.get())
     }
 }

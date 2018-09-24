@@ -1,9 +1,9 @@
 use bits::BitSetViewExt;
-use ops::{IntoJoin, Join};
-use smat::{DataIter, DataIterMut, DataPosition, DataRange, MatrixMask, MatrixMaskExt, RowRead, RowUpdate, Store};
-use std::mem;
+use smat::{
+    DataIter, DataIterMut, DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, RowRead, RowUpdate, RowWrite,
+    Store, WrapRowRead, WrapRowUpdate, WrapRowWrite,
+};
 use svec::VectorMask;
-use traits::{IndexExcl, IndexLowerBound};
 
 /// Sparse (Square) Row matrix
 pub struct SMatrix<M, S>
@@ -11,10 +11,10 @@ where
     M: MatrixMask,
     S: Store,
 {
-    nnz: usize,
-    row_mask: VectorMask,
-    mask: M,
-    store: S,
+    crate nnz: usize,
+    crate row_mask: VectorMask,
+    crate mask: M,
+    crate store: S,
 }
 
 impl<M, S> SMatrix<M, S>
@@ -113,28 +113,16 @@ where
         DataIterMut::new(0..self.nnz(), &mut self.store)
     }
 
-    pub fn row_read(&self) -> WrapRowRead<M, S> {
+    pub fn read(&self) -> WrapRowRead<M, S> {
         WrapRowRead { mat: self }
     }
 
-    pub fn row_update(&mut self) -> WrapRowUpdate<M, S> {
+    pub fn update(&mut self) -> WrapRowUpdate<M, S> {
         WrapRowUpdate { mat: self }
     }
 
-    pub fn row_write(&mut self) -> WrapRowWrite<M, S> {
+    pub fn write(&mut self) -> WrapRowWrite<M, S> {
         WrapRowWrite { mat: self }
-    }
-
-    pub fn column_read(&self) -> WrapColumnRead<M, S> {
-        WrapColumnRead { mat: self }
-    }
-
-    pub fn column_update(&mut self) -> WrapColumnUpdate<M, S> {
-        WrapColumnUpdate { mat: self }
-    }
-
-    pub fn column_write(&mut self) -> WrapColumnWrite<M, S> {
-        WrapColumnWrite { mat: self }
     }
 
     pub fn read_row(&self, r: usize) -> RowRead<M, S> {
@@ -154,6 +142,10 @@ where
             data_range,
         }
     }
+
+    pub fn write_row(&mut self, r: usize) -> RowWrite<M, S> {
+        RowWrite { row: r, mat: self }
+    }
 }
 
 impl<T, M, S> SMatrix<M, S>
@@ -165,191 +157,4 @@ where
     pub fn add_default(&mut self, r: usize, c: usize) -> Option<S::Item> {
         self.add_with(r, c, Default::default)
     }
-}
-
-/// Entry to a slot in a sparse vector.
-pub struct Entry<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    idx: (usize, usize),
-    data: Option<*mut S::Item>,
-    store: &'a mut SMatrix<M, S>,
-}
-
-impl<'a, M, S> Entry<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    crate fn new(store: &mut SMatrix<M, S>, r: usize, c: usize) -> Entry<M, S> {
-        Entry {
-            idx: (r, c),
-            data: store.get_mut(r, c).map(|d| d as *mut _),
-            store,
-        }
-    }
-
-    /// Return the (mutable) non-zero data at the given slot. If data is zero, None is returned.
-    pub fn get(&mut self) -> Option<&mut S::Item> {
-        self.data.map(|d| unsafe { &mut *d })
-    }
-
-    // Acquire the mutable non-zero data at the given slot.
-    /// If data is zero the provided default value is used.
-    pub fn acquire(&mut self, item: S::Item) -> &mut S::Item {
-        self.acquire_with(|| item)
-    }
-
-    /// Acquire the mutable non-zero data at the given slot.
-    /// If data is zero the non-zero value is created using the f function
-    pub fn acquire_with<F: FnOnce() -> S::Item>(&mut self, f: F) -> &mut S::Item {
-        if self.data.is_none() {
-            self.store.add_with(self.idx.0, self.idx.1, f);
-            self.data = self.store.get_mut(self.idx.0, self.idx.1).map(|d| d as *mut _);
-        }
-
-        self.get().unwrap()
-    }
-
-    pub fn remove(&mut self) -> Option<S::Item> {
-        match self.data.take() {
-            Some(_) => self.store.remove(self.idx.0, self.idx.1),
-            None => None,
-        }
-    }
-}
-
-impl<'a, I, M, S> Entry<'a, M, S>
-where
-    I: Default,
-    M: 'a + MatrixMask,
-    S: 'a + Store<Item = I>,
-{
-    pub fn acquire_default(&mut self) -> &mut S::Item {
-        self.acquire_with(Default::default)
-    }
-}
-
-/// Wrapper to allow immutable access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
-pub struct WrapRowRead<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    mat: &'a SMatrix<M, S>,
-}
-
-impl<'a, M, S> IndexExcl<usize> for WrapRowRead<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    type Item = RowRead<'a, M, S>;
-
-    fn index(&mut self, idx: usize) -> Self::Item {
-        self.mat.read_row(idx)
-    }
-}
-
-impl<'a, M, S> IndexLowerBound<usize> for WrapRowRead<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
-        self.mat.row_mask.lower_bound(idx)
-    }
-}
-
-impl<'a, M, S> IntoJoin for WrapRowRead<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    type Store = Self;
-
-    fn into_join(self) -> Join<Self::Store> {
-        Join::from_parts(0..self.mat.capacity(), self)
-    }
-}
-
-/// Wrapper to allow mutable access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
-pub struct WrapRowUpdate<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    mat: &'a mut SMatrix<M, S>,
-}
-
-impl<'a, M, S> IndexExcl<usize> for WrapRowUpdate<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    type Item = RowUpdate<'a, M, S>;
-
-    fn index(&mut self, idx: usize) -> Self::Item {
-        unsafe { mem::transmute(self.mat.update_row(idx)) } //GAT
-    }
-}
-
-impl<'a, M, S> IndexLowerBound<usize> for WrapRowUpdate<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
-        self.mat.row_mask.lower_bound(idx)
-    }
-}
-
-impl<'a, M, S> IntoJoin for WrapRowUpdate<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    type Store = Self;
-
-    fn into_join(self) -> Join<Self::Store> {
-        Join::from_parts(0..self.mat.capacity(), self)
-    }
-}
-
-/// Wrapper to allow Entry based access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
-pub struct WrapRowWrite<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    mat: &'a mut SMatrix<M, S>,
-}
-
-/// Wrapper to allow immutable access to the elments of an SMatrix in column-major order. Used for join and merge oprations.
-pub struct WrapColumnRead<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    mat: &'a SMatrix<M, S>,
-}
-
-/// Wrapper to allow mutable access to the elments of an SMatrix in column-major order. Used for join and merge oprations.
-pub struct WrapColumnUpdate<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    mat: &'a mut SMatrix<M, S>,
-}
-
-/// Wrapper to allow Entry based access to the elments of an SMatrix in column-major order. Used for join and merge oprations.
-pub struct WrapColumnWrite<'a, M, S>
-where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
-{
-    mat: &'a mut SMatrix<M, S>,
 }

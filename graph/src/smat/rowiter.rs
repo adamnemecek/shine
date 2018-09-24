@@ -1,5 +1,5 @@
 use ops::{IntoJoin, Join};
-use smat::{DataPosition, DataRange, MatrixMask, MatrixMaskExt, Store};
+use smat::{DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, SMatrix, Store};
 use std::mem;
 use traits::{IndexExcl, IndexLowerBound};
 
@@ -99,5 +99,50 @@ where
 
     fn into_join(self) -> Join<Self::Store> {
         Join::from_parts(self.mask.get_column_range(self.data_range), self)
+    }
+}
+
+/// Access a single row in the matrix.
+pub struct RowWrite<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    //crate row_index: usize,
+    crate row: usize,
+    crate mat: &'a mut SMatrix<M, S>,
+}
+
+impl<'a, M, S> IndexExcl<usize> for RowWrite<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    type Item = Entry<'a, M, S>;
+
+    fn index(&mut self, idx: usize) -> Self::Item {
+        unsafe { mem::transmute(self.mat.get_entry(self.row, idx)) } // GAT
+    }
+}
+
+impl<'a, M, S> IndexLowerBound<usize> for RowWrite<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    fn lower_bound(&mut self, idx: usize) -> Option<usize> {
+        Some(idx)
+    }
+}
+
+impl<'a, M, S> IntoJoin for RowWrite<'a, M, S>
+where
+    M: 'a + MatrixMask,
+    S: 'a + Store,
+{
+    type Store = Self;
+
+    fn into_join(self) -> Join<Self::Store> {
+        Join::from_parts(0..usize::max_value(), self)
     }
 }

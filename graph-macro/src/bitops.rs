@@ -1,6 +1,8 @@
 use proc_macro;
 use proc_macro2::{Span, TokenStream};
-use syn;
+use syn::parse::Parser;
+use syn::punctuated::Punctuated;
+use syn::{Ident, IntSuffix, LitInt};
 
 enum Op {
     And,
@@ -13,16 +15,16 @@ fn bitop_impl(count: usize, op: Op) -> TokenStream {
         Op::Or => ("Or", "or"),
     };
 
-    let type_ident = syn::Ident::new(&format!("{}{}", type_name, count), Span::call_site());
-    let fn_ident = syn::Ident::new(&format!("{}{}", fn_name, count), Span::call_site());
+    let type_ident = Ident::new(&format!("{}{}", type_name, count), Span::call_site());
+    let fn_ident = Ident::new(&format!("{}{}", fn_name, count), Span::call_site());
 
     let generics: Vec<_> = (0..count)
-        .map(|id| syn::Ident::new(&format!("S{}", id), Span::/*def*/call_site()))
+        .map(|id| Ident::new(&format!("S{}", id), Span::/*def*/call_site()))
         .collect();
     let generics = &generics;
 
     let members: Vec<_> = (0..count)
-        .map(|id| syn::Ident::new(&format!("set_{}", id), Span::/*def*/call_site()))
+        .map(|id| Ident::new(&format!("set_{}", id), Span::/*def*/call_site()))
         .collect();
     let members = &members;
 
@@ -113,16 +115,16 @@ fn bitop_impl(count: usize, op: Op) -> TokenStream {
 }
 
 fn bitop_tuple_impl(count: usize) -> TokenStream {
-    let and_type = syn::Ident::new(&format!("And{}", count), Span::call_site());
-    let or_type = syn::Ident::new(&format!("Or{}", count), Span::call_site());
+    let and_type = Ident::new(&format!("And{}", count), Span::call_site());
+    let or_type = Ident::new(&format!("Or{}", count), Span::call_site());
 
     let generics: Vec<_> = (0..count)
-        .map(|id| syn::Ident::new(&format!("S{}", id), Span::/*def*/call_site()))
+        .map(|id| Ident::new(&format!("S{}", id), Span::/*def*/call_site()))
         .collect();
     let generics = &generics;
 
     let index: Vec<_> = (0..count)
-        .map(|id| syn::LitInt::new(id as u64, syn::IntSuffix::None, Span::/*def*/call_site()))
+        .map(|id| LitInt::new(id as u64, IntSuffix::None, Span::/*def*/call_site()))
         .collect();
     let index = &index;
 
@@ -148,32 +150,19 @@ fn bitop_tuple_impl(count: usize) -> TokenStream {
 }
 
 pub fn impl_bitops_macro(input: proc_macro::TokenStream) -> Result<TokenStream, String> {
-    let tuple: syn::ExprTuple = syn::parse(input).map_err(|err| format!("Tuple expected, {}", err))?;
+    let parser = Punctuated::<LitInt, Token![,]>::parse_terminated;
+    let list = parser.parse(input).map_err(|err| format!("Could not parse: {}", err))?;
 
     let mut ops = Vec::new();
 
-    for expr in tuple.elems {
-        if let syn::Expr::Lit(expr) = expr {
-            if let syn::Lit::Int(lit) = expr.lit {
-                let count = lit.value();
-
-                let and_type = bitop_impl(count as usize, Op::And);
-                let or_type = bitop_impl(count as usize, Op::Or);
-                let bitop = bitop_tuple_impl(count as usize);
-                ops.push(and_type);
-                ops.push(or_type);
-                ops.push(bitop);
-            } else {
-                /* expr.lit
-                    .span()
-                    .error(format!("Invalid literal, tuple of integers required"))
-                    .emit();*/
-            }
-        } else {
-            /*expr.span()
-                .error(format!("Invalid expression, tuple of integers required."))
-                .emit();*/
-        }
+    for lit in list {
+        let count = lit.value();
+        let and_type = bitop_impl(count as usize, Op::And);
+        let or_type = bitop_impl(count as usize, Op::Or);
+        let bitop = bitop_tuple_impl(count as usize);
+        ops.push(and_type);
+        ops.push(or_type);
+        ops.push(bitop);
     }
 
     Ok(quote!{

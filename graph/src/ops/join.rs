@@ -85,4 +85,4 @@ where
 }
 
 use shine_graph_macro::impl_intojoin_for_intojoin_tuple;
-impl_intojoin_for_intojoin_tuple!{(2,3,4,5,6,7,8,9,10)}
+impl_intojoin_for_intojoin_tuple!{2,3,4,5,6,7,8,9,10}
