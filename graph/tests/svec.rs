@@ -47,7 +47,7 @@ fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
         {
             let mut tmp = vector.get_entry(16);
             assert_eq!(tmp.get(), None);
-            assert_eq!(*tmp.acquire_with(|| 16), 16);
+            assert_eq!(*tmp.get_or_new(|| 16), 16);
             assert_eq!(tmp.get(), Some(&16));
         }
         assert_eq!(vector.get(16), Some(&16));

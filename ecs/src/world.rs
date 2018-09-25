@@ -1,5 +1,6 @@
-use component::{Component, ComponentDescriptor, ComponentStore};
+use edgecomponent::{EdgeComponentDescriptor, EdgeComponentStore};
 use entity::EntityStore;
+use entitycomponent::{EntityComponentDescriptor, EntityComponentStore};
 use shred::{Fetch, FetchMut, Resources, SystemData};
 
 pub struct World {
@@ -25,33 +26,29 @@ impl World {
         self.resources.fetch_mut()
     }
 
-    pub fn register_component<C: ComponentDescriptor>(&mut self) {
-        self.resources.insert::<ComponentStore<C>>(Default::default());
+    pub fn register_entity<C: EntityComponentDescriptor>(&mut self) {
+        self.resources.insert::<EntityComponentStore<C>>(Default::default());
     }
 
-    pub fn components<'a, C: ComponentDescriptor>(&'a self) -> Fetch<'a, ComponentStore<C>> {
+    pub fn get_entity<'a, C: EntityComponentDescriptor>(&'a self) -> Fetch<'a, EntityComponentStore<C>> {
         self.resources.fetch()
     }
 
-    pub fn components_mut<'a, C: ComponentDescriptor>(&'a self) -> FetchMut<'a, ComponentStore<C>> {
+    pub fn get_entity_mut<'a, C: EntityComponentDescriptor>(&'a self) -> FetchMut<'a, EntityComponentStore<C>> {
         self.resources.fetch_mut()
     }
 
-    /*pub fn register_link<L>(&mut self)
-        where
-            L: LinkStore,
-            L::Store: Default
-    {
-        self.resources.insert::<L::Store>(Default::default());
+    pub fn register_edge<C: EdgeComponentDescriptor>(&mut self) {
+        self.resources.insert::<EdgeComponentStore<C>>(Default::default());
     }
 
-    pub fn links<'a, T: LinkStore>(&'a self) -> Fetch<'a, <T as LinkStore>::Store> {
+    pub fn get_edge<'a, C: EdgeComponentDescriptor>(&'a self) -> Fetch<'a, EdgeComponentStore<C>> {
         self.resources.fetch()
     }
 
-    pub fn links_mut<'a, T: LinkStore>(&'a self) -> FetchMut<'a, <T as LinkStore>::Store> {
+    pub fn get_edge_mut<'a, C: EdgeComponentDescriptor>(&'a self) -> FetchMut<'a, EdgeComponentStore<C>> {
         self.resources.fetch_mut()
-    }*/
+    }
 
     pub fn system_data<'a, T: SystemData<'a>>(&'a self) -> T {
         SystemData::fetch(&self.resources)

@@ -1,67 +1,96 @@
 use entity::Entity;
-use graph::svec::{self, SVector};
-use shred::{Read, ResourceId, Resources, SystemData, Write};
-use std::ops::{Deref, DerefMut};
+use graph::svec;
+pub use graph::svec::Entry;
+use storagecategory::*;
 
-pub trait StorageCategory {}
-pub struct DenseStorage;
-impl StorageCategory for DenseStorage {}
-pub struct SparseStorage;
-impl StorageCategory for SparseStorage {}
-
-/// Trait to assign component storage policy to a type
-pub trait Component: Sync + Send {
+/// Trait to assign storage policy to an entity data
+pub trait EntityComponent: Sync + Send {
     type StorageCategory: StorageCategory;
 }
 
-/// Helper to specialize ComponentStore based on the associated types of Component
-pub trait ComponentDescriptor: 'static + Sync + Send {
+/// Helper to specialize EntityComponentStore based on the type of the entity data
+pub trait EntityComponentDescriptor: 'static + Sync + Send {
     type Store: 'static + Sync + Send + Default + svec::Store;
 }
 
-impl<S, T> ComponentDescriptor for T
+impl<S, T> EntityComponentDescriptor for T
 where
     S: StorageCategory,
-    T: 'static + Component<StorageCategory = S>,
-    (S, T): ComponentDescriptor,
+    T: 'static + EntityComponent<StorageCategory = S>,
+    (S, T): EntityComponentDescriptor,
 {
-    type Store = <(S, T) as ComponentDescriptor>::Store;
+    type Store = <(S, T) as EntityComponentDescriptor>::Store;
 }
 
-impl<T> ComponentDescriptor for (DenseStorage, T)
+impl<T> EntityComponentDescriptor for (DenseStorage, T)
 where
     T: 'static + Send + Sync,
 {
     type Store = svec::DenseStore<T>;
 }
 
-impl<T> ComponentDescriptor for (SparseStorage, T)
+impl<T> EntityComponentDescriptor for (SparseStorage, T)
 where
     T: 'static + Send + Sync,
 {
     type Store = svec::HashStore<T>;
 }
 
-/// Container for a component
-pub struct ComponentStore<T>
+/// Contains the data instances assigned to the entities
+pub struct EntityComponentStore<T>
 where
-    T: 'static + Sync + Send + ComponentDescriptor,
+    T: 'static + Sync + Send + EntityComponentDescriptor,
 {
-    pub store: SVector<<T as ComponentDescriptor>::Store>,
+    pub store: svec::SVector<<T as EntityComponentDescriptor>::Store>,
 }
 
-impl<T> ComponentStore<T>
+impl<T> EntityComponentStore<T>
 where
-    T: 'static + Sync + Send + ComponentDescriptor,
+    T: 'static + Sync + Send + EntityComponentDescriptor,
 {
-    pub fn add(&mut self, entity: Entity, comp: <<T as ComponentDescriptor>::Store as svec::Store>::Item) {
+    pub fn add(&mut self, entity: Entity, comp: <<T as EntityComponentDescriptor>::Store as svec::Store>::Item) {
         self.store.add(entity.id(), comp);
+    }
+
+    pub fn remove(&mut self, entity: Entity) -> Option<<<T as EntityComponentDescriptor>::Store as svec::Store>::Item> {
+        self.store.remove(entity.id())
+    }
+
+    pub fn contains(&self, entity: Entity) -> bool {
+        self.store.contains(entity.id())
+    }
+
+    pub fn get(&self, entity: Entity) -> Option<&<<T as EntityComponentDescriptor>::Store as svec::Store>::Item> {
+        self.store.get(entity.id())
+    }
+
+    pub fn get_mut(
+        &mut self,
+        entity: Entity,
+    ) -> Option<&mut <<T as EntityComponentDescriptor>::Store as svec::Store>::Item> {
+        self.store.get_mut(entity.id())
+    }
+
+    pub fn get_entry(&mut self, entity: Entity) -> svec::Entry<<T as EntityComponentDescriptor>::Store> {
+        self.store.get_entry(entity.id())
+    }
+
+    pub fn read(&self) -> svec::WrapRead<<T as EntityComponentDescriptor>::Store> {
+        self.store.read()
+    }
+
+    pub fn update<'a>(&'a mut self) -> svec::WrapUpdate<<T as EntityComponentDescriptor>::Store> {
+        self.store.update()
+    }
+
+    pub fn write<'a>(&'a mut self) -> svec::WrapWrite<<T as EntityComponentDescriptor>::Store> {
+        self.store.write()
     }
 }
 
-impl<T> Default for ComponentStore<T>
+impl<T> Default for EntityComponentStore<T>
 where
-    T: 'static + Sync + Send + ComponentDescriptor,
+    T: 'static + Sync + Send + EntityComponentDescriptor,
 {
     fn default() -> Self {
         Self {

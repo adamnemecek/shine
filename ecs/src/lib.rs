@@ -1,6 +1,4 @@
-#![feature(vec_resize_default)]
-#![feature(rustc_private)]
-#![feature(trace_macros)]
+#![feature(tool_lints)]
 
 #[macro_use]
 extern crate log;
@@ -8,10 +6,18 @@ extern crate shine_graph as graph;
 extern crate shine_store as store;
 extern crate shred;
 
-mod component;
+mod edge;
+mod edgecomponent;
 mod entity;
+mod entitycomponent;
+mod join;
+mod storagecategory;
 mod world;
 
-pub use self::component::*;
+pub use self::edge::*;
+pub use self::edgecomponent::*;
 pub use self::entity::*;
+pub use self::entitycomponent::*;
+pub use self::join::*;
+pub use self::storagecategory::*;
 pub use self::world::*;

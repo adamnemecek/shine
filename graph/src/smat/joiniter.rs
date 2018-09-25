@@ -1,5 +1,5 @@
 use bits::BitSetViewExt;
-use ops::{IntoJoin, Join};
+use join::{IntoJoin, Join};
 use smat::{MatrixMask, RowRead, RowUpdate, RowWrite, SMatrix, Store};
 use std::mem;
 use traits::{IndexExcl, IndexLowerBound};

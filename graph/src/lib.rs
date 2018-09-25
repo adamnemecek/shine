@@ -14,7 +14,7 @@ extern crate shine_graph_macro;
 extern crate shine_store as store;
 
 pub mod bits;
-pub mod ops;
+pub mod join;
 pub mod smat;
 pub mod svec;
 pub mod traits;

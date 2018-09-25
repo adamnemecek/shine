@@ -1,19 +1,16 @@
-use std::mem;
 use entity::*;
+use std::mem;
 
-/// A connection between two entities
+/// Connection between two entities
 #[derive(Copy, Clone, Debug, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct Edge {
-    from: Entity,
-    to: Entity,
+    pub from: Entity,
+    pub to: Entity,
 }
 
 impl Edge {
     pub fn new(from: Entity, to: Entity) -> Edge {
-        Edge {
-            from: from,
-            to: to,
-        }
+        Edge { from: from, to: to }
     }
 
     pub fn new_invalid() -> Edge {
@@ -37,24 +34,15 @@ impl Edge {
         }
     }
 
+    pub fn from_ids(from: usize, to: usize) -> Edge {
+        Edge {
+            from: Entity::from_id(from),
+            to: Entity::from_id(to),
+        }
+    }
+
     pub fn is_valid(&self) -> bool {
         self.from.is_valid() && self.to.is_valid()
-    }
-
-    pub fn from(&self) -> &Entity {
-        &self.from
-    }
-
-    pub fn to(&self) -> &Entity {
-        &self.to
-    }
-
-    pub fn is_from_valid(&self) -> bool {
-        self.from.is_valid()
-    }
-
-    pub fn is_to_valid(&self) -> bool {
-        self.to.is_valid()
     }
 
     pub fn flip(&mut self) {

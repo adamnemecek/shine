@@ -158,3 +158,13 @@ where
         self.add_with(r, c, Default::default)
     }
 }
+
+impl<M, S> Default for SMatrix<M, S>
+where
+    M: Default + MatrixMask,
+    S: Default + Store,
+{
+    fn default() -> SMatrix<M, S> {
+        SMatrix::new(Default::default(), Default::default())
+    }
+}

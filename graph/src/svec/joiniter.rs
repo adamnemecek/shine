@@ -1,5 +1,5 @@
 use bits::BitSetViewExt;
-use ops::{IntoJoin, Join};
+use join::{IntoJoin, Join};
 use std::mem;
 use svec::{Entry, SVector, Store};
 use traits::{IndexExcl, IndexLowerBound};

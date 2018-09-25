@@ -5,7 +5,7 @@ extern crate log;
 extern crate env_logger;
 extern crate rand;
 
-use shine_graph::ops::*;
+use shine_graph::join::*;
 use shine_graph::smat::*;
 use shine_graph::svec::*;
 use shine_testutils::*;

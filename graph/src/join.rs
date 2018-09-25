@@ -1,33 +1,6 @@
 use std::ops::Range;
 use traits::{IndexExcl, IndexLowerBound};
 
-/// Trait to create Join
-pub trait IntoJoin {
-    type Store: IndexLowerBound<usize>;
-
-    fn into_join(self) -> Join<<Self as IntoJoin>::Store>;
-}
-
-pub trait IntoJoinExt: IntoJoin {
-    fn join_all<F>(self, f: F)
-    where
-        F: FnMut(usize, <Self::Store as IndexExcl<usize>>::Item),
-        Self: Sized,
-    {
-        self.into_join().for_each(f);
-    }
-
-    fn join_until<F>(self, f: F)
-    where
-        F: FnMut(usize, <Self::Store as IndexExcl<usize>>::Item) -> bool,
-        Self: Sized,
-    {
-        self.into_join().until(f);
-    }
-}
-
-impl<T: ?Sized> IntoJoinExt for T where T: IntoJoin {}
-
 /// Iterator like trait that performs the merge.
 pub struct Join<S>
 where
@@ -64,7 +37,6 @@ where
     pub fn for_each<F>(&mut self, mut f: F)
     where
         F: FnMut(usize, S::Item),
-        Self: Sized,
     {
         while let Some((id, e)) = self.next() {
             f(id, e);
@@ -74,7 +46,6 @@ where
     pub fn until<F>(&mut self, mut f: F)
     where
         F: FnMut(usize, S::Item) -> bool,
-        Self: Sized,
     {
         while let Some((id, e)) = self.next() {
             if !f(id, e) {
@@ -83,6 +54,33 @@ where
         }
     }
 }
+
+/// Trait to create Join
+pub trait IntoJoin {
+    type Store: IndexLowerBound<usize>;
+
+    fn into_join(self) -> Join<<Self as IntoJoin>::Store>;
+}
+
+pub trait IntoJoinExt: IntoJoin {
+    fn join_all<F>(self, f: F)
+    where
+        F: FnMut(usize, <Self::Store as IndexExcl<usize>>::Item),
+        Self: Sized,
+    {
+        self.into_join().for_each(f);
+    }
+
+    fn join_until<F>(self, f: F)
+    where
+        F: FnMut(usize, <Self::Store as IndexExcl<usize>>::Item) -> bool,
+        Self: Sized,
+    {
+        self.into_join().until(f);
+    }
+}
+
+impl<T: ?Sized> IntoJoinExt for T where T: IntoJoin {}
 
 use shine_graph_macro::impl_intojoin_for_intojoin_tuple;
 impl_intojoin_for_intojoin_tuple!{2,3,4,5,6,7,8,9,10}

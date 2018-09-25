@@ -5,7 +5,7 @@ extern crate log;
 extern crate env_logger;
 extern crate rand;
 
-use shine_graph::ops::*;
+use shine_graph::join::*;
 use shine_graph::svec::*;
 use shine_testutils::*;
 
@@ -64,7 +64,7 @@ fn test_svec_join() {
         let mut s = String::new();
         v1.write().join_until(|id, mut e| {
             if id % 2 == 0 {
-                e.acquire(id);
+                e.get_or(id);
             }
             s = format!("{},{}={:?}", s, id, e);
             if id >= 6 {
@@ -86,7 +86,7 @@ fn test_svec_join() {
             index_string = format!("{},{}", index_string, id);
             *e2 += 1;
             if *e1 % 2 == 1 {
-                e3.acquire_default();
+                e3.get_or_default();
             }
             whole_string = format!("{},({:?},{:?},{:?})", whole_string, e1, e2, e3);
         });

@@ -37,15 +37,13 @@ where
         self.data.map(|d| unsafe { &mut *d })
     }
 
-    // Acquire the mutable non-zero data at the given slot.
-    /// If data is zero the provided default value is used.
-    pub fn acquire(&mut self, item: S::Item) -> &mut S::Item {
-        self.acquire_with(|| item)
+    /// Get the mutable non-zero data at the given slot or creates a new item if the entry is vacant.
+    pub fn get_or(&mut self, item: S::Item) -> &mut S::Item {
+        self.get_or_new(|| item)
     }
 
-    /// Acquire the mutable non-zero data at the given slot.
-    /// If data is zero the non-zero value is created using the f function
-    pub fn acquire_with<F: FnOnce() -> S::Item>(&mut self, f: F) -> &mut S::Item {
+    /// Get the mutable non-zero data at the given slot or creates a new item if the entry is vacant.
+    pub fn get_or_new<F: FnOnce() -> S::Item>(&mut self, f: F) -> &mut S::Item {
         if self.data.is_none() {
             self.store.add_with(self.idx, f);
             self.data = self.store.get_mut(self.idx).map(|d| d as *mut _);
@@ -67,8 +65,9 @@ where
     I: Default,
     S: 'a + Store<Item = I>,
 {
-    pub fn acquire_default(&mut self) -> &mut S::Item {
-        self.acquire_with(Default::default)
+    /// Get the mutable non-zero data at the given slot or creates a new item if the entry is vacant.
+    pub fn get_or_default(&mut self) -> &mut S::Item {
+        self.get_or_new(Default::default)
     }
 }
 
