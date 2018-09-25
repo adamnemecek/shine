@@ -60,6 +60,14 @@ where
         self.store.remove(edge.from.id(), edge.to.id())
     }
 
+    pub fn clear(&mut self) {
+        self.store.clear();
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.nnz()
+    }
+
     pub fn contains(&self, edge: Edge) -> bool {
         self.store.contains(edge.from.id(), edge.to.id())
     }

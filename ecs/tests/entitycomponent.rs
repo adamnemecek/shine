@@ -35,7 +35,7 @@ fn test_component() {
     world.register_entity::<Pos>();
     world.register_entity::<Velocity>();
 
-    trace!("create instances");
+    debug!("create instances");
     {
         let mut ent = world.entities_mut();
         let mut pos = world.get_entity_mut::<Pos>();
@@ -51,20 +51,20 @@ fn test_component() {
         }
     }
 
-    trace!("update instances");
+    debug!("update instances");
     {
         let mut pos = world.get_entity_mut::<Pos>();
         let vel = world.get_entity::<Velocity>();
 
         (pos.update(), vel.read()).join_all(|id, (p, v)| {
-            println!("{:?}", id);
+            trace!("{:?}: {:?} {:?}", id, p, v);
             p.x += v.x;
             p.y += v.y;
             p.z += v.z;
         });
     }
 
-    trace!("get");
+    debug!("get");
     {
         let mut pos = world.get_entity_mut::<Pos>();
         assert_eq!(

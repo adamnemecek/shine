@@ -56,6 +56,14 @@ where
         self.store.remove(entity.id())
     }
 
+    pub fn clear(&mut self) {
+        self.store.clear();
+    }
+
+    pub fn count(&self) -> usize {
+        self.store.nnz()
+    }
+
     pub fn contains(&self, entity: Entity) -> bool {
         self.store.contains(entity.id())
     }
