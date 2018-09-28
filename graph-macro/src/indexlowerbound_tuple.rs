@@ -66,7 +66,5 @@ pub fn impl_indexlowerbound_for_indexlowerbound_tuple(input: proc_macro::TokenSt
         gen.push(tuple_impl);
     }
 
-    Ok(quote!{
-        #(#gen)*
-    }.into())
+    Ok(quote!{#(#gen)*})
 }

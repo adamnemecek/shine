@@ -58,7 +58,5 @@ pub fn impl_intojoin_for_intojoin_tuple(input: proc_macro::TokenStream) -> Resul
         gen.push(tuple_impl);
     }
 
-    Ok(quote!{
-        #(#gen)*
-    }.into())
+    Ok(quote!{#(#gen)*})
 }

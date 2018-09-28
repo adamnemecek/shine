@@ -47,7 +47,5 @@ pub fn impl_indexexcl_for_indexexcl_tuple(input: proc_macro::TokenStream) -> Res
         gen.push(tuple_impl);
     }
 
-    Ok(quote!{
-        #(#gen)*
-    }.into())
+    Ok(quote!{#(#gen)*})
 }

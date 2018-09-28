@@ -30,7 +30,7 @@ where
                 self.remaining_range.start = idx + 1;
                 Some((idx, self.store.index(idx)))
             }
-            None => return None,
+            None => None,
         }
     }
 

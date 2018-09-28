@@ -14,14 +14,14 @@ impl Entity {
     }
 
     pub fn from_id(id: usize) -> Entity {
-        Entity { id: id }
+        Entity { id }
     }
 
-    pub fn id(&self) -> usize {
+    pub fn id(self) -> usize {
         self.id
     }
 
-    pub fn is_valid(&self) -> bool {
+    pub fn is_valid(self) -> bool {
         self.id != usize::max_value()
     }
 }
@@ -45,6 +45,10 @@ impl EntityStore {
             max_entity_count: 0,
             count: 0,
         }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.count == 0
     }
 
     pub fn len(&self) -> usize {
@@ -82,7 +86,7 @@ impl EntityStore {
             id, self.count, self.max_entity_count
         );
 
-        Entity { id: id }
+        Entity { id }
     }
 
     /// Release an entity
@@ -106,12 +110,18 @@ impl EntityStore {
         );
     }
 
-    pub fn drain_raised<'a>(&'a mut self) -> DrainIter<'a, UnitStore> {
+    pub fn drain_raised(&mut self) -> DrainIter<UnitStore> {
         self.raised.drain_iter()
     }
 
-    pub fn drain_killed<'a>(&'a mut self) -> DrainIter<'a, UnitStore> {
+    pub fn drain_killed(&mut self) -> DrainIter<UnitStore> {
         self.killed.drain_iter()
+    }
+}
+
+impl Default for EntityStore {
+    fn default() -> EntityStore {
+        EntityStore::new()
     }
 }
 

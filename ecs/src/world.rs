@@ -18,11 +18,11 @@ impl World {
         world
     }
 
-    pub fn entities<'a>(&'a self) -> Fetch<'a, EntityStore> {
+    pub fn entities(&self) -> Fetch<EntityStore> {
         self.resources.fetch()
     }
 
-    pub fn entities_mut<'a>(&'a self) -> FetchMut<'a, EntityStore> {
+    pub fn entities_mut(&self) -> FetchMut<EntityStore> {
         self.resources.fetch_mut()
     }
 
@@ -30,11 +30,11 @@ impl World {
         self.resources.insert::<EntityComponentStore<C>>(Default::default());
     }
 
-    pub fn get_entity<'a, C: EntityComponentDescriptor>(&'a self) -> Fetch<'a, EntityComponentStore<C>> {
+    pub fn get_entity<C: EntityComponentDescriptor>(&self) -> Fetch<EntityComponentStore<C>> {
         self.resources.fetch()
     }
 
-    pub fn get_entity_mut<'a, C: EntityComponentDescriptor>(&'a self) -> FetchMut<'a, EntityComponentStore<C>> {
+    pub fn get_entity_mut<C: EntityComponentDescriptor>(&self) -> FetchMut<EntityComponentStore<C>> {
         self.resources.fetch_mut()
     }
 
@@ -42,15 +42,27 @@ impl World {
         self.resources.insert::<EdgeComponentStore<C>>(Default::default());
     }
 
-    pub fn get_edge<'a, C: EdgeComponentDescriptor>(&'a self) -> Fetch<'a, EdgeComponentStore<C>> {
+    pub fn get_edge<C: EdgeComponentDescriptor>(&self) -> Fetch<EdgeComponentStore<C>> {
         self.resources.fetch()
     }
 
-    pub fn get_edge_mut<'a, C: EdgeComponentDescriptor>(&'a self) -> FetchMut<'a, EdgeComponentStore<C>> {
+    pub fn get_edge_mut<C: EdgeComponentDescriptor>(&self) -> FetchMut<EdgeComponentStore<C>> {
         self.resources.fetch_mut()
     }
 
-    pub fn system_data<'a, T: SystemData<'a>>(&'a self) -> T {
+    /// Helper to fetch components without creating some explicit System.
+    /// let (a,mut b) : (Read<i8>, Write<i8>) = world.system_data();
+    /// (a.read(),b.write()).join_all(...);
+    pub fn system_data<'a, T>(&'a self) -> T
+    where
+        T: SystemData<'a>,
+    {
         SystemData::fetch(&self.resources)
+    }
+}
+
+impl Default for World {
+    fn default() -> World {
+        World::new()
     }
 }

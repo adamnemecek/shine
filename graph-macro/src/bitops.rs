@@ -9,7 +9,7 @@ enum Op {
     Or,
 }
 
-fn bitop_impl(count: usize, op: Op) -> TokenStream {
+fn bitop_impl(count: usize, op: &Op) -> TokenStream {
     let (type_name, fn_name) = match op {
         Op::And => ("And", "and"),
         Op::Or => ("Or", "or"),
@@ -157,15 +157,13 @@ pub fn impl_bitops_macro(input: proc_macro::TokenStream) -> Result<TokenStream, 
 
     for lit in list {
         let count = lit.value();
-        let and_type = bitop_impl(count as usize, Op::And);
-        let or_type = bitop_impl(count as usize, Op::Or);
+        let and_type = bitop_impl(count as usize, &Op::And);
+        let or_type = bitop_impl(count as usize, &Op::Or);
         let bitop = bitop_tuple_impl(count as usize);
         ops.push(and_type);
         ops.push(or_type);
         ops.push(bitop);
     }
 
-    Ok(quote!{
-        #(#ops)*
-    }.into())
+    Ok(quote!{#(#ops)*})
 }

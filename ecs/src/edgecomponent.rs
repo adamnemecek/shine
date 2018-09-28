@@ -93,14 +93,14 @@ where
         self.store.read()
     }
 
-    pub fn update<'a>(
-        &'a mut self,
+    pub fn update(
+        &mut self,
     ) -> smat::WrapRowUpdate<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
         self.store.update()
     }
 
-    pub fn write<'a>(
-        &'a mut self,
+    pub fn write(
+        &mut self,
     ) -> smat::WrapRowWrite<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
         self.store.write()
     }

@@ -87,11 +87,11 @@ where
         self.store.read()
     }
 
-    pub fn update<'a>(&'a mut self) -> svec::WrapUpdate<<T as EntityComponentDescriptor>::Store> {
+    pub fn update(&mut self) -> svec::WrapUpdate<<T as EntityComponentDescriptor>::Store> {
         self.store.update()
     }
 
-    pub fn write<'a>(&'a mut self) -> svec::WrapWrite<<T as EntityComponentDescriptor>::Store> {
+    pub fn write(&mut self) -> svec::WrapWrite<<T as EntityComponentDescriptor>::Store> {
         self.store.write()
     }
 }

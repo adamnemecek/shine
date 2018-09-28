@@ -45,7 +45,7 @@ impl<T> Store for HashStore<T> {
 
     fn get(&self, idx: usize) -> &Self::Item {
         #[allow(clippy::get_unwrap)]
-        self.values.get(&idx).unwrap()
+        &self.values[&idx]
     }
 
     fn get_mut(&mut self, idx: usize) -> &mut Self::Item {

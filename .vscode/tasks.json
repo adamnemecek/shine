@@ -68,7 +68,7 @@
             "args": [
                 "clippy",
                 "-p",
-                "shine-graph",
+                "shine-ecs",
             ],
             "presentation": {
                 "echo": true,

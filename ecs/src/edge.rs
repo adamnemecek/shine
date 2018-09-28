@@ -10,7 +10,7 @@ pub struct Edge {
 
 impl Edge {
     pub fn new(from: Entity, to: Entity) -> Edge {
-        Edge { from: from, to: to }
+        Edge { from, to }
     }
 
     pub fn new_invalid() -> Edge {
@@ -22,7 +22,7 @@ impl Edge {
 
     pub fn new_from(from: Entity) -> Edge {
         Edge {
-            from: from,
+            from,
             to: Entity::new_invalid(),
         }
     }
@@ -30,7 +30,7 @@ impl Edge {
     pub fn new_to(to: Entity) -> Edge {
         Edge {
             from: Entity::new_invalid(),
-            to: to,
+            to,
         }
     }
 
