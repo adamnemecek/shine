@@ -11,6 +11,6 @@ keywords = ["graph", "matrix", "spares"]
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "*"
-syn = {version = "*", features = ["full"] }
-quote = "*"
+proc-macro2 = "0.4.19"
+syn = {version = "0.15.6", features = ["full"] }
+quote = "0.6.8"
