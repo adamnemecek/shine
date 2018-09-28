@@ -21,4 +21,4 @@ shine-graph-macro = {path = "../graph-macro", version = "0.1.0"}
 env_logger = "0.5.13"
 rand = "0.5.5"
 permutohedron = "0.2.4"
-shine-testutils = {path = "../testutils", vesrion = "0.1.0"}
+shine-testutils = {path = "../testutils", version = "0.1.0"}
