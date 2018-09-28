@@ -47,7 +47,7 @@
             "args": [
                 "test",
                 "-p",
-                "shine-ecs",
+                "shine-tri",
                 "--",
                 "--nocapture",
             ],
@@ -68,14 +68,14 @@
             "args": [
                 "clippy",
                 "-p",
-                "shine-ecs",
+                "shine-tri",
             ],
             "presentation": {
                 "echo": true,
                 "reveal": "always",
                 "focus": false,
                 "panel": "new"
-            }
+            },
             "problemMatcher": [
                 "$rustc"
             ]
