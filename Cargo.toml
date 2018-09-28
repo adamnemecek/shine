@@ -8,7 +8,7 @@ repository = "https://github.com/gzp/shine"
 keywords = ["component system", "game"]
 
 [workspace]
-members = [ "testutils", "store", "graph", "graph-macro", "ecs" ]
+members = [ "testutils", "store", "graph", "graph-macro", "ecs", "tri" ]
 
 [dependencies]
 log = "*"
@@ -16,3 +16,4 @@ env_logger = "*"
 
 shine-store = {path = "store"}
 shine-ecs = {path = "ecs"}
+shine-tri = {path = "tri"}
