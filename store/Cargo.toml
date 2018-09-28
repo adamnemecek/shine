@@ -1,20 +1,20 @@
 [package]
 name = "shine-store"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "SHINE. Storage and container module of a general purpose multi-threaded rendering engine."
+description = "SHINE. Storage and container module for the shine engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["shine", "render", "opengl", "game"]
 
 [dependencies]
-libc = "*"
-log = "*"
-lazy_static = "*"
-num_cpus="*"
+libc = "0.2.43"
+log = "0.4.5"
+lazy_static = "1.1.0"
+num_cpus = "1.8"
 
 [dev-dependencies]
-env_logger = "*"
-rand = "*"
-permutohedron = "*"
-shine-testutils = {path = "../testutils"}
+env_logger = "0.5.13"
+rand = "0.5.5"
+permutohedron = "0.2.4"
+shine-testutils = {path = "../testutils", version = "0.1.0"}

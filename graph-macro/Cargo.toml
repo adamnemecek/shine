@@ -3,7 +3,7 @@ name = "shine-graph-macro"
 version = "0.1.1"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "SHINE. Graph and sparse matrix library macros for the shine engine."
+description = "SHINE. Graph and sparse matrix macro-module for the shine engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["graph", "matrix", "spares"]
 

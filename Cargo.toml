@@ -3,7 +3,7 @@ name = "shine"
 version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "General purpose multi-threaded sanbox engine."
+description = "SHINE. My sandbox engine to learn rust."
 repository = "https://github.com/gzp/shine"
 keywords = ["component system", "game"]
 
@@ -11,8 +11,8 @@ keywords = ["component system", "game"]
 members = [ "testutils", "store", "graph", "graph-macro", "ecs" ]
 
 [dependencies]
-log = "*"
-env_logger = "*"
+log = "0.4.5"
+env_logger = "0.5.13"
 
-shine-store = {path = "store"}
-shine-ecs = {path = "ecs"}
+shine-store = {path = "store", version = "0.2.0"}
+shine-ecs = {path = "ecs", version = "0.1.0"}

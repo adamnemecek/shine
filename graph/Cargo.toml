@@ -1,24 +1,24 @@
 [package]
 name = "shine-graph"
-version = "0.1.1"
+version = "0.1.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "SHINE. Graph and sparse matrix library for the shine engine."
+description = "SHINE. Graph and sparse matrix module for the shine engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["graph", "matrix", "spares"]
 
 [dependencies]
-libc = "*"
-log = "*"
-lazy_static = "*"
-num-traits = "*"
-arrayvec = "*"
+libc = "0.2.43"
+log = "0.4.5"
+lazy_static = "1.1.0"
+num-traits = "0.2.6"
+arrayvec = "0.4.7"
 
-shine-store = {path = "../store"}
-shine-graph-macro = {path = "../graph-macro"}
+shine-store = {path = "../store", version = "0.2.0"}
+shine-graph-macro = {path = "../graph-macro", version = "0.1.0"}
 
 [dev-dependencies]
-env_logger = "*"
-rand = "*"
-permutohedron = "*"
-shine-testutils = {path = "../testutils"}
+env_logger = "0.5.13"
+rand = "0.5.5"
+permutohedron = "0.2.4"
+shine-testutils = {path = "../testutils", vesrion = "0.1.0"}
