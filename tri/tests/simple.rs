@@ -10,7 +10,7 @@ use shine_tri::*;
 fn empty() {
     init_test_logger(module_path!());
 
-    for a in VertexIndex::from(0)..VertexIndex::from(10) {
+    for a in VertexIndex(0)..VertexIndex(10) {
         println!("{:?}", a);
     }
 }

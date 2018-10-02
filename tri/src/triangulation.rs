@@ -1,5 +1,6 @@
+use geometry::{Orientation, Predicates};
 use locator::Locator;
-use types::{FaceIndex, Location, Rot3, VertexIndex};
+use types::{Edge, FaceIndex, Location, Rot3, VertexIndex};
 
 pub trait TriStore {
     type Position;
@@ -7,6 +8,8 @@ pub trait TriStore {
 
     fn get_vertex_count(&self) -> usize;
     fn get_face_count(&self) -> usize;
+
+    fn clear(&mut self);
 
     fn create_vertex(&mut self) -> VertexIndex;
     fn get_vertex_position(&self, v: VertexIndex) -> &Self::Position;
@@ -26,21 +29,25 @@ pub trait TriStore {
 }
 
 /// (Constraint) Triangulation.
-pub struct TriGraph<T>
+pub struct TriGraph<P, T>
 where
-    T: TriStore,
+    P: Predicates,
+    T: TriStore<Position = <P as Predicates>::Position>,
 {
+    crate predicates: P,
     crate store: T,
     crate dimension: i8,
     crate infinite_vertex: VertexIndex,
 }
 
-impl<T> TriGraph<T>
+impl<P, T> TriGraph<P, T>
 where
-    T: TriStore,
+    P: Predicates,
+    T: TriStore<Position = <P as Predicates>::Position>,
 {
-    pub fn new(store: T) -> TriGraph<T> {
+    pub fn new(predicates: P, store: T) -> TriGraph<P, T> {
         TriGraph {
+            predicates,
             store,
             dimension: -1,
             infinite_vertex: VertexIndex::invalid(),
@@ -51,6 +58,10 @@ where
         self.dimension
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.dimension == -1
+    }
+
     pub fn get_vertex_count(&self) -> usize {
         self.store.get_vertex_count()
     }
@@ -59,24 +70,19 @@ where
         self.store.get_face_count()
     }
 
+    pub fn clear(&mut self) {
+        self.store.clear();
+        self.dimension = 0;
+        self.infinite_vertex = VertexIndex::invalid();
+    }
+
+    //region vertex methods
     pub fn get_vertex_position(&self, v: VertexIndex) -> &T::Position {
         self.store.get_vertex_position(v)
     }
 
     pub fn set_vertex_position(&mut self, v: VertexIndex, p: T::Position) {
         self.store.set_vertex_position(v, p);
-    }
-
-    pub fn get_constraint(&self, f: FaceIndex, i: Rot3) -> T::Constraint {
-        self.store.get_constraint(f, i)
-    }
-
-    pub fn set_constraint(&self, f: FaceIndex, i: Rot3, c: T::Constraint) {
-        self.store.set_constraint(f, i, c);
-    }
-
-    pub fn clear_constraint(&self, f: FaceIndex, i: Rot3) {
-        self.store.set_constraint(f, i, Default::default());
     }
 
     pub fn create_vertex(&mut self) -> VertexIndex {
@@ -99,8 +105,8 @@ where
         self.infinite_vertex
     }
 
-    pub fn get_infinite_face(&self) -> FaceIndex {
-        self.get_vertex_face(self.infinite_vertex)
+    pub fn is_finite_vertex(&self, v: VertexIndex) -> bool {
+        v != self.infinite_vertex
     }
 
     pub fn get_vertex_face(&self, v: VertexIndex) -> FaceIndex {
@@ -110,7 +116,9 @@ where
     pub fn set_vertex_face(&mut self, v: VertexIndex, f: FaceIndex) {
         self.store.set_vertex_face(v, f);
     }
+    //endregion
 
+    //region face methods
     pub fn create_face(&mut self) -> FaceIndex {
         self.store.create_face()
     }
@@ -121,54 +129,75 @@ where
         face
     }
 
+    pub fn get_infinite_face(&self) -> FaceIndex {
+        self.get_vertex_face(self.infinite_vertex)
+    }
+
+    pub fn is_finite_face(&self, f: FaceIndex) -> bool {
+        self.get_face_vertex_index(f, self.infinite_vertex).is_none()
+    }
+
     pub fn get_face_vertex(&self, f: FaceIndex, i: Rot3) -> VertexIndex {
+        assert!(i.is_valid());
         self.store.get_face_vertex(f, i)
     }
 
-    pub fn get_face_vertex_index(&self, f: FaceIndex, v: VertexIndex) -> Rot3 {
+    pub fn get_face_vertex_position(&self, f: FaceIndex, i: Rot3) -> &T::Position {
+        let v = self.get_face_vertex(f, i);
+        self.get_vertex_position(v)
+    }
+
+    pub fn get_face_vertex_index(&self, f: FaceIndex, v: VertexIndex) -> Option<Rot3> {
         for i in 0..3 {
-            let r = Rot3::from(i);
+            let r = Rot3(i);
             if self.get_face_vertex(f, r) == v {
-                return r;
+                return Some(r);
             }
         }
-        Rot3::invalid()
+        None
     }
 
     pub fn set_face_vertex(&mut self, f: FaceIndex, i: Rot3, v: VertexIndex) {
+        assert!(i.is_valid());
         self.store.set_face_vertex(f, i, v);
     }
 
     pub fn set_face_vertices(&mut self, f: FaceIndex, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) {
-        self.store.set_face_vertex(f, Rot3::from(0), v0);
-        self.store.set_face_vertex(f, Rot3::from(1), v1);
-        self.store.set_face_vertex(f, Rot3::from(2), v2);
-    }
-
-    pub fn swap_face_vertices(&mut self, f: FaceIndex, i0: Rot3, i1: Rot3) {
-        self.store.swap_face_vertices(f, i0, i1);
+        self.store.set_face_vertex(f, Rot3(0), v0);
+        self.store.set_face_vertex(f, Rot3(1), v1);
+        self.store.set_face_vertex(f, Rot3(2), v2);
     }
 
     pub fn get_face_neighbor(&self, f: FaceIndex, i: Rot3) -> FaceIndex {
+        assert!(i.is_valid());
         self.store.get_face_neighbor(f, i)
     }
 
-    pub fn get_face_neighbor_index(&self, f: FaceIndex, nf: FaceIndex) -> Rot3 {
+    pub fn get_face_neighbor_index(&self, f: FaceIndex, nf: FaceIndex) -> Option<Rot3> {
         for i in 0..3 {
-            let r = Rot3::from(i);
+            let r = Rot3(i);
             if self.get_face_neighbor(f, r) == nf {
-                return r;
+                return Some(r);
             }
         }
-        Rot3::invalid()
+        None
     }
 
     pub fn set_face_neighbor(&mut self, f: FaceIndex, i: Rot3, nf: FaceIndex) {
+        assert!(i.is_valid());
         self.store.set_face_neighbor(f, i, nf);
+    }
+    //endregion
+
+    //region topology modificationface methods
+    pub fn swap_face_vertices(&mut self, f: FaceIndex, i0: Rot3, i1: Rot3) {
+        assert!(i0.is_valid() && i1.is_valid());
+        self.store.swap_face_vertices(f, i0, i1);
     }
 
     pub fn set_adjacent(&mut self, f0: FaceIndex, i0: Rot3, f1: FaceIndex, i1: Rot3) {
-        assert!(i8::from(i0) <= self.dimension && i8::from(i1) <= self.dimension);
+        assert!(i0.is_valid() && i1.is_valid());
+        assert!(i0.0 <= self.dimension as u8 && i1.0 <= self.dimension as u8);
         self.set_face_neighbor(f0, i0, f1);
         self.set_face_neighbor(f1, i1, f0);
     }
@@ -176,7 +205,7 @@ where
     /// Move adjacent face information from one triangle into another.
     pub fn move_adjacent(&mut self, target_f: FaceIndex, target_i: Rot3, source_f: FaceIndex, source_i: Rot3) {
         let n = self.get_face_neighbor(source_f, source_i);
-        let i = self.get_face_neighbor_index(n, source_f);
+        let i = self.get_face_neighbor_index(n, source_f).unwrap();
         self.set_adjacent(target_f, target_i, n, i);
     }
 
@@ -201,7 +230,7 @@ where
         let i02 = i00.decrement();
 
         let f1 = self.get_face_neighbor(f0, i00);
-        let i10 = self.get_face_neighbor_index(f1, f0);
+        let i10 = self.get_face_neighbor_index(f1, f0).unwrap();
         let i11 = i10.increment();
         let i12 = i10.decrement();
 
@@ -228,13 +257,47 @@ where
         self.clear_constraint(f0, i01);
         self.clear_constraint(f1, i11);
     }
+    //endregion
 
-    pub fn locate(&self, p: &T::Position) -> Location {
-        self.locate_with_hint(p, FaceIndex::invalid())
+    //region constraints
+    pub fn get_constraint(&self, f: FaceIndex, i: Rot3) -> T::Constraint {
+        assert!(i.is_valid());
+        self.store.get_constraint(f, i)
     }
 
-    pub fn locate_with_hint(&self, p: &T::Position, hint: FaceIndex) -> Location {
+    pub fn set_constraint(&self, f: FaceIndex, i: Rot3, c: T::Constraint) {
+        assert!(i.is_valid());
+        self.store.set_constraint(f, i, c);
+    }
+
+    pub fn clear_constraint(&self, f: FaceIndex, i: Rot3) {
+        assert!(i.is_valid());
+        self.store.set_constraint(f, i, Default::default());
+    }
+    //endregion
+
+    //region query
+    pub fn locate(&self, p: &T::Position, hint: Option<FaceIndex>) -> Location {
         let mut locator = Locator::new(self);
-        locator.locate_position(p, hint)
+        locator.locate_position(p, hint).unwrap()
     }
+    //endregion
+
+    //region geometry relationship
+    pub fn get_orientation_vertices(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Orientation {
+        assert!(v0 != self.infinite_vertex && v1 != self.infinite_vertex && v2 != self.infinite_vertex);
+        let a = self.get_vertex_position(v0);
+        let b = self.get_vertex_position(v1);
+        let c = self.get_vertex_position(v2);
+        self.predicates.orientation(a, b, c)
+    }
+
+    /// Finds the orientation of an edge and a vertex    
+    pub fn get_orientation_edge_vertex(&self, e: Edge, v: VertexIndex) -> Orientation {
+        let va = v;
+        let vb = self.get_face_vertex(e.0, e.1.increment());
+        let vc = self.get_face_vertex(e.0, e.1.decrement());
+        self.get_orientation_vertices(va, vb, vc)
+    }
+    //endregion
 }

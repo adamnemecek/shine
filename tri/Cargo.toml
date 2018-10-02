@@ -9,6 +9,7 @@ keywords = ["shine", "triangulation", "robust"]
 
 [dependencies]
 log = "*"
+rand = "*"
 
 [dev-dependencies]
 env_logger = "*"

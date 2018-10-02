@@ -4,20 +4,16 @@ use std::ops::Range;
 
 /// Integer type with module 3 arithmetic
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Rot3(i8);
+pub struct Rot3(pub u8);
 
 impl Rot3 {
-    pub fn invalid() -> Rot3 {
-        Rot3(-1)
-    }
-
     pub fn third(a: Rot3, b: Rot3) -> Rot3 {
         assert!(a.is_valid() && b.is_valid() && a != b);
         Rot3(3 - a.0 - b.0)
     }
 
     pub fn is_valid(self) -> bool {
-        self.0 >= 0 && self.0 <= 2
+        self.0 <= 2
     }
 
     pub fn increment(self) -> Rot3 {
@@ -30,7 +26,7 @@ impl Rot3 {
         Rot3( (self.0 + 2) % 3 )
     }
 
-    pub fn mirror(self, over: i8) -> Rot3 {
+    pub fn mirror(self, over: u8) -> Rot3 {
         assert!(self.0 != over);
         match over {
             0 => Rot3(3 - self.0),
@@ -41,78 +37,27 @@ impl Rot3 {
     }
 }
 
-impl From<i8> for Rot3 {
-    fn from(v: i8) -> Rot3 {
-        let v = Rot3(v);
-        assert!(v.is_valid());
-        v
-    }
-}
-
-impl From<Rot3> for i8 {
-    fn from(v: Rot3) -> i8 {
-        assert!(v.is_valid());
-        v.0
-    }
-}
-
 /// Index used for Vertex indentification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FaceIndex(usize);
+pub struct FaceIndex(pub usize);
 
 impl FaceIndex {
-    pub fn invalid() -> FaceIndex {
-        FaceIndex(usize::max_value())
-    }
-
-    pub fn is_valid(self) -> bool {
-        self.0 != usize::max_value()
-    }
-}
-
-impl From<usize> for FaceIndex {
-    fn from(v: usize) -> FaceIndex {
-        let v = FaceIndex(v);
-        assert!(v.is_valid());
-        v
-    }
-}
-
-impl From<FaceIndex> for usize {
-    fn from(v: FaceIndex) -> usize {
-        assert!(v.is_valid());
-        v.0
-    }
+    pub fn invalid()-> FaceIndex { FaceIndex(usize::max_value()) }
+    pub fn is_valid(self) -> bool { self.0 != usize::max_value() }
 }
 
 /// Index used for vertex indentification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct VertexIndex(usize);
+pub struct VertexIndex(pub usize);
 
 impl VertexIndex {
-    pub fn invalid() -> VertexIndex {
-        VertexIndex(usize::max_value())
-    }
-
-    pub fn is_valid(self) -> bool {
-        self.0 != usize::max_value()
-    }
+    pub fn invalid()-> VertexIndex { VertexIndex(usize::max_value()) }
+    pub fn is_valid(self) -> bool { self.0 != usize::max_value() }
 }
 
-impl From<usize> for VertexIndex {
-    fn from(v: usize) -> VertexIndex {
-        let v = VertexIndex(v);
-        assert!(v.is_valid());
-        v
-    }
-}
-
-impl From<VertexIndex> for usize {
-    fn from(v: VertexIndex) -> usize {
-        assert!(v.is_valid());
-        v.0
-    }
-}
+/// Edge defined as the oposite edge to a vertex in a face.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Edge(pub FaceIndex, pub Rot3);
 
 /// Implement Step required for Range<...>
 macro_rules! step_impl {
@@ -163,25 +108,6 @@ pub type VertexRange = Range<VertexIndex>;
 step_impl!(FaceIndex);
 /// A range of faces
 pub type FaceRange = Range<FaceIndex>;
-
-/// Edge defined as the oposite edge to a vertex in a face.
-pub struct Edge {
-    face: FaceIndex,
-    id: Rot3,
-}
-
-impl Edge {
-    pub fn invalid() -> Edge {
-        Edge {
-            face: FaceIndex::invalid(),
-            id: Rot3::invalid(),
-        }
-    }
-
-    pub fn is_valid(&self) -> bool {
-        self.face.is_valid() && self.id.is_valid()
-    }
-}
 
 
 ///Result of a point location query
