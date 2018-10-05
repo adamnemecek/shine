@@ -186,9 +186,12 @@ where
     }
 }
 
-pub trait Tri {
-    type Position: Position + Default;
-    type Predicate;
+/// Types required for triangulation
+pub trait TriTypes {
+    type Real: PartialOrd;
+    type Position: Position<Real = Self::Real> + Default;
+    type Predicate: Predicates<Real = Self::Real, Position = Self::Position>;
+
     type VertexData: Default;
     type EdgeData: Copy + Default;
     type FaceData: Default;
@@ -197,7 +200,7 @@ pub trait Tri {
 /// (Constraint) Triangulation.
 pub struct TriGraph<T>
 where
-    T: Tri,
+    T: TriTypes,
 {
     crate predicates: T::Predicate,
     crate dimension: i8,
@@ -208,7 +211,7 @@ where
 
 impl<T> TriGraph<T>
 where
-    T: Tri,
+    T: TriTypes,
 {
     pub fn new(predicates: T::Predicate) -> TriGraph<T> {
         TriGraph {
@@ -374,21 +377,21 @@ where
     //endregion
 
     //region geometry relationship
-   /* pub fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Orientation {
+    pub fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Orientation {
         assert!(v0 != self.infinite_vertex && v1 != self.infinite_vertex && v2 != self.infinite_vertex);
-        let a = self[v0].position;
-        let b = self[v1].position;
-        let c = self[v2].position;
+        let a = &self[v0].position;
+        let b = &self[v1].position;
+        let c = &self[v2].position;
         self.predicates.orientation(a, b, c)
     }
 
     /// Finds the orientation of an edge and a vertex    
     pub fn get_edge_vertex_orientation(&self, e: Edge, v: VertexIndex) -> Orientation {
         let va = v;
-        let vb = self[e.0].vertices[e.1.increment().into()];
-        let vc = self[e.0].vertices[e.1.decrement().into()];
+        let vb = self[e.0].vertices[e.1.increment()];
+        let vc = self[e.0].vertices[e.1.decrement()];
         self.get_vertices_orientation(va, vb, vc)
-    }*/
+    }
 
     //fn is_convex(&self, edge: Edge) -> bool {}
     //endregion
@@ -396,7 +399,7 @@ where
 
 impl<T> Index<VertexIndex> for TriGraph<T>
 where
-    T: Tri,
+    T: TriTypes,
 {
     type Output = Vertex<T::Position, T::VertexData>;
 
@@ -407,7 +410,7 @@ where
 
 impl<T> IndexMut<VertexIndex> for TriGraph<T>
 where
-    T: Tri,
+    T: TriTypes,
 {
     fn index_mut(&mut self, v: VertexIndex) -> &mut Self::Output {
         self.vertex_mut(v)
@@ -416,7 +419,7 @@ where
 
 impl<T> Index<FaceIndex> for TriGraph<T>
 where
-    T: Tri,
+    T: TriTypes,
 {
     type Output = Face<T::EdgeData, T::FaceData>;
 
@@ -427,7 +430,7 @@ where
 
 impl<T> IndexMut<FaceIndex> for TriGraph<T>
 where
-    T: Tri,
+    T: TriTypes,
 {
     fn index_mut(&mut self, f: FaceIndex) -> &mut Self::Output {
         self.face_mut(f)

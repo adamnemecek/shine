@@ -144,27 +144,27 @@ pub type FaceRange = Range<FaceIndex>;
 ///Result of a point location query
 #[derive(Debug)]
 pub enum Location {
-    /// Triangulation is empty
-    Empty,
-
-    /// Point is outside the affine hull of a 0D triangulation (the query and triangulation forms a segment)
-    OutsideAffineHull,
-
-    /// Point is outside the affine hull of a 1D triangulation (the query and triangulation form a cw triangle) 
-    OutsideAffineHullClockwise,
-
-    /// Point is outside the affine hull of a 1D triangulation (the query and triangulation form a ccw triangle) 
-    OutsideAffineHullCounterClockwise,
-
-    /// Point is outside the affine hull of a 2D triangulation
-    OutsideConvexHull{face: FaceIndex},
-
-    /// Point is on the vertex of a triangle
-    Vertex{face: FaceIndex, index: Rot3},
+    /// Point is inside a triangle
+    Face{face: FaceIndex},
 
     /// Point is on the edge of a triangle
     Edge{face: FaceIndex, index: Rot3},
 
-    /// Point is inside a triangle
-    Face{face: FaceIndex},
+    /// Point is on the vertex of a triangle
+    Vertex{face: FaceIndex, index: Rot3},    
+
+    /// Triangulation is empty
+    Empty,
+    
+    /// Point is outside the affine hull of a 0D triangulation (the query point and triangulation forms a segment)
+    OutsideAffineHull,
+
+    /// Point is outside the affine hull of a 1D triangulation (the query point and triangulation forms a cw triangle) 
+    OutsideAffineHullClockwise,
+
+    /// Point is outside the affine hull of a 1D triangulation (the query point and triangulation forms a ccw triangle) 
+    OutsideAffineHullCounterClockwise,
+
+    /// Point is outside the affine hull of a 2D triangulation
+    OutsideConvexHull{face: FaceIndex},
 }

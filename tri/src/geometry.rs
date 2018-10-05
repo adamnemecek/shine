@@ -15,7 +15,7 @@ pub enum CollinearTest {
 }
 
 pub trait Position {
-    type Real;
+    type Real: PartialOrd;
 
     fn x(&self) -> Self::Real;
     fn y(&self) -> Self::Real;

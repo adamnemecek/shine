@@ -1,36 +1,38 @@
 use geometry::{Orientation, Predicates};
-use triangulation::TriGraph;
+use locator::Locator;
+use triangulation::{Face, TriGraph, TriTypes, Vertex};
 use types::{Edge, FaceIndex, Location, Rot3, VertexIndex};
 
-pub struct Builder<'a, P, T>
+pub struct Builder<'a, T>
 where
-    P: 'a + Predicates,
-    T: 'a + TriStore<Position = <P as Predicates>::Position>,
+    T: 'a + TriTypes,
 {
-    tri: &'a mut TriGraph<P, T>,
+    tri: &'a mut TriGraph<T>,
 }
 
-impl<'a, P, T> Builder<'a, P, T>
+impl<'a, T> Builder<'a, T>
 where
-    P: 'a + Predicates,
-    T: 'a + TriStore<Position = <P as Predicates>::Position>,
+    T: 'a + TriTypes,
 {
-    pub fn new(tri: &mut TriGraph<P, T>) -> Builder<P, T> {
+    pub fn new(tri: &mut TriGraph<T>) -> Builder<T> {
         Builder { tri }
     }
 
     pub fn add_vertex(&mut self, p: T::Position, hint: Option<FaceIndex>) -> VertexIndex {
-        let loc = self.tri.locate(&p, hint);
-        self.add_vertex_at(p, loc)
+        let location = {
+            let mut locator = Locator::new(self.tri);
+            locator.locate_position(&p, hint).unwrap()
+        };
+        self.add_vertex_at(p, location)
     }
 
-    pub fn add_vertex_at(&mut self, p: T::Position, loc: Location) -> VertexIndex {
+    fn add_vertex_at(&mut self, p: T::Position, loc: Location) -> VertexIndex {
         match self.tri.dimension {
             -1 => match loc {
                 Location::Empty => self.extend_to_dim0(p),
                 loc => unreachable!(format!("Invalid location for empty triangulation: {:?}", loc)),
             },
-            0 => match loc {
+            /* 0 => match loc {
                 Location::Vertex { face, index } => self.tri.get_face_vertex(face, index),
                 Location::OutsideAffineHull => self.extend_to_dim1(p),
                 loc => unreachable!(format!("Invalid location for 0D triangulation: {:?}", loc)),
@@ -49,33 +51,47 @@ where
                 Location::Face { face } => self.split_face(p, face),
                 Location::OutsideConvexHull { face } => self.insert_outside_convex_hull2(p, face),
                 _ => unreachable!(format!("Invalid location for 2D triangulation: {:?}", loc)),
-            },
+            },*/
             dim => unreachable!(format!("Invalid dimension: {}, {:?}", dim, loc)),
         }
     }
 
+    fn create_infinte_vertex(&mut self) -> VertexIndex {
+        self.tri.store_vertex(Vertex::new())
+    }
+
+    fn create_vertex_with_position(&mut self, p: T::Position) -> VertexIndex {
+        let mut v = Vertex::new();
+        v.position = p;
+        self.tri.store_vertex(v)
+    }
+
+    fn create_face_with_vertices(&mut self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> FaceIndex {
+        let mut f = Face::new();
+        //todo: f.vertices = vec![v0, v1, v2];
+        self.tri.store_face(f)
+    }
+
     fn extend_to_dim0(&mut self, p: T::Position) -> VertexIndex {
-        let tri = &mut self.tri;
+        assert!(self.tri.dimension == -1);
+        assert!(!self.tri.get_infinite_vertex().is_valid());
+        assert!(self.tri.get_vertex_count() == 0);
+        assert!(self.tri.get_face_count() == 0);
 
-        assert!(tri.dimension == -1);
-        assert!(!tri.get_infinite_vertex().is_valid());
-        assert!(tri.get_vertex_count() == 0);
-        assert!(tri.get_face_count() == 0);
+        self.tri.dimension = 0;
 
-        tri.dimension = 0;
+        let v0 = self.create_infinte_vertex();
+        let v1 = self.create_vertex_with_position(p);
+        let f0 = self.create_face_with_vertices(v0, VertexIndex::invalid(), VertexIndex::invalid());
+        let f1 = self.create_face_with_vertices(v1, VertexIndex::invalid(), VertexIndex::invalid());
 
-        let v0 = tri.create_vertex_with_infinite_position();
-        let v1 = tri.create_vertex_with_position(p);
-        let f0 = tri.create_face_with_vertices(v0, VertexIndex::invalid(), VertexIndex::invalid());
-        let f1 = tri.create_face_with_vertices(v1, VertexIndex::invalid(), VertexIndex::invalid());
-
-        tri.set_vertex_face(v0, f0);
-        tri.set_vertex_face(v1, f1);
-        tri.set_adjacent(f0, Rot3(0), f1, Rot3(0));
+        self.tri[v0].face = f0;
+        self.tri[v0].face = f1;
+        self.tri.set_adjacent(f0, Rot3(0), f1, Rot3(0));
 
         v1
     }
-
+    /*
     /// Extends dimension from 0D to 1D by creating a segment (face) out of the (two) finite points.
     /// In 1D a face is a segment, and the shell is the triangular face (as described in extend_to_dim2). The
     /// infinite vertex is always the vertex corresponding to the 2nd index in each (finite) faces(segments).
@@ -380,5 +396,5 @@ where
         }
 
         vp
-    }
+    }*/
 }

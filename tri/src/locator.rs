@@ -1,6 +1,6 @@
 use geometry::{CollinearTest, Orientation, Predicates};
 use rand::{self, Rng, ThreadRng};
-use triangulation::{TriGraph, TriStore};
+use triangulation::{TriGraph, TriTypes};
 use types::{FaceIndex, Location, Rot3, VertexIndex};
 
 enum ContainmentResult {
@@ -20,25 +20,23 @@ impl ContainmentResult {
     }
 }
 
-pub struct Locator<'a, P, R, T>
+pub struct Locator<'a, R, T>
 where
-    P: 'a + Predicates,
     R: 'a + Rng,
-    T: 'a + TriStore<Position = <P as Predicates>::Position>,
+    T: 'a + TriTypes,
 {
-    tri: &'a TriGraph<P, T>,
+    tri: &'a TriGraph<T>,
     rng: R,
     iteration_stochastic_limit: usize,
     start_face_sampling_density: usize,
 }
 
-impl<'a, P, R, T> Locator<'a, P, R, T>
+impl<'a, R, T> Locator<'a, R, T>
 where
-    P: 'a + Predicates,
     R: 'a + Rng,
-    T: 'a + TriStore<Position = <P as Predicates>::Position>,
+    T: 'a + TriTypes,
 {
-    pub fn new_with_rng(tri: &TriGraph<P, T>, rng: R) -> Locator<P, R, T> {
+    pub fn new_with_rng(rng: R, tri: &TriGraph<T>) -> Locator<R, T> {
         Locator {
             tri,
             rng,
@@ -48,12 +46,11 @@ where
     }
 }
 
-impl<'a, P, T> Locator<'a, P, ThreadRng, T>
+impl<'a, T> Locator<'a, ThreadRng, T>
 where
-    P: 'a + Predicates,
-    T: 'a + TriStore<Position = <P as Predicates>::Position>,
+    T: 'a + TriTypes,
 {
-    pub fn new(tri: &TriGraph<P, T>) -> Locator<P, ThreadRng, T> {
+    pub fn new(tri: &TriGraph<T>) -> Locator<ThreadRng, T> {
         Locator {
             tri,
             rng: rand::thread_rng(),
@@ -63,18 +60,17 @@ where
     }
 }
 
-impl<'a, P, R, T> Locator<'a, P, R, T>
+impl<'a, R, T> Locator<'a, R, T>
 where
-    P: 'a + Predicates,
     R: 'a + Rng,
-    T: 'a + TriStore<Position = <P as Predicates>::Position>,
+    T: 'a + TriTypes,
 {
     pub fn locate_position(&mut self, p: &T::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
         match self.tri.dimension {
             -1 => Ok(Location::Empty),
             0 => self.locate_position_dim0(p),
-            1 => self.locate_position_dim1(p),
-            2 => self.locate_position_dim2(p, hint),
+            //1 => self.locate_position_dim1(p),
+            //2 => self.locate_position_dim2(p, hint),
             dim => unreachable!(format!("Invalid dimension: {}", dim)),
         }
     }
@@ -98,25 +94,28 @@ where
         assert!(tri.dimension == 0);
 
         // find the finite vertex
-        let v0 = if tri.get_infinite_vertex() == VertexIndex(0) {
-            VertexIndex(1)
-        } else {
-            VertexIndex(0)
+        let v0 = {
+            let v = VertexIndex(1);
+            if !tri.is_infinite_vertex(v) {
+                v
+            } else {
+                VertexIndex(0)
+            }
         };
-        let p0 = tri.get_vertex_position(v0);
 
-        if tri.predicates.test_coincident_points(p0, p) {
-            let f = tri.get_vertex_face(v0);
+        let p0 = &tri[v0].position;
+        if tri.predicates.test_coincident_points(p, p0) {
+            let f0 = tri[v0].face;
             Ok(Location::Vertex {
-                face: f,
-                index: tri.get_face_vertex_index(f, v0).unwrap(),
+                face: f0,
+                index: tri[f0].vertices.index_of(v0).unwrap(),
             })
         } else {
             Ok(Location::OutsideAffineHull)
         }
     }
 
-    /// Find the location of a point in a straight line strip. (dimension = 1)
+    /*  /// Find the location of a point in a straight line strip. (dimension = 1)
     fn locate_position_dim1(&mut self, p: &T::Position) -> Result<Location, String> {
         let tri = self.tri;
         assert!(tri.dimension == 1);
@@ -402,5 +401,5 @@ where
                 }
             }
         }
-    }
+    }*/
 }
