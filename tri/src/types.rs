@@ -1,6 +1,6 @@
 use std::iter::Step;
 use std::mem;
-use std::ops::Range;
+use std::ops::{Index, Range};
 
 /// Integer type with module 3 arithmetic
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -37,6 +37,12 @@ impl Rot3 {
     }
 }
 
+impl From<Rot3> for usize {
+    fn from(i: Rot3) -> usize {
+        i.0 as usize
+    }
+}
+
 /// Index used for Vertex indentification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FaceIndex(pub usize);
@@ -45,6 +51,13 @@ impl FaceIndex {
     pub fn invalid()-> FaceIndex { FaceIndex(usize::max_value()) }
     pub fn is_valid(self) -> bool { self.0 != usize::max_value() }
 }
+
+impl From<FaceIndex> for usize {
+    fn from(i: FaceIndex) -> usize {
+        i.0
+    }
+}
+
 
 /// Index used for vertex indentification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -55,9 +68,27 @@ impl VertexIndex {
     pub fn is_valid(self) -> bool { self.0 != usize::max_value() }
 }
 
+impl From<VertexIndex> for usize {
+    fn from(i: VertexIndex) -> usize {
+        i.0
+    }
+}
+
 /// Edge defined as the oposite edge to a vertex in a face.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Edge(pub FaceIndex, pub Rot3);
+
+impl Edge {
+    /// Returns the next edge of the triangle in clockwise direction.
+    fn rotate_cw(&self) -> Edge {
+      Edge( self.0, self.1.decrement() )
+    }
+
+    /// Returns the next edge of the triangle in counter-clockwise direction.
+    fn rotate_ccw(&self) -> Edge {
+        Edge( self.0, self.1.increment() )
+    }
+}
 
 /// Implement Step required for Range<...>
 macro_rules! step_impl {

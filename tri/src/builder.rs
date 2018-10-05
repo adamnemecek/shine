@@ -1,5 +1,5 @@
 use geometry::{Orientation, Predicates};
-use triangulation::{TriGraph, TriStore};
+use triangulation::TriGraph;
 use types::{Edge, FaceIndex, Location, Rot3, VertexIndex};
 
 pub struct Builder<'a, P, T>

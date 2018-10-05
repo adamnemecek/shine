@@ -139,22 +139,19 @@ where
             Orientation::CounterClockwise => Ok(Location::OutsideAffineHullCounterClockwise),
             _ => {
                 // point is on the line
-                let t = tri
-                    .predicates
-                    .test_collinear_points(cp0, cp1, p)
-                    .ok_or("Points are not collinear")?;
+                let t = tri.predicates.test_collinear_points(cp0, cp1, p);
                 match t {
-                    CollinearTest::BeforeA => Ok(Location::OutsideConvexHull { face: f0 }),
-                    CollinearTest::A => Ok(Location::Vertex {
+                    CollinearTest::Before => Ok(Location::OutsideConvexHull { face: f0 }),
+                    CollinearTest::First => Ok(Location::Vertex {
                         face: f0,
                         index: iv0.mirror(2),
                     }),
-                    CollinearTest::B => Ok(Location::Vertex {
+                    CollinearTest::Second => Ok(Location::Vertex {
                         face: f1,
                         index: iv1.mirror(2),
                     }),
-                    CollinearTest::AfterB => Ok(Location::OutsideConvexHull { face: f1 }),
-                    CollinearTest::BetweenAB => {
+                    CollinearTest::After => Ok(Location::OutsideConvexHull { face: f1 }),
+                    CollinearTest::Between => {
                         // Start from an infinite face(f0) and advance to the neighboring segments while the
                         // the edge(face) containing the point is not found
 
@@ -165,23 +162,23 @@ where
                             assert!(tri.is_finite_face(cur));
                             let p0 = tri.get_face_vertex_position(cur, Rot3(0));
                             let p1 = tri.get_face_vertex_position(cur, Rot3(1));
-                            let t = tri.predicates.test_collinear_points(p0, p1, p).unwrap();
+                            let t = tri.predicates.test_collinear_points(p0, p1, p);
                             match t {
-                                CollinearTest::A => {
+                                CollinearTest::First => {
                                     // identical to p0
                                     break Ok(Location::Vertex {
                                         face: cur,
                                         index: Rot3(0),
                                     });
                                 }
-                                CollinearTest::B => {
+                                CollinearTest::Second => {
                                     // identical to p1
                                     break Ok(Location::Vertex {
                                         face: cur,
                                         index: Rot3(1),
                                     });
                                 }
-                                CollinearTest::BetweenAB => {
+                                CollinearTest::Between => {
                                     // inside the (p0,p1) segment
                                     break Ok(Location::Edge {
                                         face: cur,
