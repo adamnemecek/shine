@@ -1,32 +1,54 @@
 use geometry::{Orientation, Predicates};
-use locator::Locator;
-use triangulation::{Face, TriGraph, TriTypes, Vertex};
-use types::{Edge, FaceIndex, Location, Rot3, VertexIndex};
+use locator::{Location, Locator};
+use rand::{self, Rng, ThreadRng};
+use triangulation::{Face, FaceExt, TriGraph, Vertex, VertexExt};
+use types::{Edge, FaceIndex, Rot3, VertexIndex};
 
-pub struct Builder<'a, T>
+pub struct Builder<'a, R, P, V, F>
 where
-    T: 'a + TriTypes,
+    R: 'a + Rng,
+    P: 'a + Predicates,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
 {
-    tri: &'a mut TriGraph<T>,
+    rng: R,
+    tri: &'a mut TriGraph<P, V, F>,
 }
 
-impl<'a, T> Builder<'a, T>
+impl<'a, P, V, F> Builder<'a, ThreadRng, P, V, F>
 where
-    T: 'a + TriTypes,
+    P: 'a + Predicates,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
 {
-    pub fn new(tri: &mut TriGraph<T>) -> Builder<T> {
-        Builder { tri }
+    pub fn new(tri: &mut TriGraph<P, V, F>) -> Builder<ThreadRng, P, V, F> {
+        Builder {
+            tri,
+            rng: rand::thread_rng(),
+        }
+    }
+}
+
+impl<'a, R, P, V, F> Builder<'a, R, P, V, F>
+where
+    R: 'a + Rng,
+    P: 'a + Predicates,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
+{
+    pub fn new_with_rng(rng: R, tri: &mut TriGraph<P, V, F>) -> Builder<R, P, V, F> {
+        Builder { rng, tri }
     }
 
-    pub fn add_vertex(&mut self, p: T::Position, hint: Option<FaceIndex>) -> VertexIndex {
+    pub fn add_vertex(&mut self, p: P::Position, hint: Option<FaceIndex>) -> VertexIndex {
         let location = {
-            let mut locator = Locator::new(self.tri);
+            let mut locator = Locator::new(&mut self.rng, self.tri);
             locator.locate_position(&p, hint).unwrap()
         };
         self.add_vertex_at(p, location)
     }
 
-    fn add_vertex_at(&mut self, p: T::Position, loc: Location) -> VertexIndex {
+    fn add_vertex_at(&mut self, p: P::Position, loc: Location) -> VertexIndex {
         match self.tri.dimension {
             -1 => match loc {
                 Location::Empty => self.extend_to_dim0(p),
@@ -56,23 +78,25 @@ where
         }
     }
 
-    fn create_infinte_vertex(&mut self) -> VertexIndex {
-        self.tri.store_vertex(Vertex::new())
+    fn create_infinite_vertex(&mut self) -> VertexIndex {
+        let v = self.tri.store_vertex(Default::default());
+        self.tri.set_infinite_vertex(v);
+        v
     }
 
-    fn create_vertex_with_position(&mut self, p: T::Position) -> VertexIndex {
-        let mut v = Vertex::new();
-        v.position = p;
+    fn create_vertex_with_position(&mut self, p: P::Position) -> VertexIndex {
+        let mut v: V = Default::default();
+        v.set_position(p);
         self.tri.store_vertex(v)
     }
 
     fn create_face_with_vertices(&mut self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> FaceIndex {
-        let mut f = Face::new();
-        //todo: f.vertices = vec![v0, v1, v2];
+        let mut f: F = Default::default();
+        f.set_vertices(v0, v1, v2);
         self.tri.store_face(f)
     }
 
-    fn extend_to_dim0(&mut self, p: T::Position) -> VertexIndex {
+    fn extend_to_dim0(&mut self, p: P::Position) -> VertexIndex {
         assert!(self.tri.dimension == -1);
         assert!(!self.tri.get_infinite_vertex().is_valid());
         assert!(self.tri.get_vertex_count() == 0);
@@ -80,13 +104,13 @@ where
 
         self.tri.dimension = 0;
 
-        let v0 = self.create_infinte_vertex();
+        let v0 = self.create_infinite_vertex();
         let v1 = self.create_vertex_with_position(p);
         let f0 = self.create_face_with_vertices(v0, VertexIndex::invalid(), VertexIndex::invalid());
         let f1 = self.create_face_with_vertices(v1, VertexIndex::invalid(), VertexIndex::invalid());
 
-        self.tri[v0].face = f0;
-        self.tri[v0].face = f1;
+        self.tri[v0].set_face(f0);
+        self.tri[v0].set_face(f1);
         self.tri.set_adjacent(f0, Rot3(0), f1, Rot3(0));
 
         v1

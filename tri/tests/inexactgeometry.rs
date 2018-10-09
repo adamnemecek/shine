@@ -3,22 +3,11 @@ extern crate shine_tri;
 #[macro_use]
 extern crate log;
 
+mod common;
+
+use common::*;
 use shine_testutils::*;
 use shine_tri::*;
-
-struct Pos(pub f32, pub f32);
-
-impl Position for Pos {
-    type Real = f32;
-
-    fn x(&self) -> Self::Real {
-        self.0
-    }
-
-    fn y(&self) -> Self::Real {
-        self.1
-    }
-}
 
 #[test]
 fn orientation() {

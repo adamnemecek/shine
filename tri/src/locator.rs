@@ -1,7 +1,7 @@
 use geometry::{CollinearTest, Orientation, Predicates};
-use rand::{self, Rng, ThreadRng};
-use triangulation::{TriGraph, TriTypes};
-use types::{FaceIndex, Location, Rot3, VertexIndex};
+use rand::{self, Rng};
+use triangulation::{Face, TriGraph, Vertex};
+use types::{FaceIndex, Rot3, VertexIndex};
 
 enum ContainmentResult {
     Continue(Rot3),
@@ -20,23 +20,55 @@ impl ContainmentResult {
     }
 }
 
-pub struct Locator<'a, R, T>
+///Result of a point location query
+#[derive(Debug)]
+pub enum Location {
+    /// Point is inside a triangle
+    Face { face: FaceIndex },
+
+    /// Point is on the edge of a triangle
+    Edge { face: FaceIndex, index: Rot3 },
+
+    /// Point is on the vertex of a triangle
+    Vertex(FaceIndex, Rot3),
+
+    /// Triangulation is empty
+    Empty,
+
+    /// Point is outside the affine hull of a 0D triangulation (the query point and triangulation forms a segment)
+    OutsideAffineHull,
+
+    /// Point is outside the affine hull of a 1D triangulation (the query point and triangulation forms a cw triangle)
+    OutsideAffineHullClockwise,
+
+    /// Point is outside the affine hull of a 1D triangulation (the query point and triangulation forms a ccw triangle)
+    OutsideAffineHullCounterClockwise,
+
+    /// Point is outside the affine hull of a 2D triangulation
+    OutsideConvexHull { face: FaceIndex },
+}
+
+pub struct Locator<'a, R, P, V, F>
 where
     R: 'a + Rng,
-    T: 'a + TriTypes,
+    P: 'a + Predicates,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
 {
-    tri: &'a TriGraph<T>,
-    rng: R,
+    tri: &'a TriGraph<P, V, F>,
+    rng: &'a mut R,
     iteration_stochastic_limit: usize,
     start_face_sampling_density: usize,
 }
 
-impl<'a, R, T> Locator<'a, R, T>
+impl<'a, R, P, V, F> Locator<'a, R, P, V, F>
 where
     R: 'a + Rng,
-    T: 'a + TriTypes,
+    P: 'a + Predicates,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
 {
-    pub fn new_with_rng(rng: R, tri: &TriGraph<T>) -> Locator<R, T> {
+    pub fn new<'b>(rng: &'b mut R, tri: &'b TriGraph<P, V, F>) -> Locator<'b, R, P, V, F> {
         Locator {
             tri,
             rng,
@@ -46,26 +78,14 @@ where
     }
 }
 
-impl<'a, T> Locator<'a, ThreadRng, T>
-where
-    T: 'a + TriTypes,
-{
-    pub fn new(tri: &TriGraph<T>) -> Locator<ThreadRng, T> {
-        Locator {
-            tri,
-            rng: rand::thread_rng(),
-            iteration_stochastic_limit: 10,
-            start_face_sampling_density: 100,
-        }
-    }
-}
-
-impl<'a, R, T> Locator<'a, R, T>
+impl<'a, R, P, V, F> Locator<'a, R, P, V, F>
 where
     R: 'a + Rng,
-    T: 'a + TriTypes,
+    P: 'a + Predicates,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
 {
-    pub fn locate_position(&mut self, p: &T::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
+    pub fn locate_position(&mut self, p: &P::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
         match self.tri.dimension {
             -1 => Ok(Location::Empty),
             0 => self.locate_position_dim0(p),
@@ -76,19 +96,23 @@ where
     }
 
     /// Return some random (finite) vertex from the triangulation
-    pub fn get_random_finite_vertex(&mut self) -> VertexIndex {
-        assert!(!self.tri.is_empty());
-        let cnt = self.tri.get_vertex_count() - 1;
+    pub fn get_random_finite_vertex(&mut self) -> Result<VertexIndex, String> {
+        let cnt = self.tri.get_vertex_count();
+        if cnt < 2 {
+            return Err("Triangulation is empty".into());
+        }
+
+        let cnt = cnt - 1;
         let rnd = self.rng.gen_range(0, cnt);
         if rnd < self.tri.get_infinite_vertex().0 {
-            VertexIndex(rnd)
+            Ok(VertexIndex(rnd))
         } else {
-            VertexIndex(rnd + 1)
+            Ok(VertexIndex(rnd + 1))
         }
     }
 
     /// Find the location of a point in a single point triangulation (dimension = 0).
-    fn locate_position_dim0(&mut self, p: &T::Position) -> Result<Location, String> {
+    fn locate_position_dim0(&mut self, p: &P::Position) -> Result<Location, String> {
         let tri = self.tri;
 
         assert!(tri.dimension == 0);
@@ -103,13 +127,10 @@ where
             }
         };
 
-        let p0 = &tri[v0].position;
+        let p0 = &tri[v0].position();
         if tri.predicates.test_coincident_points(p, p0) {
-            let f0 = tri[v0].face;
-            Ok(Location::Vertex {
-                face: f0,
-                index: tri[f0].vertices.index_of(v0).unwrap(),
-            })
+            let f0 = tri[v0].face();
+            Ok(Location::Vertex(f0, tri[f0].get_vertex_index(v0).unwrap()))
         } else {
             Ok(Location::OutsideAffineHull)
         }

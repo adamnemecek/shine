@@ -3,6 +3,9 @@ extern crate shine_tri;
 #[macro_use]
 extern crate log;
 
+mod common;
+
+use common::*;
 use shine_testutils::*;
 use shine_tri::*;
 
@@ -10,7 +13,7 @@ use shine_tri::*;
 fn empty() {
     init_test_logger(module_path!());
 
-    for a in VertexIndex(0)..VertexIndex(10) {
-        println!("{:?}", a);
-    }
+    let tri = SimpleTriGraph::new();
+    assert!(tri.is_empty());
+    assert_eq!(tri.get_dimension(), -1);
 }
