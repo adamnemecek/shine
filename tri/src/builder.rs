@@ -54,12 +54,12 @@ where
                 Location::Empty => self.extend_to_dim0(p),
                 loc => unreachable!(format!("Invalid location for empty triangulation: {:?}", loc)),
             },
-            /* 0 => match loc {
-                Location::Vertex { face, index } => self.tri.get_face_vertex(face, index),
+            0 => match loc {
+                Location::Vertex(f, i) => self.tri[f].vertex(i),
                 Location::OutsideAffineHull => self.extend_to_dim1(p),
                 loc => unreachable!(format!("Invalid location for 0D triangulation: {:?}", loc)),
             },
-            1 => match loc {
+            /*1 => match loc {
                 Location::Vertex { face, index } => self.tri.get_face_vertex(face, index),
                 Location::Edge { face, .. } => self.split_edge_dim1(p, face),
                 Location::OutsideConvexHull { face } => self.split_edge_dim1(p, face),
@@ -97,12 +97,12 @@ where
     }
 
     fn extend_to_dim0(&mut self, p: P::Position) -> VertexIndex {
-        assert!(self.tri.dimension == -1);
-        assert!(!self.tri.get_infinite_vertex().is_valid());
-        assert!(self.tri.get_vertex_count() == 0);
-        assert!(self.tri.get_face_count() == 0);
+        assert!(self.tri.dimension() == -1);
+        assert!(!self.tri.infinite_vertex().is_valid());
+        assert!(self.tri.vertex_count() == 0);
+        assert!(self.tri.face_count() == 0);
 
-        self.tri.dimension = 0;
+        self.tri.set_dimension(0);
 
         let v0 = self.create_infinite_vertex();
         let v1 = self.create_vertex_with_position(p);
@@ -115,41 +115,46 @@ where
 
         v1
     }
-    /*
+
     /// Extends dimension from 0D to 1D by creating a segment (face) out of the (two) finite points.
     /// In 1D a face is a segment, and the shell is the triangular face (as described in extend_to_dim2). The
     /// infinite vertex is always the vertex corresponding to the 2nd index in each (finite) faces(segments).
-    fn extend_to_dim1(&mut self, p: T::Position) -> VertexIndex {
-        let tri = &mut self.tri;
+    fn extend_to_dim1(&mut self, p: P::Position) -> VertexIndex {
+        assert!(self.tri.dimension() == 0);
+        assert!(self.tri.vertex_count() == 2);
+        assert!(self.tri.face_count() == 2);
 
-        assert!(tri.dimension == 0);
-        assert!(tri.get_vertex_count() == 2);
-        assert!(tri.get_face_count() == 2);
+        self.tri.set_dimension(1);
 
-        tri.dimension = 1;
+        // infinite, finite vertices
+        let (v0, v1) = {
+            let v0 = VertexIndex(0);
+            let v1 = VertexIndex(1);
+            if !self.tri.is_infinite_vertex(v0) {
+                (v1, v0)
+            } else {
+                (v0, v1)
+            }
+        };
+        // finite (new) vertex
+        let v2 = self.create_vertex_with_position(p);
 
-        //infinite
-        let v0 = tri.get_infinite_vertex();
-        let f0 = tri.get_infinite_face();
-        //finite
-        let f1 = tri.get_face_neighbor(f0, Rot3(0));
-        let v1 = tri.get_face_vertex(f1, Rot3(0));
-        //new
-        let v2 = tri.create_vertex_with_position(p);
-        let f2 = tri.create_face_with_vertices(v2, v0, VertexIndex::invalid());
+        let f0 = self.tri[v0].face();
+        let f1 = self.tri[v1].face();
+        let f2 = self.create_face_with_vertices(v2, v0, VertexIndex::invalid());
 
-        tri.set_face_vertex(f0, Rot3(1), v1);
-        tri.set_face_vertex(f1, Rot3(1), v2);
-        tri.set_vertex_face(v2, f2);
+        self.tri[f0].set_vertex(Rot3(1), v1);
+        self.tri[f1].set_vertex(Rot3(1), v2);
+        self.tri[v2].set_face(f2);
 
-        tri.set_adjacent(f0, Rot3(0), f1, Rot3(1));
-        tri.set_adjacent(f1, Rot3(0), f2, Rot3(1));
-        tri.set_adjacent(f2, Rot3(0), f0, Rot3(1));
+        self.tri.set_adjacent(f0, Rot3(0), f1, Rot3(1));
+        self.tri.set_adjacent(f1, Rot3(0), f2, Rot3(1));
+        self.tri.set_adjacent(f2, Rot3(0), f0, Rot3(1));
 
         v2
     }
 
-    /// Extends dimension from 1D to 2D by creating triangles(2d face) out of the segments (1D faces).
+    /*/// Extends dimension from 1D to 2D by creating triangles(2d face) out of the segments (1D faces).
     /// The infinite vertex and triangulation can be seen as an n+1 dimensional shell. The
     /// edges of the convex hull of an nD object is connected to the infinite vertex, which can be seen as
     /// a normal point in (n+1)D which is "above" the nD points.

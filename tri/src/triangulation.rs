@@ -1,6 +1,6 @@
 use geometry::{Orientation, Position, Predicates};
 use std::ops::{Index, IndexMut};
-use types::{Edge, FaceIndex, Rot3, VertexIndex};
+use types::{Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
 /// A vertex of the triangulation
 pub trait Vertex: Default {
@@ -27,7 +27,7 @@ impl<T> VertexExt for T where T: Vertex {}
 
 /// A face of the triangualtion
 pub trait Face: Default {
-    type Constraint: Default;
+    type Constraint: Default + PartialEq;
 
     fn vertex(&self, i: Rot3) -> VertexIndex;
     fn set_vertex(&mut self, i: Rot3, v: VertexIndex);
@@ -104,8 +104,13 @@ where
         }
     }
 
-    pub fn get_dimension(&self) -> i8 {
+    pub fn dimension(&self) -> i8 {
         self.dimension
+    }
+
+    pub fn set_dimension(&mut self, dim: i8) {
+        assert!(dim >= -1 && dim < 3);
+        self.dimension = dim
     }
 
     //region container
@@ -113,11 +118,11 @@ where
         self.dimension == -1
     }
 
-    pub fn get_vertex_count(&self) -> usize {
+    pub fn vertex_count(&self) -> usize {
         self.vertices.len()
     }
 
-    pub fn get_face_count(&self) -> usize {
+    pub fn face_count(&self) -> usize {
         self.faces.len()
     }
 
@@ -136,6 +141,10 @@ where
         &mut self.vertices[v.0]
     }
 
+    pub fn vertex_index_iter(&self) -> VertexRange {
+        VertexIndex(0)..VertexIndex(self.vertices.len())
+    }
+
     pub fn store_vertex(&mut self, vert: V) -> VertexIndex {
         self.vertices.push(vert);
         VertexIndex(self.vertices.len() - 1)
@@ -149,6 +158,10 @@ where
         &mut self.faces[f.0]
     }
 
+    pub fn face_index_iter(&self) -> FaceRange {
+        FaceIndex(0)..FaceIndex(self.vertices.len())
+    }
+
     pub fn store_face(&mut self, face: F) -> FaceIndex {
         self.faces.push(face);
         FaceIndex(self.faces.len() - 1)
@@ -156,7 +169,7 @@ where
     //endregion
 
     //region infinite elements
-    pub fn get_infinite_vertex(&self) -> VertexIndex {
+    pub fn infinite_vertex(&self) -> VertexIndex {
         self.infinite_vertex
     }
 
@@ -173,8 +186,8 @@ where
         !self.is_infinite_vertex(v)
     }
 
-    pub fn get_infinite_face(&self) -> FaceIndex {
-        self[self.get_infinite_vertex()].face()
+    pub fn infinite_face(&self) -> FaceIndex {
+        self[self.infinite_vertex()].face()
     }
 
     pub fn is_infinite_face(&self, f: FaceIndex) -> bool {

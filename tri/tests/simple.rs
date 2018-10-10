@@ -15,5 +15,6 @@ fn empty() {
 
     let tri = SimpleTriGraph::new();
     assert!(tri.is_empty());
-    assert_eq!(tri.get_dimension(), -1);
+    assert_eq!(tri.dimension(), -1);
+    assert!(Checker::new(&tri).check().is_ok());
 }

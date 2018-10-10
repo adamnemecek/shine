@@ -97,14 +97,14 @@ where
 
     /// Return some random (finite) vertex from the triangulation
     pub fn get_random_finite_vertex(&mut self) -> Result<VertexIndex, String> {
-        let cnt = self.tri.get_vertex_count();
+        let cnt = self.tri.vertex_count();
         if cnt < 2 {
             return Err("Triangulation is empty".into());
         }
 
         let cnt = cnt - 1;
         let rnd = self.rng.gen_range(0, cnt);
-        if rnd < self.tri.get_infinite_vertex().0 {
+        if rnd < self.tri.infinite_vertex().0 {
             Ok(VertexIndex(rnd))
         } else {
             Ok(VertexIndex(rnd + 1))
@@ -117,7 +117,7 @@ where
 
         assert!(tri.dimension == 0);
 
-        // find the finite vertex
+        // find the (only) finite vertex
         let v0 = {
             let v = VertexIndex(1);
             if !tri.is_infinite_vertex(v) {
