@@ -91,7 +91,6 @@ where
     }
 
     fn check_face_face_link(&self) -> Result<(), String> {
-        assert!(self.tri.dimension() >= 0);
         for f in self.tri.face_index_iter() {
             for d in 0..self.tri.dimension() {
                 let i = Rot3(d as u8);
@@ -140,8 +139,15 @@ where
         Ok(())
     }
 
+    pub fn check_topology(&self) -> Result<(), String> {
+        self.check_vertex_face_link()?;
+        self.check_face_face_link()?;
+        Ok(())
+    }
+
     pub fn check(&self) -> Result<(), String> {
         self.check_dimension()?;
+        self.check_topology()?;
         Ok(())
     }
 }
