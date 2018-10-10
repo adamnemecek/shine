@@ -1,4 +1,5 @@
 use geometry::{Orientation, Position, Predicates};
+use std::fmt;
 use std::ops::{Index, IndexMut};
 use types::{Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
@@ -127,7 +128,7 @@ where
     }
 
     pub fn clear(&mut self) {
-        self.dimension = 0;
+        self.dimension = -1;
         self.faces.clear();
         self.vertices.clear();
         self.infinite_vertex = VertexIndex::invalid();
@@ -310,6 +311,52 @@ where
 {
     fn default() -> TriGraph<P, V, F> {
         TriGraph::new()
+    }
+}
+
+impl<P, V, F> fmt::Debug for TriGraph<P, V, F>
+where
+    P: Predicates,
+    V: Vertex<Position = P::Position>,
+    F: Face,
+{
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Tri {{ V[ ");
+        for v in self.vertex_index_iter() {
+            if self.is_infinite_vertex(v) {
+                write!(f, "*")?;
+            }
+            write!(f, "{:?}, ", v)?;
+        }
+        write!(f, "] ")?;
+
+        write!(f, "F[ ")?;
+        for t in self.face_index_iter() {
+            if self.is_infinite_face(t) {
+                write!(f, "*")?;
+            }
+            write!(f, "{:?}, ", t)?;
+        }
+        writeln!(f, "] ")?;
+
+        write!(f, "VF[ ")?;
+        for v in self.vertex_index_iter() {
+            write!(f, "{:?}->{:?}, ", v, self[v].face())?;
+        }
+        writeln!(f, "]")?;
+
+        write!(f, "FV[ ")?;
+        for t in self.face_index_iter() {
+            write!(
+                f,
+                "{:?}->({:?},{:?},{:?}), ",
+                t,
+                self[t].vertex(Rot3(0)),
+                self[t].vertex(Rot3(1)),
+                self[t].vertex(Rot3(2))
+            )?;
+        }
+        writeln!(f, "] }}")
     }
 }
 

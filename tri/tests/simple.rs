@@ -25,7 +25,7 @@ fn dimension0() {
 
     let mut tri = SimpleTriGraph::new();
 
-    info!("add point");
+    info!("add a point");
     let vi = {
         let mut builder = Builder::new(&mut tri);
         builder.add_vertex(Pos(0., 0.), None)
@@ -45,6 +45,6 @@ fn dimension0() {
     info!("clear");
     tri.clear();
     assert!(tri.is_empty());
-    assert_eq!(tri.dimension(), 0);
+    assert_eq!(tri.dimension(), -1);
     assert_eq!(Checker::new(&tri).check(None), Ok(()));
 }

@@ -110,7 +110,7 @@ where
         let f1 = self.create_face_with_vertices(v1, VertexIndex::invalid(), VertexIndex::invalid());
 
         self.tri[v0].set_face(f0);
-        self.tri[v0].set_face(f1);
+        self.tri[v1].set_face(f1);
         self.tri.set_adjacent(f0, Rot3(0), f1, Rot3(0));
 
         v1
