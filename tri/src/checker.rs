@@ -1,6 +1,6 @@
-use geometry::{CollinearTest, Orientation, Predicates};
+use geometry::{Orientation, Position, Predicates};
 use triangulation::{Face, TriGraph, Vertex};
-use types::{FaceIndex, Rot3, VertexIndex};
+use types::Rot3;
 
 pub struct Checker<'a, P, V, F>
 where
@@ -145,9 +145,110 @@ where
         Ok(())
     }
 
-    pub fn check(&self) -> Result<(), String> {
+    pub fn check_orientation(&self) -> Result<(), String> {
+        if self.tri.dimension() < 2 {
+            return Ok(());
+        }
+
+        for f in self.tri.face_index_iter() {
+            if self.tri.is_infinite_face(f) {
+                continue;
+            }
+
+            let v0 = self.tri[f].vertex(Rot3(0));
+            let v1 = self.tri[f].vertex(Rot3(1));
+            let v2 = self.tri[f].vertex(Rot3(2));
+
+            if self.tri.get_vertices_orientation(v0, v1, v2) != Orientation::CounterClockwise {
+                return Err(format!("Count-clockwise property is violated for {:?}", f));
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn check_area(&self, eps: Option<f64>) -> Result<(), String> {
+        if self.tri.dimension() != 2 {
+            return Ok(());
+        }
+
+        // calculate the area of the triangles
+        let mut tri_area = 0.;
+        for f in self.tri.face_index_iter() {
+            if self.tri.is_infinite_face(f) {
+                continue;
+            }
+
+            let v0 = self.tri[f].vertex(Rot3(0));
+            let v1 = self.tri[f].vertex(Rot3(1));
+            let v2 = self.tri[f].vertex(Rot3(2));
+
+            let a = self.tri[v0].position();
+            let b = self.tri[v1].position();
+            let c = self.tri[v2].position();
+
+            let ax: f64 = a.x().into();
+            let ay: f64 = a.y().into();
+            let bx: f64 = b.x().into();
+            let by: f64 = b.y().into();
+            let cx: f64 = c.x().into();
+            let cy: f64 = c.y().into();
+            let abx = bx - ax;
+            let aby = by - ay;
+            let acx = cx - ax;
+            let acy = cy - ay;
+            tri_area += abx * acy - aby * acx; // twice the area of the triangle
+        }
+
+        // calculate the area of the convex hull
+        let mut convex_area = 0.;
+        let end = self.tri.infinite_face();
+        let mut cur = end;
+        loop {
+            let iid = self.tri[cur].get_vertex_index(self.tri.infinite_vertex()).unwrap(); // index of infinite vertex
+            let aid = iid.decrement();
+            let bid = iid.increment();
+            let va = self.tri[cur].vertex(aid);
+            let vb = self.tri[cur].vertex(bid);
+            let a = self.tri[va].position();
+            let b = self.tri[vb].position();
+            let ax: f64 = a.x().into();
+            let ay: f64 = a.y().into();
+            let bx: f64 = b.x().into();
+            let by: f64 = b.y().into();
+
+            convex_area += ax * by - bx * ay;
+            cur = self.tri[cur].neighbor(aid);
+            if cur == end {
+                break;
+            }
+        }
+
+        trace!(
+            "tri_area={}, convex_area={}, area_diff={}",
+            tri_area,
+            convex_area,
+            convex_area - tri_area
+        );
+
+        let eps = eps.unwrap_or(1e-12);
+        if (convex_area - tri_area).abs() > tri_area * eps {
+            Err(format!(
+                "Area of convex hull differs from polygon too much: tri_area={}, convex_area={}, area_diff={}",
+                tri_area,
+                convex_area,
+                convex_area - tri_area
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    pub fn check(&self, eps_area: Option<f64>) -> Result<(), String> {
         self.check_dimension()?;
         self.check_topology()?;
+        self.check_orientation()?;
+        self.check_area(eps_area)?;
         Ok(())
     }
 }

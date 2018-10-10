@@ -15,14 +15,14 @@ pub enum CollinearTest {
 }
 
 pub trait Position {
-    type Real: PartialOrd;
+    type Real: PartialOrd + Into<f64>;
 
     fn x(&self) -> Self::Real;
     fn y(&self) -> Self::Real;
 }
 
 pub trait Predicates {
-    type Real: PartialOrd;
+    type Real: PartialOrd + Into<f64>;
     type Position: Position<Real = Self::Real>;
 
     // Find the orientation of three points.
