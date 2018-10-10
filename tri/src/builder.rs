@@ -130,10 +130,10 @@ where
         let (v0, v1) = {
             let v0 = VertexIndex(0);
             let v1 = VertexIndex(1);
-            if !self.tri.is_infinite_vertex(v0) {
-                (v1, v0)
-            } else {
+            if self.tri.is_infinite_vertex(v0) {
                 (v0, v1)
+            } else {
+                (v1, v0)
             }
         };
         // finite (new) vertex
