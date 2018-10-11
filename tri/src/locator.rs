@@ -24,10 +24,10 @@ impl ContainmentResult {
 #[derive(Debug)]
 pub enum Location {
     /// Point is inside a triangle
-    Face { face: FaceIndex },
+    Face(FaceIndex),
 
     /// Point is on the edge of a triangle
-    Edge { face: FaceIndex, index: Rot3 },
+    Edge(FaceIndex, Rot3),
 
     /// Point is on the vertex of a triangle
     Vertex(FaceIndex, Rot3),
@@ -44,8 +44,8 @@ pub enum Location {
     /// Point is outside the affine hull of a 1D triangulation (the query point and triangulation forms a ccw triangle)
     OutsideAffineHullCounterClockwise,
 
-    /// Point is outside the affine hull of a 2D triangulation
-    OutsideConvexHull { face: FaceIndex },
+    /// Point is outside the affine hull of a 2D triangulation, with the given nearest face
+    OutsideConvexHull(FaceIndex),
 }
 
 pub struct Locator<'a, R, P, V, F>
@@ -86,10 +86,10 @@ where
     F: 'a + Face,
 {
     pub fn locate_position(&mut self, p: &P::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
-        match self.tri.dimension {
+        match self.tri.dimension() {
             -1 => Ok(Location::Empty),
             0 => self.locate_position_dim0(p),
-            //1 => self.locate_position_dim1(p),
+            1 => self.locate_position_dim1(p),
             //2 => self.locate_position_dim2(p, hint),
             dim => unreachable!(format!("Invalid dimension: {}", dim)),
         }
@@ -115,7 +115,7 @@ where
     fn locate_position_dim0(&mut self, p: &P::Position) -> Result<Location, String> {
         let tri = self.tri;
 
-        assert!(tri.dimension == 0);
+        assert!(tri.dimension() == 0);
 
         // find the (only) finite vertex
         let v0 = {
@@ -128,7 +128,7 @@ where
         };
 
         let p0 = &tri[v0].position();
-        if tri.predicates.test_coincident_points(p, p0) {
+        if tri.predicates().test_coincident_points(p, p0) {
             let f0 = tri[v0].face();
             Ok(Location::Vertex(f0, tri[f0].get_vertex_index(v0).unwrap()))
         } else {
@@ -136,78 +136,76 @@ where
         }
     }
 
-    /*  /// Find the location of a point in a straight line strip. (dimension = 1)
-    fn locate_position_dim1(&mut self, p: &T::Position) -> Result<Location, String> {
-        let tri = self.tri;
-        assert!(tri.dimension == 1);
+    /// Find the location of a point in a straight line strip. (dimension = 1)
+    fn locate_position_dim1(&mut self, p: &P::Position) -> Result<Location, String> {
+        assert!(self.tri.dimension() == 1);
 
         // calculate the convex hull of the 1-d mesh
         // the convex hull is a segment made up from the two (finite) neighboring vertices of the infinite vertex
 
+        let vinf = self.tri.infinite_vertex();
         // first point of the convex hull (segments)
-        let f0 = tri.get_infinite_face();
-        let iv0 = tri.get_face_vertex_index(f0, tri.get_infinite_vertex()).unwrap();
-        let cp0 = tri.get_face_vertex_position(f0, iv0.mirror(2));
+        let f0 = self.tri.infinite_face();
+        let iv0 = self.tri[f0].get_vertex_index(vinf).unwrap();
+        let cp0 = {
+            let v = self.tri[f0].vertex(iv0.mirror(2));
+            self.tri[v].position()
+        };
 
         // last point of the convex hull (segments)
-        let f1 = tri.get_face_neighbor(f0, iv0.mirror(2));
-        let iv1 = tri.get_face_vertex_index(f1, tri.get_infinite_vertex()).unwrap();
-        let cp1 = tri.get_face_vertex_position(f1, iv1.mirror(2));
+        let f1 = self.tri[f0].neighbor(iv0.mirror(2));
+        let iv1 = self.tri[f1].get_vertex_index(vinf).unwrap();
+        let cp1 = {
+            let v = self.tri[f1].vertex(iv1.mirror(2));
+            self.tri[v].position()
+        };
 
-        match tri.predicates.orientation(cp0, cp1, p) {
+        match self.tri.predicates().orientation(cp0, cp1, p) {
             Orientation::Clockwise => Ok(Location::OutsideAffineHullClockwise),
             Orientation::CounterClockwise => Ok(Location::OutsideAffineHullCounterClockwise),
             _ => {
                 // point is on the line
-                let t = tri.predicates.test_collinear_points(cp0, cp1, p);
+                let t = self.tri.predicates().test_collinear_points(cp0, cp1, p);
                 match t {
-                    CollinearTest::Before => Ok(Location::OutsideConvexHull { face: f0 }),
-                    CollinearTest::First => Ok(Location::Vertex {
-                        face: f0,
-                        index: iv0.mirror(2),
-                    }),
-                    CollinearTest::Second => Ok(Location::Vertex {
-                        face: f1,
-                        index: iv1.mirror(2),
-                    }),
-                    CollinearTest::After => Ok(Location::OutsideConvexHull { face: f1 }),
+                    CollinearTest::Before => Ok(Location::OutsideConvexHull(f0)),
+                    CollinearTest::First => Ok(Location::Vertex(f0, iv0.mirror(2))),
+                    CollinearTest::Second => Ok(Location::Vertex(f1, iv1.mirror(2))),
+                    CollinearTest::After => Ok(Location::OutsideConvexHull(f1)),
                     CollinearTest::Between => {
                         // Start from an infinite face(f0) and advance to the neighboring segments while the
                         // the edge(face) containing the point is not found
-
                         let mut prev = f0;
                         let mut dir = iv0;
                         loop {
-                            let cur = tri.get_face_neighbor(prev, dir);
-                            assert!(tri.is_finite_face(cur));
-                            let p0 = tri.get_face_vertex_position(cur, Rot3(0));
-                            let p1 = tri.get_face_vertex_position(cur, Rot3(1));
-                            let t = tri.predicates.test_collinear_points(p0, p1, p);
+                            let cur = self.tri[prev].neighbor(dir);
+                            assert!(self.tri.is_finite_face(cur));
+
+                            let p0 = {
+                                let v = self.tri[cur].vertex(Rot3(0));
+                                self.tri[v].position()
+                            };
+                            let p1 = {
+                                let v = self.tri[cur].vertex(Rot3(1));
+                                self.tri[v].position()
+                            };
+
+                            let t = self.tri.predicates().test_collinear_points(p0, p1, p);
                             match t {
                                 CollinearTest::First => {
                                     // identical to p0
-                                    break Ok(Location::Vertex {
-                                        face: cur,
-                                        index: Rot3(0),
-                                    });
+                                    break Ok(Location::Vertex(cur, Rot3(0)));
                                 }
                                 CollinearTest::Second => {
                                     // identical to p1
-                                    break Ok(Location::Vertex {
-                                        face: cur,
-                                        index: Rot3(1),
-                                    });
+                                    break Ok(Location::Vertex(cur, Rot3(1)));
                                 }
                                 CollinearTest::Between => {
                                     // inside the (p0,p1) segment
-                                    break Ok(Location::Edge {
-                                        face: cur,
-                                        index: Rot3(2),
-                                    });
+                                    break Ok(Location::Edge(cur, Rot3(2)));
                                 }
                                 _ => {
                                     // advance to the next edge
-                                    let vi = tri.get_face_neighbor_index(cur, prev).unwrap();
+                                    let vi = self.tri[cur].get_neighbor_index(prev).unwrap();
                                     prev = cur;
                                     dir = vi.mirror(2);
                                 }
@@ -219,7 +217,7 @@ where
         }
     }
 
-    /// Ques point location by finding the nearest vertex to the point from a random sampling of vertices
+    /*/// Ques point location by finding the nearest vertex to the point from a random sampling of vertices
     fn guess_start_vertex(&mut self, sample_count: usize, p: &T::Position) -> VertexIndex {
         if sample_count <= 0 {
             self.tri.get_infinite_vertex()

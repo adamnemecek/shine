@@ -2,6 +2,7 @@ extern crate shine_tri;
 
 use shine_tri::*;
 
+#[derive(Clone, Debug)]
 pub struct Pos(pub f32, pub f32);
 
 impl Position for Pos {

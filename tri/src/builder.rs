@@ -49,7 +49,7 @@ where
     }
 
     fn add_vertex_at(&mut self, p: P::Position, loc: Location) -> VertexIndex {
-        match self.tri.dimension {
+        match self.tri.dimension() {
             -1 => match loc {
                 Location::Empty => self.extend_to_dim0(p),
                 loc => unreachable!(format!("Invalid location for empty triangulation: {:?}", loc)),
@@ -59,15 +59,15 @@ where
                 Location::OutsideAffineHull => self.extend_to_dim1(p),
                 loc => unreachable!(format!("Invalid location for 0D triangulation: {:?}", loc)),
             },
-            /*1 => match loc {
-                Location::Vertex { face, index } => self.tri.get_face_vertex(face, index),
-                Location::Edge { face, .. } => self.split_edge_dim1(p, face),
-                Location::OutsideConvexHull { face } => self.split_edge_dim1(p, face),
-                Location::OutsideAffineHullClockwise => self.extend_to_dim2(p, false),
-                Location::OutsideAffineHullCounterClockwise => self.extend_to_dim2(p, true),
+            1 => match loc {
+                Location::Vertex(f, i) => self.tri[f].vertex(i),
+                Location::Edge(f, _) => self.split_edge_dim1(p, f),
+                Location::OutsideConvexHull(f) => self.split_edge_dim1(p, f),
+                //Location::OutsideAffineHullClockwise => self.extend_to_dim2(p, f),
+                //Location::OutsideAffineHullCounterClockwise => self.extend_to_dim2(p, true),
                 loc => unreachable!(format!("Invalid location for 1D triangulation: {:?}", loc)),
             },
-            2 => match loc {
+            /*2 => match loc {
                 Location::Vertex { face, index } => self.tri.get_face_vertex(face, index),
                 Location::Edge { face, index } => self.split_edge_dim2(p, face, index),
                 Location::Face { face } => self.split_face(p, face),
@@ -88,6 +88,11 @@ where
         let mut v: V = Default::default();
         v.set_position(p);
         self.tri.store_vertex(v)
+    }
+
+    fn create_face(&mut self) -> FaceIndex {
+        let mut f: F = Default::default();
+        self.tri.store_face(f)
     }
 
     fn create_face_with_vertices(&mut self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> FaceIndex {
@@ -252,12 +257,10 @@ where
         }
 
         new_vertex
-    }
+    }*/
 
-    fn split_edge_dim1(&mut self, p: T::Position, f: FaceIndex) -> VertexIndex {
-        let tri = &mut self.tri;
-
-        assert!(tri.dimension == 1);
+    fn split_edge_dim1(&mut self, p: P::Position, f: FaceIndex) -> VertexIndex {
+        assert!(self.tri.dimension() == 1);
 
         // f0 : the face to split
         // f2 : new face
@@ -269,26 +272,27 @@ where
         //     v0       v2      v1
         // ----*0--f0--1*0-f2--1*j--f1---i*---
 
+        let v2 = self.create_vertex_with_position(p); // new vertex
+        let f2 = self.create_face(); // new face
+
         let f0 = f;
-        let f1 = tri.get_face_neighbor(f0, Rot3(0));
-        let i = tri.get_face_neighbor_index(f1, f0).unwrap();
-        let v1 = tri.get_face_vertex(f1, i.mirror(2)); // j = 1-i
+        let f1 = self.tri[f0].neighbor(Rot3(0));
+        let i = self.tri[f1].get_neighbor_index(f0).unwrap();
+        let v1 = self.tri[f1].vertex(i.mirror(2)); // j = 1-i
 
-        // new face,vertex
-        let v2 = tri.create_vertex_with_position(p);
-        let f2 = tri.create_face_with_vertices(v2, v1, VertexIndex::invalid());
+        self.tri[v1].set_face(f1);
+        self.tri[v2].set_face(f2);
+        self.tri[f0].set_vertex(Rot3(1), v2);
+        self.tri[f2].set_vertices(v2, v1, VertexIndex::invalid());
+        self.tri.set_adjacent(f2, Rot3(1), f0, Rot3(0));
+        self.tri.set_adjacent(f2, Rot3(0), f1, i);
 
-        tri.set_vertex_face(v1, f1);
-        tri.set_vertex_face(v2, f2);
-        tri.set_face_vertex(f0, Rot3(1), v2);
-        tri.set_face_vertices(f2, v2, v1, VertexIndex::invalid());
-        tri.set_adjacent(f2, Rot3(1), f0, Rot3(0));
-        tri.set_adjacent(f2, Rot3(0), f1, i);
+        let c = self.tri[f0].constraint(Rot3(2));
+        self.tri[f2].set_constraint(Rot3(2), c);
 
-        tri.set_constraint(f2, Rot3(2), tri.get_constraint(f0, Rot3(2)));
         v2
     }
-
+    /*
     fn split_edge_dim2(&mut self, p: T::Position, face: FaceIndex, edge: Rot3) -> VertexIndex {
         let tri = &mut self.tri;
 

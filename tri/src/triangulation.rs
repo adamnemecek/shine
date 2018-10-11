@@ -82,11 +82,11 @@ where
     V: Vertex<Position = P::Position>,
     F: Face,
 {
-    crate predicates: P,
-    crate dimension: i8,
-    crate vertices: Vec<V>,
-    crate faces: Vec<F>,
-    crate infinite_vertex: VertexIndex,
+    predicates: P,
+    dimension: i8,
+    vertices: Vec<V>,
+    faces: Vec<F>,
+    infinite_vertex: VertexIndex,
 }
 
 impl<P, V, F> TriGraph<P, V, F>
@@ -272,6 +272,14 @@ where
     //endregion
 
     //region geometry relationship
+    pub fn predicates(&self) -> &P {
+        &self.predicates
+    }
+
+    pub fn predicates_mut(&mut self) -> &mut P {
+        &mut self.predicates
+    }
+
     pub fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Orientation {
         assert!(v0 != self.infinite_vertex && v1 != self.infinite_vertex && v2 != self.infinite_vertex);
         let a = &self[v0].position();

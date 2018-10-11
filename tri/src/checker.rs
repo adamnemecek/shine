@@ -39,7 +39,7 @@ where
             let finite_vertex_count = self
                 .tri
                 .vertex_index_iter()
-                .filter(|&v| self.tri.is_infinite_vertex(v))
+                .filter(|&v| !self.tri.is_infinite_vertex(v))
                 .count();
             if finite_vertex_count != self.tri.vertex_count() - 1 {
                 return Err(format!(
