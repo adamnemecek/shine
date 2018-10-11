@@ -10,7 +10,7 @@ use shine_testutils::*;
 use shine_tri::*;
 
 #[test]
-fn empty() {
+fn t0_empty() {
     init_test_logger(module_path!());
 
     let tri = SimpleTriGraph::new();
@@ -20,7 +20,7 @@ fn empty() {
 }
 
 #[test]
-fn dimension0() {
+fn t1_dimension0() {
     init_test_logger(module_path!());
 
     let mut tri = SimpleTriGraph::new();
@@ -50,44 +50,25 @@ fn dimension0() {
 }
 
 #[test]
-fn dimension1() {
+fn t2_dimension1() {
     init_test_logger(module_path!());
 
     let mut tri = SimpleTriGraph::new();
 
-    let transforms = vec![("(x, 0.)", move |x| Pos(x, 0.))];
-    /*}
-            1 => {
-                info!("(0., x)");
-                move |x| Pos(0., x)
-            }
-            2 => {
-                info!("(-x, 0.)");
-                move |x| Pos(-x, 0.)
-            }
-            3 => {
-                info!("(0., -x)");
-                move |x| Pos(0., -x)
-            }
-            4 => {
-                info!("(x, x)");
-                move |x| Pos(x, x)
-            }
-            5 => {
-                info!("(-x, -x)");
-                move |x| Pos(-x, -x)
-            }
-            6 => {
-                info!("(x, -x)");
-                move |x| Pos(x, -x)
-            }
-            7 => {
-                info!("(-x, x)");
-                move |x| Pos(-x, x)
-            }*/
+    let transforms: Vec<(&str, Box<Fn(f32) -> Pos>)> = vec![
+        ("(x, 0)", Box::new(|x| Pos(x, 0.))),
+        ("(0, x)", Box::new(|x| Pos(0., x))),
+        ("(-x, 0)", Box::new(|x| Pos(-x, 0.))),
+        ("(0, -x)", Box::new(|x| Pos(0., -x))),
+        ("(x, x)", Box::new(|x| Pos(x, x))),
+        ("(x, -x)", Box::new(|x| Pos(x, -x))),
+        ("(-x, -x)", Box::new(|x| Pos(-x, -x))),
+        ("(-x, x)", Box::new(|x| Pos(-x, x))),
+    ];
 
     for (info, map) in transforms.iter() {
         info!("transformation: {}", info);
+
         let positions = vec![0., 0.4, 0.2, 0.1, 0.3, 0.7];
         for (i, &p) in positions.iter().enumerate() {
             let expected_dim = match i {
@@ -108,5 +89,10 @@ fn dimension1() {
             assert_eq!(Checker::new(&tri).check(None), Ok(()));
             assert_eq!(vi, vi_dup);
         }
+
+        debug!("clear");
+        tri.clear();
+        assert!(tri.is_empty());
+        assert_eq!(Checker::new(&tri).check(None), Ok(()));
     }
 }
