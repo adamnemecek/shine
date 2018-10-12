@@ -1,3 +1,4 @@
+#![cfg(off)]
 #[macro_use]
 extern crate quickcheck;
 extern crate shine_testutils;

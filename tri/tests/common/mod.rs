@@ -1,5 +1,3 @@
-extern crate shine_tri;
-
 use shine_tri::*;
 
 #[derive(Clone, Debug)]
