@@ -18,7 +18,8 @@ fn issue39() {
 
     let mut tri = SimpleTri::new();
 
-    let pnts = vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, -3.0)];
+    //let pnts = vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, -3.0)];
+    let pnts = vec![(0.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 3.0)];
 
     {
         let mut builder = Builder::new(&mut tri);

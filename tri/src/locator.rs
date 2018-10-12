@@ -75,7 +75,7 @@ where
             tri,
             rng,
             iteration_stochastic_limit: 10,
-            start_face_sampling_density: 100,
+            start_face_sampling_density: 0,
         }
     }
 }
@@ -299,8 +299,12 @@ where
         let start = match hint {
             Some(f) => f,
             None => {
-                let cnt = self.tri.vertex_count();
-                let sample_count = (cnt + self.start_face_sampling_density - 1) / self.start_face_sampling_density;
+                let sample_count = if self.start_face_sampling_density <= 0 {
+                    0
+                } else {
+                    let cnt = self.tri.vertex_count();
+                    (cnt + self.start_face_sampling_density - 1) / self.start_face_sampling_density
+                };
                 let v = self.guess_start_vertex(sample_count, p);
                 let start = self.tri[v].face();
                 match self.tri[start].get_vertex_index(self.tri.infinite_vertex()) {
