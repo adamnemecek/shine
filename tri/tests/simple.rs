@@ -13,7 +13,7 @@ use shine_tri::*;
 fn t0_empty() {
     init_test_logger(module_path!());
 
-    let tri = SimpleTriGraph::new();
+    let tri = SimpleTri::new();
     assert!(tri.is_empty());
     assert_eq!(tri.dimension(), -1);
     assert_eq!(Checker::new(&tri).check(None), Ok(()));
@@ -23,7 +23,7 @@ fn t0_empty() {
 fn t1_dimension0() {
     init_test_logger(module_path!());
 
-    let mut tri = SimpleTriGraph::new();
+    let mut tri = SimpleTri::new();
 
     info!("add a point");
     let vi = {
@@ -53,7 +53,7 @@ fn t1_dimension0() {
 fn t2_dimension1() {
     init_test_logger(module_path!());
 
-    let mut tri = SimpleTriGraph::new();
+    let mut tri = SimpleTri::new();
 
     let transforms: Vec<(&str, Box<Fn(f32) -> Pos>)> = vec![
         ("(x, 0)", Box::new(|x| Pos(x, 0.))),
@@ -94,5 +94,55 @@ fn t2_dimension1() {
         tri.clear();
         assert!(tri.is_empty());
         assert_eq!(Checker::new(&tri).check(None), Ok(()));
+    }
+}
+
+#[test]
+fn t2_dimension2() {
+    init_test_logger(module_path!());
+
+    let mut tri = SimpleTri::new();
+
+    let transforms: Vec<(&str, Box<Fn(f32, f32) -> Pos>)> = vec![
+        ("(x, y)", Box::new(|x, y| Pos(x, y))),
+        ("(-x, y)", Box::new(|x, y| Pos(-x, y))),
+        ("(-x, -y)", Box::new(|x, y| Pos(-x, -y))),
+        ("(x, -y)", Box::new(|x, y| Pos(x, -y))),
+        ("(y, x)", Box::new(|x, y| Pos(y, x))),
+        ("(-y, x)", Box::new(|x, y| Pos(-y, x))),
+        ("(-y, -x)", Box::new(|x, y| Pos(-y, -x))),
+        ("(y, -x)", Box::new(|x, y| Pos(y, -x))),
+    ];
+
+    let test_cases = vec![
+        vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0)],
+        vec![(0., 0.), (0.5, 0.), (1., 0.), (1.5, 0.), (2., 0.), (1., 2.)],
+        vec![(0., 0.), (2., 0.), (1.5, 0.), (1., 0.), (0.5, 0.), (1., 2.)],
+        vec![(0., 0.), (1.5, 0.), (1., 0.), (0.5, 0.), (2., 0.), (1., 2.)],
+    ];
+
+    for (info, map) in transforms.iter() {
+        info!("transformation: {}", info);
+
+        for (i, pnts) in test_cases.iter().enumerate() {
+            info!("testcase: {}", i);
+
+            //fTriTrace.setVirtualPositions( { glm::vec2( -3, 0 ), glm::vec2( 3, 0 ), glm::vec2( 0, -3 ), glm::vec2( 0, 3 ) } );
+
+            for &(x, y) in pnts.iter() {
+                let pos = map(x, y);
+                debug!("add {:?}", pos);
+                let vi = Builder::new(&mut tri).add_vertex(pos, None);
+                assert_eq!(Checker::new(&tri).check(None), Ok(()));
+
+                let pos = map(x, y);
+                debug!("add duplicate {:?}", pos);
+                let vi_dup = Builder::new(&mut tri).add_vertex(pos, None);
+                assert_eq!(Checker::new(&tri).check(None), Ok(()));
+                assert_eq!(vi, vi_dup);
+            }
+
+            assert_eq!(tri.dimension(), 2);
+        }
     }
 }

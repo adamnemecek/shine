@@ -17,21 +17,21 @@ impl Position for Pos {
     }
 }
 
-pub struct SimpleVertex {
+pub struct TriVertex {
     position: Pos,
     face: FaceIndex,
 }
 
-impl Default for SimpleVertex {
-    fn default() -> SimpleVertex {
-        SimpleVertex {
+impl Default for TriVertex {
+    fn default() -> TriVertex {
+        TriVertex {
             position: Pos(0., 0.),
             face: FaceIndex::invalid(),
         }
     }
 }
 
-impl Vertex for SimpleVertex {
+impl Vertex for TriVertex {
     type Position = Pos;
 
     fn position(&self) -> &Self::Position {
@@ -51,15 +51,15 @@ impl Vertex for SimpleVertex {
     }
 }
 
-pub struct SimpleFace {
+pub struct TriFace {
     vertices: [VertexIndex; 3],
     neighbors: [FaceIndex; 3],
     constraints: [bool; 3],
 }
 
-impl Default for SimpleFace {
-    fn default() -> SimpleFace {
-        SimpleFace {
+impl Default for TriFace {
+    fn default() -> TriFace {
+        TriFace {
             vertices: [VertexIndex::invalid(); 3],
             neighbors: [FaceIndex::invalid(); 3],
             constraints: [false; 3],
@@ -67,7 +67,7 @@ impl Default for SimpleFace {
     }
 }
 
-impl Face for SimpleFace {
+impl Face for TriFace {
     type Constraint = bool;
 
     fn vertex(&self, i: Rot3) -> VertexIndex {
@@ -103,4 +103,4 @@ impl Face for SimpleFace {
     }
 }
 
-pub type SimpleTriGraph = TriGraph<InexactPredicates<Pos>, SimpleVertex, SimpleFace>;
+pub type SimpleTri = Graph<InexactPredicates<Pos>, TriVertex, TriFace>;

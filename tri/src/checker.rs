@@ -1,5 +1,5 @@
 use geometry::{Orientation, Position, Predicates};
-use triangulation::{Face, TriGraph, Vertex};
+use graph::{Face, Graph, Vertex};
 use types::Rot3;
 
 pub struct Checker<'a, P, V, F>
@@ -8,7 +8,7 @@ where
     V: 'a + Vertex<Position = P::Position>,
     F: 'a + Face,
 {
-    tri: &'a TriGraph<P, V, F>,
+    tri: &'a Graph<P, V, F>,
 }
 
 impl<'a, P, V, F> Checker<'a, P, V, F>
@@ -17,7 +17,7 @@ where
     V: 'a + Vertex<Position = P::Position>,
     F: 'a + Face,
 {
-    pub fn new(tri: &TriGraph<P, V, F>) -> Checker<P, V, F> {
+    pub fn new(tri: &Graph<P, V, F>) -> Checker<P, V, F> {
         Checker { tri }
     }
 
@@ -49,8 +49,8 @@ where
                 ));
             }
 
-            let mut finite_face_count = 0;
-            let mut infinite_face_count = 0;
+            let mut _finite_face_count = 0;
+            let mut _infinite_face_count = 0;
             for f in self.tri.face_index_iter() {
                 for r in 0..3 {
                     let d = Rot3(r);
@@ -64,9 +64,9 @@ where
                     }
                 }
                 if self.tri.is_infinite_face(f) {
-                    infinite_face_count += 1;
+                    _infinite_face_count += 1;
                 } else {
-                    finite_face_count += 1;
+                    _finite_face_count += 1;
                 }
             }
 

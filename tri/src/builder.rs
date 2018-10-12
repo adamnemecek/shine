@@ -1,8 +1,8 @@
-use geometry::{Orientation, Predicates};
+use geometry::Predicates;
+use graph::{Face, FaceExt, Graph, Vertex};
 use locator::{Location, Locator};
 use rand::{self, Rng, ThreadRng};
-use triangulation::{Face, FaceExt, TriGraph, Vertex, VertexExt};
-use types::{Edge, FaceIndex, Rot3, VertexIndex};
+use types::{FaceIndex, Rot3, VertexIndex};
 
 pub struct Builder<'a, R, P, V, F>
 where
@@ -12,7 +12,7 @@ where
     F: 'a + Face,
 {
     rng: R,
-    tri: &'a mut TriGraph<P, V, F>,
+    tri: &'a mut Graph<P, V, F>,
 }
 
 impl<'a, P, V, F> Builder<'a, ThreadRng, P, V, F>
@@ -21,7 +21,7 @@ where
     V: 'a + Vertex<Position = P::Position>,
     F: 'a + Face,
 {
-    pub fn new(tri: &mut TriGraph<P, V, F>) -> Builder<ThreadRng, P, V, F> {
+    pub fn new(tri: &mut Graph<P, V, F>) -> Builder<ThreadRng, P, V, F> {
         Builder {
             tri,
             rng: rand::thread_rng(),
@@ -36,7 +36,7 @@ where
     V: 'a + Vertex<Position = P::Position>,
     F: 'a + Face,
 {
-    pub fn new_with_rng(rng: R, tri: &mut TriGraph<P, V, F>) -> Builder<R, P, V, F> {
+    pub fn new_with_rng(rng: R, tri: &mut Graph<P, V, F>) -> Builder<R, P, V, F> {
         Builder { rng, tri }
     }
 
@@ -63,17 +63,17 @@ where
                 Location::Vertex(f, i) => self.tri[f].vertex(i),
                 Location::Edge(f, _) => self.split_edge_dim1(p, f),
                 Location::OutsideConvexHull(f) => self.split_edge_dim1(p, f),
-                //Location::OutsideAffineHullClockwise => self.extend_to_dim2(p, f),
-                //Location::OutsideAffineHullCounterClockwise => self.extend_to_dim2(p, true),
+                Location::OutsideAffineHullClockwise => self.extend_to_dim2(p, false),
+                Location::OutsideAffineHullCounterClockwise => self.extend_to_dim2(p, true),
                 loc => unreachable!(format!("Invalid location for 1D triangulation: {:?}", loc)),
             },
-            /*2 => match loc {
-                Location::Vertex { face, index } => self.tri.get_face_vertex(face, index),
-                Location::Edge { face, index } => self.split_edge_dim2(p, face, index),
-                Location::Face { face } => self.split_face(p, face),
-                Location::OutsideConvexHull { face } => self.insert_outside_convex_hull2(p, face),
+            2 => match loc {
+                Location::Vertex(f, i) => self.tri[f].vertex(i),
+                //Location::Edge { face, index } => self.split_edge_dim2(p, face, index),
+                //Location::Face { face } => self.split_face(p, face),
+                //Location::OutsideConvexHull { face } => self.insert_outside_convex_hull2(p, face),
                 _ => unreachable!(format!("Invalid location for 2D triangulation: {:?}", loc)),
-            },*/
+            },
             dim => unreachable!(format!("Invalid dimension: {}, {:?}", dim, loc)),
         }
     }
@@ -91,8 +91,7 @@ where
     }
 
     fn create_face(&mut self) -> FaceIndex {
-        let mut f: F = Default::default();
-        self.tri.store_face(f)
+        self.tri.store_face(Default::default())
     }
 
     fn create_face_with_vertices(&mut self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> FaceIndex {
@@ -159,19 +158,17 @@ where
         v2
     }
 
-    /*/// Extends dimension from 1D to 2D by creating triangles(2d face) out of the segments (1D faces).
+    /// Extends dimension from 1D to 2D by creating triangles(2d face) out of the segments (1D faces).
     /// The infinite vertex and triangulation can be seen as an n+1 dimensional shell. The
     /// edges of the convex hull of an nD object is connected to the infinite vertex, which can be seen as
     /// a normal point in (n+1)D which is "above" the nD points.
     /// For 1D -> 2D lifting we have to extended each segment into a triangle that creates a shell in 3D space
     /// After lifting each segment, we have to fill the holes on the shell in 3D by generating the infinite faces
     /// of 2D.
-    fn extend_to_dim2(&mut self, p: T::Position, is_ccw: bool) -> VertexIndex {
-        let tri = &mut self.tri;
+    fn extend_to_dim2(&mut self, p: P::Position, is_ccw: bool) -> VertexIndex {
+        assert_eq!(self.tri.dimension(), 1);
 
-        assert!(tri.dimension == 1);
-
-        tri.dimension = 2;
+        self.tri.set_dimension(2);
 
         // face neighborhood:
         // It is assumed that all the segments are directed in the same direction:
@@ -191,15 +188,15 @@ where
         //   Fm[1-i] = F0[i]
         //   Cj-1[1-i] = Cj[i]
 
-        let new_vertex = tri.create_vertex_with_position(p);
+        let new_vertex = self.create_vertex_with_position(p);
 
         // F0, start by an infinite face for which the convex hull (segment) and p is in counter-clockwise direction
         // Fm is the other infinite face
         let (f0, i0, fm, im) = {
-            let f0 = tri.get_infinite_face();
-            let i0 = tri.get_face_vertex_index(f0, tri.get_infinite_vertex()).unwrap();
-            let fm = tri.get_face_neighbor(f0, i0.mirror(2));
+            let f0 = self.tri.infinite_face();
+            let i0 = self.tri[f0].get_vertex_index(self.tri.infinite_vertex()).unwrap();
             let im = i0.mirror(2);
+            let fm = self.tri[f0].neighbor(im);
 
             if is_ccw {
                 (f0, i0, fm, im)
@@ -208,56 +205,57 @@ where
             }
         };
 
-        let c0 = tri.get_face_neighbor(f0, i0);
+        let c0 = self.tri[f0].neighbor(i0);
 
         let mut cur = c0;
-        let mut prev_new_face = FaceIndex::invalid();
+        let mut new_face = FaceIndex::invalid();
         while cur != fm {
-            let new_face = tri.create_face();
-            let v1 = tri.get_face_vertex(cur, Rot3(1));
-            let v0 = tri.get_face_vertex(cur, Rot3(0));
-            let vinf = tri.get_infinite_vertex();
+            let prev_new_face = new_face;
+            new_face = self.create_face();
+
+            let v0 = self.tri[cur].vertex(Rot3(1));
+            let v1 = self.tri[cur].vertex(Rot3(0));
+            let vinf = self.tri.infinite_vertex();
             if i0 == Rot3(1) {
-                tri.set_face_vertices(new_face, v1, v0, new_vertex);
-                tri.set_face_vertex(cur, Rot3(2), vinf);
-                tri.set_vertex_face(new_vertex, new_face);
+                self.tri[new_face].set_vertices(v0, v1, new_vertex);
+                self.tri[cur].set_vertex(Rot3(2), vinf);
+                self.tri[new_vertex].set_face(new_face);
             } else {
-                tri.set_face_vertices(new_face, v1, v0, vinf);
-                tri.set_face_vertex(cur, Rot3(2), new_vertex);
-                tri.set_vertex_face(new_vertex, cur);
+                self.tri[new_face].set_vertices(v0, v1, vinf);
+                self.tri[cur].set_vertex(Rot3(2), new_vertex);
+                self.tri[new_vertex].set_face(cur);
             }
 
-            tri.set_adjacent(cur, Rot3(2), new_face, Rot3(2));
-            tri.set_constraint(new_face, Rot3(2), tri.get_constraint(cur, Rot3(2)));
+            self.tri.set_adjacent(cur, Rot3(2), new_face, Rot3(2));
+            let c = self.tri[cur].constraint(Rot3(2));
+            self.tri[new_face].set_constraint(Rot3(2), c);
             if prev_new_face.is_valid() {
-                tri.set_adjacent(prev_new_face, im, new_face, i0);
+                self.tri.set_adjacent(prev_new_face, im, new_face, i0);
             }
 
-            cur = tri.get_face_neighbor(cur, i0);
-            prev_new_face = new_face;
+            cur = self.tri[cur].neighbor(i0);
         }
 
-        let cm = tri.get_face_neighbor(fm, im);
-        let n0 = tri.get_face_neighbor(c0, Rot3(2));
-        let nm = tri.get_face_neighbor(cm, Rot3(2));
+        let cm = self.tri[fm].neighbor(im);
+        let n0 = self.tri[c0].neighbor(Rot3(2));
+        let nm = self.tri[cm].neighbor(Rot3(2));
 
-        tri.set_face_vertex(f0, Rot3(2), new_vertex);
-        tri.set_face_vertex(fm, Rot3(2), new_vertex);
+        self.tri[f0].set_vertex(Rot3(2), new_vertex);
+        self.tri[fm].set_vertex(Rot3(2), new_vertex);
 
         if i0 == Rot3(1) {
-            tri.swap_face_vertices(f0, Rot3(2), Rot3(1));
-            tri.swap_face_vertices(fm, Rot3(0), Rot3(2));
-            tri.set_adjacent(f0, Rot3(1), c0, Rot3(0));
-            tri.set_adjacent(fm, Rot3(0), cm, Rot3(1));
-            tri.set_adjacent(f0, Rot3(2), n0, Rot3(1));
-            tri.set_adjacent(fm, Rot3(2), nm, Rot3(0));
+            self.tri[f0].swap_vertices(Rot3(2), Rot3(1));
+            self.tri[fm].swap_vertices(Rot3(0), Rot3(2));
+            self.tri.set_adjacent(f0, Rot3(1), c0, Rot3(0));
+            self.tri.set_adjacent(fm, Rot3(0), cm, Rot3(1));
+            self.tri.set_adjacent(f0, Rot3(2), n0, Rot3(1));
+            self.tri.set_adjacent(fm, Rot3(2), nm, Rot3(0));
         } else {
-            tri.set_adjacent(f0, Rot3(2), n0, Rot3(0));
-            tri.set_adjacent(fm, Rot3(2), nm, Rot3(1));
+            self.tri.set_adjacent(f0, Rot3(2), n0, Rot3(0));
+            self.tri.set_adjacent(fm, Rot3(2), nm, Rot3(1));
         }
-
         new_vertex
-    }*/
+    }
 
     fn split_edge_dim1(&mut self, p: P::Position, f: FaceIndex) -> VertexIndex {
         assert!(self.tri.dimension() == 1);

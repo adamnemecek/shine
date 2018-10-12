@@ -1,6 +1,6 @@
 use std::iter::Step;
 use std::mem;
-use std::ops::{Index, Range};
+use std::ops::Range;
 
 /// Integer type with module 3 arithmetic
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]

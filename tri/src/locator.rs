@@ -1,6 +1,6 @@
 use geometry::{CollinearTest, Orientation, Predicates};
-use rand::{self, Rng};
-use triangulation::{Face, TriGraph, Vertex};
+use graph::{Face, Graph, Vertex};
+use rand::Rng;
 use types::{FaceIndex, Rot3, VertexIndex};
 
 enum ContainmentResult {
@@ -55,7 +55,7 @@ where
     V: 'a + Vertex<Position = P::Position>,
     F: 'a + Face,
 {
-    tri: &'a TriGraph<P, V, F>,
+    tri: &'a Graph<P, V, F>,
     rng: &'a mut R,
     iteration_stochastic_limit: usize,
     start_face_sampling_density: usize,
@@ -68,7 +68,7 @@ where
     V: 'a + Vertex<Position = P::Position>,
     F: 'a + Face,
 {
-    pub fn new<'b>(rng: &'b mut R, tri: &'b TriGraph<P, V, F>) -> Locator<'b, R, P, V, F> {
+    pub fn new<'b>(rng: &'b mut R, tri: &'b Graph<P, V, F>) -> Locator<'b, R, P, V, F> {
         Locator {
             tri,
             rng,
@@ -90,7 +90,7 @@ where
             -1 => Ok(Location::Empty),
             0 => self.locate_position_dim0(p),
             1 => self.locate_position_dim1(p),
-            //2 => self.locate_position_dim2(p, hint),
+            2 => self.locate_position_dim2(p, hint),
             dim => unreachable!(format!("Invalid dimension: {}", dim)),
         }
     }
@@ -147,18 +147,12 @@ where
         // first point of the convex hull (segments)
         let f0 = self.tri.infinite_face();
         let iv0 = self.tri[f0].get_vertex_index(vinf).unwrap();
-        let cp0 = {
-            let v = self.tri[f0].vertex(iv0.mirror(2));
-            self.tri[v].position()
-        };
+        let cp0 = &self.tri.positions()[(f0, iv0.mirror(2))];
 
         // last point of the convex hull (segments)
         let f1 = self.tri[f0].neighbor(iv0.mirror(2));
         let iv1 = self.tri[f1].get_vertex_index(vinf).unwrap();
-        let cp1 = {
-            let v = self.tri[f1].vertex(iv1.mirror(2));
-            self.tri[v].position()
-        };
+        let cp1 = &self.tri.positions()[(f1, iv1.mirror(2))];
 
         match self.tri.predicates().orientation(cp0, cp1, p) {
             Orientation::Clockwise => Ok(Location::OutsideAffineHullClockwise),
@@ -180,14 +174,8 @@ where
                             let cur = self.tri[prev].neighbor(dir);
                             assert!(self.tri.is_finite_face(cur));
 
-                            let p0 = {
-                                let v = self.tri[cur].vertex(Rot3(0));
-                                self.tri[v].position()
-                            };
-                            let p1 = {
-                                let v = self.tri[cur].vertex(Rot3(1));
-                                self.tri[v].position()
-                            };
+                            let p0 = &self.tri.positions()[(cur, Rot3(0))];
+                            let p1 = &self.tri.positions()[(cur, Rot3(1))];
 
                             let t = self.tri.predicates().test_collinear_points(p0, p1, p);
                             match t {
@@ -234,41 +222,74 @@ where
             }
             min_vert
         }
+    }*/
+
+    /// Test which halfspace contains the p point.
+    fn test_containment_face(&mut self, p: &P::Position, f: FaceIndex) -> ContainmentResult {
+        let tri = &self.tri;
+        let p0 = &tri.positions()[(f, Rot3(0))];
+        let p1 = &tri.positions()[(f, Rot3(1))];
+        let p2 = &tri.positions()[(f, Rot3(2))];
+
+        let e01 = tri.predicates().orientation(&p0, &p1, p);
+        if e01 == Orientation::Clockwise {
+            return ContainmentResult::Continue(Rot3(2));
+        }
+
+        let e20 = tri.predicates().orientation(&p2, &p0, p);
+        if e20 == Orientation::Clockwise {
+            return ContainmentResult::Continue(Rot3(1));
+        }
+
+        let e12 = tri.predicates().orientation(&p1, &p2, p);
+        if e12 == Orientation::Clockwise {
+            return ContainmentResult::Continue(Rot3(0));
+        }
+
+        let mut test = ContainmentResult::Stop(0);
+        test.set(Rot3(2), e01 == Orientation::Collinear);
+        test.set(Rot3(0), e12 == Orientation::Collinear);
+        test.set(Rot3(1), e20 == Orientation::Collinear);
+        test
     }
 
     /// Test the containment of the p position for the (a,b) and (b,c) sides in this order
-    fn test_containment_ab_bc(&mut self, p: &T::Position, f: FaceIndex, a: Rot3, b: Rot3, c: Rot3) -> ContainmentResult {
+    fn test_containment_ab_bc(&mut self, p: &P::Position, f: FaceIndex, a: Rot3, b: Rot3, c: Rot3) -> ContainmentResult {
         let tri = &self.tri;
-        let pa = tri.get_face_vertex_position(f, a);
-        let pb = tri.get_face_vertex_position(f, b);
-        let ab = tri.predicates.orientation(pa, pb, p);
+        let positions = tri.positions();
+
+        let pa = &positions[(f, a)];
+        let pb = &positions[(f, b)];
+        let ab = tri.predicates().orientation(&pa, &pb, p);
         if ab == Orientation::Clockwise {
             ContainmentResult::Continue(c)
         } else {
-            let pc = tri.get_face_vertex_position(f, c);
-            let bc = tri.predicates.orientation(pb, pc, p);
+            let pc = &positions[(f, c)];
+            let bc = tri.predicates().orientation(&pb, &pc, p);
             if bc == Orientation::Clockwise {
                 ContainmentResult::Continue(a)
             } else {
                 let mut test = ContainmentResult::Stop(0);
-                test.set(c, ab == Orientation::Clockwise);
-                test.set(a, bc == Orientation::Clockwise);
+                test.set(c, ab == Orientation::Collinear);
+                test.set(a, bc == Orientation::Collinear);
                 test
             }
         }
     }
 
     // Test the containment of the p position for the (b,c) and (a,b) sides in this order
-    fn test_containment_bc_ab(&mut self, p: &T::Position, f: FaceIndex, a: Rot3, b: Rot3, c: Rot3) -> ContainmentResult {
+    fn test_containment_bc_ab(&mut self, p: &P::Position, f: FaceIndex, a: Rot3, b: Rot3, c: Rot3) -> ContainmentResult {
         let tri = &self.tri;
-        let pb = tri.get_face_vertex_position(f, b);
-        let pc = tri.get_face_vertex_position(f, c);
-        let bc = tri.predicates.orientation(pb, pc, p);
+        let positions = tri.positions();
+
+        let pb = &positions[(f, b)];
+        let pc = &positions[(f, c)];
+        let bc = tri.predicates().orientation(&pb, &pc, p);
         if bc == Orientation::Clockwise {
             ContainmentResult::Continue(a)
         } else {
-            let pa = tri.get_face_vertex_position(f, a);
-            let ab = tri.predicates.orientation(pa, pb, p);
+            let pa = &positions[(f, a)];
+            let ab = tri.predicates().orientation(&pa, &pb, p);
             if ab == Orientation::Clockwise {
                 ContainmentResult::Continue(c)
             } else {
@@ -281,144 +302,57 @@ where
     }
 
     // Finds the location of a point in a non-degenerate triangulation. (dimension = 2)
-    fn locate_position_dim2(&mut self, p: &T::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
-        assert!(self.tri.dimension == 2);
+    fn locate_position_dim2(&mut self, p: &P::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
+        assert_eq!(self.tri.dimension(), 2);
 
-        // find the start_face
-        let face = match hint {
+        let start = match hint {
             Some(f) => f,
             None => {
-                let vertex_count = self.tri.get_vertex_count();
-                let sample_count = vertex_count / self.start_face_sampling_density;
-                let v = self.guess_start_vertex(sample_count, p);
-                let f = self.tri.get_vertex_face(v);
-                if self.tri.is_finite_face(f) {
-                    f
-                } else {
-                    let i = self.tri.get_face_vertex_index(f, self.tri.get_infinite_vertex()).unwrap();
-                    self.tri.get_face_neighbor(f, i)
-                }
+                let v = self.get_random_finite_vertex().unwrap();
+                self.tri[v].face()
             }
         };
-        if !self.tri.is_finite_face(face) {
-            return Err("Could not find start face".into());
-        }
 
-        // traverse triangulation and advance to the target position through the neighboring faces
-        let mut iteration = 0;
-        let mut prev;
-        let mut cur = face;
-        let mut from: Option<Rot3> = None;
+        let mut prev = FaceIndex::invalid();
+        let mut cur = start;
+        let mut count = 0;
+
         loop {
-            iteration += 1;
-            if iteration > self.tri.get_face_count() * 3 {
-                break Err("Infinite location loop detected".into());
-            } else if !self.tri.is_finite_face(cur) {
-                break Ok(Location::OutsideConvexHull { face: cur });
-            } else {
-                // match_order: there exist configurations, where we could select two directions to follow the point.
-                //  If the same direction is chosen all the time, one may end up in an infinite loop going around the point.
-                //  After a limit, the walk becomes stochastic to break the infinite loop.
-                //  Another option could be to store the visited faces and perform some tree traverse algorithm.
-                let test_order = if iteration > self.iteration_stochastic_limit {
-                    iteration % 2 == 0
-                } else {
-                    self.rng.gen::<bool>()
-                };
+            if self.tri.is_infinite_face(cur) {
+                return Ok(Location::OutsideConvexHull(cur));
+            }
 
-                let test_result = match (from, test_order) {
-                    (Some(Rot3(1)), true) => self.test_containment_ab_bc(p, cur, Rot3(2), Rot3(0), Rot3(1)),
-                    (Some(Rot3(1)), false) => self.test_containment_bc_ab(p, cur, Rot3(2), Rot3(0), Rot3(1)),
-                    (Some(Rot3(2)), true) => self.test_containment_ab_bc(p, cur, Rot3(0), Rot3(1), Rot3(2)),
-                    (Some(Rot3(2)), false) => self.test_containment_bc_ab(p, cur, Rot3(0), Rot3(1), Rot3(2)),
+            let from = self.tri[cur].get_neighbor_index(prev);
+            let order = true; //count < iteratrionLimitStochastic ? count % 2 == 0 : coinFlip( mRandomEngine );
 
-                    (Some(Rot3(3)), true) => self.test_containment_ab_bc(p, cur, Rot3(1), Rot3(2), Rot3(0)),
-                    (Some(Rot3(3)), false) => self.test_containment_bc_ab(p, cur, Rot3(1), Rot3(2), Rot3(0)),
-                    (None, _) => {
-                        //initial guess, test all the edges
-                        let p0 = self.tri.get_face_vertex_position(cur, Rot3(0));
-                        let p1 = self.tri.get_face_vertex_position(cur, Rot3(1));
-                        let e01 = self.tri.predicates.orientation(p0, p1, p);
-                        if e01 == Orientation::Clockwise {
-                            ContainmentResult::Continue(Rot3(2))
-                        } else {
-                            let p2 = self.tri.get_face_vertex_position(cur, Rot3(2));
-                            let e20 = self.tri.predicates.orientation(p2, p0, p);
-                            if e20 == Orientation::Clockwise {
-                                ContainmentResult::Continue(Rot3(1))
-                            } else {
-                                let e12 = self.tri.predicates.orientation(p1, p2, p);
-                                if e12 == Orientation::Clockwise {
-                                    ContainmentResult::Continue(Rot3(0))
-                                } else {
-                                    let mut test = ContainmentResult::Stop(0);
-                                    test.set(Rot3(2), e01 == Orientation::Collinear);
-                                    test.set(Rot3(0), e12 == Orientation::Collinear);
-                                    test.set(Rot3(1), e20 == Orientation::Collinear);
-                                    test
-                                }
-                            }
-                        }
-                    }
-                    _ => unreachable!(),
-                };
+            let testResult = match (from, order) {
+                (None, _) => self.test_containment_face(p, cur),
+                (Some(Rot3(0)), true) => self.test_containment_ab_bc(p, cur, Rot3(2), Rot3(0), Rot3(1)),
+                (Some(Rot3(0)), false) => self.test_containment_bc_ab(p, cur, Rot3(2), Rot3(0), Rot3(1)),
+                (Some(Rot3(1)), true) => self.test_containment_ab_bc(p, cur, Rot3(0), Rot3(1), Rot3(2)),
+                (Some(Rot3(1)), false) => self.test_containment_bc_ab(p, cur, Rot3(0), Rot3(1), Rot3(2)),
+                (Some(Rot3(2)), true) => self.test_containment_ab_bc(p, cur, Rot3(1), Rot3(2), Rot3(0)),
+                (Some(Rot3(2)), false) => self.test_containment_bc_ab(p, cur, Rot3(1), Rot3(2), Rot3(0)),
+                (Some(i), _) => unreachable!(format!("Invalid index: {:?}", i)),
+            };
 
-                match test_result {
-                    ContainmentResult::Continue(dir) => {
-                        // continue in the given direction
-                        prev = cur;
-                        cur = self.tri.get_face_neighbor(prev, dir);
-                        from = self.tri.get_face_neighbor_index(cur, prev);
-                    }
-                    ContainmentResult::Stop(0) => {
-                        // inside a face
-                        break Ok(Location::Face { face: cur });
-                    }
-                    ContainmentResult::Stop(1) => {
-                        // only on 0 edge
-                        break Ok(Location::Edge {
-                            face: cur,
-                            index: Rot3(0),
-                        });
-                    }
-                    ContainmentResult::Stop(2) => {
-                        // only on 1 edge
-                        break Ok(Location::Edge {
-                            face: cur,
-                            index: Rot3(1),
-                        });
-                    }
-                    ContainmentResult::Stop(3) => {
-                        //both on 0,1 edge
-                        break Ok(Location::Vertex {
-                            face: cur,
-                            index: Rot3(2),
-                        });
-                    }
-                    ContainmentResult::Stop(4) => {
-                        // only on 2 edge
-                        break Ok(Location::Edge {
-                            face: cur,
-                            index: Rot3(2),
-                        });
-                    }
-                    ContainmentResult::Stop(5) => {
-                        //both on 0,2 edge
-                        break Ok(Location::Vertex {
-                            face: cur,
-                            index: Rot3(1),
-                        });
-                    }
-                    ContainmentResult::Stop(6) => {
-                        //both on 1,2 edge
-                        break Ok(Location::Vertex {
-                            face: cur,
-                            index: Rot3(0),
-                        });
-                    }
-                    _ => unreachable!(),
+            match testResult {
+                ContainmentResult::Continue(r) => {
+                    prev = cur;
+                    cur = self.tri[cur].neighbor(r);
+                    count += 1;
                 }
+
+                ContainmentResult::Stop(0) => return Ok(Location::Face(cur)),
+                ContainmentResult::Stop(1) => return Ok(Location::Edge(cur, Rot3(0))), // only on 0 edge
+                ContainmentResult::Stop(2) => return Ok(Location::Edge(cur, Rot3(1))), // only on 1 edge
+                ContainmentResult::Stop(4) => return Ok(Location::Edge(cur, Rot3(2))), // only on 2 edge
+                ContainmentResult::Stop(6) => return Ok(Location::Vertex(cur, Rot3(0))), //both on 1,2 edge
+                ContainmentResult::Stop(5) => return Ok(Location::Vertex(cur, Rot3(1))), //both on 0,2 edge
+                ContainmentResult::Stop(3) => return Ok(Location::Vertex(cur, Rot3(2))), //both on 0,1 edge
+
+                ContainmentResult::Stop(e) => unreachable!("invalid test Result: {}", e),
             }
         }
-    }*/
+    }
 }

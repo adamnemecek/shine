@@ -1,6 +1,6 @@
 use geometry::{Orientation, Position, Predicates};
+use indexing::{Positions, PositionsMut};
 use std::fmt;
-use std::ops::{Index, IndexMut};
 use types::{Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
 /// A vertex of the triangulation
@@ -76,7 +76,7 @@ pub trait FaceExt: Face {
 impl<T> FaceExt for T where T: Face {}
 
 /// (Constraint) Triangulation.
-pub struct TriGraph<P, V, F>
+pub struct Graph<P, V, F>
 where
     P: Predicates,
     V: Vertex<Position = P::Position>,
@@ -89,14 +89,14 @@ where
     infinite_vertex: VertexIndex,
 }
 
-impl<P, V, F> TriGraph<P, V, F>
+impl<P, V, F> Graph<P, V, F>
 where
     P: Predicates,
     V: Vertex<Position = P::Position>,
     F: Face,
 {
-    pub fn new_with_predicates(predicates: P) -> TriGraph<P, V, F> {
-        TriGraph {
+    pub fn new_with_predicates(predicates: P) -> Graph<P, V, F> {
+        Graph {
             predicates,
             dimension: -1,
             vertices: Default::default(),
@@ -166,6 +166,14 @@ where
     pub fn store_face(&mut self, face: F) -> FaceIndex {
         self.faces.push(face);
         FaceIndex(self.faces.len() - 1)
+    }
+
+    pub fn positions(&self) -> Positions<P, V, F> {
+        Positions::new(self)
+    }
+
+    pub fn positions_mut(&mut self) -> PositionsMut<P, V, F> {
+        PositionsMut::new(self)
     }
     //endregion
 
@@ -300,29 +308,29 @@ where
     //endregion
 }
 
-impl<P, V, F> TriGraph<P, V, F>
+impl<P, V, F> Graph<P, V, F>
 where
     P: Predicates + Default,
     V: Vertex<Position = P::Position>,
     F: Face,
 {
-    pub fn new() -> TriGraph<P, V, F> {
-        TriGraph::new_with_predicates(Default::default())
+    pub fn new() -> Graph<P, V, F> {
+        Graph::new_with_predicates(Default::default())
     }
 }
 
-impl<P, V, F> Default for TriGraph<P, V, F>
+impl<P, V, F> Default for Graph<P, V, F>
 where
     P: Predicates + Default,
     V: Vertex<Position = P::Position>,
     F: Face,
 {
-    fn default() -> TriGraph<P, V, F> {
-        TriGraph::new()
+    fn default() -> Graph<P, V, F> {
+        Graph::new()
     }
 }
 
-impl<P, V, F> fmt::Debug for TriGraph<P, V, F>
+impl<P, V, F> fmt::Debug for Graph<P, V, F>
 where
     P: Predicates,
     V: Vertex<Position = P::Position>,
@@ -365,53 +373,5 @@ where
             )?;
         }
         writeln!(f, "] }}")
-    }
-}
-
-impl<P, V, F> Index<VertexIndex> for TriGraph<P, V, F>
-where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
-    F: Face,
-{
-    type Output = V;
-
-    fn index(&self, v: VertexIndex) -> &Self::Output {
-        self.vertex(v)
-    }
-}
-
-impl<P, V, F> IndexMut<VertexIndex> for TriGraph<P, V, F>
-where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
-    F: Face,
-{
-    fn index_mut(&mut self, v: VertexIndex) -> &mut Self::Output {
-        self.vertex_mut(v)
-    }
-}
-
-impl<P, V, F> Index<FaceIndex> for TriGraph<P, V, F>
-where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
-    F: Face,
-{
-    type Output = F;
-
-    fn index(&self, f: FaceIndex) -> &Self::Output {
-        self.face(f)
-    }
-}
-
-impl<P, V, F> IndexMut<FaceIndex> for TriGraph<P, V, F>
-where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
-    F: Face,
-{
-    fn index_mut(&mut self, f: FaceIndex) -> &mut Self::Output {
-        self.face_mut(f)
     }
 }
