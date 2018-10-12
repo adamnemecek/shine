@@ -6,6 +6,7 @@
     - cargo test --verbose --jobs 1 -p shine-store
     - cargo test --verbose --jobs 1 -p shine-graph
     - cargo test --verbose --jobs 1 -p shine-ecs
+    - cargo test --verbose --jobs 1 -p shine-tri
 
 nightly:cargo:
   image: rustdocker/rust:nightly
