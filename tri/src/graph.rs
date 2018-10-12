@@ -1,7 +1,6 @@
 use geometry::{Orientation, Position, Predicates};
-use indexing::{Positions, PositionsMut};
 use std::fmt;
-use types::{Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
+use types::{invalid_vertex, rot3, Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
 /// A vertex of the triangulation
 pub trait Vertex: Default {
@@ -46,9 +45,9 @@ pub trait Face: Default {
 pub trait FaceExt: Face {
     /// Set all the vertices
     fn set_vertices(&mut self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) {
-        self.set_vertex(Rot3(0), v0);
-        self.set_vertex(Rot3(1), v1);
-        self.set_vertex(Rot3(2), v2);
+        self.set_vertex(rot3(0), v0);
+        self.set_vertex(rot3(1), v1);
+        self.set_vertex(rot3(2), v2);
     }
 
     /// Swaps two vertices and all related data
@@ -101,7 +100,7 @@ where
             dimension: -1,
             vertices: Default::default(),
             faces: Default::default(),
-            infinite_vertex: VertexIndex::invalid(),
+            infinite_vertex: invalid_vertex(),
         }
     }
 
@@ -131,7 +130,7 @@ where
         self.dimension = -1;
         self.faces.clear();
         self.vertices.clear();
-        self.infinite_vertex = VertexIndex::invalid();
+        self.infinite_vertex = invalid_vertex();
     }
 
     pub fn vertex(&self, v: VertexIndex) -> &V {
@@ -166,14 +165,6 @@ where
     pub fn store_face(&mut self, face: F) -> FaceIndex {
         self.faces.push(face);
         FaceIndex(self.faces.len() - 1)
-    }
-
-    pub fn positions(&self) -> Positions<P, V, F> {
-        Positions::new(self)
-    }
-
-    pub fn positions_mut(&mut self) -> PositionsMut<P, V, F> {
-        PositionsMut::new(self)
     }
     //endregion
 
@@ -213,7 +204,7 @@ where
     /// Set adjacent face information for two neighboring faces.
     pub fn set_adjacent(&mut self, f0: FaceIndex, i0: Rot3, f1: FaceIndex, i1: Rot3) {
         assert!(i0.is_valid() && i1.is_valid());
-        assert!(i0.0 <= self.dimension as u8 && i1.0 <= self.dimension as u8);
+        assert!(i0.id() <= self.dimension as u8 && i1.id() <= self.dimension as u8);
         self[f0].set_neighbor(i0, f1);
         self[f1].set_neighbor(i1, f0);
     }
@@ -363,13 +354,16 @@ where
 
         write!(f, "FV[ ")?;
         for t in self.face_index_iter() {
+            if self.is_infinite_face(t) {
+                write!(f, "*")?;
+            }
             write!(
                 f,
                 "{:?}->({:?},{:?},{:?}), ",
                 t,
-                self[t].vertex(Rot3(0)),
-                self[t].vertex(Rot3(1)),
-                self[t].vertex(Rot3(2))
+                self[t].vertex(rot3(0)),
+                self[t].vertex(rot3(1)),
+                self[t].vertex(rot3(2))
             )?;
         }
         writeln!(f, "] }}")

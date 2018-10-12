@@ -133,11 +133,13 @@ fn t2_dimension2() {
                 let pos = map(x, y);
                 debug!("add {:?}", pos);
                 let vi = Builder::new(&mut tri).add_vertex(pos, None);
+                debug!("vi {:?}, {:?}", vi, tri);
                 assert_eq!(Checker::new(&tri).check(None), Ok(()));
 
                 let pos = map(x, y);
                 debug!("add duplicate {:?}", pos);
                 let vi_dup = Builder::new(&mut tri).add_vertex(pos, None);
+                debug!("{:?}", tri);
                 assert_eq!(Checker::new(&tri).check(None), Ok(()));
                 assert_eq!(vi, vi_dup);
             }

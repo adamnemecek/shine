@@ -1,6 +1,6 @@
 use geometry::{Orientation, Position, Predicates};
 use graph::{Face, Graph, Vertex};
-use types::Rot3;
+use types::rot3;
 
 pub struct Checker<'a, P, V, F>
 where
@@ -53,7 +53,7 @@ where
             let mut _infinite_face_count = 0;
             for f in self.tri.face_index_iter() {
                 for r in 0..3 {
-                    let d = Rot3(r);
+                    let d = rot3(r);
                     if self.tri[f].vertex(d).is_valid() != (r <= self.tri.dimension() as u8) {
                         return Err(format!(
                             "A face({:?}) has invalid dimension at {:?} (dim:{})",
@@ -93,7 +93,7 @@ where
     fn check_face_face_link(&self) -> Result<(), String> {
         for f in self.tri.face_index_iter() {
             for d in 0..self.tri.dimension() {
-                let i = Rot3(d as u8);
+                let i = rot3(d as u8);
                 let nf = self.tri[f].neighbor(i);
                 if !nf.is_valid() {
                     return Err(format!(
@@ -155,9 +155,9 @@ where
                 continue;
             }
 
-            let v0 = self.tri[f].vertex(Rot3(0));
-            let v1 = self.tri[f].vertex(Rot3(1));
-            let v2 = self.tri[f].vertex(Rot3(2));
+            let v0 = self.tri[f].vertex(rot3(0));
+            let v1 = self.tri[f].vertex(rot3(1));
+            let v2 = self.tri[f].vertex(rot3(2));
 
             if self.tri.get_vertices_orientation(v0, v1, v2) != Orientation::CounterClockwise {
                 return Err(format!("Count-clockwise property is violated for {:?}", f));
@@ -179,9 +179,9 @@ where
                 continue;
             }
 
-            let v0 = self.tri[f].vertex(Rot3(0));
-            let v1 = self.tri[f].vertex(Rot3(1));
-            let v2 = self.tri[f].vertex(Rot3(2));
+            let v0 = self.tri[f].vertex(rot3(0));
+            let v1 = self.tri[f].vertex(rot3(1));
+            let v2 = self.tri[f].vertex(rot3(2));
 
             let a = self.tri[v0].position();
             let b = self.tri[v1].position();
@@ -248,7 +248,7 @@ where
         self.check_dimension()?;
         self.check_topology()?;
         self.check_orientation()?;
-        self.check_area(eps_area)?;
+        //self.check_area(eps_area)?;
         Ok(())
     }
 }

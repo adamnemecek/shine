@@ -4,34 +4,44 @@ use std::ops::Range;
 
 /// Integer type with module 3 arithmetic
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Rot3(pub u8);
+pub struct Rot3(u8);
 
 impl Rot3 {
+    pub fn new(i: u8) -> Rot3 {
+        let v = Rot3(i);
+        assert!(v.is_valid());
+        v
+    }
+
     pub fn third(a: Rot3, b: Rot3) -> Rot3 {
         assert!(a.is_valid() && b.is_valid() && a != b);
-        Rot3(3 - a.0 - b.0)
+        rot3(3 - a.0 - b.0)
     }
 
     pub fn is_valid(self) -> bool {
         self.0 <= 2
     }
 
+    pub fn id(self) -> u8 {
+        self.0
+    }
+
     pub fn increment(self) -> Rot3 {
         assert!(self.is_valid());
-        Rot3( (self.0 + 1) % 3 )
+        rot3( (self.0 + 1) % 3 )
     }
 
     pub fn decrement(self) -> Rot3 {
         assert!(self.is_valid());
-        Rot3( (self.0 + 2) % 3 )
+        rot3( (self.0 + 2) % 3 )
     }
 
     pub fn mirror(self, over: u8) -> Rot3 {
         assert!(self.0 != over);
         match over {
-            0 => Rot3(3 - self.0),
-            1 => Rot3(2 - self.0),
-            2 => Rot3(1 - self.0),
+            0 => rot3(3 - self.0),
+            1 => rot3(2 - self.0),
+            2 => rot3(1 - self.0),
             _ => unreachable!(""),
         }
     }
@@ -42,6 +52,7 @@ impl From<Rot3> for usize {
         i.0 as usize
     }
 }
+
 
 /// Index used for Vertex indentification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -140,3 +151,18 @@ step_impl!(FaceIndex);
 /// A range of faces
 pub type FaceRange = Range<FaceIndex>;
 
+
+/// Shortcut for Rot3::new
+pub fn rot3(i: u8) -> Rot3 {
+    Rot3::new(i)
+}
+
+/// Shortcut for FaceIndex::invalid()
+pub fn invalid_face() -> FaceIndex {
+    FaceIndex::invalid()
+}
+
+/// Shortcut for FaceIndex::invalid()
+pub fn invalid_vertex() -> VertexIndex {
+    VertexIndex::invalid()
+}

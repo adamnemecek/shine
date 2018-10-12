@@ -60,7 +60,7 @@ pub struct TriFace {
 impl Default for TriFace {
     fn default() -> TriFace {
         TriFace {
-            vertices: [VertexIndex::invalid(); 3],
+            vertices: [invalid_vertex(); 3],
             neighbors: [FaceIndex::invalid(); 3],
             constraints: [false; 3],
         }
@@ -71,35 +71,35 @@ impl Face for TriFace {
     type Constraint = bool;
 
     fn vertex(&self, i: Rot3) -> VertexIndex {
-        self.vertices[i.0 as usize]
+        self.vertices[i.id() as usize]
     }
 
     fn set_vertex(&mut self, i: Rot3, v: VertexIndex) {
-        self.vertices[i.0 as usize] = v
+        self.vertices[i.id() as usize] = v
     }
 
     fn get_vertex_index(&self, v: VertexIndex) -> Option<Rot3> {
-        self.vertices.iter().position(|&x| x == v).map(|i| Rot3(i as u8))
+        self.vertices.iter().position(|&x| x == v).map(|i| rot3(i as u8))
     }
 
     fn neighbor(&self, i: Rot3) -> FaceIndex {
-        self.neighbors[i.0 as usize]
+        self.neighbors[i.id() as usize]
     }
 
     fn set_neighbor(&mut self, i: Rot3, f: FaceIndex) {
-        self.neighbors[i.0 as usize] = f;
+        self.neighbors[i.id() as usize] = f;
     }
 
     fn get_neighbor_index(&self, f: FaceIndex) -> Option<Rot3> {
-        self.neighbors.iter().position(|&x| x == f).map(|i| Rot3(i as u8))
+        self.neighbors.iter().position(|&x| x == f).map(|i| rot3(i as u8))
     }
 
     fn constraint(&self, i: Rot3) -> Self::Constraint {
-        self.constraints[i.0 as usize]
+        self.constraints[i.id() as usize]
     }
 
     fn set_constraint(&mut self, i: Rot3, c: Self::Constraint) {
-        self.constraints[i.0 as usize] = c
+        self.constraints[i.id() as usize] = c
     }
 }
 
