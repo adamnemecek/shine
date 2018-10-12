@@ -1,4 +1,5 @@
 use geometry::{Orientation, Position, Predicates};
+use indexing::PositionIndex;
 use std::fmt;
 use types::{invalid_vertex, rot3, Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
@@ -118,19 +119,20 @@ where
         self.dimension == -1
     }
 
-    pub fn vertex_count(&self) -> usize {
-        self.vertices.len()
-    }
-
-    pub fn face_count(&self) -> usize {
-        self.faces.len()
-    }
-
     pub fn clear(&mut self) {
         self.dimension = -1;
         self.faces.clear();
         self.vertices.clear();
         self.infinite_vertex = invalid_vertex();
+    }
+
+    pub fn vertex_count(&self) -> usize {
+        self.vertices.len()
+    }
+
+    pub fn store_vertex(&mut self, vert: V) -> VertexIndex {
+        self.vertices.push(vert);
+        VertexIndex(self.vertices.len() - 1)
     }
 
     pub fn vertex(&self, v: VertexIndex) -> &V {
@@ -145,9 +147,13 @@ where
         VertexIndex(0)..VertexIndex(self.vertices.len())
     }
 
-    pub fn store_vertex(&mut self, vert: V) -> VertexIndex {
-        self.vertices.push(vert);
-        VertexIndex(self.vertices.len() - 1)
+    pub fn face_count(&self) -> usize {
+        self.faces.len()
+    }
+
+    pub fn store_face(&mut self, face: F) -> FaceIndex {
+        self.faces.push(face);
+        FaceIndex(self.faces.len() - 1)
     }
 
     pub fn face(&self, f: FaceIndex) -> &F {
@@ -159,12 +165,7 @@ where
     }
 
     pub fn face_index_iter(&self) -> FaceRange {
-        FaceIndex(0)..FaceIndex(self.vertices.len())
-    }
-
-    pub fn store_face(&mut self, face: F) -> FaceIndex {
-        self.faces.push(face);
-        FaceIndex(self.faces.len() - 1)
+        FaceIndex(0)..FaceIndex(self.faces.len())
     }
     //endregion
 
@@ -200,75 +201,12 @@ where
     }
     //endregion
 
-    //region topology modificationface methods
-    /// Set adjacent face information for two neighboring faces.
-    pub fn set_adjacent(&mut self, f0: FaceIndex, i0: Rot3, f1: FaceIndex, i1: Rot3) {
-        assert!(i0.is_valid() && i1.is_valid());
-        assert!(i0.id() <= self.dimension as u8 && i1.id() <= self.dimension as u8);
-        self[f0].set_neighbor(i0, f1);
-        self[f1].set_neighbor(i1, f0);
+    /// Returns the opposite (twin) representation of an edge.
+    pub fn opposite_edge(&self, e: Edge) -> Edge {
+        let nf = self[e.0].neighbor(e.1);
+        let i = self[nf].get_neighbor_index(e.0).unwrap();
+        Edge(nf, i)
     }
-
-    /// Move adjacent face information from one face into another.
-    pub fn move_adjacent(&mut self, target_f: FaceIndex, target_i: Rot3, source_f: FaceIndex, source_i: Rot3) {
-        let n = self[source_f].neighbor(source_i);
-        let i = self[n].get_neighbor_index(source_f).unwrap();
-        self.set_adjacent(target_f, target_i, n, i);
-    }
-
-    /// Flips the edge in the quadrangle defined by the two neighboring triangles.
-    pub fn flip(&mut self, edge: Edge) {
-        assert!(self.dimension == 2);
-
-        let Edge(face, edge) = edge;
-        assert!(face.is_valid() && edge.is_valid());
-
-        //            v3                       v3
-        //          2 * 1                      *
-        //         /  |   \                 /  1  \
-        //       /    |     \             /2  F1   0\
-        //  v0 *0  F0 | F1  0* v2    v0 * ----------- * v2
-        //       \    |    /              \0  F0   2/
-        //         \  |  /                  \  1  /
-        //          1 * 2                      *
-        //            v1                      v1
-
-        let f0 = face;
-        let i00 = edge;
-        let i01 = i00.increment();
-        let i02 = i00.decrement();
-
-        let f1 = self[f0].neighbor(i00);
-        let i10 = self[f1].get_neighbor_index(f0).unwrap();
-        let i11 = i10.increment();
-        let i12 = i10.decrement();
-
-        let v0 = self[f0].vertex(i00);
-        let v1 = self[f0].vertex(i01);
-        let v3 = self[f0].vertex(i02);
-        let v2 = self[f1].vertex(i10);
-        assert!(self[f1].vertex(i11) == v3);
-        assert!(self[f1].vertex(i12) == v1);
-
-        self[f0].set_vertex(i02, v2);
-        self[f1].set_vertex(i12, v0);
-        self[v0].set_face(f0);
-        self[v1].set_face(f0);
-        self[v2].set_face(f0);
-        self[v3].set_face(f1);
-
-        self.move_adjacent(f0, i00, f1, i11);
-        self.move_adjacent(f1, i10, f0, i01);
-        self.move_adjacent(f0, i01, f1, i11);
-
-        let c11 = self[f1].constraint(i11);
-        self[f0].set_constraint(i00, c11);
-        let c01 = self[f0].constraint(i01);
-        self[f1].set_constraint(i10, c01);
-        self[f0].set_constraint(i01, Default::default());
-        self[f1].set_constraint(i11, Default::default());
-    }
-    //endregion
 
     //region geometry relationship
     pub fn predicates(&self) -> &P {
@@ -288,11 +226,31 @@ where
     }
 
     /// Finds the orientation of an edge and a vertex    
-    pub fn get_edge_vertex_orientation(&self, e: Edge, v: VertexIndex) -> Orientation {
+    pub fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> Orientation {
         let va = v;
-        let vb = self[e.0].vertex(e.1.increment());
-        let vc = self[e.0].vertex(e.1.decrement());
+        let vb = self[f].vertex(i.increment());
+        let vc = self[f].vertex(i.decrement());
         self.get_vertices_orientation(va, vb, vc)
+    }
+
+    /// Returns if the quad defined by the two adjacent triangles is a convex polygon.
+    pub fn is_convex(&self, f: FaceIndex, i: Rot3) -> bool {
+        assert!(self.is_finite_face(f));
+        let i0 = i;
+        let i1 = i.increment();
+        let i2 = i.decrement();
+
+        let nf = self[f].neighbor(i0);
+        assert!(self.is_finite_face(nf));
+        let ni = self[nf].get_neighbor_index(f).unwrap();
+
+        let p0 = &self[PositionIndex::Face(f, i0)];
+        let p1 = &self[PositionIndex::Face(f, i1)];
+        let p2 = &self[PositionIndex::Face(nf, ni)];
+        let p3 = &self[PositionIndex::Face(f, i2)];
+
+        self.predicates.orientation(p0, p1, p2) == Orientation::CounterClockwise
+            && self.predicates.orientation(p2, p3, p0) == Orientation::CounterClockwise
     }
 
     //fn is_convex(&self, edge: Edge) -> bool {}

@@ -247,7 +247,6 @@ where
         test.set(rot3(2), e01 == Orientation::Collinear);
         test.set(rot3(0), e12 == Orientation::Collinear);
         test.set(rot3(1), e20 == Orientation::Collinear);
-        println!("test {:?}", test);
         test
     }
 
@@ -317,13 +316,12 @@ where
         let mut count = 0;
 
         loop {
-            println!("cur: {:?}", cur);
             if self.tri.is_infinite_face(cur) {
                 return Ok(Location::OutsideConvexHull(cur));
             }
 
+            // todo: use face tagging instead of random walk
             let from = self.tri[cur].get_neighbor_index(prev);
-            println!("from: {:?}", from);
             let order = if count < self.iteration_stochastic_limit {
                 count % 2 == 0
             } else {
@@ -340,7 +338,6 @@ where
                 (Some(2), false) => self.test_containment_bc_ab(p, cur, rot3(1), rot3(2), rot3(0)),
                 (Some(i), _) => unreachable!(format!("Invalid index: {:?}", i)),
             };
-            println!("test_result: {:?}", test_result);
 
             match test_result {
                 ContainmentResult::Continue(r) => {

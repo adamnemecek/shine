@@ -1,3 +1,5 @@
+#![feature(custom_attribute)]
+
 extern crate shine_testutils;
 extern crate shine_tri;
 #[macro_use]
@@ -77,13 +79,13 @@ fn t2_dimension1() {
             };
 
             let pos = map(p);
-            debug!("add {:?}", pos);
+            trace!("add {:?}", pos);
             let vi = Builder::new(&mut tri).add_vertex(pos, None);
             assert_eq!(tri.dimension(), expected_dim);
             assert_eq!(Checker::new(&tri).check(None), Ok(()));
 
             let pos = map(p);
-            debug!("add duplicate {:?}", pos);
+            trace!("add duplicate {:?}", pos);
             let vi_dup = Builder::new(&mut tri).add_vertex(pos, None);
             assert_eq!(tri.dimension(), expected_dim);
             assert_eq!(Checker::new(&tri).check(None), Ok(()));
@@ -114,37 +116,50 @@ fn t2_dimension2() {
         ("(y, -x)", Box::new(|x, y| Pos(y, -x))),
     ];
 
-    let test_cases = vec![
+    #[rustfmt_skip]
+    let test_cases = vec![        
         vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0)],
+        vec![(0.0, 0.0), (1.0, 0.0), (2.0, 0.0), (1.0, 2.0)],
         vec![(0., 0.), (0.5, 0.), (1., 0.), (1.5, 0.), (2., 0.), (1., 2.)],
+        vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0),
+             (0., 0.), (0.5, 0.), (1., 0.), (1.5, 0.), (2., 0.), (1., 2.)],
         vec![(0., 0.), (2., 0.), (1.5, 0.), (1., 0.), (0.5, 0.), (1., 2.)],
         vec![(0., 0.), (1.5, 0.), (1., 0.), (0.5, 0.), (2., 0.), (1., 2.)],
+        vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (1.0, 1.0)],
+        vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (3.0, 3.0)],
+        vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (3.0, -3.0)],
+        vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, -3.0)],
+        vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, 3.0)],
     ];
 
     for (info, map) in transforms.iter() {
         info!("transformation: {}", info);
 
         for (i, pnts) in test_cases.iter().enumerate() {
-            info!("testcase: {}", i);
+            debug!("testcase: {}", i);
 
             //fTriTrace.setVirtualPositions( { glm::vec2( -3, 0 ), glm::vec2( 3, 0 ), glm::vec2( 0, -3 ), glm::vec2( 0, 3 ) } );
 
             for &(x, y) in pnts.iter() {
                 let pos = map(x, y);
-                debug!("add {:?}", pos);
+                trace!("add {:?}", pos);
                 let vi = Builder::new(&mut tri).add_vertex(pos, None);
-                debug!("vi {:?}, {:?}", vi, tri);
-                assert_eq!(Checker::new(&tri).check(None), Ok(()));
+                trace!("{:?} = {:?}", vi, tri[PositionIndex::Vertex(vi)]);
+                assert_eq!(Checker::new(&tri).check(None), Ok(()), "{:?}", tri);
 
                 let pos = map(x, y);
-                debug!("add duplicate {:?}", pos);
+                trace!("add duplicate {:?}", pos);
                 let vi_dup = Builder::new(&mut tri).add_vertex(pos, None);
-                debug!("{:?}", tri);
                 assert_eq!(Checker::new(&tri).check(None), Ok(()));
                 assert_eq!(vi, vi_dup);
             }
 
             assert_eq!(tri.dimension(), 2);
+
+            trace!("clear");
+            tri.clear();
+            assert!(tri.is_empty());
+            assert_eq!(Checker::new(&tri).check(None), Ok(()));
         }
     }
 }

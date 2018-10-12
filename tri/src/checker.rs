@@ -1,5 +1,6 @@
 use geometry::{Orientation, Position, Predicates};
 use graph::{Face, Graph, Vertex};
+use indexing::PositionIndex;
 use types::rot3;
 
 pub struct Checker<'a, P, V, F>
@@ -35,7 +36,7 @@ where
             } else {
                 Ok(())
             }
-        } else if self.tri.dimension() < 3 {
+        } else {
             let finite_vertex_count = self
                 .tri
                 .vertex_index_iter()
@@ -49,8 +50,8 @@ where
                 ));
             }
 
-            let mut _finite_face_count = 0;
-            let mut _infinite_face_count = 0;
+            let mut finite_face_count = 0;
+            let mut infinite_face_count = 0;
             for f in self.tri.face_index_iter() {
                 for r in 0..3 {
                     let d = rot3(r);
@@ -64,15 +65,76 @@ where
                     }
                 }
                 if self.tri.is_infinite_face(f) {
-                    _infinite_face_count += 1;
+                    infinite_face_count += 1;
                 } else {
-                    _finite_face_count += 1;
+                    finite_face_count += 1;
                 }
             }
 
-            Ok(())
-        } else {
-            Err(format!("Invalid dimension: {}", self.tri.dimension()))
+            if self.tri.dimension() == 0 {
+                if finite_face_count != 1 {
+                    Err(format!(
+                        "Face count does not match for dim0, (f = 1), f={}",
+                        finite_face_count
+                    ))
+                } else if infinite_face_count != 1 {
+                    Err(format!(
+                        "Infinit face count does not match for dim0: (h = 1), h={}",
+                        infinite_face_count
+                    ))
+                } else if finite_vertex_count != 1 {
+                    Err(format!(
+                        "Vertex count does not match for dim0: (v = 1), v={}",
+                        finite_vertex_count
+                    ))
+                } else {
+                    Ok(())
+                }
+            } else if self.tri.dimension() == 1 {
+                if infinite_face_count != 2 {
+                    Err(format!(
+                        "Infinite face count does not match hull count for dim1: (if = h), if={},h=2",
+                        infinite_face_count
+                    ))
+                } else if finite_face_count + 1 != finite_vertex_count {
+                    Err(format!(
+                        "Vertex, face count does not match for dim1: (v = f+1), v={},f={}",
+                        finite_vertex_count, finite_face_count
+                    ))
+                } else {
+                    Ok(())
+                }
+            } else if self.tri.dimension() == 2 {
+                let mut hull_count = 0;
+                let end = self.tri.infinite_face();
+                let mut cur = end;
+                loop {
+                    hull_count += 1;
+                    let iid = self.tri[cur].get_vertex_index(self.tri.infinite_vertex()).unwrap(); // index of infinite vertex
+                    let aid = iid.decrement();
+                    cur = self.tri[cur].neighbor(aid);
+                    if cur == end {
+                        break;
+                    }
+                }
+
+                if hull_count != infinite_face_count {
+                    Err(format!(
+                        "Infinite face count does not match hull count for dim2: (if = h), if={},h={}",
+                        infinite_face_count, hull_count
+                    ))
+                } else if 2 * finite_vertex_count != finite_face_count + hull_count + 2 {
+                    // https://en.wikipedia.org/wiki/Point_set_triangulation#Combinatorics_in_the_plane
+                    Err(format!(
+                        "Vertex, face count does not match for dim2: (2v-h-2 = f), v={},f={},h={}",
+                        finite_vertex_count, finite_face_count, hull_count
+                    ))
+                } else {
+                    Ok(())
+                }
+            } else {
+                Err(format!("Invalid dimension: {}", self.tri.dimension()))
+            }
         }
     }
 
@@ -179,13 +241,9 @@ where
                 continue;
             }
 
-            let v0 = self.tri[f].vertex(rot3(0));
-            let v1 = self.tri[f].vertex(rot3(1));
-            let v2 = self.tri[f].vertex(rot3(2));
-
-            let a = self.tri[v0].position();
-            let b = self.tri[v1].position();
-            let c = self.tri[v2].position();
+            let a = &self.tri[PositionIndex::Face(f, rot3(0))];
+            let b = &self.tri[PositionIndex::Face(f, rot3(1))];
+            let c = &self.tri[PositionIndex::Face(f, rot3(2))];
 
             let ax: f64 = a.x().into();
             let ay: f64 = a.y().into();
@@ -208,10 +266,8 @@ where
             let iid = self.tri[cur].get_vertex_index(self.tri.infinite_vertex()).unwrap(); // index of infinite vertex
             let aid = iid.decrement();
             let bid = iid.increment();
-            let va = self.tri[cur].vertex(aid);
-            let vb = self.tri[cur].vertex(bid);
-            let a = self.tri[va].position();
-            let b = self.tri[vb].position();
+            let a = &self.tri[PositionIndex::Face(cur, aid)];
+            let b = &self.tri[PositionIndex::Face(cur, bid)];
             let ax: f64 = a.x().into();
             let ay: f64 = a.y().into();
             let bx: f64 = b.x().into();
@@ -248,7 +304,7 @@ where
         self.check_dimension()?;
         self.check_topology()?;
         self.check_orientation()?;
-        //self.check_area(eps_area)?;
+        self.check_area(eps_area)?;
         Ok(())
     }
 }

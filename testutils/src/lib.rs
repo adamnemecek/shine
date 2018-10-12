@@ -3,6 +3,8 @@ extern crate env_logger;
 extern crate log;
 
 pub fn init_test_logger(module: &str) {
+    ::std::env::set_var("RUST_BACKTRACE", "1");
+
     if ::std::env::var("RUST_LOG").is_err() {
         ::std::env::set_var("RUST_LOG", format!("{}=debug,shine-core=info,shine-graph=info", module));
     }

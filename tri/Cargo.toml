@@ -13,4 +13,5 @@ rand = "*"
 
 [dev-dependencies]
 env_logger = "*"
+quickcheck = "*"
 shine-testutils = {path = "../testutils"}

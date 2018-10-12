@@ -91,12 +91,12 @@ pub struct Edge(pub FaceIndex, pub Rot3);
 
 impl Edge {
     /// Returns the next edge of the triangle in clockwise direction.
-    fn rotate_cw(&self) -> Edge {
+    pub fn rotate_cw(&self) -> Edge {
       Edge( self.0, self.1.decrement() )
     }
 
     /// Returns the next edge of the triangle in counter-clockwise direction.
-    fn rotate_ccw(&self) -> Edge {
+    pub fn rotate_ccw(&self) -> Edge {
         Edge( self.0, self.1.increment() )
     }
 }

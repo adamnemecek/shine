@@ -1,4 +1,4 @@
-use geometry::Predicates;
+use geometry::{Orientation, Predicates};
 use graph::{Face, FaceExt, Graph, Vertex};
 use locator::{Location, Locator};
 use rand::{self, Rng, ThreadRng};
@@ -70,8 +70,8 @@ where
             2 => match loc {
                 Location::Vertex(f, i) => self.tri[f].vertex(i),
                 Location::Edge(f, i) => self.split_edge_dim2(p, f, i),
-                //Location::Face { face } => self.split_face(p, face),
-                //Location::OutsideConvexHull { face } => self.insert_outside_convex_hull2(p, face),
+                Location::Face(f) => self.split_face(p, f),
+                Location::OutsideConvexHull(f) => self.insert_outside_convex_hull2(p, f),
                 _ => unreachable!(format!("Invalid location for 2D triangulation: {:?}", loc)),
             },
             dim => unreachable!(format!("Invalid dimension: {}, {:?}", dim, loc)),
@@ -105,6 +105,10 @@ where
         self.tri[f_to].set_constraint(i_to, c);
     }
 
+    fn clear_constraint(&mut self, f: FaceIndex, i: Rot3) {
+        self.tri[f].set_constraint(i, Default::default());
+    }
+
     fn extend_to_dim0(&mut self, p: P::Position) -> VertexIndex {
         assert!(self.tri.dimension() == -1);
         assert!(!self.tri.infinite_vertex().is_valid());
@@ -120,7 +124,7 @@ where
 
         self.tri[v0].set_face(f0);
         self.tri[v1].set_face(f1);
-        self.tri.set_adjacent(f0, rot3(0), f1, rot3(0));
+        self.set_adjacent(f0, rot3(0), f1, rot3(0));
 
         v1
     }
@@ -156,9 +160,9 @@ where
         self.tri[f1].set_vertex(rot3(1), v2);
         self.tri[v2].set_face(f2);
 
-        self.tri.set_adjacent(f0, rot3(0), f1, rot3(1));
-        self.tri.set_adjacent(f1, rot3(0), f2, rot3(1));
-        self.tri.set_adjacent(f2, rot3(0), f0, rot3(1));
+        self.set_adjacent(f0, rot3(0), f1, rot3(1));
+        self.set_adjacent(f1, rot3(0), f2, rot3(1));
+        self.set_adjacent(f2, rot3(0), f0, rot3(1));
 
         v2
     }
@@ -231,9 +235,9 @@ where
                 self.tri[new_vertex].set_face(cur);
             }
 
-            self.tri.set_adjacent(cur, rot3(2), new_face, rot3(2));
+            self.set_adjacent(cur, rot3(2), new_face, rot3(2));
             if prev_new_face.is_valid() {
-                self.tri.set_adjacent(prev_new_face, im, new_face, i0);
+                self.set_adjacent(prev_new_face, im, new_face, i0);
             }
 
             self.copy_constraint(cur, rot3(2), new_face, rot3(2));
@@ -251,13 +255,13 @@ where
         if i0 == rot3(1) {
             self.tri[f0].swap_vertices(rot3(2), rot3(1));
             self.tri[fm].swap_vertices(rot3(0), rot3(2));
-            self.tri.set_adjacent(f0, rot3(1), c0, rot3(0));
-            self.tri.set_adjacent(fm, rot3(0), cm, rot3(1));
-            self.tri.set_adjacent(f0, rot3(2), n0, rot3(1));
-            self.tri.set_adjacent(fm, rot3(2), nm, rot3(0));
+            self.set_adjacent(f0, rot3(1), c0, rot3(0));
+            self.set_adjacent(fm, rot3(0), cm, rot3(1));
+            self.set_adjacent(f0, rot3(2), n0, rot3(1));
+            self.set_adjacent(fm, rot3(2), nm, rot3(0));
         } else {
-            self.tri.set_adjacent(f0, rot3(2), n0, rot3(0));
-            self.tri.set_adjacent(fm, rot3(2), nm, rot3(1));
+            self.set_adjacent(f0, rot3(2), n0, rot3(0));
+            self.set_adjacent(fm, rot3(2), nm, rot3(1));
         }
         new_vertex
     }
@@ -287,8 +291,8 @@ where
         self.tri[v2].set_face(f2);
         self.tri[f0].set_vertex(rot3(1), v2);
         self.tri[f2].set_vertices(v2, v1, invalid_vertex());
-        self.tri.set_adjacent(f2, rot3(1), f0, rot3(0));
-        self.tri.set_adjacent(f2, rot3(0), f1, i);
+        self.set_adjacent(f2, rot3(1), f0, rot3(0));
+        self.set_adjacent(f2, rot3(0), f1, i);
 
         self.copy_constraint(f0, rot3(2), f2, rot3(2));
 
@@ -334,27 +338,25 @@ where
         self.tri[v0].set_face(n0);
         self.tri[v3].set_face(n1);
 
-        self.tri.move_adjacent(n0, rot3(0), f0, i00);
-        self.tri.set_adjacent(n0, rot3(1), f0, i00);
-        self.tri.set_adjacent(n0, rot3(2), n1, rot3(1));
+        self.move_adjacent(n0, rot3(0), f0, i00);
+        self.set_adjacent(n0, rot3(1), f0, i00);
+        self.set_adjacent(n0, rot3(2), n1, rot3(1));
 
-        self.tri.move_adjacent(n1, rot3(0), f1, i11);
-        self.tri.set_adjacent(n1, rot3(2), f1, i11);
+        self.move_adjacent(n1, rot3(0), f1, i11);
+        self.set_adjacent(n1, rot3(2), f1, i11);
 
         self.copy_constraint(f0, i00, n0, rot3(0));
         self.copy_constraint(f0, i02, n0, rot3(2));
-        self.tri[f0].set_constraint(i00, Default::default());
+        self.clear_constraint(f0, i00);
         self.copy_constraint(f1, i11, n1, rot3(0));
         self.copy_constraint(f1, i12, n1, rot3(1));
-        self.tri[f1].set_constraint(i11, Default::default());
+        self.clear_constraint(f1, i11);
 
         vp
     }
-    /*
-    fn split_face(&mut self, p: T::Position, face: FaceIndex) -> VertexIndex {
-        let tri = &mut self.tri;
 
-        assert!(tri.dimension == 2);
+    fn split_face(&mut self, p: P::Position, face: FaceIndex) -> VertexIndex {
+        assert_eq!(self.tri.dimension(), 2);
 
         //            v2
         //            x
@@ -366,69 +368,129 @@ where
         //      /0   F0    1\
         // v0  x-------------x v1
 
-        let vp = tri.create_vertex_with_position(p);
-        let n0 = tri.create_face();
-        let n1 = tri.create_face();
+        let vp = self.create_vertex_with_position(p);
+        let n0 = self.create_face();
+        let n1 = self.create_face();
         let f0 = face;
 
-        let v0 = tri.get_face_vertex(f0, rot3(0));
-        let v1 = tri.get_face_vertex(f0, rot3(1));
-        let v2 = tri.get_face_vertex(f0, rot3(2));
+        let v0 = self.tri[f0].vertex(rot3(0));
+        let v1 = self.tri[f0].vertex(rot3(1));
+        let v2 = self.tri[f0].vertex(rot3(2));
 
-        tri.set_face_vertices(n0, v0, vp, v2);
-        tri.set_face_vertices(n1, vp, v1, v2);
-        tri.set_face_vertex(f0, rot3(2), vp);
-        tri.set_vertex_face(vp, f0);
-        tri.set_vertex_face(v2, n0);
+        self.tri[n0].set_vertices(v0, vp, v2);
+        self.tri[n1].set_vertices(vp, v1, v2);
+        self.tri[f0].set_vertex(rot3(2), vp);
+        self.tri[vp].set_face(f0);
+        self.tri[v2].set_face(n0);
 
-        tri.set_adjacent(n0, rot3(0), n1, rot3(1));
-        tri.move_adjacent(n0, rot3(1), f0, rot3(1));
-        tri.move_adjacent(n1, rot3(0), f0, rot3(0));
-        tri.set_adjacent(n0, rot3(2), f0, rot3(1));
-        tri.set_adjacent(n1, rot3(2), f0, rot3(0));
+        self.set_adjacent(n0, rot3(0), n1, rot3(1));
+        self.move_adjacent(n0, rot3(1), f0, rot3(1));
+        self.move_adjacent(n1, rot3(0), f0, rot3(0));
+        self.set_adjacent(n0, rot3(2), f0, rot3(1));
+        self.set_adjacent(n1, rot3(2), f0, rot3(0));
 
-        tri.set_constraint(n0, rot3(1), tri.get_constraint(f0, rot3(1)));
-        tri.set_constraint(n1, rot3(0), tri.get_constraint(f0, rot3(0)));
-        tri.clear_constraint(f0, rot3(0));
-        tri.clear_constraint(f0, rot3(1));
+        self.copy_constraint(f0, rot3(1), n0, rot3(1));
+        self.copy_constraint(f0, rot3(0), n1, rot3(0));
+        self.clear_constraint(f0, rot3(0));
+        self.clear_constraint(f0, rot3(1));
         vp
     }
 
-    fn insert_outside_convex_hull2(&mut self, p: T::Position, face: FaceIndex) -> VertexIndex {
+    /// Set adjacent face information for two neighboring faces.
+    fn set_adjacent(&mut self, f0: FaceIndex, i0: Rot3, f1: FaceIndex, i1: Rot3) {
+        assert!(i0.is_valid() && i1.is_valid());
+        assert!(i0.id() <= self.tri.dimension() as u8 && i1.id() <= self.tri.dimension() as u8);
+        self.tri[f0].set_neighbor(i0, f1);
+        self.tri[f1].set_neighbor(i1, f0);
+    }
+
+    /// Move adjacent face information from one face into another.
+    fn move_adjacent(&mut self, f_target: FaceIndex, i_target: Rot3, f_source: FaceIndex, i_source: Rot3) {
+        let n = self.tri[f_source].neighbor(i_source);
+        let i = self.tri[n].get_neighbor_index(f_source).unwrap();
+        self.set_adjacent(f_target, i_target, n, i);
+    }
+
+    /// Flips the edge in the quadrangle defined by the two neighboring triangles.
+    pub fn flip(&mut self, face: FaceIndex, edge: Rot3) {
+        assert_eq!(self.tri.dimension(), 2);
+        assert!(face.is_valid() && edge.is_valid());
+
+        //            v3                       v3
+        //          2 * 1                      *
+        //         /  |   \                 /  1  \
+        //       /    |     \             /2  F1   0\
+        //  v0 *0  F0 | F1  0* v2    v0 * ----------- * v2
+        //       \    |    /              \0  F0   2/
+        //         \  |  /                  \  1  /
+        //          1 * 2                      *
+        //            v1                      v1
+
         let f0 = face;
-        let vinf = self.tri.get_infinite_vertex();
-        let i = self.tri.get_face_vertex_index(f0, vinf).unwrap();
-        let fcw = self.tri.get_face_neighbor(f0, i.decrement());
-        let fccw = self.tri.get_face_neighbor(f0, i.increment());
+        let i00 = edge;
+        let i01 = i00.increment();
+        let i02 = i00.decrement();
+
+        let f1 = self.tri[f0].neighbor(i00);
+        let i10 = self.tri[f1].get_neighbor_index(f0).unwrap();
+        let i11 = i10.increment();
+        let i12 = i10.decrement();
+
+        let v0 = self.tri[f0].vertex(i00);
+        let v1 = self.tri[f0].vertex(i01);
+        let v3 = self.tri[f0].vertex(i02);
+        let v2 = self.tri[f1].vertex(i10);
+        assert!(self.tri[f1].vertex(i11) == v3);
+        assert!(self.tri[f1].vertex(i12) == v1);
+
+        self.tri[f0].set_vertex(i02, v2);
+        self.tri[f1].set_vertex(i12, v0);
+        self.tri[v0].set_face(f0);
+        self.tri[v1].set_face(f0);
+        self.tri[v2].set_face(f0);
+        self.tri[v3].set_face(f1);
+
+        self.move_adjacent(f0, i00, f1, i11);
+        self.move_adjacent(f1, i10, f0, i01);
+        self.move_adjacent(f0, i01, f1, i11);
+
+        self.copy_constraint(f1, i11, f0, i00);
+        self.copy_constraint(f0, i01, f1, i10);
+        self.clear_constraint(f0, i01);
+        self.clear_constraint(f1, i11);
+    }
+
+    fn insert_outside_convex_hull2(&mut self, p: P::Position, face: FaceIndex) -> VertexIndex {
+        let f0 = face;
+        let vinf = self.tri.infinite_vertex();
+        let i = self.tri[f0].get_vertex_index(vinf).unwrap();
+        let mut fcw = self.tri[f0].neighbor(i.decrement());
+        let mut fccw = self.tri[f0].neighbor(i.increment());
 
         // split the infinite triangle by the given position
         let vp = self.split_face(p, face);
 
         //correct faces by flipping
-        let tri = &mut self.tri;
-
-        let mut cur = fcw;
         loop {
-            let i = tri.get_face_vertex_index(cur, tri.get_infinite_vertex()).unwrap();
-            let next = tri.get_face_neighbor(cur, i.decrement());
-            if tri.get_orientation_edge_vertex(Edge(cur, i), vp) != Orientation::CounterClockwise {
+            let i = self.tri[fcw].get_vertex_index(vinf).unwrap();
+            let next = self.tri[fcw].neighbor(i.decrement());
+            if self.tri.get_edge_vertex_orientation(fcw, i, vp) != Orientation::CounterClockwise {
                 break;
             }
-            tri.flip(cur, i.increment());
-            cur = next;
+            self.flip(fcw, i.increment());
+            fcw = next;
         }
 
-        let mut cur = fccw;
         loop {
-            let i = tri.get_face_vertex_index(cur, tri.get_infinite_vertex()).unwrap();
-            let next = tri.get_face_neighbor(cur, i.increment());
-            if tri.get_orientation_edge_vertex(Edge(cur, i), vp) != Orientation::CounterClockwise {
+            let i = self.tri[fccw].get_vertex_index(vinf).unwrap();
+            let next = self.tri[fccw].neighbor(i.increment());
+            if self.tri.get_edge_vertex_orientation(fccw, i, vp) != Orientation::CounterClockwise {
                 break;
             }
-            tri.flip(cur, i.decrement());
-            cur = next;
+            self.flip(fccw, i.decrement());
+            fccw = next;
         }
 
         vp
-    }*/
+    }
 }
