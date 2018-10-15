@@ -152,6 +152,19 @@ step_impl!(FaceIndex);
 pub type FaceRange = Range<FaceIndex>;
 
 
+pub struct InexactPosition {
+    x: f64,
+    y: f64,
+}
+
+impl From<T> for InexactPos where T: Position {
+    fn from(self) -> InexactPosition {
+        
+    }
+}
+
+
+
 /// Shortcut for Rot3::new
 pub fn rot3(i: u8) -> Rot3 {
     Rot3::new(i)

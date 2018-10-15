@@ -1,3 +1,5 @@
+use std::ops;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum Orientation {
     Clockwise,        // det < 0
@@ -13,6 +15,8 @@ pub enum CollinearTest {
     Second,
     After,
 }
+
+pub trait Real: PartialOrd + Into<f64> {}
 
 pub trait Position {
     type Real: PartialOrd + Into<f64>;
