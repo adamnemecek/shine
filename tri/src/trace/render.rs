@@ -2,6 +2,7 @@ use geometry::{Position, Predicates};
 use graph::{Face, Graph, Vertex};
 use indexing::PositionIndex;
 use inexactgeometry::{InexactPosition64, InexactPredicates64};
+use trace::svg::{node::element, Document, Node};
 use types::{FaceIndex, Rot3, VertexIndex};
 
 enum RenderPosition {
@@ -18,6 +19,7 @@ where
 {
     tri: &'a Graph<P, V, F>,
     virtual_positions: Vec<InexactPosition64>,
+    document: Document,
 }
 
 impl<'a, P, V, F> Render<'a, P, V, F>
@@ -30,6 +32,7 @@ where
         Render {
             tri,
             virtual_positions: Default::default(),
+            document: Document::new(),
         }
     }
 
@@ -45,9 +48,22 @@ where
         self.virtual_positions = p.into();
     }
 
-    pub fn add_vertex(&mut self, v: VertexIndex, msg: Option<&str>) {}
+    pub fn add_vertex(&mut self, v: VertexIndex, msg: Option<&str>) {
+        let p = InexactPosition64::from(&self.tri[PositionIndex::Vertex(v)]);
+        let node = element::Circle::new().set("cx", p.x).set("cy", p.y).set("fill", "red");
+        self.document.append(node);
+    }
 
-    pub fn add_edge(&mut self, start: VertexIndex, end: VertexIndex, msg: Option<&str>) {}
+    pub fn add_edge(&mut self, start: VertexIndex, end: VertexIndex, msg: Option<&str>) {
+        let a = InexactPosition64::from(&self.tri[PositionIndex::Vertex(start)]);
+        let b = InexactPosition64::from(&self.tri[PositionIndex::Vertex(end)]);
+        let node = element::Line::new()
+            .set("x1", a.x)
+            .set("y1", a.y)
+            .set("x2", b.x)
+            .set("y2", b.y);
+        self.document.append(node);
+    }
 
     pub fn add_face_edge(&mut self, f: FaceIndex, i: Rot3, msg: Option<&str>) {}
 

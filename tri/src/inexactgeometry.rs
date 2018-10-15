@@ -5,8 +5,8 @@ macro_rules! impl_inexact_position {
     ($position:ident => $float:ty) => {
         #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
         pub struct $position {
-            x: $float,
-            y: $float,
+            pub x: $float,
+            pub y: $float,
         }
 
         impl Position for $position {
