@@ -12,7 +12,7 @@ where
     F: 'a + Face,
 {
     rng: R,
-    tri: &'a mut Graph<P, V, F>,
+    pub tri: &'a mut Graph<P, V, F>,
 }
 
 impl<'a, P, V, F> Builder<'a, ThreadRng, P, V, F>
@@ -474,7 +474,7 @@ where
         loop {
             let i = self.tri[fcw].get_vertex_index(vinf).unwrap();
             let next = self.tri[fcw].neighbor(i.decrement());
-            if self.tri.get_edge_vertex_orientation(fcw, i, vp) != Orientation::CounterClockwise {
+            if !self.tri.get_edge_vertex_orientation(fcw, i, vp).is_ccw() {
                 break;
             }
             self.flip(fcw, i.increment());
@@ -484,7 +484,7 @@ where
         loop {
             let i = self.tri[fccw].get_vertex_index(vinf).unwrap();
             let next = self.tri[fccw].neighbor(i.increment());
-            if self.tri.get_edge_vertex_orientation(fccw, i, vp) != Orientation::CounterClockwise {
+            if !self.tri.get_edge_vertex_orientation(fccw, i, vp).is_ccw() {
                 break;
             }
             self.flip(fccw, i.decrement());

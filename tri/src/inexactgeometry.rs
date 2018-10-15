@@ -1,129 +1,204 @@
 use geometry::{CollinearTest, Orientation, Position, Predicates};
 use std::marker::PhantomData;
 
-pub struct InexactPredicates<P>
-where
-    P: Position<Real = f32>,
-{
-    phantom: PhantomData<P>,
-}
-
-impl<P> InexactPredicates<P>
-where
-    P: Position<Real = f32>,
-{
-    pub fn new() -> InexactPredicates<P> {
-        InexactPredicates { phantom: PhantomData }
-    }
-}
-
-impl<P> Default for InexactPredicates<P>
-where
-    P: Position<Real = f32>,
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<P> Predicates for InexactPredicates<P>
-where
-    P: Position<Real = f32>,
-{
-    type Real = f32;
-    type Position = P;
-
-    fn orientation(&self, a: &Self::Position, b: &Self::Position, c: &Self::Position) -> Orientation {
-        let bax = b.x() - a.x();
-        let bay = b.y() - a.y();
-        let cax = c.x() - a.x();
-        let cay = c.y() - a.y();
-        let det = bax * cay - bay * cax;
-        if det < 0. {
-            Orientation::Clockwise
-        } else if det > 0. {
-            Orientation::CounterClockwise
-        } else {
-            Orientation::Collinear
+macro_rules! impl_inexact_position {
+    ($position:ident => $float:ty) => {
+        #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+        pub struct $position {
+            x: $float,
+            y: $float,
         }
-    }
 
-    fn distance_points(&self, a: &Self::Position, b: &Self::Position) -> Self::Real {
-        let (ax, ay) = (a.x(), a.y());
-        let (bx, by) = (b.x(), b.y());
-        let (bax, bay) = (bx - ax, by - ay);
-        (bax * bax + bay * bay).sqrt()
-    }
+        impl Position for $position {
+            type Real = $float;
 
-    fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool {
-        let (ax, ay) = (a.x(), a.y());
-        let (bx, by) = (b.x(), b.y());
-        return ax == bx && ay == by;
-    }
-
-    fn test_collinear_points(&self, a: &Self::Position, b: &Self::Position, p: &Self::Position) -> CollinearTest {
-        let (ax, ay) = (a.x(), a.y());
-        let (bx, by) = (b.x(), b.y());
-        let (px, py) = (p.x(), p.y());
-        assert!(!self.test_coincident_points(a, b));
-        assert!(self.orientation(a, b, p) == Orientation::Collinear);
-
-        let abx = ax - bx;
-        let aby = ay - by;
-        if abx.abs() > aby.abs() {
-            // x-major line
-            let apx = ax - px;
-            if apx == 0. {
-                CollinearTest::First
-            } else {
-                let bpx = bx - px;
-                if bpx == 0. {
-                    CollinearTest::Second
-                } else if abx < 0. {
-                    if apx > 0. {
-                        CollinearTest::Before
-                    } else if bpx < 0. {
-                        CollinearTest::After
-                    } else {
-                        CollinearTest::Between
-                    }
-                } else {
-                    if apx < 0. {
-                        CollinearTest::Before
-                    } else if bpx > 0. {
-                        CollinearTest::After
-                    } else {
-                        CollinearTest::Between
-                    }
-                }
+            fn x(&self) -> Self::Real {
+                self.x
             }
-        } else {
-            // y-major line
-            let apy = ay - py;
-            if apy == 0. {
-                CollinearTest::First
-            } else {
-                let bpy = by - py;
-                if bpy == 0. {
-                    CollinearTest::Second
-                } else if aby < 0. {
-                    if apy > 0. {
-                        CollinearTest::Before
-                    } else if bpy < 0. {
-                        CollinearTest::After
-                    } else {
-                        CollinearTest::Between
-                    }
-                } else {
-                    if apy < 0. {
-                        CollinearTest::Before
-                    } else if bpy > 0. {
-                        CollinearTest::After
-                    } else {
-                        CollinearTest::Between
-                    }
+
+            fn y(&self) -> Self::Real {
+                self.y
+            }
+        }
+    
+        impl $position {
+            pub fn from<P: Position>(v: &P) -> $position {
+                $position {
+                    x: v.x().into() as $float,
+                    y: v.y().into() as $float,
                 }
             }
         }
     }
 }
+
+
+macro_rules! impl_inexact_predicate {
+    ($predicates:ident => $float:ty) => {
+
+        impl Orientation for $float {
+            fn is_cw(&self) -> bool {
+                *self < 0.
+            }
+
+            fn is_collinear(&self) -> bool {
+                *self == 0.
+            }
+
+            fn is_ccw(&self) -> bool {
+                *self > 0.
+            }
+        }
+
+        impl CollinearTest for $float {
+            fn is_before(&self) -> bool {
+                *self < 0.
+            }
+
+            fn is_first(&self) -> bool {
+                *self == 0.
+            }
+
+            fn is_between(&self) -> bool {
+                *self > 0. && *self < 1.
+            }
+
+            fn is_second(&self) -> bool {
+                *self == 1.
+            }
+
+            fn is_after(&self) -> bool {
+                *self > 1.
+            }
+        }
+
+        pub struct $predicates<P>
+        where
+            P: Position<Real = $float>,
+        {
+            phantom: PhantomData<P>,
+        }
+
+
+        impl<P> $predicates<P>
+        where
+            P: Position<Real = $float>,
+        {
+            pub fn new() -> $predicates<P> {
+                $predicates { phantom: PhantomData }
+            }
+        }
+
+        impl<P> Default for $predicates<P>
+        where
+            P: Position<Real = $float>,
+        {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+
+        impl<P> Predicates for $predicates<P>
+        where
+            P: Position<Real = $float>,
+        {
+            type Real = $float;
+            type Orientation = $float;
+            type CollinearTest = $float;
+            type Position = P;
+
+            fn orientation_triangle(&self, a: &Self::Position, b: &Self::Position, c: &Self::Position) -> Self::Orientation {
+                let bax = b.x() - a.x();
+                let bay = b.y() - a.y();
+                let cax = c.x() - a.x();
+                let cay = c.y() - a.y();
+                let det = bax * cay - bay * cax;
+                det
+            }
+
+            fn distance_point_point(&self, a: &Self::Position, b: &Self::Position) -> Self::Real {
+                let (ax, ay) = (a.x(), a.y());
+                let (bx, by) = (b.x(), b.y());
+                let (bax, bay) = (bx - ax, by - ay);
+                (bax * bax + bay * bay).sqrt()
+            }
+
+            fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool {
+                let (ax, ay) = (a.x(), a.y());
+                let (bx, by) = (b.x(), b.y());
+                return ax == bx && ay == by;
+            }
+
+            fn test_collinear_points(&self, a: &Self::Position, b: &Self::Position, p: &Self::Position) -> Self::CollinearTest {
+                let (ax, ay) = (a.x(), a.y());
+                let (bx, by) = (b.x(), b.y());
+                let (px, py) = (p.x(), p.y());
+                assert!(!self.test_coincident_points(a, b));
+                assert!(self.orientation_triangle(a, b, p).is_collinear());
+
+                let abx = ax - bx;
+                let aby = ay - by;
+                if abx.abs() > aby.abs() {
+                    // x-major line
+                    let apx = ax - px;
+                    if apx == 0. {
+                        0.
+                    } else {
+                        let bpx = bx - px;
+                        if bpx == 0. {
+                            1.
+                        } else if abx < 0. {
+                            if apx > 0. {
+                                -1.
+                            } else if bpx < 0. {
+                                2.
+                            } else {
+                                0.5
+                            }
+                        } else {
+                            if apx < 0. {
+                                -1.
+                            } else if bpx > 0. {
+                                2.
+                            } else {
+                                0.5
+                            }
+                        }
+                    }
+                } else {
+                    // y-major line
+                    let apy = ay - py;
+                    if apy == 0. {
+                        0.
+                    } else {
+                        let bpy = by - py;
+                        if bpy == 0. {
+                            1.
+                        } else if aby < 0. {
+                            if apy > 0. {
+                                -1.
+                            } else if bpy < 0. {
+                                2.
+                            } else {
+                                0.5
+                            }
+                        } else {
+                            if apy < 0. {
+                                -1.
+                            } else if bpy > 0. {
+                                2.
+                            } else {
+                                0.5
+                            }
+                        }
+                    }
+                }
+            }
+        }            
+    }
+}
+
+impl_inexact_position!(InexactPosition32 => f32);
+impl_inexact_predicate!(InexactPredicates32 => f32);
+impl_inexact_position!(InexactPosition64 => f64);
+impl_inexact_predicate!(InexactPredicates64 => f64);

@@ -12,7 +12,7 @@ mod graph;
 mod indexing;
 mod inexactgeometry;
 mod locator;
-mod trace;
+pub mod trace;
 mod types;
 
 pub use self::builder::*;
@@ -22,5 +22,4 @@ pub use self::graph::*;
 pub use self::indexing::*;
 pub use self::inexactgeometry::*;
 pub use self::locator::*;
-pub use self::trace::*;
 pub use self::types::*;

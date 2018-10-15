@@ -140,43 +140,50 @@ where
         let iv1 = self.tri[f1].get_vertex_index(vinf).unwrap();
         let cp1 = &self.tri[PositionIndex::Face(f1, iv1.mirror(2))];
 
-        match self.tri.predicates().orientation(cp0, cp1, p) {
-            Orientation::Clockwise => Ok(Location::OutsideAffineHullClockwise),
-            Orientation::CounterClockwise => Ok(Location::OutsideAffineHullCounterClockwise),
-            _ => {
-                // point is on the line
-                let t = self.tri.predicates().test_collinear_points(cp0, cp1, p);
-                match t {
-                    CollinearTest::Before => Ok(Location::OutsideConvexHull(f0)),
-                    CollinearTest::First => Ok(Location::Vertex(f0, iv0.mirror(2))),
-                    CollinearTest::Second => Ok(Location::Vertex(f1, iv1.mirror(2))),
-                    CollinearTest::After => Ok(Location::OutsideConvexHull(f1)),
-                    CollinearTest::Between => {
-                        // Start from an infinite face(f0) and advance to the neighboring segments while the
-                        // the edge(face) containing the point is not found
-                        let mut prev = f0;
-                        let mut dir = iv0;
-                        loop {
-                            let cur = self.tri[prev].neighbor(dir);
-                            assert!(self.tri.is_finite_face(cur));
+        let orient = self.tri.predicates().orientation_triangle(cp0, cp1, p);
+        if orient.is_cw() {
+            Ok(Location::OutsideAffineHullClockwise)
+        } else if orient.is_ccw() {
+            Ok(Location::OutsideAffineHullCounterClockwise)
+        } else {
+            // point is on the line
+            let t = self.tri.predicates().test_collinear_points(cp0, cp1, p);
+            if t.is_before() {
+                Ok(Location::OutsideConvexHull(f0))
+            } else if t.is_first() {
+                Ok(Location::Vertex(f0, iv0.mirror(2)))
+            } else if t.is_second() {
+                Ok(Location::Vertex(f1, iv1.mirror(2)))
+            } else if t.is_after() {
+                Ok(Location::OutsideConvexHull(f1))
+            } else {
+                assert!(t.is_between());
+                // Start from an infinite face(f0) and advance to the neighboring segments while the
+                // the edge(face) containing the point is not found
+                let mut prev = f0;
+                let mut dir = iv0;
+                loop {
+                    let cur = self.tri[prev].neighbor(dir);
+                    assert!(self.tri.is_finite_face(cur));
 
-                            let p0 = &self.tri[PositionIndex::Face(cur, rot3(0))];
-                            let p1 = &self.tri[PositionIndex::Face(cur, rot3(1))];
+                    let p0 = &self.tri[PositionIndex::Face(cur, rot3(0))];
+                    let p1 = &self.tri[PositionIndex::Face(cur, rot3(1))];
 
-                            let t = self.tri.predicates().test_collinear_points(p0, p1, p);
-                            match t {
-                                CollinearTest::First => return Ok(Location::Vertex(cur, rot3(0))), // identical to p0
-                                CollinearTest::Second => return Ok(Location::Vertex(cur, rot3(1))), // identical to p1
-                                CollinearTest::Between => return Ok(Location::Edge(cur, rot3(2))), // inside the (p0,p1) segment
-
-                                _ => {
-                                    // advance to the next edge
-                                    let vi = self.tri[cur].get_neighbor_index(prev).unwrap();
-                                    prev = cur;
-                                    dir = vi.mirror(2);
-                                }
-                            }
-                        }
+                    let t = self.tri.predicates().test_collinear_points(p0, p1, p);
+                    if t.is_first() {
+                        // identical to p0
+                        return Ok(Location::Vertex(cur, rot3(0)));
+                    } else if t.is_second() {
+                        // identical to p1
+                        return Ok(Location::Vertex(cur, rot3(1)));
+                    } else if t.is_between() {
+                        // inside the (p0,p1) segment
+                        return Ok(Location::Edge(cur, rot3(2)));
+                    } else {
+                        // advance to the next edge
+                        let vi = self.tri[cur].get_neighbor_index(prev).unwrap();
+                        prev = cur;
+                        dir = vi.mirror(2);
                     }
                 }
             }
@@ -206,13 +213,13 @@ where
             let mut min_dist = self
                 .tri
                 .predicates()
-                .distance_points(p, &self.tri[PositionIndex::Vertex(min_vert)]);
+                .distance_point_point(p, &self.tri[PositionIndex::Vertex(min_vert)]);
             for _ in 0..sample_count {
                 let mut vert = self.get_random_finite_vertex();
                 let dist = self
                     .tri
                     .predicates()
-                    .distance_points(p, &self.tri[PositionIndex::Vertex(vert)]);
+                    .distance_point_point(p, &self.tri[PositionIndex::Vertex(vert)]);
                 if dist < min_dist {
                     min_vert = vert;
                     min_dist = dist;
@@ -228,25 +235,25 @@ where
         let p1 = &self.tri[PositionIndex::Face(f, rot3(1))];
         let p2 = &self.tri[PositionIndex::Face(f, rot3(2))];
 
-        let e01 = self.tri.predicates().orientation(p0, p1, p);
-        if e01 == Orientation::Clockwise {
+        let e01 = self.tri.predicates().orientation_triangle(p0, p1, p);
+        if e01.is_cw() {
             return ContainmentResult::Continue(rot3(2));
         }
 
-        let e20 = self.tri.predicates().orientation(p2, p0, p);
-        if e20 == Orientation::Clockwise {
+        let e20 = self.tri.predicates().orientation_triangle(p2, p0, p);
+        if e20.is_cw() {
             return ContainmentResult::Continue(rot3(1));
         }
 
-        let e12 = self.tri.predicates().orientation(&p1, &p2, p);
-        if e12 == Orientation::Clockwise {
+        let e12 = self.tri.predicates().orientation_triangle(&p1, &p2, p);
+        if e12.is_cw() {
             return ContainmentResult::Continue(rot3(0));
         }
 
         let mut test = ContainmentResult::Stop(0);
-        test.set(rot3(2), e01 == Orientation::Collinear);
-        test.set(rot3(0), e12 == Orientation::Collinear);
-        test.set(rot3(1), e20 == Orientation::Collinear);
+        test.set(rot3(2), e01.is_collinear());
+        test.set(rot3(0), e12.is_collinear());
+        test.set(rot3(1), e20.is_collinear());
         test
     }
 
@@ -254,18 +261,18 @@ where
     fn test_containment_ab_bc(&mut self, p: &P::Position, f: FaceIndex, a: Rot3, b: Rot3, c: Rot3) -> ContainmentResult {
         let pa = &self.tri[PositionIndex::Face(f, a)];
         let pb = &self.tri[PositionIndex::Face(f, b)];
-        let ab = self.tri.predicates().orientation(&pa, &pb, p);
-        if ab == Orientation::Clockwise {
+        let ab = self.tri.predicates().orientation_triangle(&pa, &pb, p);
+        if ab.is_cw() {
             ContainmentResult::Continue(c)
         } else {
             let pc = &self.tri[PositionIndex::Face(f, c)];
-            let bc = self.tri.predicates().orientation(pb, pc, p);
-            if bc == Orientation::Clockwise {
+            let bc = self.tri.predicates().orientation_triangle(pb, pc, p);
+            if bc.is_cw() {
                 ContainmentResult::Continue(a)
             } else {
                 let mut test = ContainmentResult::Stop(0);
-                test.set(c, ab == Orientation::Collinear);
-                test.set(a, bc == Orientation::Collinear);
+                test.set(c, ab.is_collinear());
+                test.set(a, bc.is_collinear());
                 test
             }
         }
@@ -275,18 +282,18 @@ where
     fn test_containment_bc_ab(&mut self, p: &P::Position, f: FaceIndex, a: Rot3, b: Rot3, c: Rot3) -> ContainmentResult {
         let pb = &self.tri[PositionIndex::Face(f, b)];
         let pc = &self.tri[PositionIndex::Face(f, c)];
-        let bc = self.tri.predicates().orientation(&pb, &pc, p);
-        if bc == Orientation::Clockwise {
+        let bc = self.tri.predicates().orientation_triangle(&pb, &pc, p);
+        if bc.is_cw() {
             ContainmentResult::Continue(a)
         } else {
             let pa = &self.tri[PositionIndex::Face(f, a)];
-            let ab = self.tri.predicates().orientation(&pa, &pb, p);
-            if ab == Orientation::Clockwise {
+            let ab = self.tri.predicates().orientation_triangle(&pa, &pb, p);
+            if ab.is_cw() {
                 ContainmentResult::Continue(c)
             } else {
                 let mut test = ContainmentResult::Stop(0);
-                test.set(c.into(), ab == Orientation::Collinear);
-                test.set(a.into(), bc == Orientation::Collinear);
+                test.set(c.into(), ab.is_collinear());
+                test.set(a.into(), bc.is_collinear());
                 test
             }
         }

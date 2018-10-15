@@ -221,7 +221,7 @@ where
             let v1 = self.tri[f].vertex(rot3(1));
             let v2 = self.tri[f].vertex(rot3(2));
 
-            if self.tri.get_vertices_orientation(v0, v1, v2) != Orientation::CounterClockwise {
+            if !self.tri.get_vertices_orientation(v0, v1, v2).is_ccw() {
                 return Err(format!("Count-clockwise property is violated for {:?}", f));
             }
         }

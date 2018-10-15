@@ -217,16 +217,16 @@ where
         &mut self.predicates
     }
 
-    pub fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Orientation {
+    pub fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> P::Orientation {
         assert!(v0 != self.infinite_vertex && v1 != self.infinite_vertex && v2 != self.infinite_vertex);
         let a = &self[v0].position();
         let b = &self[v1].position();
         let c = &self[v2].position();
-        self.predicates.orientation(a, b, c)
+        self.predicates.orientation_triangle(a, b, c)
     }
 
-    /// Finds the orientation of an edge and a vertex    
-    pub fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> Orientation {
+    /// Finds the orientation_triangle of an edge and a vertex    
+    pub fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> P::Orientation {
         let va = v;
         let vb = self[f].vertex(i.increment());
         let vc = self[f].vertex(i.decrement());
@@ -249,8 +249,7 @@ where
         let p2 = &self[PositionIndex::Face(nf, ni)];
         let p3 = &self[PositionIndex::Face(f, i2)];
 
-        self.predicates.orientation(p0, p1, p2) == Orientation::CounterClockwise
-            && self.predicates.orientation(p2, p3, p0) == Orientation::CounterClockwise
+        self.predicates.orientation_triangle(p0, p1, p2).is_ccw() && self.predicates.orientation_triangle(p2, p3, p0).is_ccw()
     }
 
     //fn is_convex(&self, edge: Edge) -> bool {}

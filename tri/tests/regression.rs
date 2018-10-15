@@ -16,6 +16,7 @@ use shine_tri::*;
 fn issue39() {
     init_test_logger(module_path!());
 
+    trace::start_service();
     let mut tri = SimpleTri::new();
 
     //let pnts = vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, -3.0)];
@@ -25,6 +26,7 @@ fn issue39() {
         let mut builder = Builder::new(&mut tri);
         for &(x, y) in pnts.iter() {
             builder.add_vertex(Pos(x, y), None);
+            trace::trace(builder.tri);
         }
     }
     assert_eq!(tri.dimension(), 2);

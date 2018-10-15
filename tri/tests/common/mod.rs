@@ -101,4 +101,4 @@ impl Face for TriFace {
     }
 }
 
-pub type SimpleTri = Graph<InexactPredicates<Pos>, TriVertex, TriFace>;
+pub type SimpleTri = Graph<InexactPredicates32<Pos>, TriVertex, TriFace>;
