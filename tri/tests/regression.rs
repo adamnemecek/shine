@@ -16,18 +16,20 @@ use shine_tri::*;
 fn issue39() {
     init_test_logger(module_path!());
 
-    trace::start_service();
+    let service = trace::Service::start();
     let mut tri = SimpleTri::new();
 
     //let pnts = vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, -3.0)];
-    let pnts = vec![(0.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 3.0)];
+    //let pnts = vec![(0.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 3.0)];
+    let pnts = vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, 3.0)];
 
     {
         let mut builder = Builder::new(&mut tri);
         for &(x, y) in pnts.iter() {
             builder.add_vertex(Pos(x, y), None);
-            trace::trace(builder.tri);
+            service.trace_triangle(builder.tri, &Default::default());
         }
+        service.wait();
     }
     assert_eq!(tri.dimension(), 2);
     assert_eq!(Checker::new(&tri).check(None), Ok(()), "{:?}", tri);

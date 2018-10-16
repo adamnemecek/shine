@@ -9,7 +9,7 @@ keywords = ["shine", "triangulation", "robust"]
 
 [features]
 default = ["debug_service"]
-debug_service = ["svg", "actix", "actix-web"]
+debug_service = ["svg", "tera", "actix", "actix-web"]
 
 
 [dependencies]
@@ -17,6 +17,7 @@ log = "*"
 rand = "*"
 
 svg = {version = "*", optional = true}
+tera = {version = "*", optional = true}
 actix = {version = "*", optional = true}
 actix-web = {version = "*", optional = true}
 
