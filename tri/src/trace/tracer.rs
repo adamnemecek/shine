@@ -334,29 +334,22 @@ impl Tracer {
         V: Vertex<Position = P::Position>,
         F: Face,
     {
-        let (mut minx, mut miny) = (0., 0.);
-        let (mut maxx, mut maxy) = (0., 0.);
+        use std::f64;
+        let (mut minx, mut miny) = (f64::MAX, f64::MAX);
+        let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
 
         for v in tri.vertex_index_iter() {
             let p = InexactPosition64::from(&tri[PositionIndex::Vertex(v)]);
-            if p.x < minx {
-                minx = p.x;
-            }
-            if p.x > maxx {
-                maxx = p.x;
-            }
-
-            if p.y < miny {
-                miny = p.y;
-            }
-            if p.y > maxy {
-                maxy = p.y;
-            }
+            minx = if p.x < minx { p.x } else { minx };
+            maxx = if p.x > maxx { p.x } else { maxx };
+            miny = if p.y < minx { p.y } else { minx };
+            maxy = if p.y > maxx { p.y } else { maxx };
         }
 
-        self.document.assign("width", maxx - minx);
-        self.document.assign("height", maxy - miny);
+        self.document.assign("width", "auto");
+        self.document.assign("height", "100%");
         //self.document.assign("viewBox", (minx, miny, maxx - minx, maxy - miny));
+        self.document.assign("viewBox", (-100, -100, 200, 200));
 
         for v in tri.vertex_index_iter() {
             self.add_vertex(tri, mapping, v, None);
@@ -391,11 +384,11 @@ impl Tracer {
             return;
         }
 
-        if let Some(m) = msg {
+        /*if let Some(m) = msg {
             let mut node = element::Text::new().set("x", p.x).set("y", p.y).set("fill", color);
             node.append(Text::new(m));
             self.add_node(node);
-        }
+        }*/
     }
 }
 
