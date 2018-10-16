@@ -1,4 +1,4 @@
-use actix_web::{error, middleware, server, App, Error as ActixWebError, HttpRequest, HttpResponse, State};
+use actix_web::{error, http, middleware, server, App, Error as ActixWebError, HttpRequest, HttpResponse, State};
 use geometry::Predicates;
 use graph::{Face, Graph, Vertex};
 use std::sync::{Arc, Mutex};
@@ -7,17 +7,23 @@ use tera;
 use trace::{RenderMapping, Tracer};
 
 struct AppContext {
-    image: Arc<Mutex<String>>,
+    image: Arc<Mutex<Vec<String>>>,
     template: tera::Tera,
 }
 
 type AppState = State<AppContext>;
 
 fn image_service(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+    //let id: usize = req.match_info().query("id")?;
+    let id = 2;
     let state = req.state();
     let image = {
         let mut img = state.image.lock().unwrap();
-        img.clone()
+        if id < img.len() {
+            img[id].clone()
+        } else {
+            "".into()
+        }
     };
 
     let body = {
@@ -33,12 +39,12 @@ fn image_service(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWeb
 }
 
 pub struct Service {
-    image: Arc<Mutex<String>>,
+    image: Arc<Mutex<Vec<String>>>,
 }
 
 impl Service {
     pub fn start() -> Service {
-        let image = Arc::new(Mutex::new(String::new()));
+        let image = Arc::new(Mutex::new(Vec::new()));
 
         thread::spawn({
             let image = image.clone();
@@ -61,7 +67,7 @@ impl Service {
 
     pub fn set_image(&self, svg: String) {
         let mut img = self.image.lock().unwrap();
-        *img = svg;
+        img.push(svg);
     }
 
     pub fn trace_triangle<'a, P, V, F>(&self, tri: &'a Graph<P, V, F>, mapping: &RenderMapping)

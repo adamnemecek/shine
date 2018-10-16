@@ -1,9 +1,12 @@
-use shine_tri::*;
+use geometry::Position;
+use graph::{Face, Graph, Vertex};
+use inexactgeometry::InexactPredicates32;
+use types::{invalid_vertex, rot3, FaceIndex, Rot3, VertexIndex};
 
 #[derive(Clone, Debug)]
-pub struct Pos(pub f32, pub f32);
+pub struct TriPos(pub f32, pub f32);
 
-impl Position for Pos {
+impl Position for TriPos {
     type Real = f32;
 
     fn x(&self) -> Self::Real {
@@ -16,21 +19,21 @@ impl Position for Pos {
 }
 
 pub struct TriVertex {
-    position: Pos,
+    position: TriPos,
     face: FaceIndex,
 }
 
 impl Default for TriVertex {
     fn default() -> TriVertex {
         TriVertex {
-            position: Pos(0., 0.),
+            position: TriPos(0., 0.),
             face: FaceIndex::invalid(),
         }
     }
 }
 
 impl Vertex for TriVertex {
-    type Position = Pos;
+    type Position = TriPos;
 
     fn position(&self) -> &Self::Position {
         &self.position
@@ -101,4 +104,4 @@ impl Face for TriFace {
     }
 }
 
-pub type SimpleTri = Graph<InexactPredicates32<Pos>, TriVertex, TriFace>;
+pub type SimpleTri = Graph<InexactPredicates32<TriPos>, TriVertex, TriFace>;

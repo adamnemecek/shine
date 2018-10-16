@@ -452,7 +452,7 @@ where
 
         self.move_adjacent(f0, i00, f1, i11);
         self.move_adjacent(f1, i10, f0, i01);
-        self.move_adjacent(f0, i01, f1, i11);
+        self.set_adjacent(f0, i01, f1, i11);
 
         self.copy_constraint(f1, i11, f0, i00);
         self.copy_constraint(f0, i01, f1, i10);

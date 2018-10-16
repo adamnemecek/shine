@@ -1,7 +1,8 @@
-use geometry::{Position, Predicates};
+use geometry::Predicates;
 use graph::{Face, Graph, Vertex};
 use indexing::PositionIndex;
 use inexactgeometry::{InexactPosition64, InexactPredicates64};
+use std::collections::HashMap;
 use svg::node::{element, Text};
 use svg::{Document, Node};
 use types::{rot3, FaceIndex, Rot3, VertexIndex};
@@ -14,6 +15,10 @@ pub struct Coloring {
     pub infinite_vertex_text: String,
     pub edge: String,
     pub edge_text: String,
+    pub face: String,
+    pub face_text: String,
+    pub infinite_face: String,
+    pub infinite_face_text: String,
 }
 
 impl Coloring {
@@ -25,6 +30,10 @@ impl Coloring {
             infinite_vertex_text: "green".into(),
             edge: "blue".into(),
             edge_text: "blue".into(),
+            face: "yellow".into(),
+            face_text: "yellow".into(),
+            infinite_face: "grey".into(),
+            infinite_face_text: "grey".into(),
         }
     }
 }
@@ -48,6 +57,13 @@ impl RenderPosition {
         match *self {
             RenderPosition::Virtual(_) => true,
             RenderPosition::Real(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_virtual(&self) -> bool {
+        match *self {
+            RenderPosition::Virtual(_) => true,
             _ => false,
         }
     }
@@ -158,6 +174,8 @@ pub struct Tracer {
     coloring: Coloring,
     document: Document,
     layers: Vec<element::Group>,
+    scale: (f64, f64, f64, f64),
+    text_map: HashMap<(i32, i32), usize>,
 }
 
 impl Tracer {
@@ -166,6 +184,8 @@ impl Tracer {
             coloring: Default::default(),
             document: Document::new(),
             layers: Default::default(),
+            scale: (1., 1., 0., 0.),
+            text_map: Default::default(),
         }
     }
 
@@ -192,22 +212,16 @@ impl Tracer {
 
         if tri.is_finite_vertex(v) {
             let p = InexactPosition64::from(&tri[PositionIndex::Vertex(v)]);
-            let node = element::Circle::new()
-                .set("cx", p.x)
-                .set("cy", p.y)
-                .set("fill", self.coloring.vertex.clone());
-            self.add_node(node);
+            let color = self.coloring.vertex.clone();
+            self.add_point(&p, color);
             let color = self.coloring.vertex_text.clone();
-            self.add_text(&p, Some(msg), color);
+            self.add_text(&p, msg, color);
         } else {
-            for &p in mapping.virtual_positions.iter() {
-                let node = element::Circle::new()
-                    .set("cx", p.x)
-                    .set("cy", p.y)
-                    .set("fill", self.coloring.vertex.clone());
-                self.add_node(node);
+            for p in mapping.virtual_positions.iter() {
+                let color = self.coloring.infinite_vertex.clone();
+                self.add_point(p, color);
                 let color = self.coloring.infinite_vertex_text.clone();
-                self.add_text(&p, Some(msg.clone()), color);
+                self.add_text(p, msg.clone(), color);
             }
         }
     }
@@ -242,7 +256,9 @@ impl Tracer {
         let x = (a.x + b.x) * 0.5;
         let y = (a.y + b.y) * 0.5;
         let color = self.coloring.edge_text.clone();
-        self.add_text(&InexactPosition64 { x, y }, msg, color);
+        if let Some(msg) = msg {
+            self.add_text(&InexactPosition64 { x, y }, msg, color);
+        }
     }
 
     pub fn add_face_edge<P, V, F>(
@@ -279,14 +295,22 @@ impl Tracer {
 
         for edge in 0..3 {
             // vertex
-            /*if positions[ edge ].is_visible() {
-                addText( positions[ edge ].pos, stdext::format( aFace, ".", edge, "=", verts[ edge ] ),
-                        positions[ edge ].isVirtual() ? aColor.faceInfiniteText : aColor.faceText_ );
-        }*/
+            if positions[edge].is_visible() {
+                let color = if positions[edge].is_virtual() {
+                    self.coloring.face_text.clone()
+                } else {
+                    self.coloring.infinite_face_text.clone()
+                };
+                self.add_text(
+                    positions[edge].position(),
+                    format!("{}.{} = {}", f.0, edge, verts[edge].0),
+                    color,
+                );
+            }
 
             // edges
-            let edge_start = rot3(edge).decrement().id() as usize;
-            let edge_end = rot3(edge).increment().id() as usize;
+            let edge_start = rot3(edge as u8).decrement().id() as usize;
+            let edge_end = rot3(edge as u8).increment().id() as usize;
             if !positions[edge_start].is_visible() || !positions[edge_end].is_visible() {
                 continue;
             }
@@ -298,7 +322,8 @@ impl Tracer {
             //let  col = isConstraint ? aColor.edgeConstrained_ : isVirtual ? aColor.edgeInfinite_ : aColor.edge_;
             let a = positions[edge_start].position();
             let b = positions[edge_end].position();
-            self.add_line(a, b, "red".into());
+            let color = self.coloring.face.clone();
+            self.add_line(a, b, color);
             //glm::vec2 ab = ( a + b ) * 0.5f;
             //addText( ab, stdext::format( "n", aFace, ".", edge, "=", n ), col );
         }
@@ -346,18 +371,22 @@ impl Tracer {
             maxy = if p.y > maxx { p.y } else { maxx };
         }
 
-        self.document.assign("width", "auto");
-        self.document.assign("height", "100%");
-        //self.document.assign("viewBox", (minx, miny, maxx - minx, maxy - miny));
-        self.document.assign("viewBox", (-100, -100, 200, 200));
+        let w = maxx - minx;
+        let h = maxy - miny;
+        minx = minx - w * 0.2;
+        miny = miny - h * 0.2;
+        maxx = maxx + w * 0.2;
+        maxy = maxy + h * 0.2;
 
-        for v in tri.vertex_index_iter() {
-            self.add_vertex(tri, mapping, v, None);
-        }
+        self.set_scale(minx, miny, maxx, maxy);
 
         for f in tri.face_index_iter() {
             self.add_face(tri, mapping, f, None);
             //traceCircumCircle( aTri, f, stdext::nullopt, aColor );
+        }
+
+        for v in tri.vertex_index_iter() {
+            self.add_vertex(tri, mapping, v, None);
         }
     }
 
@@ -369,26 +398,74 @@ impl Tracer {
         }
     }
 
+    fn scale(&self, p: &InexactPosition64) -> InexactPosition64 {
+        InexactPosition64 {
+            x: p.x * self.scale.0 + self.scale.2,
+            y: p.y * self.scale.1 + self.scale.3,
+        }
+    }
+
+    fn set_scale(&mut self, minx: f64, miny: f64, maxx: f64, maxy: f64) {
+        let w = maxx - minx;
+        let h = maxy - miny;
+        let w = if w == 0. { 1. } else { w };
+        let h = if h == 0. { 1. } else { h };
+
+        self.scale.0 = 2. / w;
+        self.scale.1 = 2. / h;
+        self.scale.2 = -(minx + maxx) / w;
+        self.scale.3 = -(miny + maxy) / h;
+        self.document.assign("width", "640");
+        self.document.assign("height", "auto");
+        self.document.assign("viewbox", "-1 -1 2 2");
+    }
+
+    fn add_point(&mut self, p: &InexactPosition64, color: String) {
+        let p = self.scale(p);
+        let node = element::Line::new()
+            .set("x1", p.x)
+            .set("y1", p.y)
+            .set("x2", p.x)
+            .set("y2", p.y)
+            .set("vector-effect", "non-scaling-stroke")
+            .set("stroke-linecap", "round")
+            .set("stroke", color)
+            .set("stroke-width", "4");
+        self.add_node(node);
+    }
+
     fn add_line(&mut self, a: &InexactPosition64, b: &InexactPosition64, color: String) {
+        let a = self.scale(a);
+        let b = self.scale(b);
         let node = element::Line::new()
             .set("x1", a.x)
             .set("y1", a.y)
             .set("x2", b.x)
             .set("y2", b.y)
-            .set("fill", color);
+            .set("vector-effect", "non-scaling-stroke")
+            .set("stroke-linecap", "round")
+            .set("stroke", color)
+            .set("stroke-width", "2");
         self.add_node(node);
     }
 
-    fn add_text(&mut self, p: &InexactPosition64, msg: Option<String>, color: String) {
-        if color.is_empty() {
-            return;
-        }
+    fn add_text(&mut self, p: &InexactPosition64, msg: String, color: String) {
+        let p = self.scale(p);
 
-        /*if let Some(m) = msg {
-            let mut node = element::Text::new().set("x", p.x).set("y", p.y).set("fill", color);
-            node.append(Text::new(m));
-            self.add_node(node);
-        }*/
+        let offset = {
+            let key = ((p.x * 65536.) as i32, (p.y * 65536.) as i32);
+            let count = self.text_map.entry(key).or_insert(0);
+            *count += 1;
+            *count as f64 * 0.05
+        };
+
+        let mut node = element::Text::new()
+            .set("x", p.x)
+            .set("y", p.y + offset)
+            .set("font-size", "0.05")
+            .set("fill", color);
+        node.append(Text::new(msg));
+        self.add_node(node);
     }
 }
 

@@ -5,11 +5,8 @@ extern crate shine_tri;
 #[macro_use]
 extern crate log;
 
-mod common;
-
-use common::*;
 use shine_testutils::*;
-use shine_tri::*;
+use shine_tri::{simplegraph::*, *};
 
 #[test]
 fn t0_empty() {
@@ -30,7 +27,7 @@ fn t1_dimension0() {
     info!("add a point");
     let vi = {
         let mut builder = Builder::new(&mut tri);
-        builder.add_vertex(Pos(0., 0.), None)
+        builder.add_vertex(TriPos(0., 0.), None)
     };
     assert!(!tri.is_empty());
     assert_eq!(tri.dimension(), 0);
@@ -39,7 +36,7 @@ fn t1_dimension0() {
     info!("add same point twice");
     let vi2 = {
         let mut builder = Builder::new(&mut tri);
-        builder.add_vertex(Pos(0., 0.), None)
+        builder.add_vertex(TriPos(0., 0.), None)
     };
     assert_eq!(tri.dimension(), 0);
     assert_eq!(vi, vi2);
@@ -57,15 +54,15 @@ fn t2_dimension1() {
 
     let mut tri = SimpleTri::new();
 
-    let transforms: Vec<(&str, Box<Fn(f32) -> Pos>)> = vec![
-        ("(x, 0)", Box::new(|x| Pos(x, 0.))),
-        ("(0, x)", Box::new(|x| Pos(0., x))),
-        ("(-x, 0)", Box::new(|x| Pos(-x, 0.))),
-        ("(0, -x)", Box::new(|x| Pos(0., -x))),
-        ("(x, x)", Box::new(|x| Pos(x, x))),
-        ("(x, -x)", Box::new(|x| Pos(x, -x))),
-        ("(-x, -x)", Box::new(|x| Pos(-x, -x))),
-        ("(-x, x)", Box::new(|x| Pos(-x, x))),
+    let transforms: Vec<(&str, Box<Fn(f32) -> TriPos>)> = vec![
+        ("(x, 0)", Box::new(|x| TriPos(x, 0.))),
+        ("(0, x)", Box::new(|x| TriPos(0., x))),
+        ("(-x, 0)", Box::new(|x| TriPos(-x, 0.))),
+        ("(0, -x)", Box::new(|x| TriPos(0., -x))),
+        ("(x, x)", Box::new(|x| TriPos(x, x))),
+        ("(x, -x)", Box::new(|x| TriPos(x, -x))),
+        ("(-x, -x)", Box::new(|x| TriPos(-x, -x))),
+        ("(-x, x)", Box::new(|x| TriPos(-x, x))),
     ];
 
     for (info, map) in transforms.iter() {
@@ -105,15 +102,15 @@ fn t2_dimension2() {
 
     let mut tri = SimpleTri::new();
 
-    let transforms: Vec<(&str, Box<Fn(f32, f32) -> Pos>)> = vec![
-        ("(x, y)", Box::new(|x, y| Pos(x, y))),
-        ("(-x, y)", Box::new(|x, y| Pos(-x, y))),
-        ("(-x, -y)", Box::new(|x, y| Pos(-x, -y))),
-        ("(x, -y)", Box::new(|x, y| Pos(x, -y))),
-        ("(y, x)", Box::new(|x, y| Pos(y, x))),
-        ("(-y, x)", Box::new(|x, y| Pos(-y, x))),
-        ("(-y, -x)", Box::new(|x, y| Pos(-y, -x))),
-        ("(y, -x)", Box::new(|x, y| Pos(y, -x))),
+    let transforms: Vec<(&str, Box<Fn(f32, f32) -> TriPos>)> = vec![
+        ("(x, y)", Box::new(|x, y| TriPos(x, y))),
+        ("(-x, y)", Box::new(|x, y| TriPos(-x, y))),
+        ("(-x, -y)", Box::new(|x, y| TriPos(-x, -y))),
+        ("(x, -y)", Box::new(|x, y| TriPos(x, -y))),
+        ("(y, x)", Box::new(|x, y| TriPos(y, x))),
+        ("(-y, x)", Box::new(|x, y| TriPos(-y, x))),
+        ("(-y, -x)", Box::new(|x, y| TriPos(-y, -x))),
+        ("(y, -x)", Box::new(|x, y| TriPos(y, -x))),
     ];
 
     #[rustfmt_skip]
@@ -128,7 +125,7 @@ fn t2_dimension2() {
         vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (1.0, 1.0)],
         vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (3.0, 3.0)],
         vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (3.0, -3.0)],
-        //vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, -3.0)],
+        vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, -3.0)],
         vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, 3.0)],
     ];
 
@@ -137,8 +134,6 @@ fn t2_dimension2() {
 
         for (i, pnts) in test_cases.iter().enumerate() {
             debug!("testcase: {}", i);
-
-            //fTriTrace.setVirtualPositions( { glm::vec2( -3, 0 ), glm::vec2( 3, 0 ), glm::vec2( 0, -3 ), glm::vec2( 0, 3 ) } );
 
             for &(x, y) in pnts.iter() {
                 let pos = map(x, y);

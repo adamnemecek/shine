@@ -22,8 +22,10 @@ mod graph;
 mod indexing;
 mod inexactgeometry;
 mod locator;
-pub mod trace;
 mod types;
+
+pub mod simplegraph;
+pub mod trace;
 
 pub use self::builder::*;
 pub use self::checker::*;

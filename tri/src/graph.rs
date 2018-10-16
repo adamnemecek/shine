@@ -290,18 +290,12 @@ where
             if self.is_infinite_vertex(v) {
                 write!(f, "*")?;
             }
-            write!(f, "{:?}, ", v)?;
+            let p = self[v].position();
+            let x: f64 = p.x().into();
+            let y: f64 = p.y().into();
+            write!(f, "{:?}:({},{}), ", v, x, y)?;
         }
-        write!(f, "] ")?;
-
-        write!(f, "F[ ")?;
-        for t in self.face_index_iter() {
-            if self.is_infinite_face(t) {
-                write!(f, "*")?;
-            }
-            write!(f, "{:?}, ", t)?;
-        }
-        writeln!(f, "] ")?;
+        writeln!(f, "]")?;
 
         write!(f, "VF[ ")?;
         for v in self.vertex_index_iter() {
@@ -321,6 +315,22 @@ where
                 self[t].vertex(rot3(0)),
                 self[t].vertex(rot3(1)),
                 self[t].vertex(rot3(2))
+            )?;
+        }
+        writeln!(f, "]");
+
+        write!(f, "FN[ ")?;
+        for t in self.face_index_iter() {
+            if self.is_infinite_face(t) {
+                write!(f, "*")?;
+            }
+            write!(
+                f,
+                "{:?}->({:?},{:?},{:?}), ",
+                t,
+                self[t].neighbor(rot3(0)),
+                self[t].neighbor(rot3(1)),
+                self[t].neighbor(rot3(2))
             )?;
         }
         writeln!(f, "] }}")
