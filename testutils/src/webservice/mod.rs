@@ -1,5 +1,5 @@
+mod d2trace;
 mod service;
-mod tracer;
 
+pub use self::d2trace::*;
 pub use self::service::*;
-pub use self::tracer::*;

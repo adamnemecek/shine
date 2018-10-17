@@ -10,3 +10,11 @@ keywords = ["shine", "render", "opengl", "game"]
 [dependencies]
 log = "*"
 env_logger = "*"
+
+tera =  "*"
+futures = "*"
+actix =  "*"
+actix-net =  "*"
+actix-web =  "*"
+
+svg =  "*"

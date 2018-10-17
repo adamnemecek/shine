@@ -3,8 +3,11 @@ extern crate shine_tri;
 #[macro_use]
 extern crate log;
 
+mod common;
+
+use common::*;
 use shine_testutils::*;
-use shine_tri::{simplegraph::*, *};
+use shine_tri::*;
 
 #[test]
 fn orientation_triangle() {

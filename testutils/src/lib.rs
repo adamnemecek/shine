@@ -1,6 +1,15 @@
+extern crate actix;
+extern crate actix_net;
+extern crate actix_web;
 extern crate env_logger;
+extern crate futures;
 #[macro_use]
 extern crate log;
+extern crate svg;
+#[macro_use]
+extern crate tera;
+
+pub mod webservice;
 
 pub fn init_test_logger(module: &str) {
     ::std::env::set_var("RUST_BACKTRACE", "1");

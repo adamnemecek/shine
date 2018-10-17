@@ -1,7 +1,4 @@
-use geometry::Position;
-use graph::{Face, Graph, Vertex};
-use inexactgeometry::InexactPredicates32;
-use types::{invalid_vertex, rot3, FaceIndex, Rot3, VertexIndex};
+use shine_tri::*;
 
 #[derive(Clone, Debug)]
 pub struct TriPos(pub f32, pub f32);

@@ -1,14 +1,21 @@
+#![feature(custom_attribute)]
+
 extern crate log;
 extern crate quickcheck;
 extern crate shine_testutils;
 extern crate shine_tri;
 
-use quickcheck::quickcheck;
-use shine_tri::{simplegraph::*, *};
+mod common;
 
-fn main() {
-    ::std::env::set_var("QUICKCHECK_TESTS", "100000000");
-    println!("Quickcheck point triangulation");
+use common::*;
+use quickcheck::quickcheck;
+use shine_testutils::*;
+use shine_tri::*;
+
+#[test]
+fn stress() {
+    init_test_logger(module_path!());
+    ::std::env::set_var("QUICKCHECK_TESTS", "1000");
 
     fn fuzzer(xs: Vec<(f32, f32)>) -> bool {
         let mut tri = SimpleTri::new();
