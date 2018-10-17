@@ -52,6 +52,8 @@ fn issue39_3() {
     // todo: test if it failes for numeric issues (inexact)
     init_test_logger(module_path!());
 
+    let server = webserver::Service::start(None);
+
     let mut tri = SimpleTri::new();
 
     let pnts = vec![
@@ -70,6 +72,9 @@ fn issue39_3() {
             builder.add_vertex(TriPos(x, y), None);
         }
     }
+
+    server.wait_user();
     assert_eq!(tri.dimension(), 2);
     assert_eq!(Checker::new(&tri).check(None), Ok(()), "{:?}", tri);
+    server.stop();
 }

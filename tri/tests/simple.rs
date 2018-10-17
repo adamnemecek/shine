@@ -116,6 +116,7 @@ fn t2_dimension2() {
         ("(y, -x)", Box::new(|x, y| TriPos(y, -x))),
     ];
 
+    #[allow(unused_attributes)]
     #[rustfmt_skip]
     let test_cases = vec![        
         vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0)],

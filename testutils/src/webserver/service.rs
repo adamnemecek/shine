@@ -14,6 +14,7 @@ struct AppContext {
 fn d2_get_image(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     //let id: usize = req.match_info().query("id")?;
     let id = 2;
+    println!("id: {}", id);
     let state = req.state();
     let image = {
         let mut img = state.d2_images.lock().unwrap();
@@ -24,12 +25,14 @@ fn d2_get_image(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebE
         }
     };
 
+    println!("image: {}", image);
+
     let body = {
         let mut ctx = tera::Context::new();
         ctx.insert("image", &image);
         state
             .template
-            .render("image.html", &ctx)
+            .render("d2.html", &ctx)
             .map_err(|_| error::ErrorInternalServerError("Template error"))?
     };
 

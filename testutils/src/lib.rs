@@ -9,7 +9,7 @@ extern crate svg;
 #[macro_use]
 extern crate tera;
 
-pub mod webservice;
+pub mod webserver;
 
 pub fn init_test_logger(module: &str) {
     ::std::env::set_var("RUST_BACKTRACE", "1");
