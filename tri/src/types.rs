@@ -7,12 +7,6 @@ use std::ops::Range;
 pub struct Rot3(u8);
 
 impl Rot3 {
-    pub fn new(i: u8) -> Rot3 {
-        let v = Rot3(i);
-        assert!(v.is_valid());
-        v
-    }
-
     pub fn third(a: Rot3, b: Rot3) -> Rot3 {
         assert!(a.is_valid() && b.is_valid() && a != b);
         rot3(3 - a.0 - b.0)
@@ -56,11 +50,11 @@ impl From<Rot3> for usize {
 
 /// Index used for Vertex indentification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FaceIndex(pub usize);
+pub struct FaceIndex(usize);
 
 impl FaceIndex {
-    pub fn invalid()-> FaceIndex { FaceIndex(usize::max_value()) }
     pub fn is_valid(self) -> bool { self.0 != usize::max_value() }
+    pub fn id(self) -> usize { self.0 }
 }
 
 impl From<FaceIndex> for usize {
@@ -72,11 +66,11 @@ impl From<FaceIndex> for usize {
 
 /// Index used for vertex indentification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct VertexIndex(pub usize);
+pub struct VertexIndex(usize);
 
 impl VertexIndex {
-    pub fn invalid()-> VertexIndex { VertexIndex(usize::max_value()) }
     pub fn is_valid(self) -> bool { self.0 != usize::max_value() }
+    pub fn id(self) -> usize { self.0 }
 }
 
 impl From<VertexIndex> for usize {
@@ -152,17 +146,34 @@ step_impl!(FaceIndex);
 pub type FaceRange = Range<FaceIndex>;
 
 
-/// Shortcut for Rot3::new
+/// Create a Rot3 from the given index
 pub fn rot3(i: u8) -> Rot3 {
-    Rot3::new(i)
+    let v = Rot3(i);
+    assert!(v.is_valid());
+    v
 }
 
-/// Shortcut for FaceIndex::invalid()
-pub fn invalid_face() -> FaceIndex {
-    FaceIndex::invalid()
+/// Create an invalid VertexIndex
+pub fn invalid_vertex_index() -> VertexIndex {
+    VertexIndex(usize::max_value())
 }
 
-/// Shortcut for FaceIndex::invalid()
-pub fn invalid_vertex() -> VertexIndex {
-    VertexIndex::invalid()
+/// Create a VertexIndex from the given index
+pub fn vertex_index(i: usize) -> VertexIndex {
+    let v = VertexIndex(i);
+    assert!(v.is_valid());
+    v
 }
+
+/// Create an invalid FaceIndex
+pub fn invalid_face_index() -> FaceIndex {
+    FaceIndex(usize::max_value())
+}
+
+/// Create a FaceIndex from the given index
+pub fn face_index(i: usize) -> FaceIndex {
+    let v = FaceIndex(i);
+    assert!(v.is_valid());
+    v
+}
+

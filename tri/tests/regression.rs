@@ -67,14 +67,24 @@ fn issue39_3() {
     ];
 
     {
+        let mut rm = RenderMapping::new();
+        let coloring = Coloring::new();
+        
+        rm.add_virtual_position((-10., 50.));
+        rm.add_virtual_position((90., 50.));
+        rm.add_virtual_position((25., -10.));
+        rm.add_virtual_position((25., 110.));
+
         let mut builder = Builder::new(&mut tri);
         for &(x, y) in pnts.iter() {
             builder.add_vertex(TriPos(x, y), None);
         }
+        server.add_d2_image(&Trace::new(builder.tri, &rm, &coloring));
+        server.wait_user();
     }
 
     server.wait_user();
-    assert_eq!(tri.dimension(), 2);
+    assert_eq!(tri.dimension(), 2);             
     assert_eq!(Checker::new(&tri).check(None), Ok(()), "{:?}", tri);
     server.stop();
 }

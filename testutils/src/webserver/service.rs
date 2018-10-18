@@ -5,6 +5,7 @@ use futures::future::Future;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use tera;
+use webserver::d2trace::{D2Trace, IntoD2Image};
 
 struct AppContext {
     d2_images: Arc<Mutex<Vec<String>>>,
@@ -13,11 +14,12 @@ struct AppContext {
 
 fn d2_get_image(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     //let id: usize = req.match_info().query("id")?;
-    let id = 2;
+    let id = 0;
     println!("id: {}", id);
     let state = req.state();
     let image = {
         let mut img = state.d2_images.lock().unwrap();
+        println!("img: {}", img.len());
         if id < img.len() {
             img[id].clone()
         } else {
@@ -79,7 +81,10 @@ impl Service {
         let _ = self.service_addr.send(server::StopServer { graceful: true }).wait();
     }
 
-    pub fn add_d2_image(&self, svg: String) {
+    pub fn add_d2_image<T: IntoD2Image>(&self, t: &T) {
+        let mut tr = D2Trace::new();
+        t.trace(&mut tr);
+        let svg = tr.to_string();
         let mut imges = self.d2_images.lock().unwrap();
         imges.push(svg);
     }

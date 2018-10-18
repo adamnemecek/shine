@@ -2,7 +2,7 @@ use geometry::{CollinearTest, Orientation, Predicates};
 use graph::{Face, Graph, Vertex};
 use indexing::PositionIndex;
 use rand::Rng;
-use types::{rot3, FaceIndex, Rot3, VertexIndex};
+use types::{vertex_index, invalid_face_index, rot3, FaceIndex, Rot3, VertexIndex};
 
 #[derive(Debug)]
 enum ContainmentResult {
@@ -105,11 +105,11 @@ where
 
         // find the (only) finite vertex
         let v0 = {
-            let v = VertexIndex(1);
+            let v = vertex_index(1);
             if !tri.is_infinite_vertex(v) {
                 v
             } else {
-                VertexIndex(0)
+                vertex_index(0)
             }
         };
 
@@ -197,10 +197,10 @@ where
 
         let cnt = cnt - 1;
         let rnd = self.rng.gen_range(0, cnt);
-        if rnd < self.tri.infinite_vertex().0 {
-            VertexIndex(rnd)
+        if rnd < self.tri.infinite_vertex().id() {
+            vertex_index(rnd)
         } else {
-            VertexIndex(rnd + 1)
+            vertex_index(rnd + 1)
         }
     }
 
@@ -322,7 +322,7 @@ where
         };
         assert!(self.tri.is_finite_face(start));
 
-        let mut prev = FaceIndex::invalid();
+        let mut prev = invalid_face_index();
         let mut cur = start;
         let mut count = 0;
 

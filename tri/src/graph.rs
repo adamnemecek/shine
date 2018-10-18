@@ -1,7 +1,7 @@
 use geometry::{Orientation, Position, Predicates};
 use indexing::PositionIndex;
 use std::fmt;
-use types::{invalid_vertex, rot3, Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
+use types::{face_index, invalid_vertex_index, vertex_index, rot3, Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
 /// A vertex of the triangulation
 pub trait Vertex: Default {
@@ -101,7 +101,7 @@ where
             dimension: -1,
             vertices: Default::default(),
             faces: Default::default(),
-            infinite_vertex: invalid_vertex(),
+            infinite_vertex: invalid_vertex_index(),
         }
     }
 
@@ -123,7 +123,7 @@ where
         self.dimension = -1;
         self.faces.clear();
         self.vertices.clear();
-        self.infinite_vertex = invalid_vertex();
+        self.infinite_vertex = invalid_vertex_index();
     }
 
     pub fn vertex_count(&self) -> usize {
@@ -132,19 +132,19 @@ where
 
     pub fn store_vertex(&mut self, vert: V) -> VertexIndex {
         self.vertices.push(vert);
-        VertexIndex(self.vertices.len() - 1)
+        vertex_index(self.vertices.len() - 1)
     }
 
     pub fn vertex(&self, v: VertexIndex) -> &V {
-        &self.vertices[v.0]
+        &self.vertices[v.id()]
     }
 
     pub fn vertex_mut(&mut self, v: VertexIndex) -> &mut V {
-        &mut self.vertices[v.0]
+        &mut self.vertices[v.id()]
     }
 
     pub fn vertex_index_iter(&self) -> VertexRange {
-        VertexIndex(0)..VertexIndex(self.vertices.len())
+        vertex_index(0)..vertex_index(self.vertices.len())
     }
 
     pub fn face_count(&self) -> usize {
@@ -153,19 +153,19 @@ where
 
     pub fn store_face(&mut self, face: F) -> FaceIndex {
         self.faces.push(face);
-        FaceIndex(self.faces.len() - 1)
+        face_index(self.faces.len() - 1)
     }
 
     pub fn face(&self, f: FaceIndex) -> &F {
-        &self.faces[f.0]
+        &self.faces[f.id()]
     }
 
     pub fn face_mut(&mut self, f: FaceIndex) -> &mut F {
-        &mut self.faces[f.0]
+        &mut self.faces[f.id()]
     }
 
     pub fn face_index_iter(&self) -> FaceRange {
-        FaceIndex(0)..FaceIndex(self.faces.len())
+        face_index(0)..face_index(self.faces.len())
     }
     //endregion
 

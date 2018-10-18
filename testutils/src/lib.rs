@@ -3,7 +3,6 @@ extern crate actix_net;
 extern crate actix_web;
 extern crate env_logger;
 extern crate futures;
-#[macro_use]
 extern crate log;
 extern crate svg;
 #[macro_use]

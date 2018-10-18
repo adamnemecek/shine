@@ -2,6 +2,10 @@ use std::collections::HashMap;
 use svg::node::{element, Text};
 use svg::{Document, Node};
 
+pub trait IntoD2Image {
+    fn trace(&self, tr: &mut D2Trace);
+}
+
 /// Trace 2D geometry object through the web service
 pub struct D2Trace {
     document: Document,

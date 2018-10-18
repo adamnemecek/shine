@@ -24,7 +24,7 @@ impl Default for TriVertex {
     fn default() -> TriVertex {
         TriVertex {
             position: TriPos(0., 0.),
-            face: FaceIndex::invalid(),
+            face: invalid_face_index(),
         }
     }
 }
@@ -58,8 +58,8 @@ pub struct TriFace {
 impl Default for TriFace {
     fn default() -> TriFace {
         TriFace {
-            vertices: [invalid_vertex(); 3],
-            neighbors: [FaceIndex::invalid(); 3],
+            vertices: [invalid_vertex_index(); 3],
+            neighbors: [invalid_face_index(); 3],
             constraints: [false; 3],
         }
     }

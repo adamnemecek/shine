@@ -8,7 +8,16 @@ macro_rules! impl_inexact_position {
             pub x: $float,
             pub y: $float,
         }
-
+    
+        impl $position {
+            pub fn from<P: Position>(v: &P) -> $position {
+                $position {
+                    x: v.x().into() as $float,
+                    y: v.y().into() as $float,
+                }
+            }
+        }
+        
         impl Position for $position {
             type Real = $float;
 
@@ -20,13 +29,10 @@ macro_rules! impl_inexact_position {
                 self.y
             }
         }
-    
-        impl $position {
-            pub fn from<P: Position>(v: &P) -> $position {
-                $position {
-                    x: v.x().into() as $float,
-                    y: v.y().into() as $float,
-                }
+
+        impl From<($float, $float)> for $position {
+            fn from(v: ($float, $float)) -> $position {
+                $position{x: v.0, y: v.1}
             }
         }
     }

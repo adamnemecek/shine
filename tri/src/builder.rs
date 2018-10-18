@@ -2,7 +2,7 @@ use geometry::{Orientation, Predicates};
 use graph::{Face, FaceExt, Graph, Vertex};
 use locator::{Location, Locator};
 use rand::{self, Rng, ThreadRng};
-use types::{invalid_vertex, rot3, FaceIndex, Rot3, VertexIndex};
+use types::{vertex_index, invalid_vertex_index, invalid_face_index, rot3, FaceIndex, Rot3, VertexIndex};
 
 pub struct Builder<'a, R, P, V, F>
 where
@@ -119,8 +119,8 @@ where
 
         let v0 = self.create_infinite_vertex();
         let v1 = self.create_vertex_with_position(p);
-        let f0 = self.create_face_with_vertices(v0, invalid_vertex(), invalid_vertex());
-        let f1 = self.create_face_with_vertices(v1, invalid_vertex(), invalid_vertex());
+        let f0 = self.create_face_with_vertices(v0, invalid_vertex_index(), invalid_vertex_index());
+        let f1 = self.create_face_with_vertices(v1, invalid_vertex_index(), invalid_vertex_index());
 
         self.tri[v0].set_face(f0);
         self.tri[v1].set_face(f1);
@@ -141,8 +141,8 @@ where
 
         // infinite, finite vertices
         let (v0, v1) = {
-            let v0 = VertexIndex(0);
-            let v1 = VertexIndex(1);
+            let v0 = vertex_index(0);
+            let v1 = vertex_index(1);
             if self.tri.is_infinite_vertex(v0) {
                 (v0, v1)
             } else {
@@ -154,7 +154,7 @@ where
 
         let f0 = self.tri[v0].face();
         let f1 = self.tri[v1].face();
-        let f2 = self.create_face_with_vertices(v2, v0, invalid_vertex());
+        let f2 = self.create_face_with_vertices(v2, v0, invalid_vertex_index());
 
         self.tri[f0].set_vertex(rot3(1), v1);
         self.tri[f1].set_vertex(rot3(1), v2);
@@ -217,7 +217,7 @@ where
         let c0 = self.tri[f0].neighbor(i0);
 
         let mut cur = c0;
-        let mut new_face = FaceIndex::invalid();
+        let mut new_face = invalid_face_index();
         while cur != fm {
             let prev_new_face = new_face;
             new_face = self.create_face();
@@ -290,7 +290,7 @@ where
         self.tri[v1].set_face(f1);
         self.tri[v2].set_face(f2);
         self.tri[f0].set_vertex(rot3(1), v2);
-        self.tri[f2].set_vertices(v2, v1, invalid_vertex());
+        self.tri[f2].set_vertices(v2, v1, invalid_vertex_index());
         self.set_adjacent(f2, rot3(1), f0, rot3(0));
         self.set_adjacent(f2, rot3(0), f1, i);
 
