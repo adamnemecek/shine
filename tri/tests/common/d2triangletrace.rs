@@ -294,8 +294,6 @@ where
             tr.add_text( &(center.x,center.y), msg, color.clone() );
         }
     }
-
-    fn add_circum_circle(&self, tr: &mut D2Trace, f: FaceIndex, msg: Option<&str>) {}
 }
 
 impl<'a, P, V, F> IntoD2Image for Trace<'a, P, V, F>

@@ -1,6 +1,6 @@
 use actix;
 use actix_net;
-use actix_web::{error, middleware, server, App, Error as ActixWebError, HttpRequest, HttpResponse};
+use actix_web::{error, fs, middleware, server, App, Error as ActixWebError, HttpRequest, HttpResponse};
 use futures::future::Future;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
@@ -63,7 +63,12 @@ impl Service {
                         let d2_images = d2_images.clone();
                         AppContext { d2_images, template }
                     }).middleware(middleware::Logger::default())
-                    .resource("/d2.html", |r| r.f(d2_get_image))
+                    .handler(
+                        "/",
+                        fs::StaticFiles::new("www")
+                            .expect("Could not find www folder")
+                            .index_file("index.html"),
+                    ).resource("/d2.html", |r| r.f(d2_get_image))
                 }).bind(bind_address.clone())
                 .expect(&format!("Cannot bind to {}", bind_address))
                 .start();

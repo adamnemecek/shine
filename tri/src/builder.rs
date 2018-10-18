@@ -48,6 +48,35 @@ where
         self.add_vertex_at(p, location)
     }
 
+    /// Add a constraining segment.
+    /// First the two positions are inserted then the segment is added as a constraining edge.
+    pub fn add_constraint(&mut self, p0: P::Position, p1: P::Position, c: F::Constraint ) {
+        //drAssert( aConstraint );
+        let v0 = self.add_vertex( p0, None );
+        let start_face = self.tri[v0].face();
+        let v1 = self.add_vertex( p1, Some(start_face) );
+        self.add_constraint_for( v0, v1, c );
+    }
+
+    /// Add a constraining segment.
+    /// First the two positions are inserted then the segment is added as a constraining edge.
+    pub fn add_constraint_for(&mut self, v0: VertexIndex, v1: VertexIndex, _c: F::Constraint ) {
+        assert!(v0.is_valid());
+        assert!(v1.is_valid());             
+        assert!(self.tri.is_finite_vertex(v0));
+        assert!(self.tri.is_finite_vertex(v1));
+        if v0 == v1 {
+            return;
+        }
+
+        match self.tri.dimension() {
+            1 => unimplemented!(),
+            2 => unimplemented!(),
+            _ => unreachable!("Inconsistent triangulation"),
+        }
+    }
+
+
     fn add_vertex_at(&mut self, p: P::Position, loc: Location) -> VertexIndex {
         match self.tri.dimension() {
             -1 => match loc {
