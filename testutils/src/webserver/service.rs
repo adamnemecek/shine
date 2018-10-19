@@ -13,8 +13,7 @@ struct AppContext {
 }
 
 fn d2_get_image(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    //let id: usize = req.match_info().query("id")?;
-    let id = 0;
+    let id: usize = req.match_info().query("id")?;
     println!("id: {}", id);
     let state = req.state();
     let image = {
@@ -23,22 +22,11 @@ fn d2_get_image(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebE
         if id < img.len() {
             img[id].clone()
         } else {
-            "".into()
+            "<svg></svg>".into()
         }
     };
 
-    println!("image: {}", image);
-
-    let body = {
-        let mut ctx = tera::Context::new();
-        ctx.insert("image", &image);
-        state
-            .template
-            .render("d2.html", &ctx)
-            .map_err(|_| error::ErrorInternalServerError("Template error"))?
-    };
-
-    Ok(HttpResponse::Ok().body(body))
+    Ok(HttpResponse::Ok().content_type("image/svg+xml").body(image))
 }
 
 pub struct Service {
@@ -47,7 +35,7 @@ pub struct Service {
 }
 
 impl Service {
-    pub fn start(bind_address: Option<&str>) -> Service {
+    pub fn start(bind_address: Option<&str>) -> Result<Service, ActixWebError> {
         let bind_address = bind_address.unwrap_or("127.0.0.1:80").to_owned();
         let d2_images = Arc::new(Mutex::new(Vec::new()));
         let (tx, rx) = mpsc::channel();
@@ -58,17 +46,18 @@ impl Service {
                 let sys = actix::System::new("d2-server");
 
                 let addr = server::new(move || {
+                    let static_content = fs::StaticFiles::new("www")
+                        .or_else(|_| fs::StaticFiles::new("../testutils/www")) // fall back for devel mode
+                        .unwrap()
+                        .index_file("index.html");
+
                     App::with_state({
                         let template = compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"));
                         let d2_images = d2_images.clone();
                         AppContext { d2_images, template }
                     }).middleware(middleware::Logger::default())
-                    .handler(
-                        "/",
-                        fs::StaticFiles::new("www")
-                            .expect("Could not find www folder")
-                            .index_file("index.html"),
-                    ).resource("/d2.html", |r| r.f(d2_get_image))
+                    .resource("/d2/{id}", |r| r.f(d2_get_image))
+                    .handler("/", static_content)
                 }).bind(bind_address.clone())
                 .expect(&format!("Cannot bind to {}", bind_address))
                 .start();
@@ -79,7 +68,7 @@ impl Service {
         });
 
         let service_addr = rx.recv().unwrap();
-        Service { service_addr, d2_images }
+        Ok(Service { service_addr, d2_images })
     }
 
     pub fn stop(self) {

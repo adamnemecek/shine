@@ -52,7 +52,7 @@ fn issue39_3() {
     // todo: test if it failes for numeric issues (inexact)
     init_test_logger(module_path!());
 
-    let server = webserver::Service::start(None);
+    let server = webserver::Service::start(None).unwrap();
 
     let mut tri = SimpleTri::new();
 
@@ -69,7 +69,7 @@ fn issue39_3() {
     {
         let mut rm = RenderMapping::new();
         let coloring = Coloring::new();
-        
+
         rm.add_virtual_position((-10., 50.));
         rm.add_virtual_position((90., 50.));
         rm.add_virtual_position((25., -10.));
@@ -84,7 +84,7 @@ fn issue39_3() {
     }
 
     server.wait_user();
-    assert_eq!(tri.dimension(), 2);             
+    assert_eq!(tri.dimension(), 2);
     assert_eq!(Checker::new(&tri).check(None), Ok(()), "{:?}", tri);
     server.stop();
 }
