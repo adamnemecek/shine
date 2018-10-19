@@ -67,16 +67,16 @@ var thumbnailViewer = function (options) {
             scope.setAttribute("y", scopeY + 1);
             scope.setAttribute("width", scopeWidth - 2);
             scope.setAttribute("height", scopeHeight - 2);
-            /*
-              line1.setAttribute("x1", scopeX + 1);
-              line1.setAttribute("y1", scopeY + 1);
-              line1.setAttribute("x2", scopeX + 1 + scopeWidth - 2);
-              line1.setAttribute("y2", scopeY + 1 + scopeHeight - 2);
-              line2.setAttribute("x1", scopeX + 1);
-              line2.setAttribute("y1", scopeY + 1 + scopeHeight - 2);
-              line2.setAttribute("x2", scopeX + 1 + scopeWidth - 2);
-              line2.setAttribute("y2", scopeY + 1);
-            */
+
+            /*line1.setAttribute("x1", scopeX + 1);
+            line1.setAttribute("y1", scopeY + 1);
+            line1.setAttribute("x2", scopeX + 1 + scopeWidth - 2);
+            line1.setAttribute("y2", scopeY + 1 + scopeHeight - 2);
+            line2.setAttribute("x1", scopeX + 1);
+            line2.setAttribute("y1", scopeY + 1 + scopeHeight - 2);
+            line2.setAttribute("x2", scopeX + 1 + scopeWidth - 2);
+            line2.setAttribute("y2", scopeY + 1);*/
+
         };
 
         window.thumb.updateThumbScope = function () {
@@ -184,3 +184,10 @@ var thumbnailViewer = function (options) {
 
     }, false);
 };
+
+var my_url_params = new URL(window.location.href);
+var image_id = my_url_params.searchParams.get("id");
+if (!image_id || image_id < 0) {
+    image_id = "0"
+}
+image_id = parseInt(image_id)
