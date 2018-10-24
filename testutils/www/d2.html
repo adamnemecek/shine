@@ -34,76 +34,58 @@
             overflow: hidden;
         }
         #mainView {
-            min-height: 100%;
-            display: inline;
-        }
-        .thumbViewClass {
-            border: 1px solid black;
-            position: absolute;
-            bottom: 5px;
-            left: 5px;
-            width: 20%;
-            height: 30%;
-            margin: 3px;
-            padding: 3px;
-            overflow: hidden;
-        }
-        #thumbView {
-            z-index: 110;
-            background: white;
-        }
-        #scopeContainer {
-            z-index: 120;
-        }
+            min-height: 100%;            
+            min-width: 100%;            
+        }        
     </style>
 </head>
 
 <script src="jscript/svg-pan-zoom/svg-pan-zoom.min.js" type="text/javascript"></script>
-<script src="jscript/d2Viewer.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+    var my_url_params = new URL(window.location.href);
+    var image_id = my_url_params.searchParams.get("id");
+    if (!image_id || image_id < 0) {
+        image_id = "0"
+    }
+
+    image_id = parseInt(image_id)
+    var prev_image_id = image_id - 1;
+    if (prev_image_id < 0) { prev_image_id = 0; }
+    var prev_prev_image_id = image_id - 10;
+    if (prev_prev_image_id < 0) { prev_prev_image_id = 0; }
+    var next_image_id = image_id + 1;
+    next_next_image_id = image_id + 10;
+</script>
 
 <body>
     <script type="text/javascript">
-        var count = 1
-        console.log(count);
-        var last = count - 1;
-        if (last < 0) { last = 0; }
-        var prev_image_id = image_id - 1;
-        if (prev_image_id < 0) { prev_image_id = 0; }
-        var prev_prev_image_id = image_id - 10;
-        if (prev_prev_image_id < 0) { prev_prev_image_id = 0; }
-        var next_image_id = image_id + 1;
-        next_next_image_id = image_id + 10;
         document.write('<h1>Image ' + image_id + '</h1>');
-        document.write('<a href="d2.html?id=0" class="navigate">First</a>');
-        document.write('<a href="d2.html?id=' + prev_prev_image_id + '" class="navigate">&laquo; &laquo; Previous</a>');
-        document.write('<a href="d2.html?id=' + prev_image_id + '" class="navigate">&laquo; Previous</a>');
-        document.write('<a href="d2.html?id=' + next_image_id + '" class="navigate">Next &raquo;</a>');
-        document.write('<a href="d2.html?id=' + next_next_image_id + '" class="navigate">Next &raquo; &raquo;</a>');
     </script>
-    <!--embed type="text/html" src="control.html" /-->
+    <div>
+        <script type="text/javascript">
+            document.write('<a href="d2.html?id=0" class="navigate">First</a>');
+            document.write('<a href="d2.html?id=' + prev_prev_image_id + '" class="navigate">&laquo; &laquo; Previous</a>');
+            document.write('<a href="d2.html?id=' + prev_image_id + '" class="navigate">&laquo; Previous</a>');
+            document.write('<a href="d2.html?id=' + image_id + '" class="navigate">Refresh</a>');
+            document.write('<a href="d2.html?id=' + next_image_id + '" class="navigate">Next &raquo;</a>');
+            document.write('<a href="d2.html?id=' + next_next_image_id + '" class="navigate">Next &raquo; &raquo;</a>');
+        </script>
+    </div>
     <div id="mainViewContainer">
         <script type="text/javascript">
             document.write('<embed id="mainView" type="image/svg+xml" src="d2/' + image_id + '"/>');
+
+            window.onload = function () {
+                svgPanZoom('#mainView', {
+                    zoomEnabled: true,
+                    controlIconsEnabled: true,
+                    fit: true,
+                    center: true,
+                });
+            };
         </script>
     </div>
-
-    <div id="thumbViewContainer">
-        <svg id="scopeContainer" class="thumbViewClass">
-            <g>
-                <rect id="scope" fill="red" fill-opacity="0.1" stroke="red" stroke-width="2px" x="0" y="0" width="0"
-                    height="0" />
-                <line id="line1" stroke="red" stroke-width="2px" x1="0" y1="0" x2="0" y2="0" />
-                <line id="line2" stroke="red" stroke-width="2px" x1="0" y1="0" x2="0" y2="0" />
-            </g>
-        </svg>
-        <script type="text/javascript">
-            document.write('<embed id="thumbView" type="image/svg+xml" src="d2/' + image_id + '" class="thumbViewClass" />')
-        </script>
-    </div>
-
-    <script type="text/javascript">
-        thumbnailViewer({ mainViewId: 'mainView', thumbViewId: 'thumbView' });
-    </script>
 </body>
 
 </html>

@@ -11,7 +11,6 @@ pub struct D2Trace {
     document: Document,
     layers: Vec<element::Group>,
     scale: (f64, f64, f64, f64),
-    text_map: HashMap<(i32, i32), usize>,
 }
 
 impl D2Trace {
@@ -20,7 +19,6 @@ impl D2Trace {
             document: Document::new(),
             layers: Default::default(),
             scale: (1., 1., 0., 0.),
-            text_map: Default::default(),
         }
     }
 
@@ -50,7 +48,7 @@ impl D2Trace {
         self.scale.2 = -(minx + maxx) / w;
         self.scale.3 = -(miny + maxy) / h;
         self.document.assign("width", "640");
-        self.document.assign("height", "auto");
+        //self.document.assign("height", "auto");
         self.document.assign("viewbox", "-1 -1 2 2");
     }
 
@@ -90,16 +88,9 @@ impl D2Trace {
     pub fn add_text(&mut self, p: &(f64, f64), msg: String, color: String) {
         let p = self.scale_position(p);
 
-        let offset = {
-            let key = ((p.0 * 65536.) as i32, (p.1 * 65536.) as i32);
-            let count = self.text_map.entry(key).or_insert(0);
-            *count += 1;
-            *count as f64 * 0.05
-        };
-
         let mut node = element::Text::new()
             .set("x", p.0)
-            .set("y", p.1 + offset)
+            .set("y", p.1)
             .set("font-size", "0.05")
             .set("fill", color);
         node.append(Text::new(msg));
