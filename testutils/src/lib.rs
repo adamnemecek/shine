@@ -1,3 +1,5 @@
+#![feature(crate_visibility_modifier)]
+
 extern crate actix;
 extern crate actix_net;
 extern crate actix_web;

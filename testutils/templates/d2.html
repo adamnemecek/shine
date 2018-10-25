@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1" />
+    <style tyle="text/css">
+        html,body {
+            width: 100%;
+            height: 100%;
+        }
+        a{
+            text-decoration: none;
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 3px;
+        }
+        a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+        .navigate {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .round {
+            border-radius: 50%;
+        }
+        #container {
+            width: 95%;
+            height: 75%;
+            border: 1px solid black;
+            margin: 10px;
+            padding: 3px;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<script src="jscript/svg-pan-zoom/svg-pan-zoom.min.js" type="text/javascript"></script>
+
+<body>
+    <h1>Image {{ image_id }} / {{ image_count }} </h1>
+    <div>
+        <a href="d2.html?id=0" class="navigate">First</a>
+        <a href="d2.html?id={{ prev_prev_image_id }}" class="navigate">&laquo; &laquo; Previous</a>
+        <a href="d2.html?id={{ prev_image_id }}" class="navigate">&laquo; Previous</a>
+        <a href="d2.html?id={{ image_id }}" class="navigate">Refresh</a>
+        <a href="d2.html?id={{ next_image_id }}" class="navigate">Next &raquo;</a>
+        <a href="d2.html?id={{ next_next_image_id }}" class="navigate">Next &raquo; &raquo;</a>
+        <a href="d2.html?id={{ last_image_id }}" class="navigate">Last</a>
+    </div>
+    <div id="container">
+        {{ svg | safe }}
+
+        <script type="text/javascript">
+            //find the svg
+            var content = document.getElementById("container").childNodes;
+            var svg = null;
+            for (var i = 0; i < content.length; i++) {
+                console.log(content[i].nodeName)
+                if (content[i].nodeName == "svg") {
+                    svg = content[i];
+                    break;
+                }
+            }
+            svg.setAttribute("style", "display: inline; min-width: 100%; min-height: 100%; max-width: 100%; max-height: 100%")
+
+            var panZoom = svgPanZoom('svg', {
+                zoomEnabled: true,
+                controlIconsEnabled: true,
+                fit: true,
+                center: true
+            });
+
+            window.onresize = function () {
+                panZoom.resize();
+                panZoom.fit();
+                panZoom.center();
+            };
+        </script>
+    </div>
+</body>
+
+</html>

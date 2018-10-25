@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
 use svg::node::{element, Text};
 use svg::{Document, Node};
+use webserver::service::AppContext;
 
 pub trait IntoD2Image {
     fn trace(&self, tr: &mut D2Trace);
@@ -116,4 +117,49 @@ impl ToString for D2Trace {
     fn to_string(&self) -> String {
         self.document.to_string()
     }
+}
+
+crate fn d2_page(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+    let state = req.state();
+
+    let id = match req.query().get("id") {
+        Some(id) => id
+            .parse()
+            .map_err(|_| error::ErrorBadRequest(format!("Invalid id: {}", id)))?,
+        None => 0,
+    };
+
+    let (image, id, image_count) = {
+        let mut img = state.d2_images.lock().unwrap();
+        if img.is_empty() {
+            ("<svg></svg>".into(), 0, 1)
+        } else if id < img.len() {
+            (img[id].clone(), id, img.len())
+        } else {
+            (img.last().unwrap().clone(), img.len() - 1, img.len())
+        }
+    };
+
+    let last_id = image_count - 1;
+    let next_id = if id + 1 <= last_id { id + 1 } else { last_id };
+    let next_next_id = if id + 10 <= last_id { id + 10 } else { last_id };
+    let prev_id = if id > 1 { id - 1 } else { 0 };
+    let prev_prev_id = if id > 10 { id - 10 } else { 0 };
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("image_id", &format!("{}", id));
+    ctx.insert("image_count", &image_count);
+    ctx.insert("next_image_id", &next_id);
+    ctx.insert("next_next_image_id", &next_next_id);
+    ctx.insert("prev_image_id", &prev_id);
+    ctx.insert("prev_prev_image_id", &prev_prev_id);
+    ctx.insert("last_image_id", &last_id);
+    ctx.insert("svg", &image);
+
+    let body = state.template.render("d2.html", &ctx).map_err(|e| {
+        println!("Template error: {}", e);
+        error::ErrorInternalServerError(format!("Template error: {}", e))
+    })?;
+
+    Ok(HttpResponse::Ok().content_type("text/html").body(body))
 }

@@ -1,43 +1,18 @@
 use actix;
 use actix_net;
-use actix_web::{error, fs, middleware, server, App, Error as ActixWebError, HttpRequest, HttpResponse};
+use actix_web::{fs, http, middleware, server, App, Error as ActixWebError, HttpRequest, HttpResponse};
 use futures::future::Future;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use tera;
-use webserver::d2trace::{D2Trace, IntoD2Image};
+use webserver::d2trace::{d2_page, D2Trace, IntoD2Image};
 
-struct AppContext {
-    d2_images: Arc<Mutex<Vec<String>>>,
-    template: tera::Tera,
+crate struct AppContext {
+    crate d2_images: Arc<Mutex<Vec<String>>>,
+    crate template: tera::Tera,
 }
 
-fn d2_get_image(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    let state = req.state();
-
-    let id = req.match_info().get("id").unwrap_or("0");
-    if id == "len" {
-        let img = state.d2_images.lock().unwrap();
-        return Ok(HttpResponse::Ok().content_type("text/plain").body(format!("{}", img.len())));
-    }
-
-    let id: usize = id
-        .parse()
-        .map_err(|_| error::ErrorBadRequest(format!("Invalid id: {}", id)))?;
-
-    let image = {
-        let mut img = state.d2_images.lock().unwrap();
-        if id < img.len() {
-            img[id].clone()
-        } else {
-            "<svg></svg>".into()
-        }
-    };
-
-    Ok(HttpResponse::Ok().content_type("image/svg+xml").body(image))
-}
-
-fn control_page(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+fn control_page(_req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     println!("hello");
     Ok(HttpResponse::Ok().content_type("test/html").body("Hello"))
 }
@@ -68,11 +43,13 @@ impl Service {
                         let template = compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"));
                         let d2_images = d2_images.clone();
                         AppContext { d2_images, template }
-                    }).middleware(middleware::Logger::default())
-                    .resource("/d2/{id}", |r| r.f(d2_get_image))
+                    })
+                    .middleware(middleware::Logger::default())
+                    .resource("/d2.html", |r| r.method(http::Method::GET).f(d2_page))
                     .resource("/control.html", |r| r.f(control_page))
                     .handler("/", static_content)
-                }).bind(bind_address.clone())
+                })
+                .bind(bind_address.clone())
                 .expect(&format!("Cannot bind to {}", bind_address))
                 .start();
 

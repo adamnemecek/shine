@@ -78,9 +78,8 @@ fn issue39_3() {
         let mut builder = Builder::new(&mut tri);
         for &(x, y) in pnts.iter() {
             builder.add_vertex(TriPos(x, y), None);
+            server.add_d2_image(&Trace::new(builder.tri, &rm, &coloring));
         }
-        server.add_d2_image(&Trace::new(builder.tri, &rm, &coloring));
-        server.wait_user();
     }
 
     server.wait_user();
