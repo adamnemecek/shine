@@ -143,7 +143,7 @@ fn t2_dimension2() {
                 let pos = map(x, y);
                 trace!("add {:?}", pos);
                 let vi = Builder::new(&mut tri).add_vertex(pos, None);
-                trace!("{:?} = {:?}", vi, tri[PositionIndex::Vertex(vi)]);
+                trace!("{:?} = {:?}", vi, tri[PositionQuery::Vertex(vi)]);
                 assert_eq!(Checker::new(&tri).check(None), Ok(()), "{:?}", tri);
 
                 let pos = map(x, y);

@@ -106,7 +106,7 @@ impl RenderMapping {
         }
 
         if tri.is_finite_vertex(v) {
-            let p = InexactPosition64::from(&tri[PositionIndex::Vertex(v)]);
+            let p = InexactPosition64::from(&tri[PositionQuery::Vertex(v)]);
             return RenderPosition::Real(p);
         }
 
@@ -118,9 +118,9 @@ impl RenderMapping {
 
         // find virtual point best fitting the convex hull (2d)
         if vcw.is_valid() && tri.is_finite_vertex(vcw) && vccw.is_valid() && tri.is_finite_vertex(vccw) {
-            let p = InexactPosition64::from(&tri[PositionIndex::Vertex(v)]);
-            let pcw = InexactPosition64::from(&tri[PositionIndex::Vertex(vcw)]);
-            let pccw = InexactPosition64::from(&tri[PositionIndex::Vertex(vccw)]);
+            let p = InexactPosition64::from(&tri[PositionQuery::Vertex(v)]);
+            let pcw = InexactPosition64::from(&tri[PositionQuery::Vertex(vcw)]);
+            let pccw = InexactPosition64::from(&tri[PositionQuery::Vertex(vccw)]);
             let mut best_value = 0.;
             let mut best = None;
 
@@ -138,7 +138,7 @@ impl RenderMapping {
         // find virtual point best fitting the edge (1d)
         for &candidate in [vcw, vccw].iter() {
             if candidate.is_valid() && tri.is_finite_vertex(candidate) {
-                let p = InexactPosition64::from(&tri[PositionIndex::Vertex(candidate)]);
+                let p = InexactPosition64::from(&tri[PositionQuery::Vertex(candidate)]);
                 let mut best_value = 0.;
                 let mut best = None;
 
@@ -191,7 +191,7 @@ where
         let msg = msg.map(|m| format!("V: {}", m)).unwrap_or_else(|| format!("V: {}", v.id()));
 
         if self.tri.is_finite_vertex(v) {
-            let p = InexactPosition64::from(&self.tri[PositionIndex::Vertex(v)]);
+            let p = InexactPosition64::from(&self.tri[PositionQuery::Vertex(v)]);
             tr.add_point(&(p.x, p.y), self.coloring.vertex.clone());
             tr.add_text(&(p.x, p.y), msg, self.coloring.vertex_text.clone());
         } else {
@@ -212,20 +212,25 @@ where
             return;
         }
 
-        let msg = msg.map(|m| format!("E: {}", m)).unwrap_or_else(|| format!("E: ({},{})", a.id(), b.id()));
+        let msg = msg
+            .map(|m| format!("E: {}", m))
+            .unwrap_or_else(|| format!("E: ({},{})", a.id(), b.id()));
 
-        let pa = InexactPosition64::from(&self.tri[PositionIndex::Vertex(a)]);
-        let pb = InexactPosition64::from(&self.tri[PositionIndex::Vertex(b)]);
+        let pa = InexactPosition64::from(&self.tri[PositionQuery::Vertex(a)]);
+        let pb = InexactPosition64::from(&self.tri[PositionQuery::Vertex(b)]);
         tr.add_line(&(pa.x, pa.y), &(pb.x, pb.y), self.coloring.edge.clone());
         let x = (pa.x + pb.x) * 0.5;
         let y = (pa.y + pb.y) * 0.5;
         tr.add_text(&(x, y), msg, self.coloring.edge_text.clone());
     }
 
-    pub fn add_face_edge(&self, _tr: &mut D2Trace, f: FaceIndex, i: Rot3, msg: Option<&str>) {
-        let _msg = msg.map(|m| format!("E: {}", m)).unwrap_or_else(|| format!("E: ({}.{})", f.id(), i.id()));
-        //tr.add_edge( tr, self.tri[self.tri.getStartVertex( aEdge )], aself.tri.getEndVertex( aEdge ), aMessage, aColor );
-        unimplemented!()
+    pub fn add_face_edge(&self, tr: &mut D2Trace, f: FaceIndex, i: Rot3, msg: Option<&str>) {
+        self.add_edge(
+            tr,
+            self.tri.index_get(VertexIndexQuery::EdgeStart(f, i)),
+            self.tri.index_get(VertexIndexQuery::EdgeEnd(f, i)),
+            msg,
+        );
     }
 
     fn add_face(&self, tr: &mut D2Trace, f: FaceIndex, msg: Option<&str>) {
@@ -277,8 +282,8 @@ where
         }
 
         // text
-        let msg = msg.map(|m| format!("F: {}",m)).unwrap_or_else( || format!( "F: {}", f.id() ) );
-        let mut center = InexactPosition64{x:0.,y:0.};
+        let msg = msg.map(|m| format!("F: {}", m)).unwrap_or_else(|| format!("F: {}", f.id()));
+        let mut center = InexactPosition64 { x: 0., y: 0. };
         let mut cnt = 0.;
         for p in positions.iter() {
             if p.is_visible() {
@@ -289,9 +294,13 @@ where
             }
         }
 
-        if cnt > 0.  {            
-            let color = if self.tri.is_finite_face(f) { &self.coloring.face_text } else { &self.coloring.infinite_face_text };
-            tr.add_text( &(center.x,center.y), msg, color.clone() );
+        if cnt > 0. {
+            let color = if self.tri.is_finite_face(f) {
+                &self.coloring.face_text
+            } else {
+                &self.coloring.infinite_face_text
+            };
+            tr.add_text(&(center.x, center.y), msg, color.clone());
         }
     }
 }
@@ -308,7 +317,7 @@ where
         let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
 
         for v in self.tri.vertex_index_iter() {
-            let p = InexactPosition64::from(&self.tri[PositionIndex::Vertex(v)]);
+            let p = InexactPosition64::from(&self.tri[PositionQuery::Vertex(v)]);
             minx = if p.x < minx { p.x } else { minx };
             maxx = if p.x > maxx { p.x } else { maxx };
             miny = if p.y < minx { p.y } else { minx };

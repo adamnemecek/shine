@@ -2,7 +2,7 @@ use geometry::{Orientation, Predicates};
 use graph::{Face, FaceExt, Graph, Vertex};
 use locator::{Location, Locator};
 use rand::{self, Rng, ThreadRng};
-use types::{vertex_index, invalid_vertex_index, invalid_face_index, rot3, FaceIndex, Rot3, VertexIndex};
+use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
 
 pub struct Builder<'a, R, P, V, F>
 where
@@ -50,19 +50,19 @@ where
 
     /// Add a constraining segment.
     /// First the two positions are inserted then the segment is added as a constraining edge.
-    pub fn add_constraint(&mut self, p0: P::Position, p1: P::Position, c: F::Constraint ) {
+    pub fn add_constraint(&mut self, p0: P::Position, p1: P::Position, c: F::Constraint) {
         //drAssert( aConstraint );
-        let v0 = self.add_vertex( p0, None );
+        let v0 = self.add_vertex(p0, None);
         let start_face = self.tri[v0].face();
-        let v1 = self.add_vertex( p1, Some(start_face) );
-        self.add_constraint_for( v0, v1, c );
+        let v1 = self.add_vertex(p1, Some(start_face));
+        self.add_constraint_for(v0, v1, c);
     }
 
     /// Add a constraining segment.
     /// First the two positions are inserted then the segment is added as a constraining edge.
-    pub fn add_constraint_for(&mut self, v0: VertexIndex, v1: VertexIndex, _c: F::Constraint ) {
+    pub fn add_constraint_for(&mut self, v0: VertexIndex, v1: VertexIndex, _c: F::Constraint) {
         assert!(v0.is_valid());
-        assert!(v1.is_valid());             
+        assert!(v1.is_valid());
         assert!(self.tri.is_finite_vertex(v0));
         assert!(self.tri.is_finite_vertex(v1));
         if v0 == v1 {
@@ -75,7 +75,6 @@ where
             _ => unreachable!("Inconsistent triangulation"),
         }
     }
-
 
     fn add_vertex_at(&mut self, p: P::Position, loc: Location) -> VertexIndex {
         match self.tri.dimension() {

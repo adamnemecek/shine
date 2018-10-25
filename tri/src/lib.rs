@@ -1,5 +1,6 @@
 #![feature(step_trait)]
 #![feature(crate_visibility_modifier)]
+#![feature(try_from)]
 
 #[macro_use]
 extern crate log;

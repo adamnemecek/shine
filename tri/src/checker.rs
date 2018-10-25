@@ -1,6 +1,6 @@
 use geometry::{Orientation, Position, Predicates};
 use graph::{Face, Graph, Vertex};
-use indexing::PositionIndex;
+use indexing::PositionQuery;
 use types::rot3;
 
 pub struct Checker<'a, P, V, F>
@@ -147,7 +147,7 @@ where
             let nf = self.tri[v].face();
             let _vi = self.tri[nf]
                 .get_vertex_index(v)
-                .ok_or(format!("Vertex-face link is invalid {:?} is not a neighbor of {:?}", nf, v))?;
+                .ok_or_else(|| format!("Vertex-face link is invalid {:?} is not a neighbor of {:?}", nf, v))?;
         }
         Ok(())
     }
@@ -164,10 +164,12 @@ where
                     ));
                 }
 
-                let ni = self.tri[nf].get_neighbor_index(f).ok_or(format!(
-                    "Face-face link is invalid, missing backward link between ({:?},{:?}) and {:?}",
-                    f, i, nf
-                ))?;
+                let ni = self.tri[nf].get_neighbor_index(f).ok_or_else(|| {
+                    format!(
+                        "Face-face link is invalid, missing backward link between ({:?},{:?}) and {:?}",
+                        f, i, nf
+                    )
+                })?;
 
                 match self.tri.dimension() {
                     1 => {
@@ -241,9 +243,9 @@ where
                 continue;
             }
 
-            let a = &self.tri[PositionIndex::Face(f, rot3(0))];
-            let b = &self.tri[PositionIndex::Face(f, rot3(1))];
-            let c = &self.tri[PositionIndex::Face(f, rot3(2))];
+            let a = &self.tri[PositionQuery::Face(f, rot3(0))];
+            let b = &self.tri[PositionQuery::Face(f, rot3(1))];
+            let c = &self.tri[PositionQuery::Face(f, rot3(2))];
 
             let ax: f64 = a.x().into();
             let ay: f64 = a.y().into();
@@ -266,8 +268,8 @@ where
             let iid = self.tri[cur].get_vertex_index(self.tri.infinite_vertex()).unwrap(); // index of infinite vertex
             let aid = iid.decrement();
             let bid = iid.increment();
-            let a = &self.tri[PositionIndex::Face(cur, aid)];
-            let b = &self.tri[PositionIndex::Face(cur, bid)];
+            let a = &self.tri[PositionQuery::Face(cur, aid)];
+            let b = &self.tri[PositionQuery::Face(cur, bid)];
             let ax: f64 = a.x().into();
             let ay: f64 = a.y().into();
             let bx: f64 = b.x().into();

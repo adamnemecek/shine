@@ -1,7 +1,7 @@
 use geometry::{Orientation, Position, Predicates};
-use indexing::PositionIndex;
+use indexing::PositionQuery;
 use std::fmt;
-use types::{face_index, invalid_vertex_index, vertex_index, rot3, Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
+use types::{face_index, invalid_vertex_index, rot3, vertex_index, Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
 /// A vertex of the triangulation
 pub trait Vertex: Default {
@@ -244,10 +244,10 @@ where
         assert!(self.is_finite_face(nf));
         let ni = self[nf].get_neighbor_index(f).unwrap();
 
-        let p0 = &self[PositionIndex::Face(f, i0)];
-        let p1 = &self[PositionIndex::Face(f, i1)];
-        let p2 = &self[PositionIndex::Face(nf, ni)];
-        let p3 = &self[PositionIndex::Face(f, i2)];
+        let p0 = &self[PositionQuery::Face(f, i0)];
+        let p1 = &self[PositionQuery::Face(f, i1)];
+        let p2 = &self[PositionQuery::Face(nf, ni)];
+        let p3 = &self[PositionQuery::Face(f, i2)];
 
         self.predicates.orientation_triangle(p0, p1, p2).is_ccw() && self.predicates.orientation_triangle(p2, p3, p0).is_ccw()
     }

@@ -50,7 +50,7 @@
                 "shine-tri",
                 "--",
                 "--nocapture",
-                "--ignored"
+                //"--ignored"
             ],
             "presentation": {
                 "echo": true,

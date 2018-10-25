@@ -69,6 +69,7 @@ macro_rules! impl_inexact_predicate {
                 *self > 0. && *self < 1.
             }
 
+            #[allow(clippy::float_cmp)]
             fn is_second(&self) -> bool {
                 *self == 1.
             }
@@ -118,8 +119,7 @@ macro_rules! impl_inexact_predicate {
                 let bay = b.y() - a.y();
                 let cax = c.x() - a.x();
                 let cay = c.y() - a.y();
-                let det = bax * cay - bay * cax;
-                det
+                bax * cay - bay * cax
             }
 
             fn distance_point_point(&self, a: &Self::Position, b: &Self::Position) -> Self::Real {
@@ -129,6 +129,7 @@ macro_rules! impl_inexact_predicate {
                 (bax * bax + bay * bay).sqrt()
             }
 
+            #[allow(clippy::float_cmp)]
             fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool {
                 let (ax, ay) = (a.x(), a.y());
                 let (bx, by) = (b.x(), b.y());

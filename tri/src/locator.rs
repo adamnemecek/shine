@@ -1,8 +1,8 @@
 use geometry::{CollinearTest, Orientation, Predicates};
 use graph::{Face, Graph, Vertex};
-use indexing::PositionIndex;
+use indexing::PositionQuery;
 use rand::Rng;
-use types::{vertex_index, invalid_face_index, rot3, FaceIndex, Rot3, VertexIndex};
+use types::{invalid_face_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
 
 #[derive(Debug)]
 enum ContainmentResult {
@@ -14,8 +14,8 @@ impl ContainmentResult {
     fn set(&mut self, i: Rot3, b: bool) {
         assert!(i.is_valid());
         if b {
-            match self {
-                &mut ContainmentResult::Stop(ref mut t) => *t |= 1 << i.id(),
+            match *self {
+                ContainmentResult::Stop(ref mut t) => *t |= 1 << i.id(),
                 _ => unreachable!(),
             }
         }
@@ -133,12 +133,12 @@ where
         // first point of the convex hull (segments)
         let f0 = self.tri.infinite_face();
         let iv0 = self.tri[f0].get_vertex_index(vinf).unwrap();
-        let cp0 = &self.tri[PositionIndex::Face(f0, iv0.mirror(2))];
+        let cp0 = &self.tri[PositionQuery::Face(f0, iv0.mirror(2))];
 
         // last point of the convex hull (segments)
         let f1 = self.tri[f0].neighbor(iv0.mirror(2));
         let iv1 = self.tri[f1].get_vertex_index(vinf).unwrap();
-        let cp1 = &self.tri[PositionIndex::Face(f1, iv1.mirror(2))];
+        let cp1 = &self.tri[PositionQuery::Face(f1, iv1.mirror(2))];
 
         let orient = self.tri.predicates().orientation_triangle(cp0, cp1, p);
         if orient.is_cw() {
@@ -166,8 +166,8 @@ where
                     let cur = self.tri[prev].neighbor(dir);
                     assert!(self.tri.is_finite_face(cur));
 
-                    let p0 = &self.tri[PositionIndex::Face(cur, rot3(0))];
-                    let p1 = &self.tri[PositionIndex::Face(cur, rot3(1))];
+                    let p0 = &self.tri[PositionQuery::Face(cur, rot3(0))];
+                    let p1 = &self.tri[PositionQuery::Face(cur, rot3(1))];
 
                     let t = self.tri.predicates().test_collinear_points(p0, p1, p);
                     if t.is_first() {
@@ -206,20 +206,20 @@ where
 
     /// Ques point location by finding the nearest vertex to the point from a random sampling of vertices
     fn guess_start_vertex(&mut self, sample_count: usize, p: &P::Position) -> VertexIndex {
-        if sample_count <= 0 {
+        if sample_count == 0 {
             self.tri.infinite_vertex()
         } else {
             let mut min_vert = self.get_random_finite_vertex();
             let mut min_dist = self
                 .tri
                 .predicates()
-                .distance_point_point(p, &self.tri[PositionIndex::Vertex(min_vert)]);
+                .distance_point_point(p, &self.tri[PositionQuery::Vertex(min_vert)]);
             for _ in 0..sample_count {
                 let mut vert = self.get_random_finite_vertex();
                 let dist = self
                     .tri
                     .predicates()
-                    .distance_point_point(p, &self.tri[PositionIndex::Vertex(vert)]);
+                    .distance_point_point(p, &self.tri[PositionQuery::Vertex(vert)]);
                 if dist < min_dist {
                     min_vert = vert;
                     min_dist = dist;
@@ -231,9 +231,9 @@ where
 
     /// Test which halfspace contains the p point.
     fn test_containment_face(&mut self, p: &P::Position, f: FaceIndex) -> ContainmentResult {
-        let p0 = &self.tri[PositionIndex::Face(f, rot3(0))];
-        let p1 = &self.tri[PositionIndex::Face(f, rot3(1))];
-        let p2 = &self.tri[PositionIndex::Face(f, rot3(2))];
+        let p0 = &self.tri[PositionQuery::Face(f, rot3(0))];
+        let p1 = &self.tri[PositionQuery::Face(f, rot3(1))];
+        let p2 = &self.tri[PositionQuery::Face(f, rot3(2))];
 
         let e01 = self.tri.predicates().orientation_triangle(p0, p1, p);
         if e01.is_cw() {
@@ -258,14 +258,15 @@ where
     }
 
     /// Test the containment of the p position for the (a,b) and (b,c) sides in this order
+    #[allow(clippy::many_single_char_names)]
     fn test_containment_ab_bc(&mut self, p: &P::Position, f: FaceIndex, a: Rot3, b: Rot3, c: Rot3) -> ContainmentResult {
-        let pa = &self.tri[PositionIndex::Face(f, a)];
-        let pb = &self.tri[PositionIndex::Face(f, b)];
+        let pa = &self.tri[PositionQuery::Face(f, a)];
+        let pb = &self.tri[PositionQuery::Face(f, b)];
         let ab = self.tri.predicates().orientation_triangle(&pa, &pb, p);
         if ab.is_cw() {
             ContainmentResult::Continue(c)
         } else {
-            let pc = &self.tri[PositionIndex::Face(f, c)];
+            let pc = &self.tri[PositionQuery::Face(f, c)];
             let bc = self.tri.predicates().orientation_triangle(pb, pc, p);
             if bc.is_cw() {
                 ContainmentResult::Continue(a)
@@ -279,21 +280,22 @@ where
     }
 
     // Test the containment of the p position for the (b,c) and (a,b) sides in this order
+    #[allow(clippy::many_single_char_names)]
     fn test_containment_bc_ab(&mut self, p: &P::Position, f: FaceIndex, a: Rot3, b: Rot3, c: Rot3) -> ContainmentResult {
-        let pb = &self.tri[PositionIndex::Face(f, b)];
-        let pc = &self.tri[PositionIndex::Face(f, c)];
+        let pb = &self.tri[PositionQuery::Face(f, b)];
+        let pc = &self.tri[PositionQuery::Face(f, c)];
         let bc = self.tri.predicates().orientation_triangle(&pb, &pc, p);
         if bc.is_cw() {
             ContainmentResult::Continue(a)
         } else {
-            let pa = &self.tri[PositionIndex::Face(f, a)];
+            let pa = &self.tri[PositionQuery::Face(f, a)];
             let ab = self.tri.predicates().orientation_triangle(&pa, &pb, p);
             if ab.is_cw() {
                 ContainmentResult::Continue(c)
             } else {
                 let mut test = ContainmentResult::Stop(0);
-                test.set(c.into(), ab.is_collinear());
-                test.set(a.into(), bc.is_collinear());
+                test.set(c, ab.is_collinear());
+                test.set(a, bc.is_collinear());
                 test
             }
         }
@@ -306,7 +308,7 @@ where
         let start = match hint {
             Some(f) => f,
             None => {
-                let sample_count = if self.start_face_sampling_density <= 0 {
+                let sample_count = if self.start_face_sampling_density == 0 {
                     0
                 } else {
                     let cnt = self.tri.vertex_count();
