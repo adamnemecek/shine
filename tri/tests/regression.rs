@@ -34,7 +34,7 @@ fn issue39_2() {
 
     let mut tri = SimpleTri::new();
 
-    let pnts = vec![(0.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 3.0)];
+    let pnts = vec![(0.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 3.0)];    
 
     {
         let mut builder = Builder::new(&mut tri);
@@ -55,6 +55,11 @@ fn issue39_3() {
     let server = webserver::Service::start(None).unwrap();
 
     let mut tri = SimpleTri::new();
+    {
+        let mut rng = rand::thread_rng();
+        let mut loc = Locator::new(&mut rng, &tri);
+        loc.guess_start_vertex(10, &TriPos(0.,0.));
+    }
 
     let pnts = vec![
         (0.0, 0.0),

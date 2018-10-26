@@ -136,7 +136,7 @@ impl RenderMapping {
         }
 
         // find virtual point best fitting the edge (1d)
-        for &candidate in [vcw, vccw].iter() {
+        /*for &candidate in [vcw, vccw].iter() {
             if candidate.is_valid() && tri.is_finite_vertex(candidate) {
                 let p = InexactPosition64::from(&tri[PositionQuery::Vertex(candidate)]);
                 let mut best_value = 0.;
@@ -151,7 +151,7 @@ impl RenderMapping {
                 }
                 return best.map(|p| RenderPosition::Virtual(p)).unwrap_or(RenderPosition::Invisible);
             }
-        }
+        }*/
 
         RenderPosition::Invisible
     }

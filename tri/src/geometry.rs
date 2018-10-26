@@ -12,17 +12,17 @@ pub trait CollinearTest {
     fn is_after(&self) -> bool;
 }
 
-pub trait Real: PartialOrd + Into<f64> {}
+pub trait Real: Into<f64> {}
 
 pub trait Position {
-    type Real: PartialOrd + Into<f64>;
+    type Real: Real;
 
     fn x(&self) -> Self::Real;
     fn y(&self) -> Self::Real;
 }
 
 pub trait Predicates {
-    type Real: PartialOrd + Into<f64>;
+    type Real: Real;
 
     type Orientation: Orientation;
     type CollinearTest: CollinearTest;
@@ -31,12 +31,23 @@ pub trait Predicates {
     // Find the orientation_triangle of three points.
     fn orientation_triangle(&self, a: &Self::Position, b: &Self::Position, c: &Self::Position) -> Self::Orientation;
 
-    /// Find the distance between two points
-    fn distance_point_point(&self, a: &Self::Position, b: &Self::Position) -> Self::Real;
-
     /// Test if two poinst are coincident
     fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool;
 
-    // Find the relationship of the collinera point.
+    // Find the relationship of three collinear points.
     fn test_collinear_points(&self, a: &Self::Position, b: &Self::Position, c: &Self::Position) -> Self::CollinearTest;
 }
+
+pub trait NearestPointSearch<'a, D> {
+    type Position: 'a + Position;
+
+    fn test(&mut self, pos: &Self::Position, data: D);
+    fn nearest_data(self) -> Option<D>;
+}
+
+pub trait NearestPointSearchBuilder<'a, D> : 'a + Predicates {
+    type NearestPointSearch: NearestPointSearch<'a, D, Position = Self::Position>;
+
+    fn nearest_point_search(base: &'a Self::Position) -> Self::NearestPointSearch;
+}
+

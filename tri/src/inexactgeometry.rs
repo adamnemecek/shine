@@ -1,8 +1,11 @@
-use geometry::{CollinearTest, Orientation, Position, Predicates};
+use geometry::{Real, CollinearTest, Orientation, Position, Predicates, NearestPointSearch, NearestPointSearchBuilder};
 use std::marker::PhantomData;
 
 macro_rules! impl_inexact_position {
     ($position:ident => $float:ty) => {
+
+        impl Real for $float {}
+
         #[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
         pub struct $position {
             pub x: $float,
@@ -120,14 +123,7 @@ macro_rules! impl_inexact_predicate {
                 let cax = c.x() - a.x();
                 let cay = c.y() - a.y();
                 bax * cay - bay * cax
-            }
-
-            fn distance_point_point(&self, a: &Self::Position, b: &Self::Position) -> Self::Real {
-                let (ax, ay) = (a.x(), a.y());
-                let (bx, by) = (b.x(), b.y());
-                let (bax, bay) = (bx - ax, by - ay);
-                (bax * bax + bay * bay).sqrt()
-            }
+            }            
 
             #[allow(clippy::float_cmp)]
             fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool {
@@ -202,6 +198,65 @@ macro_rules! impl_inexact_predicate {
                 }
             }
         }            
+    }
+}
+
+
+pub struct NearestPointSearchf32<'a, D,P> 
+where
+    P: Position<Real = f32>,
+{
+    base: (f32,f32),
+    dist: f32,                
+    best: Option<D>,
+    phantom: PhantomData<&'a P>,
+}
+
+impl <'a, D,P> NearestPointSearchf32<'a, D,P> 
+where
+        P: Position<Real = f32>,
+{
+    fn new<'b>(base: &'b P) -> NearestPointSearchf32<'b, D,P>  {
+        NearestPointSearchf32 {
+            base : (base.x(), base.y()),
+            dist: 0.,
+            best: None,
+            phantom: PhantomData,
+        }
+    }
+}
+
+impl<'a, D,P> NearestPointSearch<'a, D> for NearestPointSearchf32<'a,D,P> 
+where
+        P: 'a + Position<Real = f32>
+{
+    type Position = P;
+
+    fn test(&mut self, pos: &Self::Position, data: D) {
+        let (ax, ay) = self.base;
+        let (bx, by) = (pos.x(), pos.y());
+        let (bax, bay) = (bx - ax, by - ay);
+        let dist = bax * bax + bay * bay;
+
+        if self.best.is_none() || self.dist > dist {
+            self.best = Some(data);
+            self.dist = dist;
+        }
+    }
+
+    fn nearest_data(self) -> Option<D> {
+        self.best
+    }
+}
+
+impl<'a, D, P> NearestPointSearchBuilder<'a,D> for InexactPredicates32<P> 
+where P: 'a + Position<Real = f32>,
+{
+    type NearestPointSearch = NearestPointSearchf32<'a,D,P>;
+
+    fn nearest_point_search(base: &'a Self::Position) -> Self::NearestPointSearch
+    {
+        NearestPointSearchf32::new(base)
     }
 }
 

@@ -1,4 +1,4 @@
-use geometry::{CollinearTest, Orientation, Predicates};
+use geometry::{CollinearTest, Orientation, Predicates, NearestPointSearch, NearestPointSearchBuilder};
 use graph::{Face, Graph, Vertex};
 use indexing::PositionQuery;
 use rand::Rng;
@@ -203,32 +203,7 @@ where
             vertex_index(rnd + 1)
         }
     }
-
-    /// Ques point location by finding the nearest vertex to the point from a random sampling of vertices
-    fn guess_start_vertex(&mut self, sample_count: usize, p: &P::Position) -> VertexIndex {
-        if sample_count == 0 {
-            self.tri.infinite_vertex()
-        } else {
-            let mut min_vert = self.get_random_finite_vertex();
-            let mut min_dist = self
-                .tri
-                .predicates()
-                .distance_point_point(p, &self.tri[PositionQuery::Vertex(min_vert)]);
-            for _ in 0..sample_count {
-                let mut vert = self.get_random_finite_vertex();
-                let dist = self
-                    .tri
-                    .predicates()
-                    .distance_point_point(p, &self.tri[PositionQuery::Vertex(vert)]);
-                if dist < min_dist {
-                    min_vert = vert;
-                    min_dist = dist;
-                }
-            }
-            min_vert
-        }
-    }
-
+    
     /// Test which halfspace contains the p point.
     fn test_containment_face(&mut self, p: &P::Position, f: FaceIndex) -> ContainmentResult {
         let p0 = &self.tri[PositionQuery::Face(f, rot3(0))];
@@ -308,14 +283,15 @@ where
         let start = match hint {
             Some(f) => f,
             None => {
-                let sample_count = if self.start_face_sampling_density == 0 {
+                /*let sample_count = if self.start_face_sampling_density == 0 {
                     0
                 } else {
                     let cnt = self.tri.vertex_count();
                     (cnt + self.start_face_sampling_density - 1) / self.start_face_sampling_density
                 };
                 let v = self.guess_start_vertex(sample_count, p);
-                let start = self.tri[v].face();
+                let start = self.tri[v].face();*/
+                let start = self.tri.infinite_face();
                 match self.tri[start].get_vertex_index(self.tri.infinite_vertex()) {
                     None => start,                          // finite face
                     Some(i) => self.tri[start].neighbor(i), // the opposite face to an infinite vertex is finite
@@ -371,4 +347,29 @@ where
             }
         }
     }
+}
+
+
+impl<'a, 'b: 'a, R, P, V, F> Locator<'a, R, P, V, F>
+where
+    R: 'a + Rng,
+    P: 'a + NearestPointSearchBuilder<'b, VertexIndex>,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
+{
+    /// Guess point location by finding the nearest vertex to the point from a random sampling of vertices
+    /// If sample count is zero, the infinite vertex is used.
+    pub fn guess_start_vertex(& mut self, sample_count: usize, p: &'b P::Position) -> VertexIndex {
+        if sample_count == 0 {
+            self.tri.infinite_vertex()
+        } else {
+            let mut search = P::nearest_point_search(p);
+            for _ in 0..sample_count {
+                let mut vert = self.get_random_finite_vertex();
+                search.test(&self.tri[PositionQuery::Vertex(vert)], vert);
+            }
+            search.nearest_data().unwrap()
+        }
+    }
+
 }
