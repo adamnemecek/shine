@@ -1,4 +1,4 @@
-use geometry::{Orientation, Position, Predicates};
+use geometry::{Orientation, Position, Real, Predicates};
 use indexing::PositionQuery;
 use std::fmt;
 use types::{face_index, invalid_vertex_index, rot3, vertex_index, Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
@@ -291,8 +291,8 @@ where
                 write!(f, "*")?;
             }
             let p = self[v].position();
-            let x: f64 = p.x().into();
-            let y: f64 = p.y().into();
+            let x: f64 = p.x().approximate();
+            let y: f64 = p.y().approximate();
             write!(f, "{:?}:({},{}), ", v, x, y)?;
         }
         writeln!(f, "]")?;

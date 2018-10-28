@@ -1,4 +1,4 @@
-use geometry::{Orientation, Position, Predicates};
+use geometry::{Orientation, Real, Position, Predicates};
 use graph::{Face, Graph, Vertex};
 use indexing::PositionQuery;
 use types::rot3;
@@ -247,12 +247,12 @@ where
             let b = &self.tri[PositionQuery::Face(f, rot3(1))];
             let c = &self.tri[PositionQuery::Face(f, rot3(2))];
 
-            let ax: f64 = a.x().into();
-            let ay: f64 = a.y().into();
-            let bx: f64 = b.x().into();
-            let by: f64 = b.y().into();
-            let cx: f64 = c.x().into();
-            let cy: f64 = c.y().into();
+            let ax: f64 = a.x().approximate();
+            let ay: f64 = a.y().approximate();
+            let bx: f64 = b.x().approximate();
+            let by: f64 = b.y().approximate();
+            let cx: f64 = c.x().approximate();
+            let cy: f64 = c.y().approximate();
             let abx = bx - ax;
             let aby = by - ay;
             let acx = cx - ax;
@@ -270,10 +270,10 @@ where
             let bid = iid.increment();
             let a = &self.tri[PositionQuery::Face(cur, aid)];
             let b = &self.tri[PositionQuery::Face(cur, bid)];
-            let ax: f64 = a.x().into();
-            let ay: f64 = a.y().into();
-            let bx: f64 = b.x().into();
-            let by: f64 = b.y().into();
+            let ax: f64 = a.x().approximate();
+            let ay: f64 = a.y().approximate();
+            let bx: f64 = b.x().approximate();
+            let by: f64 = b.y().approximate();
 
             convex_area += ax * by - bx * ay;
             cur = self.tri[cur].neighbor(aid);

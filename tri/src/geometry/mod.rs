@@ -12,7 +12,33 @@ pub trait CollinearTest {
     fn is_after(&self) -> bool;
 }
 
-pub trait Real: Into<f64> {}
+pub trait Real {
+    fn approximate(&self) -> f64;
+}
+
+impl Real for f32 {
+    fn approximate(&self) -> f64 {
+        *self as f64
+    }
+}
+
+impl Real for f64 {
+    fn approximate(&self) -> f64 {
+        *self as f64
+    }
+}
+
+impl Real for i32 {
+    fn approximate(&self) -> f64 {
+        *self as f64
+    }
+}
+
+impl Real for i64 {
+    fn approximate(&self) -> f64 {
+        *self as f64
+    }
+}
 
 pub trait Position {
     type Real: Real;
@@ -45,9 +71,12 @@ pub trait NearestPointSearch<'a, D> {
     fn nearest_data(self) -> Option<D>;
 }
 
-pub trait NearestPointSearchBuilder<'a, D> : 'a + Predicates {
+pub trait NearestPointSearchBuilder<'a, D>: 'a + Predicates {
     type NearestPointSearch: NearestPointSearch<'a, D, Position = Self::Position>;
 
     fn nearest_point_search(base: &'a Self::Position) -> Self::NearestPointSearch;
 }
 
+mod inexact;
+
+pub use self::inexact::*;

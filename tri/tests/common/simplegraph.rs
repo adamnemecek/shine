@@ -1,36 +1,33 @@
-use shine_tri::*;
+use common::position::{Posf32, Posf64, Posi32, Posi64};
+use shine_tri::geometry::{Position, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64};
+use shine_tri::types::{invalid_face_index, invalid_vertex_index, rot3, FaceIndex, Rot3, VertexIndex};
+use shine_tri::{Face, Graph, Vertex};
 
-#[derive(Clone, Debug)]
-pub struct TriPos(pub f32, pub f32);
-
-impl Position for TriPos {
-    type Real = f32;
-
-    fn x(&self) -> Self::Real {
-        self.0
-    }
-
-    fn y(&self) -> Self::Real {
-        self.1
-    }
-}
-
-pub struct TriVertex {
-    position: TriPos,
+pub struct TriVertex<P>
+where
+    P: Default + Position,
+{
+    position: P,
     face: FaceIndex,
 }
 
-impl Default for TriVertex {
-    fn default() -> TriVertex {
+impl<P> Default for TriVertex<P>
+where
+    P: Default + Position,
+{
+    fn default() -> TriVertex<P> {
         TriVertex {
-            position: TriPos(0., 0.),
+            position: Default::default(),
             face: invalid_face_index(),
         }
     }
 }
 
-impl Vertex for TriVertex {
-    type Position = TriPos;
+impl<P> Vertex for TriVertex<P>
+where
+    P: Default + Position,
+{
+    type Position = P;
 
     fn position(&self) -> &Self::Position {
         &self.position
@@ -101,4 +98,9 @@ impl Face for TriFace {
     }
 }
 
-pub type SimpleTri = Graph<InexactPredicates32<TriPos>, TriVertex, TriFace>;
+type SimpleTri<P, PR> = Graph<PR, TriVertex<P>, TriFace>;
+
+pub type SimpleTrif32 = SimpleTri<Posf32, Predicatesf32<Posf32>>;
+pub type SimpleTrif64 = SimpleTri<Posf64, Predicatesf64<Posf64>>;
+pub type SimpleTrii32 = SimpleTri<Posi32, Predicatesi32<Posi32>>;
+pub type SimpleTrii64 = SimpleTri<Posi64, Predicatesi64<Posi64>>;

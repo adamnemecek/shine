@@ -1,5 +1,9 @@
+use common::position::Posf64;
 use shine_testutils::webserver::*;
-use shine_tri::*;
+use shine_tri::geometry::{Predicates, Predicatesf64};
+use shine_tri::indexing::{IndexGet, PositionQuery, VertexIndexQuery};
+use shine_tri::types::{rot3, FaceIndex, Rot3, VertexIndex};
+use shine_tri::{Face, Graph, Vertex};
 
 /// Color settings for the Trace
 pub struct Coloring {
@@ -42,8 +46,8 @@ impl Default for Coloring {
 #[derive(Debug)]
 pub enum RenderPosition {
     Invisible,
-    Virtual(InexactPosition64),
-    Real(InexactPosition64),
+    Virtual(Posf64),
+    Real(Posf64),
 }
 
 impl RenderPosition {
@@ -62,7 +66,7 @@ impl RenderPosition {
         }
     }
 
-    pub fn position(&self) -> &InexactPosition64 {
+    pub fn position(&self) -> &Posf64 {
         match *self {
             RenderPosition::Virtual(ref p) => p,
             RenderPosition::Real(ref p) => p,
@@ -73,7 +77,7 @@ impl RenderPosition {
 
 /// Trace helper to map vertices into virtual positions
 pub struct RenderMapping {
-    virtual_positions: Vec<InexactPosition64>,
+    virtual_positions: Vec<Posf64>,
 }
 
 impl RenderMapping {
@@ -87,11 +91,11 @@ impl RenderMapping {
         self.virtual_positions.clear();
     }
 
-    pub fn add_virtual_position<VP: Into<InexactPosition64>>(&mut self, p: VP) {
+    pub fn add_virtual_position<VP: Into<Posf64>>(&mut self, p: VP) {
         self.virtual_positions.push(p.into());
     }
 
-    pub fn set_virtual_position<VP: Into<Vec<InexactPosition64>>>(&mut self, p: VP) {
+    pub fn set_virtual_position<VP: Into<Vec<Posf64>>>(&mut self, p: VP) {
         self.virtual_positions = p.into();
     }
 
@@ -106,7 +110,7 @@ impl RenderMapping {
         }
 
         if tri.is_finite_vertex(v) {
-            let p = InexactPosition64::from(&tri[PositionQuery::Vertex(v)]);
+            let p = Posf64::from(&tri[PositionQuery::Vertex(v)]);
             return RenderPosition::Real(p);
         }
 
@@ -114,17 +118,17 @@ impl RenderMapping {
             return RenderPosition::Invisible;
         }
 
-        let predicates = InexactPredicates64::new();
+        let predicates = Predicatesf64::new();
 
-        // find virtual point best fitting the convex hull (2d)
+        // find virtual point best fitting the convex hull in 2d
         if vcw.is_valid() && tri.is_finite_vertex(vcw) && vccw.is_valid() && tri.is_finite_vertex(vccw) {
-            let p = InexactPosition64::from(&tri[PositionQuery::Vertex(v)]);
-            let pcw = InexactPosition64::from(&tri[PositionQuery::Vertex(vcw)]);
-            let pccw = InexactPosition64::from(&tri[PositionQuery::Vertex(vccw)]);
+            let p = Posf64::from(&tri[PositionQuery::Vertex(v)]);
+            let pcw = Posf64::from(&tri[PositionQuery::Vertex(vcw)]);
+            let pccw = Posf64::from(&tri[PositionQuery::Vertex(vccw)]);
             let mut best_value = 0.;
             let mut best = None;
 
-            for &virt_pos in self.virtual_positions.iter() {
+            for virt_pos in self.virtual_positions.iter() {
                 let value = predicates.orientation_triangle(&pcw, &p, &pccw);
                 if value > best_value {
                     best_value = value;
@@ -132,16 +136,18 @@ impl RenderMapping {
                 }
             }
 
-            return best.map(|p| RenderPosition::Virtual(p)).unwrap_or(RenderPosition::Invisible);
+            return best
+                .map(|p| RenderPosition::Virtual(p.clone()))
+                .unwrap_or(RenderPosition::Invisible);
         }
 
-        // find virtual point best fitting the edge (1d)
+        // find virtual point best fitting the convex hull in 1d
         /*for &candidate in [vcw, vccw].iter() {
             if candidate.is_valid() && tri.is_finite_vertex(candidate) {
-                let p = InexactPosition64::from(&tri[PositionQuery::Vertex(candidate)]);
+                let p = Posf64::from(&tri[PositionQuery::Vertex(candidate)]);
                 let mut best_value = 0.;
                 let mut best = None;
-
+        
                 for &virt_pos in self.virtual_positions.iter() {
                     let value = predicates.distance_point_point(&virt_pos, &p);
                     if value > best_value {
@@ -191,7 +197,7 @@ where
         let msg = msg.map(|m| format!("V: {}", m)).unwrap_or_else(|| format!("V: {}", v.id()));
 
         if self.tri.is_finite_vertex(v) {
-            let p = InexactPosition64::from(&self.tri[PositionQuery::Vertex(v)]);
+            let p = Posf64::from(&self.tri[PositionQuery::Vertex(v)]);
             tr.add_point(&(p.x, p.y), self.coloring.vertex.clone());
             tr.add_text(&(p.x, p.y), msg, self.coloring.vertex_text.clone());
         } else {
@@ -216,8 +222,8 @@ where
             .map(|m| format!("E: {}", m))
             .unwrap_or_else(|| format!("E: ({},{})", a.id(), b.id()));
 
-        let pa = InexactPosition64::from(&self.tri[PositionQuery::Vertex(a)]);
-        let pb = InexactPosition64::from(&self.tri[PositionQuery::Vertex(b)]);
+        let pa = Posf64::from(&self.tri[PositionQuery::Vertex(a)]);
+        let pb = Posf64::from(&self.tri[PositionQuery::Vertex(b)]);
         tr.add_line(&(pa.x, pa.y), &(pb.x, pb.y), self.coloring.edge.clone());
         let x = (pa.x + pb.x) * 0.5;
         let y = (pa.y + pb.y) * 0.5;
@@ -283,7 +289,7 @@ where
 
         // text
         let msg = msg.map(|m| format!("F: {}", m)).unwrap_or_else(|| format!("F: {}", f.id()));
-        let mut center = InexactPosition64 { x: 0., y: 0. };
+        let mut center = Posf64 { x: 0., y: 0. };
         let mut cnt = 0.;
         for p in positions.iter() {
             if p.is_visible() {
@@ -317,7 +323,7 @@ where
         let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
 
         for v in self.tri.vertex_index_iter() {
-            let p = InexactPosition64::from(&self.tri[PositionQuery::Vertex(v)]);
+            let p = Posf64::from(&self.tri[PositionQuery::Vertex(v)]);
             minx = if p.x < minx { p.x } else { minx };
             maxx = if p.x > maxx { p.x } else { maxx };
             miny = if p.y < minx { p.y } else { minx };
