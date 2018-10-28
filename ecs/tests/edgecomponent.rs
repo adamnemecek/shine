@@ -36,7 +36,7 @@ impl EdgeComponent for Weight {
 
 #[test]
 fn test_component() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut world = World::new();
 

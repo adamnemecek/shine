@@ -12,7 +12,7 @@ const ITER_COUNT: i32 = 0x2ffff;
 
 #[test]
 fn single_threaded_logic() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let (p, c) = state_channel();
 
@@ -41,7 +41,7 @@ fn single_threaded_logic() {
 
 #[test]
 fn single_threaded_stress_small_buffer() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let (p, c) = state_channel();
 
@@ -53,7 +53,7 @@ fn single_threaded_stress_small_buffer() {
 
 #[test]
 fn multi_threaded_stress_small_buffer() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     assert!(
         env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
@@ -137,7 +137,7 @@ impl Default for BigData {
 
 #[test]
 fn single_threaded_stress_big_buffer() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let (p, c) = state_channel::<BigData>();
     for x in 0..ITER_COUNT {
@@ -167,7 +167,7 @@ fn single_threaded_stress_big_buffer() {
 
 #[test]
 fn multi_threaded_stress_big_buffer() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     assert!(
         env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",

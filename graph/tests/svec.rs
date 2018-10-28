@@ -86,7 +86,7 @@ fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
 
 #[test]
 fn test_simple() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SDVector");
     test_simple_(new_dvec());
@@ -121,7 +121,7 @@ fn test_stress_<S: Store<Item = Data>>(mut vector: SVector<S>, size: usize, cnt:
 
 #[test]
 fn test_stress() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     for _ in 0..10 {
         trace!("SDVector");
@@ -169,7 +169,7 @@ fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
 
 #[test]
 fn test_data_iter() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SDVector");
     test_data_iter_(new_dvec::<Data>());

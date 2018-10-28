@@ -69,7 +69,7 @@ fn test_clear_<B: BitBlock>() {
 
 #[test]
 fn test_clear() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("clear - u8");
     test_clear_::<u8>();
@@ -114,7 +114,7 @@ fn test_simple_<B: BitBlock>() {
 
 #[test]
 fn test_simple() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("simple u8");
     test_simple_::<u8>();
@@ -154,7 +154,7 @@ fn test_stress_<B: BitBlock>(cnt: usize) {
 
 #[test]
 fn test_stress() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("stress - u8");
     test_stress_::<u8>(4096);
@@ -217,7 +217,7 @@ fn test_stress_random_<B: BitBlock>(range: usize, count: usize) {
 
 #[test]
 fn test_random_stress() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let count = 1000;
     let range = 1 << 20;
@@ -327,30 +327,12 @@ fn test_ops_<B: BitBlock>() {
     b3.add(1360);
     b3.add(23600);
 
-    check_bitset(
-        bitops::or3(&b1, &b2, &b3),
-        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
-    );
-    check_bitset(
-        bitops::or3(&b1, &b3, &b2),
-        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
-    );
-    check_bitset(
-        bitops::or3(&b2, &b1, &b3),
-        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
-    );
-    check_bitset(
-        bitops::or3(&b2, &b3, &b1),
-        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
-    );
-    check_bitset(
-        bitops::or3(&b3, &b1, &b2),
-        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
-    );
-    check_bitset(
-        bitops::or3(&b3, &b2, &b1),
-        &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600],
-    );
+    check_bitset(bitops::or3(&b1, &b2, &b3), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset(bitops::or3(&b1, &b3, &b2), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset(bitops::or3(&b2, &b1, &b3), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset(bitops::or3(&b2, &b3, &b1), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset(bitops::or3(&b3, &b1, &b2), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
+    check_bitset(bitops::or3(&b3, &b2, &b1), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
 
     check_bitset((&b1, &b2, &b3).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
     check_bitset((&b1, &b3, &b2).or(), &[0, 1, 10, 15, 17, 18, 1360, 2357, 2360, 23600]);
@@ -368,7 +350,7 @@ fn test_ops_<B: BitBlock>() {
 
 #[test]
 fn test_ops() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("ops - u8");
     test_ops_::<u8>();
@@ -422,7 +404,7 @@ fn test_ops_random_<B: BitBlock>(range: usize, count: usize) {
 
 #[test]
 fn test_ops_random() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let count = 128;
     let range = 1024;

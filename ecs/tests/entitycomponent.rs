@@ -28,7 +28,7 @@ impl EntityComponent for Velocity {
 
 #[test]
 fn test_component() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut world = World::new();
 
@@ -67,10 +67,7 @@ fn test_component() {
     debug!("get");
     {
         let mut pos = world.get_entity_mut::<Pos>();
-        assert_eq!(
-            pos.get_entry(Entity::from_id(2)).remove(),
-            Some(Pos { x: 2, y: 4, z: 6 })
-        );
+        assert_eq!(pos.get_entry(Entity::from_id(2)).remove(), Some(Pos { x: 2, y: 4, z: 6 }));
         assert_eq!(pos.get(Entity::from_id(1)), Some(&Pos { x: 1, y: 2, z: 0 }));
         assert_eq!(pos.remove(Entity::from_id(4)), Some(Pos { x: 4, y: 8, z: 12 }));
     }

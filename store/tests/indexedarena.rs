@@ -27,7 +27,7 @@ struct Node<'a>(i32, DropTracker<'a>);
 
 #[test]
 fn simple() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let drop_counter = Cell::new(0);
     {
@@ -75,7 +75,7 @@ fn simple() {
 
 #[test]
 fn stress() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut data = [1usize, 2, 5, 7, 100, 4000];
 

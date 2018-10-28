@@ -9,17 +9,12 @@ mod common;
 
 use common::{Posf32, Posi64, SimpleTrif32, SimpleTrii64};
 use quickcheck::quickcheck;
-use shine_testutils::init_test_logger;
+use shine_testutils::init_quickcheck_test;
 use shine_tri::{Builder, Checker};
-
-const DEFAULT_TEST_COUNT: &str = "1000";
 
 #[test]
 fn stress_exact_i64() {
-    init_test_logger(module_path!());
-    if ::std::env::var("QUICKCHECK_TESTS").is_err() {
-        ::std::env::set_var("QUICKCHECK_TESTS", DEFAULT_TEST_COUNT);
-    }
+    init_quickcheck_test(module_path!(), 1000);
 
     // Even tough the graph has a point type of i64, we are testing with i16 to avoid overflow error.
     fn fuzzer(xs: Vec<(i16, i16)>) -> bool {
@@ -45,10 +40,7 @@ fn stress_exact_i64() {
 #[test]
 #[ignore]
 fn stress_exactf32() {
-    init_test_logger(module_path!());
-    if ::std::env::var("QUICKCHECK_TESTS").is_err() {
-        ::std::env::set_var("QUICKCHECK_TESTS", DEFAULT_TEST_COUNT);
-    }
+    init_quickcheck_test(module_path!(), 1000);
 
     fn fuzzer(xs: Vec<(f32, f32)>) -> bool {
         let mut tri = SimpleTrif32/*Exact*/::default();

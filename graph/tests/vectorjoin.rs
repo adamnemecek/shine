@@ -11,7 +11,7 @@ use shine_testutils::*;
 
 #[test]
 fn test_svec_join() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut v1 = new_dvec::<usize>();
     let mut v2 = new_dvec::<usize>();
@@ -92,9 +92,6 @@ fn test_svec_join() {
         });
 
         assert_eq!(index_string, ",3,14,17,18");
-        assert_eq!(
-            whole_string,
-            ",(3,5,Some(())),(14,16,None),(17,19,Some(())),(18,20,None)"
-        );
+        assert_eq!(whole_string, ",(3,5,Some(())),(14,16,None),(17,19,Some(())),(18,20,None)");
     }
 }

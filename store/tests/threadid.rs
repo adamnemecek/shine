@@ -14,7 +14,7 @@ use shine_testutils::*;
 
 #[test]
 fn thread_count() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     assert!(
         threadid::get_max_thread_count() >= threadid::get_preferred_thread_count(),
@@ -24,7 +24,7 @@ fn thread_count() {
 
 #[test]
 fn alloc_free() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     assert!(
         env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",

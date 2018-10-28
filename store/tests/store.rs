@@ -30,7 +30,7 @@ impl Drop for TestData {
 
 #[test]
 fn simple_single_threaded() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let store = Store::<TestData>::new();
     let mut r0; // = TestRef::none();
@@ -110,7 +110,7 @@ fn simple_single_threaded() {
 
 #[test]
 fn simple_multi_threaded() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     assert!(
         env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
@@ -159,7 +159,7 @@ fn simple_multi_threaded() {
 
 #[test]
 fn check_lock() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     // single threaded as panic hook is a global resource
     assert!(
@@ -174,40 +174,37 @@ fn check_lock() {
 
     {
         let store = Store::<TestData>::new();
-        assert!(
-            panic::catch_unwind(|| {
-                let w = store.write();
-                let r = store.read();
-                drop(r);
-                drop(w);
-            }).is_err()
-        );
+        assert!(panic::catch_unwind(|| {
+            let w = store.write();
+            let r = store.read();
+            drop(r);
+            drop(w);
+        })
+        .is_err());
         mem::forget(store);
     }
 
     {
         let store = Store::<TestData>::new();
-        assert!(
-            panic::catch_unwind(|| {
-                let r = store.read();
-                let w = store.write();
-                drop(w);
-                drop(r);
-            }).is_err()
-        );
+        assert!(panic::catch_unwind(|| {
+            let r = store.read();
+            let w = store.write();
+            drop(w);
+            drop(r);
+        })
+        .is_err());
         mem::forget(store);
     }
 
     {
         let store = Store::<TestData>::new();
-        assert!(
-            panic::catch_unwind(|| {
-                let w1 = store.write();
-                let w2 = store.write();
-                drop(w2);
-                drop(w1);
-            }).is_err()
-        );
+        assert!(panic::catch_unwind(|| {
+            let w1 = store.write();
+            let w2 = store.write();
+            drop(w2);
+            drop(w1);
+        })
+        .is_err());
         mem::forget(store);
     }
 

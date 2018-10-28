@@ -9,7 +9,7 @@ use shine_testutils::*;
 
 #[test]
 fn lower_bound() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let b: [u32; 0] = [];
     assert_eq!(b.lower_bound(&0), 0);

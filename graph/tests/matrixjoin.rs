@@ -12,7 +12,7 @@ use shine_testutils::*;
 
 #[test]
 fn test_vec_mat_join() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut v1 = new_dvec::<usize>();
     let mut v2 = new_dvec::<usize>();

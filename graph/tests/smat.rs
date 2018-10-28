@@ -71,7 +71,7 @@ fn test_simple_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>)
 
 #[test]
 fn test_simple() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SparseDMatrix");
     test_simple_(new_dmat::<Data>());
@@ -109,7 +109,7 @@ fn test_stress_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>,
 
 #[test]
 fn test_stress() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SparseDMatrix - big");
     test_stress_(new_dmat::<Data>(), 1024, 100000);
@@ -162,7 +162,7 @@ fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, 
 
 #[test]
 fn test_data_iter() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SparseDMatrix/CSMatrix");
     test_data_iter_(new_dmat::<Data>());

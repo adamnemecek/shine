@@ -5,16 +5,15 @@ extern crate log;
 
 mod common;
 
-use common::{Sample, Posf32, Posf64, Posi32, Posi64};
-use shine_testutils::init_test_logger;
+use common::{Posf32, Posf64, Posi32, Posi64, Sample};
+use shine_testutils::init_test;
 use shine_tri::geometry::{
     CollinearTest, Orientation, Position, Predicates, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64, Real,
 };
 
-
 #[test]
 fn orientation_triangle() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     fn orientation_triangle_<R, P, PR>(gp: PR, desc: &str)
     where
@@ -23,7 +22,7 @@ fn orientation_triangle() {
         PR: Predicates<Real = R, Position = P>,
     {
         info!("{}", desc);
-        
+
         assert!(gp
             .orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)))
             .is_collinear());
@@ -52,7 +51,7 @@ fn orientation_triangle() {
 
 #[test]
 fn test_collinear_points() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     fn test_collinear_points_<R, P, PR>(gp: PR, desc: &str)
     where

@@ -7,12 +7,12 @@ extern crate shine_tri;
 mod common;
 
 use common::{Posf32, SimpleTrif32};
-use shine_testutils::init_test_logger;
+use shine_testutils::init_test;
 use shine_tri::{Builder, Checker};
 
 #[test]
 fn issue39_1() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut tri = SimpleTrif32::default();
 
@@ -30,7 +30,7 @@ fn issue39_1() {
 
 #[test]
 fn issue39_2() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut tri = SimpleTrif32::default();
 

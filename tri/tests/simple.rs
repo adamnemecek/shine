@@ -16,7 +16,7 @@ use std::fmt;
 
 #[test]
 fn t0_empty() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     fn t0_empty_<R, P, PR, V, F>(mut tri: Graph<PR, V, F>, desc: &str)
     where
@@ -41,7 +41,7 @@ fn t0_empty() {
 
 #[test]
 fn t1_dimension0() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     fn t1_dimension0_<R, P, PR, V, F>(mut tri: Graph<PR, V, F>, desc: &str)
     where
@@ -85,7 +85,7 @@ fn t1_dimension0() {
 
 #[test]
 fn t2_dimension1() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     fn t2_dimension1_<R, P, PR, V, F>(mut tri: Graph<PR, V, F>, desc: &str)
     where
@@ -147,7 +147,7 @@ fn t2_dimension1() {
 
 #[test]
 fn t3_dimension2() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     fn t3_dimension2_<R, P, PR, V, F>(mut tri: Graph<PR, V, F>, desc: &str)
     where

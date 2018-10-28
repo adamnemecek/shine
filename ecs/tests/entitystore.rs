@@ -7,7 +7,7 @@ use shine_testutils::*;
 
 #[test]
 fn entity_create() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut store = EntityStore::new();
     let e0 = store.create();
