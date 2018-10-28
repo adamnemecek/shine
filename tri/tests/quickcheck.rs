@@ -12,10 +12,10 @@ use quickcheck::quickcheck;
 use shine_testutils::init_test_logger;
 use shine_tri::{Builder, Checker};
 
-const DEFAULT_TEST_COUNT: &str = "1000000";
+const DEFAULT_TEST_COUNT: &str = "1000";
 
 #[test]
-fn stress_i64() {
+fn stress_exact_i64() {
     init_test_logger(module_path!());
     if ::std::env::var("QUICKCHECK_TESTS").is_err() {
         ::std::env::set_var("QUICKCHECK_TESTS", DEFAULT_TEST_COUNT);
