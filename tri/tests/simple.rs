@@ -147,9 +147,9 @@ fn t2_dimension1() {
 
 #[test]
 fn t3_dimension2() {
-    let test_control = init_webcontroll_test(module_path!());
+    init_test(module_path!());
 
-    fn t3_dimension2_<R, P, PR, V, F>(mut tri: Graph<PR, V, F>, desc: &str, test_control: &webserver::Service)
+    fn t3_dimension2_<R, P, PR, V, F>(mut tri: Graph<PR, V, F>, desc: &str)
     where
         R: Real,
         P: Default + fmt::Debug + Position<Real = R> + From<Sample>,
@@ -213,7 +213,6 @@ fn t3_dimension2() {
                     }
                 }
 
-                test_control.add_d2_image(&trace_tri(&tri, &rm, &coloring));
                 assert_eq!(tri.dimension(), 2);
 
                 trace!("clear");
@@ -224,10 +223,8 @@ fn t3_dimension2() {
         }
     }
 
-    t3_dimension2_(SimpleTrif32::default(), "inexact f32", &test_control);
-    t3_dimension2_(SimpleTrif64::default(), "inexact f64", &test_control);
-    t3_dimension2_(SimpleTrii32::default(), "exact i32", &test_control);
-    t3_dimension2_(SimpleTrii64::default(), "exact i64", &test_control);
-
-    test_control.wait_user();
+    t3_dimension2_(SimpleTrif32::default(), "inexact f32");
+    t3_dimension2_(SimpleTrif64::default(), "inexact f64");
+    t3_dimension2_(SimpleTrii32::default(), "exact i32");
+    t3_dimension2_(SimpleTrii64::default(), "exact i64");
 }
