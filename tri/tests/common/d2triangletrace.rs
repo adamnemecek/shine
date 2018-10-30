@@ -1,6 +1,6 @@
 use common::position::Posf64;
 use shine_testutils::webserver::*;
-use shine_tri::geometry::{Predicates, Predicatesf64};
+use shine_tri::geometry::{NearestPointSearch, NearestPointSearchBuilder, Predicates, Predicatesf64};
 use shine_tri::indexing::{IndexGet, PositionQuery, VertexIndexQuery};
 use shine_tri::types::{rot3, FaceIndex, Rot3, VertexIndex};
 use shine_tri::{Face, Graph, Vertex};
@@ -142,24 +142,28 @@ impl RenderMapping {
         }
 
         // find virtual point best fitting the convex hull in 1d
-        /*for &candidate in [vcw, vccw].iter() {
+        for &candidate in [vcw, vccw].iter() {
             if candidate.is_valid() && tri.is_finite_vertex(candidate) {
                 let p = Posf64::from(&tri[PositionQuery::Vertex(candidate)]);
-                let mut best_value = 0.;
-                let mut best = None;
-        
-                for &virt_pos in self.virtual_positions.iter() {
-                    let value = predicates.distance_point_point(&virt_pos, &p);
-                    if value > best_value {
-                        best_value = value;
-                        best = Some(virt_pos);
-                    }
+                let mut search = predicates.nearest_point_search(&p);
+
+                for virt_pos in self.virtual_positions.iter() {
+                    search.test(virt_pos, ());
                 }
-                return best.map(|p| RenderPosition::Virtual(p)).unwrap_or(RenderPosition::Invisible);
+                return search
+                    .nearest()
+                    .map(|(p, _)| RenderPosition::Virtual(p.clone()))
+                    .unwrap_or(RenderPosition::Invisible);
             }
-        }*/
+        }
 
         RenderPosition::Invisible
+    }
+}
+
+impl Default for RenderMapping {
+    fn default() -> RenderMapping {
+        RenderMapping::new()
     }
 }
 
@@ -306,7 +310,7 @@ where
             } else {
                 &self.coloring.infinite_face_text
             };
-            tr.add_text(&(center.x, center.y), msg, color.clone());
+            tr.add_text(&(center.x / cnt, center.y / cnt), msg, color.clone());
         }
     }
 }
@@ -348,4 +352,13 @@ where
             self.add_vertex(tr, v, None);
         }
     }
+}
+
+pub fn trace_tri<'a, P, V, F>(tri: &'a Graph<P, V, F>, mapping: &'a RenderMapping, coloring: &'a Coloring) -> Trace<'a, P, V, F>
+where
+    P: 'a + Predicates,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
+{
+    Trace::new(tri, mapping, coloring)
 }

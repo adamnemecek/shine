@@ -1,4 +1,4 @@
-use geometry::{CollinearTest, Orientation, Predicates, NearestPointSearch, NearestPointSearchBuilder};
+use geometry::{CollinearTest, NearestPointSearch, NearestPointSearchBuilder, Orientation, Predicates};
 use graph::{Face, Graph, Vertex};
 use indexing::PositionQuery;
 use rand::Rng;
@@ -203,7 +203,7 @@ where
             vertex_index(rnd + 1)
         }
     }
-    
+
     /// Test which halfspace contains the p point.
     fn test_containment_face(&mut self, p: &P::Position, f: FaceIndex) -> ContainmentResult {
         let p0 = &self.tri[PositionQuery::Face(f, rot3(0))];
@@ -349,27 +349,25 @@ where
     }
 }
 
-
-impl<'a, 'b: 'a, R, P, V, F> Locator<'a, R, P, V, F>
+impl<'a, R, P, V, F> Locator<'a, R, P, V, F>
 where
     R: 'a + Rng,
-    P: 'a + NearestPointSearchBuilder<'b, VertexIndex>,
+    P: 'a + NearestPointSearchBuilder<'a, VertexIndex>,
     V: 'a + Vertex<Position = P::Position>,
     F: 'a + Face,
 {
     /// Guess point location by finding the nearest vertex to the point from a random sampling of vertices
     /// If sample count is zero, the infinite vertex is used.
-    pub fn guess_start_vertex(& mut self, sample_count: usize, p: &'b P::Position) -> VertexIndex {
+    pub fn guess_start_vertex(&mut self, sample_count: usize, p: &'a P::Position) -> VertexIndex {
         if sample_count == 0 {
             self.tri.infinite_vertex()
         } else {
-            let mut search = P::nearest_point_search(p);
+            let mut search = self.tri.predicates().nearest_point_search(p);
             for _ in 0..sample_count {
                 let mut vert = self.get_random_finite_vertex();
                 search.test(&self.tri[PositionQuery::Vertex(vert)], vert);
             }
-            search.nearest_data().unwrap()
+            search.nearest().unwrap().1
         }
     }
-
 }

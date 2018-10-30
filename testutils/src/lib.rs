@@ -32,5 +32,12 @@ pub fn init_quickcheck_test(module: &str, test_count: usize) {
     ::std::env::set_var("QUICKCHECK_TESTS", format!("{}", test_count));
 
     let _ = env_logger::try_init();
+
     println!(""); // add a new line after the test output ...
+}
+
+pub fn init_webcontroll_test(module: &str) -> webserver::Service {
+    init_test(module);
+
+    webserver::Service::start(None).expect("Could not start webservice")
 }

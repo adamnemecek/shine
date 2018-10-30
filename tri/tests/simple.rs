@@ -7,9 +7,9 @@ extern crate log;
 
 mod common;
 
-use common::{Posf32, Posf64, Posi32, Posi64, Sample, SimpleTrif32, SimpleTrif64, SimpleTrii32, SimpleTrii64};
-use shine_testutils::*;
-use shine_tri::geometry::{Position, Predicates, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64, Real};
+use common::{trace_tri, Coloring, RenderMapping, Sample, SimpleTrif32, SimpleTrif64, SimpleTrii32, SimpleTrii64};
+use shine_testutils::{init_test, init_webcontroll_test, webserver};
+use shine_tri::geometry::{Position, Predicates, Real};
 use shine_tri::indexing::PositionQuery;
 use shine_tri::{Builder, Checker, Face, Graph, Vertex};
 use std::fmt;
@@ -18,7 +18,7 @@ use std::fmt;
 fn t0_empty() {
     init_test(module_path!());
 
-    fn t0_empty_<R, P, PR, V, F>(mut tri: Graph<PR, V, F>, desc: &str)
+    fn t0_empty_<R, P, PR, V, F>(tri: Graph<PR, V, F>, desc: &str)
     where
         R: Real,
         P: Default + fmt::Debug + Position<Real = R> + From<Sample>,
@@ -147,9 +147,9 @@ fn t2_dimension1() {
 
 #[test]
 fn t3_dimension2() {
-    init_test(module_path!());
+    let test_control = init_webcontroll_test(module_path!());
 
-    fn t3_dimension2_<R, P, PR, V, F>(mut tri: Graph<PR, V, F>, desc: &str)
+    fn t3_dimension2_<R, P, PR, V, F>(mut tri: Graph<PR, V, F>, desc: &str, test_control: &webserver::Service)
     where
         R: Real,
         P: Default + fmt::Debug + Position<Real = R> + From<Sample>,
@@ -193,20 +193,27 @@ fn t3_dimension2() {
             for (i, pnts) in test_cases.iter().enumerate() {
                 trace!("testcase: {}", i);
 
-                for &(x, y) in pnts.iter() {
-                    let pos = map(x, y);
-                    trace!("add {:?}", pos);
-                    let vi = Builder::new(&mut tri).add_vertex(pos, None);
-                    trace!("{:?} = {:?}", vi, tri[PositionQuery::Vertex(vi)]);
-                    assert_eq!(Checker::new(&tri).check(None), Ok(()), "{:?}", tri);
+                let rm = RenderMapping::default();
+                let coloring = Coloring::default();
 
-                    let pos = map(x, y);
-                    trace!("add duplicate {:?}", pos);
-                    let vi_dup = Builder::new(&mut tri).add_vertex(pos, None);
-                    assert_eq!(Checker::new(&tri).check(None), Ok(()));
-                    assert_eq!(vi, vi_dup);
+                {
+                    let mut builder = Builder::new(&mut tri);
+                    for &(x, y) in pnts.iter() {
+                        let pos = map(x, y);
+                        trace!("add {:?}", pos);
+                        let vi = builder.add_vertex(pos, None);
+                        trace!("{:?} = {:?}", vi, builder.tri[PositionQuery::Vertex(vi)]);
+                        assert_eq!(Checker::new(builder.tri).check(None), Ok(()), "{:?}", builder.tri);
+
+                        let pos = map(x, y);
+                        trace!("add duplicate {:?}", pos);
+                        let vi_dup = builder.add_vertex(pos, None);
+                        assert_eq!(Checker::new(builder.tri).check(None), Ok(()), "{:?}", builder.tri);
+                        assert_eq!(vi, vi_dup);
+                    }
                 }
 
+                test_control.add_d2_image(&trace_tri(&tri, &rm, &coloring));
                 assert_eq!(tri.dimension(), 2);
 
                 trace!("clear");
@@ -217,8 +224,10 @@ fn t3_dimension2() {
         }
     }
 
-    t3_dimension2_(SimpleTrif32::default(), "inexact f32");
-    t3_dimension2_(SimpleTrif64::default(), "inexact f64");
-    t3_dimension2_(SimpleTrii32::default(), "exact i32");
-    t3_dimension2_(SimpleTrii64::default(), "exact i64");
+    t3_dimension2_(SimpleTrif32::default(), "inexact f32", &test_control);
+    t3_dimension2_(SimpleTrif64::default(), "inexact f64", &test_control);
+    t3_dimension2_(SimpleTrii32::default(), "exact i32", &test_control);
+    t3_dimension2_(SimpleTrii64::default(), "exact i64", &test_control);
+
+    test_control.wait_user();
 }

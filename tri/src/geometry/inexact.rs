@@ -170,8 +170,7 @@ macro_rules! impl_inexact_nearest_point_search {
         {
             base: ($float,$float),
             dist: $float,                
-            best: Option<D>,
-            phantom: PhantomData<&'a P>,
+            best: Option<(&'a P, D)>,
         }
 
         impl <'a, D,P> $nearest_point_search<'a, D,P> 
@@ -183,7 +182,6 @@ macro_rules! impl_inexact_nearest_point_search {
                     base : (base.x(), base.y()),
                     dist: 0 as $float,
                     best: None,
-                    phantom: PhantomData,
                 }
             }
         }
@@ -194,19 +192,19 @@ macro_rules! impl_inexact_nearest_point_search {
         {
             type Position = P;
 
-            fn test(&mut self, pos: &Self::Position, data: D) {
+            fn test(&mut self, pos: &'a Self::Position, data: D) {
                 let (ax, ay) = self.base;
                 let (bx, by) = (pos.x(), pos.y());
                 let (bax, bay) = (bx - ax, by - ay);
                 let dist = bax * bax + bay * bay;
 
                 if self.best.is_none() || self.dist > dist {
-                    self.best = Some(data);
+                    self.best = Some((pos, data));
                     self.dist = dist;
                 }
             }
 
-            fn nearest_data(self) -> Option<D> {
+            fn nearest(self) -> Option<(&'a Self::Position, D)> {
                 self.best
             }
         }
@@ -216,7 +214,7 @@ macro_rules! impl_inexact_nearest_point_search {
         {
             type NearestPointSearch = $nearest_point_search<'a,D,P>;
 
-            fn nearest_point_search(base: &'a Self::Position) -> Self::NearestPointSearch
+            fn nearest_point_search(&self, base: &'a Self::Position) -> Self::NearestPointSearch
             {
                 $nearest_point_search::new(base)
             }

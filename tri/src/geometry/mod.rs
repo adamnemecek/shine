@@ -67,14 +67,14 @@ pub trait Predicates {
 pub trait NearestPointSearch<'a, D> {
     type Position: 'a + Position;
 
-    fn test(&mut self, pos: &Self::Position, data: D);
-    fn nearest_data(self) -> Option<D>;
+    fn test(&mut self, pos: &'a Self::Position, data: D);
+    fn nearest(self) -> Option<(&'a Self::Position, D)>;
 }
 
 pub trait NearestPointSearchBuilder<'a, D>: 'a + Predicates {
     type NearestPointSearch: NearestPointSearch<'a, D, Position = Self::Position>;
 
-    fn nearest_point_search(base: &'a Self::Position) -> Self::NearestPointSearch;
+    fn nearest_point_search(&self, base: &'a Self::Position) -> Self::NearestPointSearch;
 }
 
 mod inexact;
