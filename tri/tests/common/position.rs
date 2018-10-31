@@ -36,12 +36,12 @@ impl Position for Posf64 {
     }
 }
 
-impl<R, P> From<&P> for Posf64
+impl<'a, R, P> From<&'a P> for Posf64
 where
     R: Real,
     P: Position<Real = R>,
 {
-    fn from(p: &P) -> Posf64 {
+    fn from(p: &'a P) -> Posf64 {
         Posf64 {
             x: p.x().approximate(),
             y: p.y().approximate(),

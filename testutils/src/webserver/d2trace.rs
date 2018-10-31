@@ -1,6 +1,7 @@
 use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
 use svg::node::{element, Text};
 use svg::{Document, Node};
+use tera;
 use webserver::service::AppContext;
 
 pub trait IntoD2Image {

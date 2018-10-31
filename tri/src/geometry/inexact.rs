@@ -166,7 +166,7 @@ macro_rules! impl_inexact_nearest_point_search {
     ($nearest_point_search:ident => ($float:ty, $predicates:ident)) => {
         pub struct $nearest_point_search<'a, D,P> 
         where
-            P: Position<Real = $float>,
+            P: 'a + Position<Real = $float>,
         {
             base: ($float,$float),
             dist: $float,                
@@ -175,7 +175,7 @@ macro_rules! impl_inexact_nearest_point_search {
 
         impl <'a, D,P> $nearest_point_search<'a, D,P> 
         where
-                P: Position<Real = $float>,
+                P: 'a + Position<Real = $float>,
         {
             fn new<'b>(base: &'b P) -> $nearest_point_search<'b, D,P>  {
                 $nearest_point_search {
