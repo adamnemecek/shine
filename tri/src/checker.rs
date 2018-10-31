@@ -1,6 +1,7 @@
-use geometry::{Orientation, Real, Position, Predicates};
+use geometry::{Orientation, Position, Predicates, Real};
 use graph::{Face, Graph, Vertex};
 use indexing::PositionQuery;
+use query::Query;
 use types::rot3;
 
 pub struct Checker<'a, P, V, F>
@@ -9,7 +10,8 @@ where
     V: 'a + Vertex<Position = P::Position>,
     F: 'a + Face,
 {
-    tri: &'a Graph<P, V, F>,
+    pub graph: &'a Graph<P::Position, V, F>,
+    pub predicates: &'a P,
 }
 
 impl<'a, P, V, F> Checker<'a, P, V, F>
@@ -18,60 +20,64 @@ where
     V: 'a + Vertex<Position = P::Position>,
     F: 'a + Face,
 {
-    pub fn new(tri: &Graph<P, V, F>) -> Checker<P, V, F> {
-        Checker { tri }
+    crate fn new<'b>(graph: &'b Graph<P::Position, V, F>, predicates: &'b P) -> Checker<'b, P, V, F> {
+        Checker { graph, predicates }
+    }
+
+    pub fn query(&self) -> Query<P, V, F> {
+        Query::new(self.graph, self.predicates)
     }
 
     pub fn check_dimension(&self) -> Result<(), String> {
-        if self.tri.dimension() == -1 {
-            if self.tri.vertex_count() != 0 {
-                Err(format!("Empty triangulation has vertices: {}", self.tri.vertex_count()))
-            } else if self.tri.face_count() != 0 {
-                Err(format!("Empty triangulation has faces: {}", self.tri.face_count()))
-            } else if self.tri.infinite_vertex().is_valid() {
+        if self.graph.dimension() == -1 {
+            if self.graph.vertex_count() != 0 {
+                Err(format!("Empty triangulation has vertices: {}", self.graph.vertex_count()))
+            } else if self.graph.face_count() != 0 {
+                Err(format!("Empty triangulation has faces: {}", self.graph.face_count()))
+            } else if self.graph.infinite_vertex().is_valid() {
                 Err(format!(
                     "Empty triangulation has a valid infinite vertex: {:?}",
-                    self.tri.infinite_vertex()
+                    self.graph.infinite_vertex()
                 ))
             } else {
                 Ok(())
             }
         } else {
             let finite_vertex_count = self
-                .tri
+                .graph
                 .vertex_index_iter()
-                .filter(|&v| !self.tri.is_infinite_vertex(v))
+                .filter(|&v| !self.graph.is_infinite_vertex(v))
                 .count();
-            if finite_vertex_count != self.tri.vertex_count() - 1 {
+            if finite_vertex_count != self.graph.vertex_count() - 1 {
                 return Err(format!(
                     "Number of finite vertices is invalid, got {}, expected: {}",
                     finite_vertex_count,
-                    self.tri.vertex_count() - 1
+                    self.graph.vertex_count() - 1
                 ));
             }
 
             let mut finite_face_count = 0;
             let mut infinite_face_count = 0;
-            for f in self.tri.face_index_iter() {
+            for f in self.graph.face_index_iter() {
                 for r in 0..3 {
                     let d = rot3(r);
-                    if self.tri[f].vertex(d).is_valid() != (r <= self.tri.dimension() as u8) {
+                    if self.graph[f].vertex(d).is_valid() != (r <= self.graph.dimension() as u8) {
                         return Err(format!(
                             "A face({:?}) has invalid dimension at {:?} (dim:{})",
                             f,
                             d,
-                            self.tri.dimension()
+                            self.graph.dimension()
                         ));
                     }
                 }
-                if self.tri.is_infinite_face(f) {
+                if self.graph.is_infinite_face(f) {
                     infinite_face_count += 1;
                 } else {
                     finite_face_count += 1;
                 }
             }
 
-            if self.tri.dimension() == 0 {
+            if self.graph.dimension() == 0 {
                 if finite_face_count != 1 {
                     Err(format!(
                         "Face count does not match for dim0, (f = 1), f={}",
@@ -90,7 +96,7 @@ where
                 } else {
                     Ok(())
                 }
-            } else if self.tri.dimension() == 1 {
+            } else if self.graph.dimension() == 1 {
                 if infinite_face_count != 2 {
                     Err(format!(
                         "Infinite face count does not match hull count for dim1: (if = h), if={},h=2",
@@ -104,15 +110,15 @@ where
                 } else {
                     Ok(())
                 }
-            } else if self.tri.dimension() == 2 {
+            } else if self.graph.dimension() == 2 {
                 let mut hull_count = 0;
-                let end = self.tri.infinite_face();
+                let end = self.graph.infinite_face();
                 let mut cur = end;
                 loop {
                     hull_count += 1;
-                    let iid = self.tri[cur].get_vertex_index(self.tri.infinite_vertex()).unwrap(); // index of infinite vertex
+                    let iid = self.graph[cur].get_vertex_index(self.graph.infinite_vertex()).unwrap(); // index of infinite vertex
                     let aid = iid.decrement();
-                    cur = self.tri[cur].neighbor(aid);
+                    cur = self.graph[cur].neighbor(aid);
                     if cur == end {
                         break;
                     }
@@ -133,19 +139,19 @@ where
                     Ok(())
                 }
             } else {
-                Err(format!("Invalid dimension: {}", self.tri.dimension()))
+                Err(format!("Invalid dimension: {}", self.graph.dimension()))
             }
         }
     }
 
     fn check_vertex_face_link(&self) -> Result<(), String> {
-        for v in self.tri.vertex_index_iter() {
-            if !self.tri[v].face().is_valid() {
+        for v in self.graph.vertex_index_iter() {
+            if !self.graph[v].face().is_valid() {
                 return Err(format!("Vertex-face link is invalid, no face for {:?} ", v));
             }
 
-            let nf = self.tri[v].face();
-            let _vi = self.tri[nf]
+            let nf = self.graph[v].face();
+            let _vi = self.graph[nf]
                 .get_vertex_index(v)
                 .ok_or_else(|| format!("Vertex-face link is invalid {:?} is not a neighbor of {:?}", nf, v))?;
         }
@@ -153,10 +159,10 @@ where
     }
 
     fn check_face_face_link(&self) -> Result<(), String> {
-        for f in self.tri.face_index_iter() {
-            for d in 0..self.tri.dimension() {
+        for f in self.graph.face_index_iter() {
+            for d in 0..self.graph.dimension() {
                 let i = rot3(d as u8);
-                let nf = self.tri[f].neighbor(i);
+                let nf = self.graph[f].neighbor(i);
                 if !nf.is_valid() {
                     return Err(format!(
                         "Face-face link is invalid, no neighboring face for {:?} at {:?}",
@@ -164,16 +170,16 @@ where
                     ));
                 }
 
-                let ni = self.tri[nf].get_neighbor_index(f).ok_or_else(|| {
+                let ni = self.graph[nf].get_neighbor_index(f).ok_or_else(|| {
                     format!(
                         "Face-face link is invalid, missing backward link between ({:?},{:?}) and {:?}",
                         f, i, nf
                     )
                 })?;
 
-                match self.tri.dimension() {
+                match self.graph.dimension() {
                     1 => {
-                        if self.tri[f].vertex(i.mirror(2)) != self.tri[nf].vertex(ni.mirror(2)) {
+                        if self.graph[f].vertex(i.mirror(2)) != self.graph[nf].vertex(ni.mirror(2)) {
                             return Err(format!(
                                 "Face-face link is invalid, vertex relation in dim1 ({:?},{:?}) <-> ({:?},{:?})",
                                 f, i, nf, ni
@@ -181,15 +187,15 @@ where
                         }
                     }
                     2 => {
-                        if self.tri[f].vertex(i.decrement()) != self.tri[nf].vertex(ni.increment())
-                            || self.tri[f].vertex(i.increment()) != self.tri[nf].vertex(ni.decrement())
+                        if self.graph[f].vertex(i.decrement()) != self.graph[nf].vertex(ni.increment())
+                            || self.graph[f].vertex(i.increment()) != self.graph[nf].vertex(ni.decrement())
                         {
                             return Err(format!(
                                 "Face-face link is invalid, vertex relation in dim2 ({:?},{:?}) <-> ({:?},{:?})",
                                 f, d, nf, ni
                             ));
                         }
-                        if self.tri[f].constraint(i) != self.tri[nf].constraint(ni) {
+                        if self.graph[f].constraint(i) != self.graph[nf].constraint(ni) {
                             return Err(format!(
                                 "Face-face link is invalid, non-matching constraints in dim2 ({:?},{:?}) <-> ({:?},{:?})",
                                 f, d, nf, ni
@@ -210,20 +216,20 @@ where
     }
 
     pub fn check_orientation(&self) -> Result<(), String> {
-        if self.tri.dimension() < 2 {
+        if self.graph.dimension() < 2 {
             return Ok(());
         }
 
-        for f in self.tri.face_index_iter() {
-            if self.tri.is_infinite_face(f) {
+        for f in self.graph.face_index_iter() {
+            if self.graph.is_infinite_face(f) {
                 continue;
             }
 
-            let v0 = self.tri[f].vertex(rot3(0));
-            let v1 = self.tri[f].vertex(rot3(1));
-            let v2 = self.tri[f].vertex(rot3(2));
+            let v0 = self.graph[f].vertex(rot3(0));
+            let v1 = self.graph[f].vertex(rot3(1));
+            let v2 = self.graph[f].vertex(rot3(2));
 
-            if !self.tri.get_vertices_orientation(v0, v1, v2).is_ccw() {
+            if !self.query().get_vertices_orientation(v0, v1, v2).is_ccw() {
                 return Err(format!("Count-clockwise property is violated for {:?}", f));
             }
         }
@@ -232,20 +238,20 @@ where
     }
 
     pub fn check_area(&self, eps: Option<f64>) -> Result<(), String> {
-        if self.tri.dimension() != 2 {
+        if self.graph.dimension() != 2 {
             return Ok(());
         }
 
         // calculate the area of the triangles
         let mut tri_area = 0.;
-        for f in self.tri.face_index_iter() {
-            if self.tri.is_infinite_face(f) {
+        for f in self.graph.face_index_iter() {
+            if self.graph.is_infinite_face(f) {
                 continue;
             }
 
-            let a = &self.tri[PositionQuery::Face(f, rot3(0))];
-            let b = &self.tri[PositionQuery::Face(f, rot3(1))];
-            let c = &self.tri[PositionQuery::Face(f, rot3(2))];
+            let a = &self.graph[PositionQuery::Face(f, rot3(0))];
+            let b = &self.graph[PositionQuery::Face(f, rot3(1))];
+            let c = &self.graph[PositionQuery::Face(f, rot3(2))];
 
             let ax: f64 = a.x().approximate();
             let ay: f64 = a.y().approximate();
@@ -262,21 +268,21 @@ where
 
         // calculate the area of the convex hull
         let mut convex_area = 0.;
-        let end = self.tri.infinite_face();
+        let end = self.graph.infinite_face();
         let mut cur = end;
         loop {
-            let iid = self.tri[cur].get_vertex_index(self.tri.infinite_vertex()).unwrap(); // index of infinite vertex
+            let iid = self.graph[cur].get_vertex_index(self.graph.infinite_vertex()).unwrap(); // index of infinite vertex
             let aid = iid.decrement();
             let bid = iid.increment();
-            let a = &self.tri[PositionQuery::Face(cur, aid)];
-            let b = &self.tri[PositionQuery::Face(cur, bid)];
+            let a = &self.graph[PositionQuery::Face(cur, aid)];
+            let b = &self.graph[PositionQuery::Face(cur, bid)];
             let ax: f64 = a.x().approximate();
             let ay: f64 = a.y().approximate();
             let bx: f64 = b.x().approximate();
             let by: f64 = b.y().approximate();
 
             convex_area += ax * by - bx * ay;
-            cur = self.tri[cur].neighbor(aid);
+            cur = self.graph[cur].neighbor(aid);
             if cur == end {
                 break;
             }
@@ -302,7 +308,7 @@ where
         }
     }
 
-    pub fn check(&self, eps_area: Option<f64>) -> Result<(), String> {
+    pub fn check_full(&self, eps_area: Option<f64>) -> Result<(), String> {
         self.check_dimension()?;
         self.check_topology()?;
         self.check_orientation()?;

@@ -1,9 +1,9 @@
 use common::position::{Posf32, Posf64, Posi32, Posi64};
 use shine_tri::geometry::{Position, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64};
 use shine_tri::types::{invalid_face_index, invalid_vertex_index, rot3, FaceIndex, Rot3, VertexIndex};
-use shine_tri::{Face, Graph, Vertex};
+use shine_tri::{Face, Triangulation, Vertex};
 
-pub struct TriVertex<P>
+pub struct SimpleVertex<P>
 where
     P: Default + Position,
 {
@@ -11,19 +11,19 @@ where
     face: FaceIndex,
 }
 
-impl<P> Default for TriVertex<P>
+impl<P> Default for SimpleVertex<P>
 where
     P: Default + Position,
 {
-    fn default() -> TriVertex<P> {
-        TriVertex {
+    fn default() -> SimpleVertex<P> {
+        SimpleVertex {
             position: Default::default(),
             face: invalid_face_index(),
         }
     }
 }
 
-impl<P> Vertex for TriVertex<P>
+impl<P> Vertex for SimpleVertex<P>
 where
     P: Default + Position,
 {
@@ -46,23 +46,25 @@ where
     }
 }
 
-pub struct TriFace {
+pub struct SimpleFace {
     vertices: [VertexIndex; 3],
     neighbors: [FaceIndex; 3],
     constraints: [bool; 3],
+    tag: usize,
 }
 
-impl Default for TriFace {
-    fn default() -> TriFace {
-        TriFace {
+impl Default for SimpleFace {
+    fn default() -> SimpleFace {
+        SimpleFace {
             vertices: [invalid_vertex_index(); 3],
             neighbors: [invalid_face_index(); 3],
             constraints: [false; 3],
+            tag: 0,
         }
     }
 }
 
-impl Face for TriFace {
+impl Face for SimpleFace {
     type Constraint = bool;
 
     fn vertex(&self, i: Rot3) -> VertexIndex {
@@ -96,9 +98,17 @@ impl Face for TriFace {
     fn set_constraint(&mut self, i: Rot3, c: Self::Constraint) {
         self.constraints[i.id() as usize] = c
     }
+
+    fn tag(&self) -> usize {
+        self.tag
+    }
+
+    fn set_tag(&mut self, tag: usize) {
+        self.tag = tag
+    }
 }
 
-type SimpleTri<P, PR> = Graph<PR, TriVertex<P>, TriFace>;
+type SimpleTri<P, PR> = Triangulation<PR, SimpleVertex<P>, SimpleFace>;
 
 pub type SimpleTrif32 = SimpleTri<Posf32, Predicatesf32<Posf32>>;
 pub type SimpleTrif64 = SimpleTri<Posf64, Predicatesf64<Posf64>>;

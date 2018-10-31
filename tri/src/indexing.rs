@@ -1,4 +1,4 @@
-use geometry::Predicates;
+use geometry::Position;
 use graph::{Face, Graph, Vertex};
 use std::convert::TryFrom;
 use std::ops::{Index, IndexMut};
@@ -13,8 +13,8 @@ pub trait IndexGet<I> {
 
 impl<P, V, F> Index<VertexIndex> for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     type Output = V;
@@ -26,8 +26,8 @@ where
 
 impl<P, V, F> IndexMut<VertexIndex> for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     fn index_mut(&mut self, idx: VertexIndex) -> &mut Self::Output {
@@ -37,8 +37,8 @@ where
 
 impl<P, V, F> Index<FaceIndex> for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     type Output = F;
@@ -50,8 +50,8 @@ where
 
 impl<P, V, F> IndexMut<FaceIndex> for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     fn index_mut(&mut self, idx: FaceIndex) -> &mut Self::Output {
@@ -70,8 +70,8 @@ pub enum VertexIndexQuery {
 
 impl<P, V, F> IndexGet<VertexIndexQuery> for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     type Output = VertexIndex;
@@ -111,8 +111,8 @@ impl TryFrom<VertexQuery> for VertexIndexQuery {
 
 impl<P, V, F> Index<VertexQuery> for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     type Output = V;
@@ -127,8 +127,8 @@ where
 
 impl<P, V, F> IndexMut<VertexQuery> for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     fn index_mut(&mut self, idx: VertexQuery) -> &mut Self::Output {
@@ -167,11 +167,11 @@ impl TryFrom<PositionQuery> for VertexIndexQuery {
 
 impl<P, V, F> Index<PositionQuery> for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
-    type Output = P::Position;
+    type Output = P;
 
     fn index(&self, idx: PositionQuery) -> &Self::Output {
         match VertexIndexQuery::try_from(idx) {
@@ -186,8 +186,8 @@ where
 
 impl<P, V, F> IndexMut<PositionQuery> for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     fn index_mut(&mut self, idx: PositionQuery) -> &mut Self::Output {

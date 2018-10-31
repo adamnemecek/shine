@@ -1,4 +1,3 @@
-#![cfg(test)]
 mod d2triangletrace;
 mod position;
 mod simplegraph;

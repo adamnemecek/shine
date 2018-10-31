@@ -1,0 +1,61 @@
+use geometry::{Orientation, Predicates};
+use graph::{Face, Graph, Vertex};
+use indexing::PositionQuery;
+use types::{FaceIndex, Rot3, VertexIndex};
+
+pub struct Query<'a, P, V, F>
+where
+    P: 'a + Predicates,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
+{
+    graph: &'a Graph<P::Position, V, F>,
+    predicates: &'a P,
+}
+
+impl<'a, P, V, F> Query<'a, P, V, F>
+where
+    P: 'a + Predicates,
+    V: 'a + Vertex<Position = P::Position>,
+    F: 'a + Face,
+{
+    crate fn new<'b>(graph: &'b Graph<P::Position, V, F>, predicates: &'b P) -> Query<'b, P, V, F> {
+        Query { graph, predicates }
+    }
+
+    //region geometry relationship
+    pub fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> P::Orientation {
+        assert!(self.graph.is_finite_vertex(v0) && self.graph.is_finite_vertex(v1) && self.graph.is_finite_vertex(v2));
+        let a = &self.graph[PositionQuery::Vertex(v0)];
+        let b = &self.graph[PositionQuery::Vertex(v1)];
+        let c = &self.graph[PositionQuery::Vertex(v2)];
+        self.predicates.orientation_triangle(a, b, c)
+    }
+
+    /// Finds the orientation_triangle of an edge and a vertex    
+    pub fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> P::Orientation {
+        let va = v;
+        let vb = self.graph[f].vertex(i.increment());
+        let vc = self.graph[f].vertex(i.decrement());
+        self.get_vertices_orientation(va, vb, vc)
+    }
+
+    /// Returns if the quad defined by the two adjacent triangles is a convex polygon.
+    pub fn is_convex(&self, f: FaceIndex, i: Rot3) -> bool {
+        assert!(self.graph.is_finite_face(f));
+        let i0 = i;
+        let i1 = i.increment();
+        let i2 = i.decrement();
+
+        let nf = self.graph[f].neighbor(i0);
+        assert!(self.graph.is_finite_face(nf));
+        let ni = self.graph[nf].get_neighbor_index(f).unwrap();
+
+        let p0 = &self.graph[PositionQuery::Face(f, i0)];
+        let p1 = &self.graph[PositionQuery::Face(f, i1)];
+        let p2 = &self.graph[PositionQuery::Face(nf, ni)];
+        let p3 = &self.graph[PositionQuery::Face(f, i2)];
+
+        self.predicates.orientation_triangle(p0, p1, p2).is_ccw() && self.predicates.orientation_triangle(p2, p3, p0).is_ccw()
+    }
+}

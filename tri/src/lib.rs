@@ -12,7 +12,9 @@ extern crate shine_testutils;
 mod builder;
 mod checker;
 mod graph;
-mod locator;
+mod query;
+mod tagging_locator;
+mod triangulation;
 
 pub mod geometry;
 pub mod indexing;
@@ -21,4 +23,6 @@ pub mod types;
 pub use self::builder::*;
 pub use self::checker::*;
 pub use self::graph::*;
-pub use self::locator::*;
+pub use self::tagging_locator::*;
+pub use self::triangulation::*;
+pub use self::query::*;

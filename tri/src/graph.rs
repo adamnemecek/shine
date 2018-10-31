@@ -1,5 +1,4 @@
-use geometry::{Orientation, Position, Real, Predicates};
-use indexing::PositionQuery;
+use geometry::{Position, Real};
 use std::fmt;
 use types::{face_index, invalid_vertex_index, rot3, vertex_index, Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
@@ -40,6 +39,9 @@ pub trait Face: Default {
 
     fn constraint(&self, i: Rot3) -> Self::Constraint;
     fn set_constraint(&mut self, i: Rot3, c: Self::Constraint);
+
+    fn tag(&self) -> usize;
+    fn set_tag(&mut self, tag: usize);
 }
 
 /// Extension methods for the Face trait
@@ -78,11 +80,10 @@ impl<T> FaceExt for T where T: Face {}
 /// (Constraint) Triangulation.
 pub struct Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
-    predicates: P,
     dimension: i8,
     vertices: Vec<V>,
     faces: Vec<F>,
@@ -91,13 +92,12 @@ where
 
 impl<P, V, F> Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
-    pub fn new_with_predicates(predicates: P) -> Graph<P, V, F> {
+    pub fn new() -> Graph<P, V, F> {
         Graph {
-            predicates,
             dimension: -1,
             vertices: Default::default(),
             faces: Default::default(),
@@ -207,70 +207,12 @@ where
         let i = self[nf].get_neighbor_index(e.0).unwrap();
         Edge(nf, i)
     }
-
-    //region geometry relationship
-    pub fn predicates(&self) -> &P {
-        &self.predicates
-    }
-
-    pub fn predicates_mut(&mut self) -> &mut P {
-        &mut self.predicates
-    }
-
-    pub fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> P::Orientation {
-        assert!(v0 != self.infinite_vertex && v1 != self.infinite_vertex && v2 != self.infinite_vertex);
-        let a = &self[v0].position();
-        let b = &self[v1].position();
-        let c = &self[v2].position();
-        self.predicates.orientation_triangle(a, b, c)
-    }
-
-    /// Finds the orientation_triangle of an edge and a vertex    
-    pub fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> P::Orientation {
-        let va = v;
-        let vb = self[f].vertex(i.increment());
-        let vc = self[f].vertex(i.decrement());
-        self.get_vertices_orientation(va, vb, vc)
-    }
-
-    /// Returns if the quad defined by the two adjacent triangles is a convex polygon.
-    pub fn is_convex(&self, f: FaceIndex, i: Rot3) -> bool {
-        assert!(self.is_finite_face(f));
-        let i0 = i;
-        let i1 = i.increment();
-        let i2 = i.decrement();
-
-        let nf = self[f].neighbor(i0);
-        assert!(self.is_finite_face(nf));
-        let ni = self[nf].get_neighbor_index(f).unwrap();
-
-        let p0 = &self[PositionQuery::Face(f, i0)];
-        let p1 = &self[PositionQuery::Face(f, i1)];
-        let p2 = &self[PositionQuery::Face(nf, ni)];
-        let p3 = &self[PositionQuery::Face(f, i2)];
-
-        self.predicates.orientation_triangle(p0, p1, p2).is_ccw() && self.predicates.orientation_triangle(p2, p3, p0).is_ccw()
-    }
-
-    //fn is_convex(&self, edge: Edge) -> bool {}
-    //endregion
-}
-
-impl<P, V, F> Graph<P, V, F>
-where
-    P: Predicates + Default,
-    V: Vertex<Position = P::Position>,
-    F: Face,
-{
-    pub fn new() -> Graph<P, V, F> {
-        Graph::new_with_predicates(Default::default())
-    }
 }
 
 impl<P, V, F> Default for Graph<P, V, F>
 where
-    P: Predicates + Default,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     fn default() -> Graph<P, V, F> {
@@ -280,8 +222,8 @@ where
 
 impl<P, V, F> fmt::Debug for Graph<P, V, F>
 where
-    P: Predicates,
-    V: Vertex<Position = P::Position>,
+    P: Position,
+    V: Vertex<Position = P>,
     F: Face,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

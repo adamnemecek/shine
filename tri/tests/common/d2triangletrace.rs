@@ -1,6 +1,6 @@
 use common::position::Posf64;
 use shine_testutils::webserver::*;
-use shine_tri::geometry::{NearestPointSearch, NearestPointSearchBuilder, Predicates, Predicatesf64};
+use shine_tri::geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates, Predicatesf64};
 use shine_tri::indexing::{IndexGet, PositionQuery, VertexIndexQuery};
 use shine_tri::types::{rot3, FaceIndex, Rot3, VertexIndex};
 use shine_tri::{Face, Graph, Vertex};
@@ -99,18 +99,24 @@ impl RenderMapping {
         self.virtual_positions = p.into();
     }
 
-    pub fn map_vertex<P, V, F>(&self, tri: &Graph<P, V, F>, v: VertexIndex, vcw: VertexIndex, vccw: VertexIndex) -> RenderPosition
+    pub fn map_vertex<P, V, F>(
+        &self,
+        graph: &Graph<P, V, F>,
+        v: VertexIndex,
+        vcw: VertexIndex,
+        vccw: VertexIndex,
+    ) -> RenderPosition
     where
-        P: Predicates,
-        V: Vertex<Position = P::Position>,
+        P: Position,
+        V: Vertex<Position = P>,
         F: Face,
     {
         if !v.is_valid() {
             return RenderPosition::Invisible;
         }
 
-        if tri.is_finite_vertex(v) {
-            let p = Posf64::from(&tri[PositionQuery::Vertex(v)]);
+        if graph.is_finite_vertex(v) {
+            let p = Posf64::from(&graph[PositionQuery::Vertex(v)]);
             return RenderPosition::Real(p);
         }
 
@@ -121,10 +127,10 @@ impl RenderMapping {
         let predicates = Predicatesf64::new();
 
         // find virtual point best fitting the convex hull in 2d
-        if vcw.is_valid() && tri.is_finite_vertex(vcw) && vccw.is_valid() && tri.is_finite_vertex(vccw) {
-            let p = Posf64::from(&tri[PositionQuery::Vertex(v)]);
-            let pcw = Posf64::from(&tri[PositionQuery::Vertex(vcw)]);
-            let pccw = Posf64::from(&tri[PositionQuery::Vertex(vccw)]);
+        if vcw.is_valid() && graph.is_finite_vertex(vcw) && vccw.is_valid() && graph.is_finite_vertex(vccw) {
+            let p = Posf64::from(&graph[PositionQuery::Vertex(v)]);
+            let pcw = Posf64::from(&graph[PositionQuery::Vertex(vcw)]);
+            let pccw = Posf64::from(&graph[PositionQuery::Vertex(vccw)]);
             let mut best_value = 0.;
             let mut best = None;
 
@@ -143,8 +149,8 @@ impl RenderMapping {
 
         // find virtual point best fitting the convex hull in 1d
         for &candidate in [vcw, vccw].iter() {
-            if candidate.is_valid() && tri.is_finite_vertex(candidate) {
-                let p = Posf64::from(&tri[PositionQuery::Vertex(candidate)]);
+            if candidate.is_valid() && graph.is_finite_vertex(candidate) {
+                let p = Posf64::from(&graph[PositionQuery::Vertex(candidate)]);
                 let mut search = predicates.nearest_point_search(&p);
 
                 for virt_pos in self.virtual_positions.iter() {
@@ -169,29 +175,33 @@ impl Default for RenderMapping {
 
 pub struct Trace<'a, P, V, F>
 where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
+    P: 'a + Position,
+    V: 'a + Vertex<Position = P>,
     F: 'a + Face,
 {
-    tri: &'a Graph<P, V, F>,
+    graph: &'a Graph<P, V, F>,
     mapping: &'a RenderMapping,
     coloring: &'a Coloring,
 }
 
 impl<'a, P, V, F> Trace<'a, P, V, F>
 where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
+    P: 'a + Position,
+    V: 'a + Vertex<Position = P>,
     F: 'a + Face,
 {
-    pub fn new<'b>(tri: &'b Graph<P, V, F>, mapping: &'b RenderMapping, coloring: &'b Coloring) -> Trace<'b, P, V, F> {
-        Trace { tri, mapping, coloring }
+    pub fn new<'b>(graph: &'b Graph<P, V, F>, mapping: &'b RenderMapping, coloring: &'b Coloring) -> Trace<'b, P, V, F> {
+        Trace {
+            graph,
+            mapping,
+            coloring,
+        }
     }
 
     pub fn add_vertex(&self, tr: &mut D2Trace, v: VertexIndex, msg: Option<&str>)
     where
-        P: Predicates,
-        V: Vertex<Position = P::Position>,
+        P: Position,
+        V: Vertex<Position = P>,
         F: Face,
     {
         if !v.is_valid() {
@@ -200,8 +210,8 @@ where
 
         let msg = msg.map(|m| format!("V: {}", m)).unwrap_or_else(|| format!("V: {}", v.id()));
 
-        if self.tri.is_finite_vertex(v) {
-            let p = Posf64::from(&self.tri[PositionQuery::Vertex(v)]);
+        if self.graph.is_finite_vertex(v) {
+            let p = Posf64::from(&self.graph[PositionQuery::Vertex(v)]);
             tr.add_point(&(p.x, p.y), self.coloring.vertex.clone());
             tr.add_text(&(p.x, p.y), msg, self.coloring.vertex_text.clone());
         } else {
@@ -214,11 +224,11 @@ where
 
     pub fn add_edge(&self, tr: &mut D2Trace, a: VertexIndex, b: VertexIndex, msg: Option<&str>)
     where
-        P: Predicates,
-        V: Vertex<Position = P::Position>,
+        P: Position,
+        V: Vertex<Position = P>,
         F: Face,
     {
-        if self.tri.is_infinite_vertex(a) || self.tri.is_infinite_vertex(b) {
+        if self.graph.is_infinite_vertex(a) || self.graph.is_infinite_vertex(b) {
             return;
         }
 
@@ -226,8 +236,8 @@ where
             .map(|m| format!("E: {}", m))
             .unwrap_or_else(|| format!("E: ({},{})", a.id(), b.id()));
 
-        let pa = Posf64::from(&self.tri[PositionQuery::Vertex(a)]);
-        let pb = Posf64::from(&self.tri[PositionQuery::Vertex(b)]);
+        let pa = Posf64::from(&self.graph[PositionQuery::Vertex(a)]);
+        let pb = Posf64::from(&self.graph[PositionQuery::Vertex(b)]);
         tr.add_line(&(pa.x, pa.y), &(pb.x, pb.y), self.coloring.edge.clone());
         let x = (pa.x + pb.x) * 0.5;
         let y = (pa.y + pb.y) * 0.5;
@@ -237,8 +247,8 @@ where
     pub fn add_face_edge(&self, tr: &mut D2Trace, f: FaceIndex, i: Rot3, msg: Option<&str>) {
         self.add_edge(
             tr,
-            self.tri.index_get(VertexIndexQuery::EdgeStart(f, i)),
-            self.tri.index_get(VertexIndexQuery::EdgeEnd(f, i)),
+            self.graph.index_get(VertexIndexQuery::EdgeStart(f, i)),
+            self.graph.index_get(VertexIndexQuery::EdgeEnd(f, i)),
             msg,
         );
     }
@@ -249,14 +259,14 @@ where
         }
 
         let verts = [
-            self.tri[f].vertex(rot3(0)),
-            self.tri[f].vertex(rot3(1)),
-            self.tri[f].vertex(rot3(2)),
+            self.graph[f].vertex(rot3(0)),
+            self.graph[f].vertex(rot3(1)),
+            self.graph[f].vertex(rot3(2)),
         ];
         let positions = [
-            self.mapping.map_vertex(self.tri, verts[0], verts[1], verts[2]),
-            self.mapping.map_vertex(self.tri, verts[1], verts[2], verts[0]),
-            self.mapping.map_vertex(self.tri, verts[2], verts[0], verts[1]),
+            self.mapping.map_vertex(self.graph, verts[0], verts[1], verts[2]),
+            self.mapping.map_vertex(self.graph, verts[1], verts[2], verts[0]),
+            self.mapping.map_vertex(self.graph, verts[2], verts[0], verts[1]),
         ];
 
         for edge in 0..3 {
@@ -279,9 +289,9 @@ where
             }
 
             //let is_virtual = positions[ edge_start ].is_virtual() || positions[ edge_end ].is_virtual();
-            //bool is_constraint = !!aself.tri[ aFace ].getConstraint( edge );
+            //bool is_constraint = !!aself.graph[ aFace ].getConstraint( edge );
 
-            //let n = self.tri[f].neighbor(rot3(edge));
+            //let n = self.graph[f].neighbor(rot3(edge));
             //let  col = isConstraint ? aColor.edgeConstrained_ : isVirtual ? aColor.edgeInfinite_ : aColor.edge_;
             let a = positions[edge_start].position();
             let b = positions[edge_end].position();
@@ -305,7 +315,7 @@ where
         }
 
         if cnt > 0. {
-            let color = if self.tri.is_finite_face(f) {
+            let color = if self.graph.is_finite_face(f) {
                 &self.coloring.face_text
             } else {
                 &self.coloring.infinite_face_text
@@ -317,8 +327,8 @@ where
 
 impl<'a, P, V, F> IntoD2Image for Trace<'a, P, V, F>
 where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
+    P: 'a + Position,
+    V: 'a + Vertex<Position = P>,
     F: 'a + Face,
 {
     fn trace(&self, tr: &mut D2Trace) {
@@ -326,8 +336,8 @@ where
         let (mut minx, mut miny) = (f64::MAX, f64::MAX);
         let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
 
-        for v in self.tri.vertex_index_iter() {
-            let p = Posf64::from(&self.tri[PositionQuery::Vertex(v)]);
+        for v in self.graph.vertex_index_iter() {
+            let p = Posf64::from(&self.graph[PositionQuery::Vertex(v)]);
             minx = if p.x < minx { p.x } else { minx };
             maxx = if p.x > maxx { p.x } else { maxx };
             miny = if p.y < minx { p.y } else { minx };
@@ -343,22 +353,26 @@ where
 
         tr.set_scale(minx, miny, maxx, maxy);
 
-        for f in self.tri.face_index_iter() {
+        for f in self.graph.face_index_iter() {
             self.add_face(tr, f, None);
             //add_circum_circle( f, None );
         }
 
-        for v in self.tri.vertex_index_iter() {
+        for v in self.graph.vertex_index_iter() {
             self.add_vertex(tr, v, None);
         }
     }
 }
 
-pub fn trace_tri<'a, P, V, F>(tri: &'a Graph<P, V, F>, mapping: &'a RenderMapping, coloring: &'a Coloring) -> Trace<'a, P, V, F>
+pub fn trace_graph<'a, P, V, F>(
+    graph: &'a Graph<P, V, F>,
+    mapping: &'a RenderMapping,
+    coloring: &'a Coloring,
+) -> Trace<'a, P, V, F>
 where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
+    P: 'a + Position,
+    V: 'a + Vertex<Position = P>,
     F: 'a + Face,
 {
-    Trace::new(tri, mapping, coloring)
+    Trace::new(graph, mapping, coloring)
 }
