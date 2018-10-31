@@ -1,6 +1,7 @@
 use checker::Checker;
 use geometry::{Orientation, Predicates};
 use graph::{Face, FaceExt, Graph, Vertex};
+use indexing::PositionQuery;
 use query::Query;
 use tagginglocator::{Location, TaggingLocator};
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
@@ -55,7 +56,7 @@ where
 
     /// Add a constraining segment.
     /// First the two positions are inserted then the segment is added as a constraining edge.
-    pub fn add_constraint_for(&mut self, v0: VertexIndex, v1: VertexIndex, _c: F::Constraint) {
+    pub fn add_constraint_for(&mut self, v0: VertexIndex, v1: VertexIndex, c: F::Constraint) {
         assert!(v0.is_valid());
         assert!(v1.is_valid());
         assert!(self.graph.is_finite_vertex(v0));
@@ -65,7 +66,7 @@ where
         }
 
         match self.graph.dimension() {
-            1 => unimplemented!(),
+            1 => self.add_constraint_dim1(v0, v1, c),
             2 => unimplemented!(),
             _ => unreachable!("Inconsistent triangulation"),
         }
@@ -516,4 +517,61 @@ where
 
         vp
     }
+
+    /// Adds the constraining edge between the two vertex when dim=1 (all faces are segments)
+    fn add_constraint_dim1(&mut self, v0: VertexIndex, v1: VertexIndex, c: F::Constraint) {
+        assert!(self.graph.is_finite_vertex(v0));
+        assert!(self.graph.is_finite_vertex(v1));
+        assert_ne!(v1, v0);
+
+        // start by the face of the first vertex
+        let f0 = self.graph[v0].face();
+        let i0 = self.graph[f0].get_vertex_index(v0).unwrap();
+
+        // next vertex
+        let vn = self.graph[f0].vertex(i0.mirror(2));
+        if vn == v1 {
+            // v0-v1 edge was just found
+            self.graph[f0].set_constraint(rot3(2), c);
+            return;
+        }
+
+        // v0,v1 and any other (finite) point must be collinear as dim==1,
+        let p0 = &self.graph[PositionQuery::Vertex(v0)];
+        let p1 = &self.graph[PositionQuery::Vertex(v1)];
+
+        // find the direction to reach v1 from v0
+        /*let direction = if self.tri.is_finite_vertex(vn) {
+            // test direction to traverse by point order
+            tri_.getPredicates().approximateSegmentParameter(p0, p1, tri_.getPosition(vn))
+        } else {
+            // we are at the end of the edge-chain, start search backward
+            -1
+        };
+        assert!(
+            direction < 0 || (direction > 0 && direction < 1),
+            "Internal error, direction test result"
+        );
+
+        if( direction < 0 ) {
+            // opposite direction
+            FaceIndex next = tri_[ f0 ].getNeighbor( i0.mirrored2() );
+            i0 = tri_[ next ].getIndexOf( f0 ).mirrored2();
+            f0 = next;
+        }
+
+        // mark all edges constraint until the end vertex is reached
+        // no geometry have to be tested, as we are on a straight line and no segment may overlap
+        FaceIndex cur = f0;
+        Index3 curI = i0;
+        for(;; ) {
+            tri_[ cur ].getConstraint( 2 ) |= aConstraint;
+            if( tri_[ cur ].getVertex( curI.mirrored2() ) == aV1 )
+            break;
+
+            FaceIndex next = tri_[ cur ].getNeighbor( curI );
+            curI = tri_[ next ].getIndexOf( cur ).mirrored2();
+            cur = next;
+        }
+        */    }
 }
