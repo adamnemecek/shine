@@ -2,8 +2,8 @@ use builder::Builder;
 use checker::Checker;
 use geometry::Predicates;
 use graph::{Face, Graph, Vertex};
-use tagging_locator::TaggingLocator;
 use query::Query;
+use tagginglocator::TaggingLocator;
 
 pub struct Triangulation<P, V, F>
 where

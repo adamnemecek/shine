@@ -1,8 +1,8 @@
 use checker::Checker;
 use geometry::{Orientation, Predicates};
 use graph::{Face, FaceExt, Graph, Vertex};
-use tagging_locator::{Location, TaggingLocator};
 use query::Query;
+use tagginglocator::{Location, TaggingLocator};
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
 
 pub struct Builder<'a, P, V, F>

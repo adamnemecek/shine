@@ -14,7 +14,7 @@ mod builder;
 mod checker;
 mod graph;
 mod query;
-mod tagging_locator;
+mod tagginglocator;
 mod triangulation;
 
 pub mod geometry;
@@ -25,5 +25,5 @@ pub use self::builder::*;
 pub use self::checker::*;
 pub use self::graph::*;
 pub use self::query::*;
-pub use self::tagging_locator::*;
+pub use self::tagginglocator::*;
 pub use self::triangulation::*;
