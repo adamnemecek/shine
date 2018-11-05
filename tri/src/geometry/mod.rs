@@ -33,10 +33,10 @@ pub trait Position {
     fn y(&self) -> Self::Real;
 }
 
-mod inexact;
+mod inexactpredicates;
 mod predicates;
 
 pub mod position;
 
-pub use self::inexact::*;
+pub use self::inexactpredicates::*;
 pub use self::predicates::*;

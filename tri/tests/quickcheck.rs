@@ -10,7 +10,7 @@ mod common;
 use common::{SimpleTrif32, SimpleTrii64};
 use quickcheck::quickcheck;
 use shine_testutils::init_quickcheck_test;
-use shine_tri::geometry::position::{Posf32, Posf64, Posi32, Posi64};
+use shine_tri::geometry::position::{Posf32, Posi64};
 
 #[test]
 fn stress_exact_i64() {
