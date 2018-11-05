@@ -1,39 +1,34 @@
 use geometry::{Orientation, Predicates};
-use graph::{Face, Graph, Vertex};
+use graph::{Face, Vertex};
 use indexing::PositionQuery;
 use types::{FaceIndex, Rot3, VertexIndex};
+use triangulation::Triangulation;
 
-pub struct Query<'a, P, V, F>
-where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
-{
-    graph: &'a Graph<P::Position, V, F>,
-    predicates: &'a P,
+pub trait Query {
+    type Orientation: Orientation;
+
+    fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Self::Orientation;
+    fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> Self::Orientation;
+    fn is_convex(&self, f: FaceIndex, i: Rot3) -> bool;
 }
 
-impl<'a, P, V, F> Query<'a, P, V, F>
+impl<PR, V, F> Query for Triangulation<PR, V, F>
 where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
+    PR:  Predicates,
+    V:  Vertex<Position = PR::Position>,
+    F:  Face,
 {
-    crate fn new<'b>(graph: &'b Graph<P::Position, V, F>, predicates: &'b P) -> Query<'b, P, V, F> {
-        Query { graph, predicates }
-    }
-
-    //region geometry relationship
-    pub fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> P::Orientation {
+    type Orientation = PR::Orientation;
+    
+    fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Self::Orientation {
         assert!(self.graph.is_finite_vertex(v0) && self.graph.is_finite_vertex(v1) && self.graph.is_finite_vertex(v2));
         let a = &self.graph[PositionQuery::Vertex(v0)];
         let b = &self.graph[PositionQuery::Vertex(v1)];
         let c = &self.graph[PositionQuery::Vertex(v2)];
         self.predicates.orientation_triangle(a, b, c)
     }
-
-    /// Finds the orientation_triangle of an edge and a vertex    
-    pub fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> P::Orientation {
+    
+    fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> Self::Orientation {
         let va = v;
         let vb = self.graph[f].vertex(i.increment());
         let vc = self.graph[f].vertex(i.decrement());
@@ -41,7 +36,7 @@ where
     }
 
     /// Returns if the quad defined by the two adjacent triangles is a convex polygon.
-    pub fn is_convex(&self, f: FaceIndex, i: Rot3) -> bool {
+    fn is_convex(&self, f: FaceIndex, i: Rot3) -> bool {
         assert!(self.graph.is_finite_face(f));
         let i0 = i;
         let i1 = i.increment();

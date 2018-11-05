@@ -1,34 +1,112 @@
 use geometry::{Orientation, Position, Predicates, Real};
-use graph::{Face, Graph, Vertex};
+use graph::{Face, Vertex};
 use indexing::PositionQuery;
 use query::Query;
+use triangulation::Triangulation;
 use types::rot3;
 
-pub struct Checker<'a, P, V, F>
-where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
-{
-    pub graph: &'a Graph<P::Position, V, F>,
-    pub predicates: &'a P,
+pub trait Checker {
+    /// Check dimension and count based invariants.
+    fn check_dimension(&self) -> Result<(), String>;
+
+    /// Check linking invariants.
+    fn check_topology(&self) -> Result<(), String>;
+
+    /// Check geometry predicates
+    fn check_orientation(&self) -> Result<(), String>;
+
+    /// Compare the area of the convex hull to the sum of the triangles
+    fn check_area(&self, eps: Option<f64>) -> Result<(), String>;
+
+    /// Perform full check.
+    fn check_full(&self, eps_area: Option<f64>) -> Result<(), String> {
+        self.check_dimension()?;
+        self.check_topology()?;
+        self.check_orientation()?;
+        self.check_area(eps_area)?;
+        Ok(())
+    }
 }
 
-impl<'a, P, V, F> Checker<'a, P, V, F>
+impl<PR, V, F> Triangulation<PR, V, F>
 where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
 {
-    crate fn new<'b>(graph: &'b Graph<P::Position, V, F>, predicates: &'b P) -> Checker<'b, P, V, F> {
-        Checker { graph, predicates }
+    fn check_vertex_face_link(&self) -> Result<(), String> {
+        for v in self.graph.vertex_index_iter() {
+            if !self.graph[v].face().is_valid() {
+                return Err(format!("Vertex-face link is invalid, no face for {:?} ", v));
+            }
+
+            let nf = self.graph[v].face();
+            let _vi = self.graph[nf]
+                .get_vertex_index(v)
+                .ok_or_else(|| format!("Vertex-face link is invalid {:?} is not a neighbor of {:?}", nf, v))?;
+        }
+        Ok(())
     }
 
-    pub fn query(&self) -> Query<P, V, F> {
-        Query::new(self.graph, self.predicates)
-    }
+    fn check_face_face_link(&self) -> Result<(), String> {
+        for f in self.graph.face_index_iter() {
+            for d in 0..self.graph.dimension() {
+                let i = rot3(d as u8);
+                let nf = self.graph[f].neighbor(i);
+                if !nf.is_valid() {
+                    return Err(format!(
+                        "Face-face link is invalid, no neighboring face for {:?} at {:?}",
+                        f, i
+                    ));
+                }
 
-    pub fn check_dimension(&self) -> Result<(), String> {
+                let ni = self.graph[nf].get_neighbor_index(f).ok_or_else(|| {
+                    format!(
+                        "Face-face link is invalid, missing backward link between ({:?},{:?}) and {:?}",
+                        f, i, nf
+                    )
+                })?;
+
+                match self.graph.dimension() {
+                    1 => {
+                        if self.graph[f].vertex(i.mirror(2)) != self.graph[nf].vertex(ni.mirror(2)) {
+                            return Err(format!(
+                                "Face-face link is invalid, vertex relation in dim1 ({:?},{:?}) <-> ({:?},{:?})",
+                                f, i, nf, ni
+                            ));
+                        }
+                    }
+                    2 => {
+                        if self.graph[f].vertex(i.decrement()) != self.graph[nf].vertex(ni.increment())
+                            || self.graph[f].vertex(i.increment()) != self.graph[nf].vertex(ni.decrement())
+                        {
+                            return Err(format!(
+                                "Face-face link is invalid, vertex relation in dim2 ({:?},{:?}) <-> ({:?},{:?})",
+                                f, d, nf, ni
+                            ));
+                        }
+                        if self.graph[f].constraint(i) != self.graph[nf].constraint(ni) {
+                            return Err(format!(
+                                "Face-face link is invalid, non-matching constraints in dim2 ({:?},{:?}) <-> ({:?},{:?})",
+                                f, d, nf, ni
+                            ));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        Ok(())
+    }
+}
+
+impl<PR, V, F> Checker for Triangulation<PR, V, F>
+where
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
+{
+    fn check_dimension(&self) -> Result<(), String> {
         if self.graph.dimension() == -1 {
             if self.graph.vertex_count() != 0 {
                 Err(format!("Empty triangulation has vertices: {}", self.graph.vertex_count()))
@@ -144,78 +222,13 @@ where
         }
     }
 
-    fn check_vertex_face_link(&self) -> Result<(), String> {
-        for v in self.graph.vertex_index_iter() {
-            if !self.graph[v].face().is_valid() {
-                return Err(format!("Vertex-face link is invalid, no face for {:?} ", v));
-            }
-
-            let nf = self.graph[v].face();
-            let _vi = self.graph[nf]
-                .get_vertex_index(v)
-                .ok_or_else(|| format!("Vertex-face link is invalid {:?} is not a neighbor of {:?}", nf, v))?;
-        }
-        Ok(())
-    }
-
-    fn check_face_face_link(&self) -> Result<(), String> {
-        for f in self.graph.face_index_iter() {
-            for d in 0..self.graph.dimension() {
-                let i = rot3(d as u8);
-                let nf = self.graph[f].neighbor(i);
-                if !nf.is_valid() {
-                    return Err(format!(
-                        "Face-face link is invalid, no neighboring face for {:?} at {:?}",
-                        f, i
-                    ));
-                }
-
-                let ni = self.graph[nf].get_neighbor_index(f).ok_or_else(|| {
-                    format!(
-                        "Face-face link is invalid, missing backward link between ({:?},{:?}) and {:?}",
-                        f, i, nf
-                    )
-                })?;
-
-                match self.graph.dimension() {
-                    1 => {
-                        if self.graph[f].vertex(i.mirror(2)) != self.graph[nf].vertex(ni.mirror(2)) {
-                            return Err(format!(
-                                "Face-face link is invalid, vertex relation in dim1 ({:?},{:?}) <-> ({:?},{:?})",
-                                f, i, nf, ni
-                            ));
-                        }
-                    }
-                    2 => {
-                        if self.graph[f].vertex(i.decrement()) != self.graph[nf].vertex(ni.increment())
-                            || self.graph[f].vertex(i.increment()) != self.graph[nf].vertex(ni.decrement())
-                        {
-                            return Err(format!(
-                                "Face-face link is invalid, vertex relation in dim2 ({:?},{:?}) <-> ({:?},{:?})",
-                                f, d, nf, ni
-                            ));
-                        }
-                        if self.graph[f].constraint(i) != self.graph[nf].constraint(ni) {
-                            return Err(format!(
-                                "Face-face link is invalid, non-matching constraints in dim2 ({:?},{:?}) <-> ({:?},{:?})",
-                                f, d, nf, ni
-                            ));
-                        }
-                    }
-                    _ => {}
-                }
-            }
-        }
-        Ok(())
-    }
-
-    pub fn check_topology(&self) -> Result<(), String> {
+    fn check_topology(&self) -> Result<(), String> {
         self.check_vertex_face_link()?;
         self.check_face_face_link()?;
         Ok(())
     }
 
-    pub fn check_orientation(&self) -> Result<(), String> {
+    fn check_orientation(&self) -> Result<(), String> {
         if self.graph.dimension() < 2 {
             return Ok(());
         }
@@ -229,7 +242,7 @@ where
             let v1 = self.graph[f].vertex(rot3(1));
             let v2 = self.graph[f].vertex(rot3(2));
 
-            if !self.query().get_vertices_orientation(v0, v1, v2).is_ccw() {
+            if !self.get_vertices_orientation(v0, v1, v2).is_ccw() {
                 return Err(format!("Count-clockwise property is violated for {:?}", f));
             }
         }
@@ -237,7 +250,7 @@ where
         Ok(())
     }
 
-    pub fn check_area(&self, eps: Option<f64>) -> Result<(), String> {
+    fn check_area(&self, eps: Option<f64>) -> Result<(), String> {
         if self.graph.dimension() != 2 {
             return Ok(());
         }
@@ -306,13 +319,5 @@ where
         } else {
             Ok(())
         }
-    }
-
-    pub fn check_full(&self, eps_area: Option<f64>) -> Result<(), String> {
-        self.check_dimension()?;
-        self.check_topology()?;
-        self.check_orientation()?;
-        self.check_area(eps_area)?;
-        Ok(())
     }
 }

@@ -1,6 +1,7 @@
-use geometry::{CollinearTest, Orientation, Predicates};
-use graph::{Face, Graph, Vertex};
+use geometry::{CollinearTest, Orientation, Position, Predicates};
+use graph::{Face, Vertex};
 use indexing::PositionQuery;
+use triangulation::Triangulation;
 use types::{invalid_face_index, rot3, vertex_index, FaceIndex, Rot3};
 
 #[derive(Debug)]
@@ -49,46 +50,20 @@ pub enum Location {
     OutsideConvexHull(FaceIndex),
 }
 
-pub struct TaggingLocator<'a, P, V, F>
-where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
-{
-    pub graph: &'a mut Graph<P::Position, V, F>,
-    pub predicates: &'a P,
-    pub tag: &'a mut usize,
+pub trait TaggingLocator {
+    type Position: Position;
+
+    fn locate_position(&mut self, p: &Self::Position, hint: Option<FaceIndex>) -> Result<Location, String>;
 }
 
-impl<'a, P, V, F> TaggingLocator<'a, P, V, F>
+impl<PR, V, F> Triangulation<PR, V, F>
 where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
 {
-    crate fn new<'b>(graph: &'b mut Graph<P::Position, V, F>, predicates: &'b P, tag: &'b mut usize) -> TaggingLocator<'b, P, V, F> {
-        TaggingLocator { graph, predicates, tag }
-    }
-}
-
-impl<'a, P, V, F> TaggingLocator<'a, P, V, F>
-where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
-{
-    pub fn locate_position(&mut self, p: &P::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
-        match self.graph.dimension() {
-            -1 => Ok(Location::Empty),
-            0 => self.locate_position_dim0(p),
-            1 => self.locate_position_dim1(p),
-            2 => self.locate_position_dim2(p, hint),
-            dim => unreachable!(format!("Invalid dimension: {}", dim)),
-        }
-    }
-
     /// Find the location of a point in a single point triangulation (dimension = 0).
-    fn locate_position_dim0(&mut self, p: &P::Position) -> Result<Location, String> {
+    fn locate_position_dim0(&mut self, p: &PR::Position) -> Result<Location, String> {
         assert!(self.graph.dimension() == 0);
 
         // find the (only) finite vertex
@@ -111,7 +86,7 @@ where
     }
 
     /// Find the location of a point in a straight line strip. (dimension = 1)
-    fn locate_position_dim1(&mut self, p: &P::Position) -> Result<Location, String> {
+    fn locate_position_dim1(&mut self, p: &PR::Position) -> Result<Location, String> {
         assert!(self.graph.dimension() == 1);
 
         // calculate the convex hull of the 1-d mesh
@@ -179,7 +154,7 @@ where
     }
 
     /// Test which halfspace contains the p point.
-    fn test_containment_face(&mut self, p: &P::Position, f: FaceIndex) -> ContainmentResult {
+    fn test_containment_face(&mut self, p: &PR::Position, f: FaceIndex) -> ContainmentResult {
         let p0 = &self.graph[PositionQuery::Face(f, rot3(0))];
         let p1 = &self.graph[PositionQuery::Face(f, rot3(1))];
         let p2 = &self.graph[PositionQuery::Face(f, rot3(2))];
@@ -210,7 +185,15 @@ where
     }
 
     /// Test the containment of the p position for the (a,b) and (b,c) sides in this order
-    fn test_containment(&mut self, p: &P::Position, face: FaceIndex, a: Rot3, b: Rot3, c: Rot3, tag: usize) -> ContainmentResult {
+    fn test_containment(
+        &mut self,
+        p: &PR::Position,
+        face: FaceIndex,
+        a: Rot3,
+        b: Rot3,
+        c: Rot3,
+        tag: usize,
+    ) -> ContainmentResult {
         let pa = &self.graph[PositionQuery::Face(face, a)];
         let pb = &self.graph[PositionQuery::Face(face, b)];
         let ab = self.predicates.orientation_triangle(&pa, &pb, p);
@@ -237,7 +220,7 @@ where
     }
 
     // Finds the location of a point in a non-degenerate triangulation. (dimension = 2)
-    fn locate_position_dim2(&mut self, p: &P::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
+    fn locate_position_dim2(&mut self, p: &PR::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
         assert_eq!(self.graph.dimension(), 2);
 
         let start = match hint {
@@ -256,8 +239,8 @@ where
         let mut cur = start;
         //let mut count = 0;
 
-        *self.tag += 1;
-        let tag = *self.tag;
+        self.tag += 1;
+        let tag = self.tag;
 
         loop {
             if self.graph.is_infinite_face(cur) {
@@ -295,40 +278,21 @@ where
     }
 }
 
-/*impl<'a,  P, V, F> TaggingLocator<'a,  P, V, F>
+impl<PR, V, F> TaggingLocator for Triangulation<PR, V, F>
 where
-    R: 'a + Rng,
-    P: 'a + NearestPointSearchBuilder<'a, VertexIndex>,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
 {
-    /// Guess point location by finding the nearest vertex to the point from a random sampling of vertices
-    /// If sample count is zero, the infinite vertex is used.
-    pub fn guess_start_vertex(&mut self, sample_count: usize, p: &'a P::Position) -> VertexIndex {
-        if sample_count == 0 {
-            self.graph.infinite_vertex()
-        } else {
-            let mut search = self.predicates.nearest_point_search(p);
-            for _ in 0..sample_count {
-                let mut vert = self.get_random_finite_vertex();
-                search.test(&self.graph[PositionQuery::Vertex(vert)], vert);
-            }
-            search.nearest().unwrap().1
-        }
-    }
+    type Position = PR::Position;
 
-     /// Return some random (finite) vertex from the triangulation
-    pub fn get_random_finite_vertex(&mut self) -> VertexIndex {
-        let cnt = self.graph.vertex_count();
-        assert!(cnt >= 2, "Triangulation is empty");
-
-        let cnt = cnt - 1;
-        let rnd = self.rng.gen_range(0, cnt);
-        if rnd < self.graph.infinite_vertex().id() {
-            vertex_index(rnd)
-        } else {
-            vertex_index(rnd + 1)
+    fn locate_position(&mut self, p: &PR::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
+        match self.graph.dimension() {
+            -1 => Ok(Location::Empty),
+            0 => self.locate_position_dim0(p),
+            1 => self.locate_position_dim1(p),
+            2 => self.locate_position_dim2(p, hint),
+            dim => unreachable!(format!("Invalid dimension: {}", dim)),
         }
     }
 }
-*/

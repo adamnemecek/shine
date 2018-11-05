@@ -1,115 +1,40 @@
-use checker::Checker;
-use geometry::{CollinearTest, Orientation, Predicates};
-use graph::{Constraint, Face, FaceExt, Graph, Vertex};
+use geometry::{CollinearTest, Orientation, Position, Predicates};
+use graph::{Constraint, Face, FaceExt, Vertex};
 use indexing::PositionQuery;
 use query::Query;
 use tagginglocator::{Location, TaggingLocator};
+use triangulation::Triangulation;
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
 
-pub struct Builder<'a, P, V, F>
-where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
-{
-    pub graph: &'a mut Graph<P::Position, V, F>,
-    pub predicates: &'a P,
-    pub tag: &'a mut usize,
+pub trait Builder {
+    type Position: Position;
+    type Constraint: Constraint;
+
+    fn add_vertex(&mut self, p: Self::Position, hint: Option<FaceIndex>) -> VertexIndex;
+    fn add_vertex_at(&mut self, p: Self::Position, loc: Location) -> VertexIndex;
+
+    /// Add a constraining segment.
+    /// First the two positions are inserted then the segment is added as a constraining edge.
+    fn add_constraint_segment(&mut self, p0: Self::Position, p1: Self::Position, c: Self::Constraint);
+
+    /// Add a constraining segment.
+    /// First the two positions are inserted then the segment is added as a constraining edge.
+    fn add_constraint_edge(&mut self, v0: VertexIndex, v1: VertexIndex, c: Self::Constraint);
 }
 
-impl<'a, P, V, F> Builder<'a, P, V, F>
+impl<PR, V, F> Triangulation<PR, V, F>
 where
-    P: 'a + Predicates,
-    V: 'a + Vertex<Position = P::Position>,
-    F: 'a + Face,
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
 {
-    crate fn new<'b>(graph: &'b mut Graph<P::Position, V, F>, predicates: &'b P, tag: &'b mut usize) -> Builder<'b, P, V, F> {
-        Builder { graph, predicates, tag }
-    }
-
-    pub fn query(&self) -> Query<P, V, F> {
-        Query::new(&*self.graph, self.predicates)
-    }
-
-    pub fn check(&self) -> Checker<P, V, F> {
-        Checker::new(self.graph, self.predicates)
-    }
-
-    pub fn locate_tagging(&mut self) -> TaggingLocator<P, V, F> {
-        TaggingLocator::new(self.graph, self.predicates, self.tag)
-    }
-
-    pub fn add_vertex(&mut self, p: P::Position, hint: Option<FaceIndex>) -> VertexIndex {
-        let location = self.locate_tagging().locate_position(&p, hint).unwrap();
-        self.add_vertex_at(p, location)
-    }
-
-    /// Add a constraining segment.
-    /// First the two positions are inserted then the segment is added as a constraining edge.
-    pub fn add_constraint(&mut self, p0: P::Position, p1: P::Position, c: F::Constraint) {
-        assert!(c.is_constraint());
-        let v0 = self.add_vertex(p0, None);
-        let start_face = self.graph[v0].face();
-        let v1 = self.add_vertex(p1, Some(start_face));
-        self.add_constraint_for(v0, v1, c);
-    }
-
-    /// Add a constraining segment.
-    /// First the two positions are inserted then the segment is added as a constraining edge.
-    pub fn add_constraint_for(&mut self, v0: VertexIndex, v1: VertexIndex, c: F::Constraint) {
-        assert!(c.is_constraint());
-        assert!(v0.is_valid());
-        assert!(v1.is_valid());
-        assert!(self.graph.is_finite_vertex(v0));
-        assert!(self.graph.is_finite_vertex(v1));
-        if v0 == v1 {
-            return;
-        }
-
-        match self.graph.dimension() {
-            1 => self.add_constraint_dim1(v0, v1, c),
-            2 => unimplemented!(),
-            _ => unreachable!("Inconsistent triangulation"),
-        }
-    }
-
-    fn add_vertex_at(&mut self, p: P::Position, loc: Location) -> VertexIndex {
-        match self.graph.dimension() {
-            -1 => match loc {
-                Location::Empty => self.extend_to_dim0(p),
-                loc => unreachable!(format!("Invalid location for empty triangulation: {:?}", loc)),
-            },
-            0 => match loc {
-                Location::Vertex(f, i) => self.graph[f].vertex(i),
-                Location::OutsideAffineHull => self.extend_to_dim1(p),
-                loc => unreachable!(format!("Invalid location for 0D triangulation: {:?}", loc)),
-            },
-            1 => match loc {
-                Location::Vertex(f, i) => self.graph[f].vertex(i),
-                Location::Edge(f, _) => self.split_edge_dim1(p, f),
-                Location::OutsideConvexHull(f) => self.split_edge_dim1(p, f),
-                Location::OutsideAffineHullClockwise => self.extend_to_dim2(p, false),
-                Location::OutsideAffineHullCounterClockwise => self.extend_to_dim2(p, true),
-                loc => unreachable!(format!("Invalid location for 1D triangulation: {:?}", loc)),
-            },
-            2 => match loc {
-                Location::Vertex(f, i) => self.graph[f].vertex(i),
-                Location::Edge(f, i) => self.split_edge_dim2(p, f, i),
-                Location::Face(f) => self.split_face(p, f),
-                Location::OutsideConvexHull(f) => self.insert_outside_convex_hull2(p, f),
-                _ => unreachable!(format!("Invalid location for 2D triangulation: {:?}", loc)),
-            },
-            dim => unreachable!(format!("Invalid dimension: {}, {:?}", dim, loc)),
-        }
-    }
-
     fn create_infinite_vertex(&mut self) -> VertexIndex {
         let v = self.graph.store_vertex(Default::default());
         self.graph.set_infinite_vertex(v);
         v
     }
 
-    fn create_vertex_with_position(&mut self, p: P::Position) -> VertexIndex {
+    fn create_vertex_with_position(&mut self, p: PR::Position) -> VertexIndex {
         let mut v: V = Default::default();
         v.set_position(p);
         self.graph.store_vertex(v)
@@ -134,7 +59,7 @@ where
         self.graph[f].set_constraint(i, Default::default());
     }
 
-    fn extend_to_dim0(&mut self, p: P::Position) -> VertexIndex {
+    fn extend_to_dim0(&mut self, p: PR::Position) -> VertexIndex {
         assert!(self.graph.dimension() == -1);
         assert!(!self.graph.infinite_vertex().is_valid());
         assert!(self.graph.vertex_count() == 0);
@@ -157,7 +82,7 @@ where
     /// Extends dimension from 0D to 1D by creating a segment (face) out of the (two) finite points.
     /// In 1D a face is a segment, and the shell is the triangular face (as described in extend_to_dim2). The
     /// infinite vertex is always the vertex corresponding to the 2nd index in each (finite) faces(segments).
-    fn extend_to_dim1(&mut self, p: P::Position) -> VertexIndex {
+    fn extend_to_dim1(&mut self, p: PR::Position) -> VertexIndex {
         assert!(self.graph.dimension() == 0);
         assert!(self.graph.vertex_count() == 2);
         assert!(self.graph.face_count() == 2);
@@ -199,7 +124,7 @@ where
     /// For 1D -> 2D lifting we have to extended each segment into a triangle that creates a shell in 3D space
     /// After lifting each segment, we have to fill the holes on the shell in 3D by generating the infinite faces
     /// of 2D.
-    fn extend_to_dim2(&mut self, p: P::Position, is_ccw: bool) -> VertexIndex {
+    fn extend_to_dim2(&mut self, p: PR::Position, is_ccw: bool) -> VertexIndex {
         assert_eq!(self.graph.dimension(), 1);
 
         self.graph.set_dimension(2);
@@ -291,7 +216,7 @@ where
         new_vertex
     }
 
-    fn split_edge_dim1(&mut self, p: P::Position, f: FaceIndex) -> VertexIndex {
+    fn split_edge_dim1(&mut self, p: PR::Position, f: FaceIndex) -> VertexIndex {
         assert!(self.graph.dimension() == 1);
 
         // f0 : the face to split
@@ -324,7 +249,7 @@ where
         v2
     }
 
-    fn split_edge_dim2(&mut self, p: P::Position, face: FaceIndex, edge: Rot3) -> VertexIndex {
+    fn split_edge_dim2(&mut self, p: PR::Position, face: FaceIndex, edge: Rot3) -> VertexIndex {
         assert_eq!(self.graph.dimension(), 2);
 
         //           v0  i02 = edge
@@ -380,7 +305,7 @@ where
         vp
     }
 
-    fn split_face(&mut self, p: P::Position, face: FaceIndex) -> VertexIndex {
+    fn split_face(&mut self, p: PR::Position, face: FaceIndex) -> VertexIndex {
         assert_eq!(self.graph.dimension(), 2);
 
         //            v2
@@ -485,7 +410,7 @@ where
         self.clear_constraint(f1, i11);
     }
 
-    fn insert_outside_convex_hull2(&mut self, p: P::Position, face: FaceIndex) -> VertexIndex {
+    fn insert_outside_convex_hull2(&mut self, p: PR::Position, face: FaceIndex) -> VertexIndex {
         let f0 = face;
         let vinf = self.graph.infinite_vertex();
         let i = self.graph[f0].get_vertex_index(vinf).unwrap();
@@ -499,7 +424,7 @@ where
         loop {
             let i = self.graph[fcw].get_vertex_index(vinf).unwrap();
             let next = self.graph[fcw].neighbor(i.decrement());
-            if !self.query().get_edge_vertex_orientation(fcw, i, vp).is_ccw() {
+            if !self.get_edge_vertex_orientation(fcw, i, vp).is_ccw() {
                 break;
             }
             self.flip(fcw, i.increment());
@@ -509,7 +434,7 @@ where
         loop {
             let i = self.graph[fccw].get_vertex_index(vinf).unwrap();
             let next = self.graph[fccw].neighbor(i.increment());
-            if !self.query().get_edge_vertex_orientation(fccw, i, vp).is_ccw() {
+            if !self.get_edge_vertex_orientation(fccw, i, vp).is_ccw() {
                 break;
             }
             self.flip(fccw, i.decrement());
@@ -574,6 +499,76 @@ where
             let next = self.graph[cur].neighbor(cur_i);
             cur_i = self.graph[next].get_neighbor_index(cur).unwrap().mirror(2);
             cur = next;
+        }
+    }
+}
+
+impl<PR, V, F> Builder for Triangulation<PR, V, F>
+where
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
+{
+    type Position = PR::Position;
+    type Constraint = F::Constraint;
+
+    fn add_vertex(&mut self, p: PR::Position, hint: Option<FaceIndex>) -> VertexIndex {
+        let location = self.locate_position(&p, hint).unwrap();
+        self.add_vertex_at(p, location)
+    }
+
+    fn add_vertex_at(&mut self, p: PR::Position, loc: Location) -> VertexIndex {
+        match self.graph.dimension() {
+            -1 => match loc {
+                Location::Empty => self.extend_to_dim0(p),
+                loc => unreachable!(format!("Invalid location for empty triangulation: {:?}", loc)),
+            },
+            0 => match loc {
+                Location::Vertex(f, i) => self.graph[f].vertex(i),
+                Location::OutsideAffineHull => self.extend_to_dim1(p),
+                loc => unreachable!(format!("Invalid location for 0D triangulation: {:?}", loc)),
+            },
+            1 => match loc {
+                Location::Vertex(f, i) => self.graph[f].vertex(i),
+                Location::Edge(f, _) => self.split_edge_dim1(p, f),
+                Location::OutsideConvexHull(f) => self.split_edge_dim1(p, f),
+                Location::OutsideAffineHullClockwise => self.extend_to_dim2(p, false),
+                Location::OutsideAffineHullCounterClockwise => self.extend_to_dim2(p, true),
+                loc => unreachable!(format!("Invalid location for 1D triangulation: {:?}", loc)),
+            },
+            2 => match loc {
+                Location::Vertex(f, i) => self.graph[f].vertex(i),
+                Location::Edge(f, i) => self.split_edge_dim2(p, f, i),
+                Location::Face(f) => self.split_face(p, f),
+                Location::OutsideConvexHull(f) => self.insert_outside_convex_hull2(p, f),
+                _ => unreachable!(format!("Invalid location for 2D triangulation: {:?}", loc)),
+            },
+            dim => unreachable!(format!("Invalid dimension: {}, {:?}", dim, loc)),
+        }
+    }
+
+    fn add_constraint_segment(&mut self, p0: PR::Position, p1: PR::Position, c: F::Constraint) {
+        assert!(c.is_constraint());
+        let v0 = self.add_vertex(p0, None);
+        let start_face = self.graph[v0].face();
+        let v1 = self.add_vertex(p1, Some(start_face));
+        self.add_constraint_edge(v0, v1, c);
+    }
+
+    fn add_constraint_edge(&mut self, v0: VertexIndex, v1: VertexIndex, c: F::Constraint) {
+        assert!(c.is_constraint());
+        assert!(v0.is_valid());
+        assert!(v1.is_valid());
+        assert!(self.graph.is_finite_vertex(v0));
+        assert!(self.graph.is_finite_vertex(v1));
+        if v0 == v1 {
+            return;
+        }
+
+        match self.graph.dimension() {
+            1 => self.add_constraint_dim1(v0, v1, c),
+            2 => unimplemented!(),
+            _ => unreachable!("Inconsistent triangulation"),
         }
     }
 }

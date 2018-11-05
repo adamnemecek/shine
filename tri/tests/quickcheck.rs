@@ -11,6 +11,7 @@ use common::{SimpleTrif32, SimpleTrii64};
 use quickcheck::quickcheck;
 use shine_testutils::init_quickcheck_test;
 use shine_tri::geometry::position::{Posf32, Posi64};
+use shine_tri::{Builder, Checker};
 
 #[test]
 fn stress_exact_i64() {
@@ -22,9 +23,8 @@ fn stress_exact_i64() {
     fn fuzzer(xs: Vec<(i8, i8)>) -> bool {
         let mut tri = SimpleTrii64::default();
         {
-            let mut builder = tri.build();
             for &(x, y) in xs.iter() {
-                builder.add_vertex(
+                tri.add_vertex(
                     Posi64 {
                         x: x as i64,
                         y: y as i64,
@@ -33,7 +33,7 @@ fn stress_exact_i64() {
                 );
             }
         }
-        tri.check().check_full(None) == Ok(())
+        tri.check_full(None) == Ok(())
     }
 
     quickcheck(fuzzer as fn(Vec<(i8, i8)>) -> bool);
@@ -47,20 +47,18 @@ fn stress_exactf32() {
     fn fuzzer(xs: Vec<(f32, f32)>) -> bool {
         let mut tri = SimpleTrif32/*Exact*/::default();
         {
-            let mut builder = tri.build();
             for &(x, y) in xs.iter() {
-                builder.add_vertex(Posf32 { x, y }, None);
+                tri.add_vertex(Posf32 { x, y }, None);
             }
         }
-        tri.check().check_full(None) == Ok(())
+        tri.check_full(None) == Ok(())
     }
 
     fn fuzzer_01(xs: Vec<(f32, f32)>) -> bool {
         let mut tri = SimpleTrif32/*Exact*/::default();
         {
-            let mut builder = tri.build();
             for &(x, y) in xs.iter() {
-                builder.add_vertex(
+                tri.add_vertex(
                     Posf32 {
                         x: x.fract(),
                         y: y.fract(),
@@ -69,7 +67,7 @@ fn stress_exactf32() {
                 );
             }
         }
-        tri.check().check_full(None) == Ok(())
+        tri.check_full(None) == Ok(())
     }
 
     quickcheck(fuzzer as fn(Vec<(f32, f32)>) -> bool);
