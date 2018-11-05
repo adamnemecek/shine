@@ -53,6 +53,7 @@ pub enum Location {
 pub trait TaggingLocator {
     type Position: Position;
 
+    /// Find the exact location a point in the triangulation.
     fn locate_position(&mut self, p: &Self::Position, hint: Option<FaceIndex>) -> Result<Location, String>;
 }
 
@@ -154,26 +155,26 @@ where
     }
 
     /// Test which halfspace contains the p point.
-    fn test_containment_face(&mut self, p: &PR::Position, f: FaceIndex) -> ContainmentResult {
-        let p0 = &self.graph[PositionQuery::Face(f, rot3(0))];
-        let p1 = &self.graph[PositionQuery::Face(f, rot3(1))];
-        let p2 = &self.graph[PositionQuery::Face(f, rot3(2))];
+    fn test_containment_face(&self, pos: &PR::Position, face: FaceIndex) -> ContainmentResult {
+        let p0 = &self.graph[PositionQuery::Face(face, rot3(0))];
+        let p1 = &self.graph[PositionQuery::Face(face, rot3(1))];
+        let p2 = &self.graph[PositionQuery::Face(face, rot3(2))];
 
-        let e01 = self.predicates.orientation_triangle(p0, p1, p);
+        let e01 = self.predicates.orientation_triangle(p0, p1, pos);
         if e01.is_cw() {
-            let next = self.graph[f].neighbor(rot3(2));
+            let next = self.graph[face].neighbor(rot3(2));
             return ContainmentResult::Continue(next);
         }
 
-        let e20 = self.predicates.orientation_triangle(p2, p0, p);
+        let e20 = self.predicates.orientation_triangle(p2, p0, pos);
         if e20.is_cw() {
-            let next = self.graph[f].neighbor(rot3(1));
+            let next = self.graph[face].neighbor(rot3(1));
             return ContainmentResult::Continue(next);
         }
 
-        let e12 = self.predicates.orientation_triangle(&p1, &p2, p);
+        let e12 = self.predicates.orientation_triangle(&p1, &p2, pos);
         if e12.is_cw() {
-            let next = self.graph[f].neighbor(rot3(0));
+            let next = self.graph[face].neighbor(rot3(0));
             return ContainmentResult::Continue(next);
         }
 
@@ -184,19 +185,11 @@ where
         test
     }
 
-    /// Test the containment of the p position for the (a,b) and (b,c) sides in this order
-    fn test_containment(
-        &mut self,
-        p: &PR::Position,
-        face: FaceIndex,
-        a: Rot3,
-        b: Rot3,
-        c: Rot3,
-        tag: usize,
-    ) -> ContainmentResult {
+    /// Test the containment of the p position with respect to the half spaces defined by the (a,b) and (b,c) edges.
+    fn test_containment(&self, pos: &PR::Position, face: FaceIndex, a: Rot3, b: Rot3, c: Rot3, tag: usize) -> ContainmentResult {
         let pa = &self.graph[PositionQuery::Face(face, a)];
         let pb = &self.graph[PositionQuery::Face(face, b)];
-        let ab = self.predicates.orientation_triangle(&pa, &pb, p);
+        let ab = self.predicates.orientation_triangle(&pa, &pb, pos);
 
         if ab.is_cw() {
             let next = self.graph[face].neighbor(c);
@@ -206,7 +199,7 @@ where
         }
 
         let pc = &self.graph[PositionQuery::Face(face, c)];
-        let bc = self.predicates.orientation_triangle(pb, pc, p);
+        let bc = self.predicates.orientation_triangle(pb, pc, pos);
         if bc.is_cw() {
             let next = self.graph[face].neighbor(a);
             assert!(self.graph[next].tag() != tag);
@@ -219,7 +212,7 @@ where
         test
     }
 
-    // Finds the location of a point in a non-degenerate triangulation. (dimension = 2)
+    // Find the location of a point in a triangulation. (dimension = 2)
     fn locate_position_dim2(&mut self, p: &PR::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
         assert_eq!(self.graph.dimension(), 2);
 
@@ -239,22 +232,23 @@ where
         let mut cur = start;
         //let mut count = 0;
 
-        self.tag += 1;
-        let tag = self.tag;
+        // keep a mutable reference to tag to avoid any additional interference in tag increment during traverse
+        let mut tag = self.tag.borrow_mut();
+        *tag += 1;
 
         loop {
             if self.graph.is_infinite_face(cur) {
                 return Ok(Location::OutsideConvexHull(cur));
             }
 
-            self.graph[cur].set_tag(tag);
+            self.graph[cur].set_tag(*tag);
             let from = self.graph[cur].get_neighbor_index(prev);
 
             let test_result = match from.map(|r| r.id()) {
                 None => self.test_containment_face(p, cur),
-                Some(0) => self.test_containment(p, cur, rot3(2), rot3(0), rot3(1), tag),
-                Some(1) => self.test_containment(p, cur, rot3(0), rot3(1), rot3(2), tag),
-                Some(2) => self.test_containment(p, cur, rot3(1), rot3(2), rot3(0), tag),
+                Some(0) => self.test_containment(p, cur, rot3(2), rot3(0), rot3(1), *tag),
+                Some(1) => self.test_containment(p, cur, rot3(0), rot3(1), rot3(2), *tag),
+                Some(2) => self.test_containment(p, cur, rot3(1), rot3(2), rot3(0), *tag),
                 Some(i) => unreachable!(format!("Invalid index: {:?}", i)),
             };
             match test_result {

@@ -61,33 +61,6 @@ where
 
 /// Get VertexIndex from a graph
 #[derive(Debug)]
-pub enum VertexIndexQuery {
-    Vertex(VertexIndex),
-    Face(FaceIndex, Rot3),
-    EdgeStart(FaceIndex, Rot3),
-    EdgeEnd(FaceIndex, Rot3),
-}
-
-impl<P, V, F> IndexGet<VertexIndexQuery> for Graph<P, V, F>
-where
-    P: Position,
-    V: Vertex<Position = P>,
-    F: Face,
-{
-    type Output = VertexIndex;
-
-    fn index_get(&self, idx: VertexIndexQuery) -> Self::Output {
-        match idx {
-            VertexIndexQuery::Vertex(v) => v,
-            VertexIndexQuery::Face(f, i) => self.face(f).vertex(i),
-            VertexIndexQuery::EdgeStart(f, i) => self.face(f).vertex(i.increment()),
-            VertexIndexQuery::EdgeEnd(f, i) => self.face(f).vertex(i.decrement()),
-        }
-    }
-}
-
-/// Get Vertex from a graph
-#[derive(Debug)]
 pub enum VertexQuery {
     Vertex(VertexIndex),
     Face(FaceIndex, Rot3),
@@ -95,49 +68,20 @@ pub enum VertexQuery {
     EdgeEnd(FaceIndex, Rot3),
 }
 
-impl TryFrom<VertexQuery> for VertexIndexQuery {
-    type Error = VertexQuery;
+impl<P, V, F> IndexGet<VertexQuery> for Graph<P, V, F>
+where
+    P: Position,
+    V: Vertex<Position = P>,
+    F: Face,
+{
+    type Output = VertexIndex;
 
-    fn try_from(idx: VertexQuery) -> Result<Self, Self::Error> {
+    fn index_get(&self, idx: VertexQuery) -> Self::Output {
         match idx {
-            VertexQuery::Vertex(v) => Ok(VertexIndexQuery::Vertex(v)),
-            VertexQuery::Face(f, i) => Ok(VertexIndexQuery::Face(f, i)),
-            VertexQuery::EdgeStart(f, i) => Ok(VertexIndexQuery::EdgeStart(f, i)),
-            VertexQuery::EdgeEnd(f, i) => Ok(VertexIndexQuery::EdgeEnd(f, i)),
-            //idx => Err(idx),
-        }
-    }
-}
-
-impl<P, V, F> Index<VertexQuery> for Graph<P, V, F>
-where
-    P: Position,
-    V: Vertex<Position = P>,
-    F: Face,
-{
-    type Output = V;
-
-    fn index(&self, idx: VertexQuery) -> &Self::Output {
-        match VertexIndexQuery::try_from(idx) {
-            Ok(v) => self.vertex(self.index_get(v)),
-            Err(idx) => unimplemented!("{:?}", idx),
-        }
-    }
-}
-
-impl<P, V, F> IndexMut<VertexQuery> for Graph<P, V, F>
-where
-    P: Position,
-    V: Vertex<Position = P>,
-    F: Face,
-{
-    fn index_mut(&mut self, idx: VertexQuery) -> &mut Self::Output {
-        match VertexIndexQuery::try_from(idx) {
-            Ok(v) => {
-                let v = self.index_get(v);
-                self.vertex_mut(v)
-            }
-            Err(idx) => unimplemented!("{:?}", idx),
+            VertexQuery::Vertex(v) => v,
+            VertexQuery::Face(f, i) => self.face(f).vertex(i),
+            VertexQuery::EdgeStart(f, i) => self.face(f).vertex(i.increment()),
+            VertexQuery::EdgeEnd(f, i) => self.face(f).vertex(i.decrement()),
         }
     }
 }
@@ -151,15 +95,15 @@ pub enum PositionQuery {
     EdgeEnd(FaceIndex, Rot3),
 }
 
-impl TryFrom<PositionQuery> for VertexIndexQuery {
+impl TryFrom<PositionQuery> for VertexQuery {
     type Error = PositionQuery;
 
     fn try_from(idx: PositionQuery) -> Result<Self, Self::Error> {
         match idx {
-            PositionQuery::Vertex(v) => Ok(VertexIndexQuery::Vertex(v)),
-            PositionQuery::Face(f, i) => Ok(VertexIndexQuery::Face(f, i)),
-            PositionQuery::EdgeStart(f, i) => Ok(VertexIndexQuery::EdgeStart(f, i)),
-            PositionQuery::EdgeEnd(f, i) => Ok(VertexIndexQuery::EdgeEnd(f, i)),
+            PositionQuery::Vertex(v) => Ok(VertexQuery::Vertex(v)),
+            PositionQuery::Face(f, i) => Ok(VertexQuery::Face(f, i)),
+            PositionQuery::EdgeStart(f, i) => Ok(VertexQuery::EdgeStart(f, i)),
+            PositionQuery::EdgeEnd(f, i) => Ok(VertexQuery::EdgeEnd(f, i)),
             //idx => Err(idx),
         }
     }
@@ -174,7 +118,7 @@ where
     type Output = P;
 
     fn index(&self, idx: PositionQuery) -> &Self::Output {
-        match VertexIndexQuery::try_from(idx) {
+        match VertexQuery::try_from(idx) {
             Ok(v) => {
                 let v = self.index_get(v);
                 self.vertex(v).position()
@@ -191,7 +135,7 @@ where
     F: Face,
 {
     fn index_mut(&mut self, idx: PositionQuery) -> &mut Self::Output {
-        match VertexIndexQuery::try_from(idx) {
+        match VertexQuery::try_from(idx) {
             Ok(v) => {
                 let v = self.index_get(v);
                 self.vertex_mut(v).position_mut()

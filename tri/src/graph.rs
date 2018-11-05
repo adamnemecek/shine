@@ -1,6 +1,6 @@
 use geometry::{Position, Real};
 use std::fmt;
-use types::{face_index, invalid_vertex_index, rot3, vertex_index, Edge, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
+use types::{face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
 /// A vertex of the triangulation
 pub trait Vertex: Default {
@@ -207,10 +207,10 @@ where
     //endregion
 
     /// Returns the opposite (twin) representation of an edge.
-    pub fn opposite_edge(&self, e: Edge) -> Edge {
-        let nf = self[e.0].neighbor(e.1);
-        let i = self[nf].get_neighbor_index(e.0).unwrap();
-        Edge(nf, i)
+    pub fn opposite_edge(&self, face: FaceIndex, index: Rot3) -> (FaceIndex, Rot3) {
+        let nf = self[face].neighbor(index);
+        let i = self[nf].get_neighbor_index(face).unwrap();
+        (nf, i)
     }
 }
 

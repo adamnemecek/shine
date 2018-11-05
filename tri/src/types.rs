@@ -79,22 +79,6 @@ impl From<VertexIndex> for usize {
     }
 }
 
-/// Edge defined as the oposite edge to a vertex in a face.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Edge(pub FaceIndex, pub Rot3);
-
-impl Edge {
-    /// Returns the next edge of the triangle in clockwise direction.
-    pub fn rotate_cw(&self) -> Edge {
-      Edge( self.0, self.1.decrement() )
-    }
-
-    /// Returns the next edge of the triangle in counter-clockwise direction.
-    pub fn rotate_ccw(&self) -> Edge {
-        Edge( self.0, self.1.increment() )
-    }
-}
-
 /// Implement Step required for Range<...>
 macro_rules! step_impl {
     ($t:ident) => (

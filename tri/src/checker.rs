@@ -1,7 +1,7 @@
 use geometry::{Orientation, Position, Predicates, Real};
 use graph::{Face, Vertex};
 use indexing::PositionQuery;
-use query::Query;
+use orientationquery::OrientationQuery;
 use triangulation::Triangulation;
 use types::rot3;
 
@@ -9,13 +9,13 @@ pub trait Checker {
     /// Check dimension and count based invariants.
     fn check_dimension(&self) -> Result<(), String>;
 
-    /// Check linking invariants.
+    /// Check linking ang graph invariants.
     fn check_topology(&self) -> Result<(), String>;
 
-    /// Check geometry predicates
+    /// Check geometry predicates.
     fn check_orientation(&self) -> Result<(), String>;
 
-    /// Compare the area of the convex hull to the sum of the triangles
+    /// Check if the area of the convex hull and the sum of area of the triangles are within the given tolerance.
     fn check_area(&self, eps: Option<f64>) -> Result<(), String>;
 
     /// Perform full check.

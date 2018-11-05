@@ -1,10 +1,10 @@
 use geometry::{Orientation, Predicates};
 use graph::{Face, Vertex};
 use indexing::PositionQuery;
-use types::{FaceIndex, Rot3, VertexIndex};
 use triangulation::Triangulation;
+use types::{FaceIndex, Rot3, VertexIndex};
 
-pub trait Query {
+pub trait OrientationQuery {
     type Orientation: Orientation;
 
     fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Self::Orientation;
@@ -12,14 +12,14 @@ pub trait Query {
     fn is_convex(&self, f: FaceIndex, i: Rot3) -> bool;
 }
 
-impl<PR, V, F> Query for Triangulation<PR, V, F>
+impl<PR, V, F> OrientationQuery for Triangulation<PR, V, F>
 where
-    PR:  Predicates,
-    V:  Vertex<Position = PR::Position>,
-    F:  Face,
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
 {
     type Orientation = PR::Orientation;
-    
+
     fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Self::Orientation {
         assert!(self.graph.is_finite_vertex(v0) && self.graph.is_finite_vertex(v1) && self.graph.is_finite_vertex(v2));
         let a = &self.graph[PositionQuery::Vertex(v0)];
@@ -27,7 +27,7 @@ where
         let c = &self.graph[PositionQuery::Vertex(v2)];
         self.predicates.orientation_triangle(a, b, c)
     }
-    
+
     fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> Self::Orientation {
         let va = v;
         let vb = self.graph[f].vertex(i.increment());

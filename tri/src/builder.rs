@@ -1,7 +1,7 @@
 use geometry::{CollinearTest, Orientation, Position, Predicates};
 use graph::{Constraint, Face, FaceExt, Vertex};
 use indexing::PositionQuery;
-use query::Query;
+use orientationquery::OrientationQuery;
 use tagginglocator::{Location, TaggingLocator};
 use triangulation::Triangulation;
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};

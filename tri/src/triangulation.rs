@@ -1,5 +1,6 @@
 use geometry::Predicates;
 use graph::{Face, Graph, Vertex};
+use std::cell::RefCell;
 
 pub struct Triangulation<PR, V, F>
 where
@@ -9,7 +10,7 @@ where
 {
     pub graph: Graph<PR::Position, V, F>,
     pub predicates: PR,
-    pub tag: usize,
+    pub tag: RefCell<usize>,
 }
 
 impl<PR, V, F> Triangulation<PR, V, F>
@@ -22,7 +23,7 @@ where
         Triangulation {
             predicates,
             graph: Default::default(),
-            tag: 0,
+            tag: RefCell::new(0),
         }
     }
 }
