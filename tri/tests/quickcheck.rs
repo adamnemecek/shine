@@ -16,8 +16,10 @@ use shine_tri::geometry::position::{Posf32, Posi64};
 fn stress_exact_i64() {
     init_quickcheck_test(module_path!(), 1000);
 
-    // Even tough the graph has a point type of i64, we are testing with i16 to avoid overflow error.
-    fn fuzzer(xs: Vec<(i16, i16)>) -> bool {
+    // Even tough the graph has a point type of i64, we are testing with i8 to
+    //  - avoid overflow error.
+    //  - test gets more dense to generate more extremal case
+    fn fuzzer(xs: Vec<(i8, i8)>) -> bool {
         let mut tri = SimpleTrii64::default();
         {
             let mut builder = tri.build();
@@ -34,7 +36,7 @@ fn stress_exact_i64() {
         tri.check().check_full(None) == Ok(())
     }
 
-    quickcheck(fuzzer as fn(Vec<(i16, i16)>) -> bool);
+    quickcheck(fuzzer as fn(Vec<(i8, i8)>) -> bool);
 }
 
 #[test]
@@ -53,5 +55,23 @@ fn stress_exactf32() {
         tri.check().check_full(None) == Ok(())
     }
 
+    fn fuzzer_01(xs: Vec<(f32, f32)>) -> bool {
+        let mut tri = SimpleTrif32/*Exact*/::default();
+        {
+            let mut builder = tri.build();
+            for &(x, y) in xs.iter() {
+                builder.add_vertex(
+                    Posf32 {
+                        x: x.fract(),
+                        y: y.fract(),
+                    },
+                    None,
+                );
+            }
+        }
+        tri.check().check_full(None) == Ok(())
+    }
+
     quickcheck(fuzzer as fn(Vec<(f32, f32)>) -> bool);
+    quickcheck(fuzzer_01 as fn(Vec<(f32, f32)>) -> bool);
 }
