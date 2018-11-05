@@ -1,7 +1,9 @@
-use common::position::{Posf32, Posf64, Posi32, Posi64};
+#![allow(dead_code)]
+
+use shine_tri::geometry::position::{Posf32, Posf64, Posi32, Posi64};
 use shine_tri::geometry::{Position, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64};
 use shine_tri::types::{invalid_face_index, invalid_vertex_index, rot3, FaceIndex, Rot3, VertexIndex};
-use shine_tri::{Face, Triangulation, Vertex};
+use shine_tri::{Constraint, Face, Triangulation, Vertex};
 
 pub struct SimpleVertex<P>
 where
@@ -46,10 +48,31 @@ where
     }
 }
 
+#[derive(PartialEq, Clone, Copy, Debug)]
+pub struct SimpleConstraint(pub u8);
+
+impl Default for SimpleConstraint {
+    fn default() -> Self {
+        SimpleConstraint(0)
+    }
+}
+
+impl Constraint for SimpleConstraint {
+    fn is_constraint(&self) -> bool {
+        self.0 != 0
+    }
+}
+
+impl From<u8> for SimpleConstraint {
+    fn from(v: u8) -> SimpleConstraint {
+        SimpleConstraint(v)
+    }
+}
+
 pub struct SimpleFace {
     vertices: [VertexIndex; 3],
     neighbors: [FaceIndex; 3],
-    constraints: [bool; 3],
+    constraints: [SimpleConstraint; 3],
     tag: usize,
 }
 
@@ -58,14 +81,14 @@ impl Default for SimpleFace {
         SimpleFace {
             vertices: [invalid_vertex_index(); 3],
             neighbors: [invalid_face_index(); 3],
-            constraints: [false; 3],
+            constraints: [SimpleConstraint::default(); 3],
             tag: 0,
         }
     }
 }
 
 impl Face for SimpleFace {
-    type Constraint = bool;
+    type Constraint = SimpleConstraint;
 
     fn vertex(&self, i: Rot3) -> VertexIndex {
         self.vertices[i.id() as usize]
@@ -96,7 +119,7 @@ impl Face for SimpleFace {
     }
 
     fn set_constraint(&mut self, i: Rot3, c: Self::Constraint) {
-        self.constraints[i.id() as usize] = c
+        self.constraints[i.id() as usize].0 |= c.0
     }
 
     fn tag(&self) -> usize {

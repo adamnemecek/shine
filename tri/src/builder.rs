@@ -1,6 +1,6 @@
 use checker::Checker;
-use geometry::{Orientation, Predicates};
-use graph::{Face, FaceExt, Graph, Vertex};
+use geometry::{CollinearTest, Orientation, Predicates};
+use graph::{Constraint, Face, FaceExt, Graph, Vertex};
 use indexing::PositionQuery;
 use query::Query;
 use tagginglocator::{Location, TaggingLocator};
@@ -47,7 +47,7 @@ where
     /// Add a constraining segment.
     /// First the two positions are inserted then the segment is added as a constraining edge.
     pub fn add_constraint(&mut self, p0: P::Position, p1: P::Position, c: F::Constraint) {
-        //drAssert( aConstraint );
+        assert!(c.is_constraint());
         let v0 = self.add_vertex(p0, None);
         let start_face = self.graph[v0].face();
         let v1 = self.add_vertex(p1, Some(start_face));
@@ -57,6 +57,7 @@ where
     /// Add a constraining segment.
     /// First the two positions are inserted then the segment is added as a constraining edge.
     pub fn add_constraint_for(&mut self, v0: VertexIndex, v1: VertexIndex, c: F::Constraint) {
+        assert!(c.is_constraint());
         assert!(v0.is_valid());
         assert!(v1.is_valid());
         assert!(self.graph.is_finite_vertex(v0));
@@ -536,42 +537,43 @@ where
             return;
         }
 
-        // v0,v1 and any other (finite) point must be collinear as dim==1,
-        let p0 = &self.graph[PositionQuery::Vertex(v0)];
-        let p1 = &self.graph[PositionQuery::Vertex(v1)];
-
         // find the direction to reach v1 from v0
-        /*let direction = if self.tri.is_finite_vertex(vn) {
+        let reverse_dir = if self.graph.is_finite_vertex(vn) {
             // test direction to traverse by point order
-            tri_.getPredicates().approximateSegmentParameter(p0, p1, tri_.getPosition(vn))
+            let p0 = &self.graph[PositionQuery::Vertex(v0)];
+            let p1 = &self.graph[PositionQuery::Vertex(v1)];
+            let pn = &self.graph[PositionQuery::Vertex(vn)];
+            // p0,p1,pn and any other (finite) point must be collinear as dim==1,
+            let direction = self.predicates.test_collinear_points(p0, p1, pn);
+            assert!(
+                direction.is_before() || direction.is_between(),
+                "Internal error, direction test result"
+            );
+            direction.is_before()
         } else {
-            // we are at the end of the edge-chain, start search backward
-            -1
+            true
         };
-        assert!(
-            direction < 0 || (direction > 0 && direction < 1),
-            "Internal error, direction test result"
-        );
 
-        if( direction < 0 ) {
+        let (mut cur, mut cur_i) = if reverse_dir {
             // opposite direction
-            FaceIndex next = tri_[ f0 ].getNeighbor( i0.mirrored2() );
-            i0 = tri_[ next ].getIndexOf( f0 ).mirrored2();
-            f0 = next;
-        }
+            let next = self.graph[f0].neighbor(i0.mirror(2));
+            let next_i = self.graph[next].get_neighbor_index(f0).unwrap().mirror(2);
+            (next, next_i)
+        } else {
+            (f0, i0)
+        };
 
         // mark all edges constraint until the end vertex is reached
         // no geometry have to be tested, as we are on a straight line and no segment may overlap
-        FaceIndex cur = f0;
-        Index3 curI = i0;
-        for(;; ) {
-            tri_[ cur ].getConstraint( 2 ) |= aConstraint;
-            if( tri_[ cur ].getVertex( curI.mirrored2() ) == aV1 )
-            break;
+        loop {
+            self.graph[cur].set_constraint(rot3(2), c.clone());
+            if self.graph[cur].vertex(cur_i.mirror(2)) == v1 {
+                break;
+            }
 
-            FaceIndex next = tri_[ cur ].getNeighbor( curI );
-            curI = tri_[ next ].getIndexOf( cur ).mirrored2();
+            let next = self.graph[cur].neighbor(cur_i);
+            cur_i = self.graph[next].get_neighbor_index(cur).unwrap().mirror(2);
             cur = next;
         }
-        */    }
+    }
 }

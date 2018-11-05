@@ -25,9 +25,14 @@ pub trait VertexExt: Vertex {
 }
 impl<T> VertexExt for T where T: Vertex {}
 
+/// Edge constraint
+pub trait Constraint: Default + Clone + PartialEq {
+    fn is_constraint(&self) -> bool;
+}
+
 /// A face of the triangualtion
 pub trait Face: Default {
-    type Constraint: Default + PartialEq;
+    type Constraint: Constraint;
 
     fn vertex(&self, i: Rot3) -> VertexIndex;
     fn set_vertex(&mut self, i: Rot3, v: VertexIndex);

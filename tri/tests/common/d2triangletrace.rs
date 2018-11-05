@@ -1,5 +1,7 @@
-use common::position::Posf64;
+#![allow(dead_code)]
+
 use shine_testutils::webserver::*;
+use shine_tri::geometry::position::Posf64;
 use shine_tri::geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates, Predicatesf64};
 use shine_tri::indexing::{IndexGet, PositionQuery, VertexIndexQuery};
 use shine_tri::types::{rot3, FaceIndex, Rot3, VertexIndex};

@@ -7,24 +7,22 @@ extern crate log;
 
 mod common;
 
-use common::{Sample, SimpleTrif32, SimpleTrif64, SimpleTrii32, SimpleTrii64};
+use common::{Sample, SimpleFace, SimpleTrif32, SimpleTrif64, SimpleTrii32, SimpleTrii64, SimpleVertex};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Position, Predicates, Real};
 use shine_tri::indexing::PositionQuery;
-use shine_tri::{Face, Triangulation, Vertex};
-use std::fmt;
+use shine_tri::Triangulation;
+use std::fmt::Debug;
 
 #[test]
-fn t0_empty() {
+fn simple_points() {
     init_test(module_path!());
 
-    fn t0_empty_<R, P, PR, V, F>(tri: Triangulation<PR, V, F>, desc: &str)
+    fn test_<R, P, PR>(tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
     where
         R: Real,
-        P: Default + fmt::Debug + Position<Real = R> + From<Sample>,
-        PR: Default + Predicates<Real = R, Position = P>,
-        V: Vertex<Position = P>,
-        F: Face,
+        P: Default + Position<Real = R> + From<Sample> + Debug,
+        PR: Default + Predicates<Position = P, Real = R>,
     {
         info!("{}", desc);
 
@@ -33,23 +31,21 @@ fn t0_empty() {
         assert_eq!(tri.check().check_full(None), Ok(()));
     }
 
-    t0_empty_(SimpleTrif32::default(), "inexact f32");
-    t0_empty_(SimpleTrif64::default(), "inexact f64");
-    t0_empty_(SimpleTrii32::default(), "exact i32");
-    t0_empty_(SimpleTrii64::default(), "exact i64");
+    test_(SimpleTrif32::default(), "inexact f32");
+    test_(SimpleTrif64::default(), "inexact f64");
+    test_(SimpleTrii32::default(), "exact i32");
+    test_(SimpleTrii64::default(), "exact i64");
 }
 
 #[test]
-fn t1_dimension0() {
+fn simple_points_dim0() {
     init_test(module_path!());
 
-    fn t1_dimension0_<R, P, PR, V, F>(mut tri: Triangulation<PR, V, F>, desc: &str)
+    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
     where
         R: Real,
-        P: Default + fmt::Debug + Position<Real = R> + From<Sample>,
-        PR: Default + Predicates<Real = R, Position = P>,
-        V: Vertex<Position = P>,
-        F: Face,
+        P: Default + Position<Real = R> + From<Sample>,
+        PR: Default + Predicates<Position = P, Real = R>,
     {
         info!("{}", desc);
 
@@ -71,23 +67,21 @@ fn t1_dimension0() {
         assert_eq!(tri.check().check_full(None), Ok(()));
     }
 
-    t1_dimension0_(SimpleTrif32::default(), "inexact f32");
-    t1_dimension0_(SimpleTrif64::default(), "inexact f64");
-    t1_dimension0_(SimpleTrii32::default(), "exact i32");
-    t1_dimension0_(SimpleTrii64::default(), "exact i64");
+    test_(SimpleTrif32::default(), "inexact f32");
+    test_(SimpleTrif64::default(), "inexact f64");
+    test_(SimpleTrii32::default(), "exact i32");
+    test_(SimpleTrii64::default(), "exact i64");
 }
 
 #[test]
-fn t2_dimension1() {
+fn simple_points_dim1() {
     init_test(module_path!());
 
-    fn t2_dimension1_<R, P, PR, V, F>(mut tri: Triangulation<PR, V, F>, desc: &str)
+    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
     where
         R: Real,
-        P: Default + fmt::Debug + Position<Real = R> + From<Sample>,
-        PR: Default + Predicates<Real = R, Position = P>,
-        V: Vertex<Position = P>,
-        F: Face,
+        P: Default + Position<Real = R> + From<Sample> + Debug,
+        PR: Default + Predicates<Position = P, Real = R>,
     {
         info!("{}", desc);
 
@@ -133,23 +127,21 @@ fn t2_dimension1() {
         }
     }
 
-    t2_dimension1_(SimpleTrif32::default(), "inexact f32");
-    t2_dimension1_(SimpleTrif64::default(), "inexact f64");
-    t2_dimension1_(SimpleTrii32::default(), "exact i32");
-    t2_dimension1_(SimpleTrii64::default(), "exact i64");
+    test_(SimpleTrif32::default(), "inexact f32");
+    test_(SimpleTrif64::default(), "inexact f64");
+    test_(SimpleTrii32::default(), "exact i32");
+    test_(SimpleTrii64::default(), "exact i64");
 }
 
 #[test]
-fn t3_dimension2() {
+fn simple_points_dim2() {
     init_test(module_path!());
 
-    fn t3_dimension2_<R, P, PR, V, F>(mut tri: Triangulation<PR, V, F>, desc: &str)
+    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
     where
         R: Real,
-        P: Default + fmt::Debug + Position<Real = R> + From<Sample>,
-        PR: Default + Predicates<Real = R, Position = P>,
-        V: Vertex<Position = P>,
-        F: Face,
+        P: Default + Position<Real = R> + From<Sample> + Debug,
+        PR: Default + Predicates<Position = P, Real = R>,
     {
         info!("{}", desc);
 
@@ -214,8 +206,8 @@ fn t3_dimension2() {
         }
     }
 
-    t3_dimension2_(SimpleTrif32::default(), "inexact f32");
-    t3_dimension2_(SimpleTrif64::default(), "inexact f64");
-    t3_dimension2_(SimpleTrii32::default(), "exact i32");
-    t3_dimension2_(SimpleTrii64::default(), "exact i64");
+    test_(SimpleTrif32::default(), "inexact f32");
+    test_(SimpleTrif64::default(), "inexact f64");
+    test_(SimpleTrii32::default(), "exact i32");
+    test_(SimpleTrii64::default(), "exact i64");
 }

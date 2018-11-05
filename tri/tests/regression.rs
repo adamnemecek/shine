@@ -6,8 +6,9 @@ extern crate shine_tri;
 
 mod common;
 
-use common::{Posf32, SimpleTrif32};
+use common::SimpleTrif32;
 use shine_testutils::init_test;
+use shine_tri::geometry::position::Posf32;
 
 #[test]
 fn issue39_1() {
