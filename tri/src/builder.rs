@@ -1,10 +1,12 @@
 use geometry::{CollinearTest, Orientation, Position, Predicates};
 use graph::{Constraint, Face, FaceExt, Vertex};
-use indexing::PositionQuery;
+use indexing::{PositionQuery, VertexQuery};
 use orientationquery::OrientationQuery;
 use tagginglocator::{Location, TaggingLocator};
+use traverse::{CrossingIterator, CrossingSide};
 use triangulation::Triangulation;
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
+use vertexchain::{ChainIndex, ChainStore};
 
 pub trait Builder {
     type Position: Position;
@@ -530,6 +532,53 @@ where
             cur = next;
         }
     }
+
+    /// Adds the constraining edge between the two vertex when dim=2
+    fn add_constraint_dim2(&mut self, v0: VertexIndex, v1: VertexIndex, c: F::Constraint) {
+        let mut chain_store = ChainStore::new();
+        let start = v0;
+        while start != v1 {
+            // collect intersecting faces and generate the two (top/bottom) chains
+            // The edge-chain is not a whole polygon the new constraining edge is the missing closing edge
+            let mut crossing_iter = CrossingIterator::new(self, start, v1);
+
+            if let Some(cross) = crossing_iter.next() {
+                assert_eq!(cross.side, CrossingSide::Start);
+                let mut top_chain = chain_store.new_chain(cross.face, cross.edge.increment(), true);
+                let bottom_chain = chain_store.new_chain(cross.face, cross.edge.decrement(), true);
+
+                while let Some(cross) = crossing_iter.next() {
+                    //if self.tri.graph.getConstraint( edge ) ) {
+                    // insert constraint-constraint intersection points
+                    //unimplemented!( "Not implemented" );
+                    //}
+
+                    match cross.side {
+                        CrossingSide::CCW => {
+                            top_chain = chain_store.insert_before(top_chain, cross.face, cross.edge.increment());
+                        }
+                        CrossingSide::CW => {
+                            chain_store.insert_before(bottom_chain, cross.face, cross.edge.decrement());
+                        }
+                        CrossingSide::End => {
+                            top_chain = chain_store.insert_before(top_chain, cross.face, cross.edge.increment());
+                            chain_store.insert_before(bottom_chain, cross.face, cross.edge.decrement());
+                            chain_store.split_before(top_chain);
+                            chain_store.split_before(bottom_chain);
+                        }
+                        _ => unreachable!(),
+                    };
+                }
+
+                //edge = triangulateHole( chain_store, top_chain, bottom_chain );
+                //startV = tri_.getEndVertex( edge );
+                chain_store.clear();
+            }
+
+            //makeConstraint( edge, aConstraint );
+            //start = self.tri.graph[VertexQuery::EdgeEnd(cross.face, cross.edge)];
+        }
+    }
 }
 
 impl<PR, V, F> Builder for Triangulation<PR, V, F>
@@ -566,7 +615,7 @@ where
 
         match self.graph.dimension() {
             1 => self.add_constraint_dim1(v0, v1, c),
-            2 => unimplemented!(),
+            2 => self.add_constraint_dim2(v0, v1, c),
             _ => unreachable!("Inconsistent triangulation"),
         }
     }

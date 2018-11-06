@@ -7,17 +7,18 @@ use triangulation::Triangulation;
 use types::{FaceIndex, Rot3, VertexIndex};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Side {
-    Any, // no side information is know, or the edges are coincident
+pub enum CrossingSide {
+    Start,
     CCW,
     CW,
+    End,
 }
 
 pub struct CrossedFace {
     pub vertex: VertexIndex,
     pub face: FaceIndex,
     pub edge: Rot3,
-    pub side: Side,
+    pub side: CrossingSide,
 }
 
 pub struct CrossingIterator<'a, PR, V, F>
@@ -46,7 +47,7 @@ where
     }
 
     fn init(&mut self) {
-        let mut direction = Side::Any;
+        let mut direction = CrossingSide::Start;
         let mut circulator = EdgeCirculator::new(self.tri, self.v0);
 
         self.next = loop {
@@ -62,7 +63,7 @@ where
                     vertex,
                     face: circulator.face(),
                     edge: circulator.edge(),
-                    side: Side::Any,
+                    side: CrossingSide::End,
                 });
             }
 
@@ -86,26 +87,26 @@ where
                             vertex,
                             face: circulator.face(),
                             edge: circulator.edge(),
-                            side: Side::Any,
+                            side: CrossingSide::Start,
                         });
                     }
-                    Side::CCW
+                    CrossingSide::CCW
                 } else if orient.is_ccw() {
-                    Side::CCW
+                    CrossingSide::CCW
                 } else {
-                    Side::CW
+                    CrossingSide::CW
                 }
             };
 
-            if direction == Side::Any {
+            if direction == CrossingSide::Start {
                 // "first" loop iteration, find circulating direction
-                assert_ne!(orientation, Side::Any);
+                assert!(orientation == CrossingSide::CCW || orientation == CrossingSide::CW);
                 direction = orientation;
             }
 
             if direction != orientation {
                 // orientation has changed -> we have the first triangle crossing the edge
-                if direction == Side::CW {
+                if direction == CrossingSide::CW {
                     circulator.advance_cw();
                 }
 
@@ -113,56 +114,51 @@ where
                     vertex: circulator.vertex(),
                     face: circulator.face(),
                     edge: circulator.edge(),
-                    side: Side::Any,
+                    side: CrossingSide::Start,
                 });
-            } else if direction == Side::CCW {
+            } else if direction == CrossingSide::CCW {
                 circulator.advance_cw();
             } else {
-                assert_ne!(direction, Side::CW);
+                assert_ne!(direction, CrossingSide::CW);
                 circulator.advance_ccw();
             }
         };
     }
 
     pub fn next(&mut self) -> Option<CrossedFace> {
-        if self.next.is_none() {
-            return None;
-        }
-
         let cur = mem::replace(&mut self.next, None);
-        if let Some(ref cur) {
-                if cur.vertex != self.v1 {
-                    let nf = self.tri.graph[cur.face].neighbor(cur.edge);
-                    let iv = self.tri.graph[nf].get_neighbor_index(cur.face).unwrap();
-                    let nv = self.tri.graph[nf].vertex(iv);
-                    if nv == self.v1 {
+        if let Some(ref cur) = cur {
+            if cur.vertex != self.v1 {
+                let face = self.tri.graph[cur.face].neighbor(cur.edge);
+                let vertex_index = self.tri.graph[face].get_neighbor_index(cur.face).unwrap();
+                let vertex = self.tri.graph[face].vertex(vertex_index);
+                if vertex == self.v1 {
+                    self.next = Some(CrossedFace {
+                        vertex,
+                        face,
+                        edge: vertex_index.increment(),
+                        side: CrossingSide::End,
+                    });
+                } else {
+                    let p0 = &self.tri.graph[PositionQuery::Vertex(self.v0)];
+                    let p1 = &self.tri.graph[PositionQuery::Vertex(self.v1)];
+                    let pn = &self.tri.graph[PositionQuery::Vertex(cur.vertex)];
+                    let orientation = self.tri.predicates.orientation_triangle(p0, p1, pn);
+                    assert!(!orientation.is_collinear(), "next != v1, but v0,v1,next are collinear");
+                    if orientation.is_ccw() {
                         self.next = Some(CrossedFace {
-                            vertex: nv,
-                            face: nf,
-                            edge: iv.increment(),
-                            side: Side::Any,
+                            vertex,
+                            face,
+                            edge: vertex_index.increment(),
+                            side: CrossingSide::CCW,
                         });
                     } else {
-                        let p0 = &self.tri.graph[PositionQuery::Vertex(self.v0)];
-                        let p1 = &self.tri.graph[PositionQuery::Vertex(self.v1)];
-                        let pn = &self.tri.graph[PositionQuery::Vertex(cur.vertex)];
-                        let orientation = self.tri.predicates.orientation_triangle(p0, p1, pn);
-                        assert!(!orientation.is_collinear(), "next != v1, but v0,v1,next are collinear");
-                        if orientation.is_ccw() {
-                            self.next = Some(CrossedFace {
-                                vertex: nv,
-                                face: nf,
-                                edge: iv.increment(),
-                                side: Side::CCW,
-                            });
-                        } else {
-                            self.next = Some(CrossedFace {
-                                vertex: nv,
-                                face: nf,
-                                edge: iv.decrement(),
-                                side: Side::CW,
-                            });
-                        }
+                        self.next = Some(CrossedFace {
+                            vertex,
+                            face,
+                            edge: vertex_index.decrement(),
+                            side: CrossingSide::CW,
+                        });
                     }
                 }
             }

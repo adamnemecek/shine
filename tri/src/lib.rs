@@ -1,7 +1,7 @@
 #![feature(step_trait)]
 #![feature(crate_visibility_modifier)]
 #![feature(try_from)]
-#![feature(tool_lints)]
+//#![feature(tool_lints)]
 
 #[macro_use]
 extern crate log;
@@ -21,6 +21,7 @@ pub mod geometry;
 pub mod indexing;
 pub mod traverse;
 pub mod types;
+pub mod vertexchain;
 
 pub use self::builder::*;
 pub use self::checker::*;

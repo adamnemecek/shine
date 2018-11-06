@@ -49,7 +49,7 @@ where
 }
 
 #[derive(PartialEq, Clone, Copy, Debug)]
-pub struct SimpleConstraint(pub u8);
+pub struct SimpleConstraint(pub u16);
 
 impl Default for SimpleConstraint {
     fn default() -> Self {
@@ -63,8 +63,8 @@ impl Constraint for SimpleConstraint {
     }
 }
 
-impl From<u8> for SimpleConstraint {
-    fn from(v: u8) -> SimpleConstraint {
+impl From<u16> for SimpleConstraint {
+    fn from(v: u16) -> SimpleConstraint {
         SimpleConstraint(v)
     }
 }
