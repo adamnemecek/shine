@@ -25,7 +25,7 @@ fn issue39_1() {
         }
     }
     assert_eq!(tri.graph.dimension(), 2);
-    assert_eq!(tri.check_full(None), Ok(()), "{:?}", tri.graph);
+    assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 }
 
 #[test]
@@ -42,5 +42,5 @@ fn issue39_2() {
         }
     }
     assert_eq!(tri.graph.dimension(), 2);
-    assert_eq!(tri.check_full(None), Ok(()), "{:?}", tri.graph);
+    assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 }

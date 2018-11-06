@@ -41,21 +41,21 @@ fn constraint_dimension1() {
             //fTriTrace.setVirtualPositions( { glm::vec2( -1.5f, 0.0f ), glm::vec2( 1.5f, 0.0f ), glm::vec2( 0.0f, 1.5f ), glm::vec2( 0.0f, -1.5f ) } );
 
             tri.add_vertex(map(0.), None);
-            assert_eq!(tri.check_full(None), Ok(()));
+            assert_eq!(tri.check(None), Ok(()));
             tri.add_vertex(map(1.), None);
-            assert_eq!(tri.check_full(None), Ok(()));
+            assert_eq!(tri.check(None), Ok(()));
 
             tri.add_constraint_segment(map(0.2), map(0.5), SimpleConstraint(1));
-            assert_eq!(tri.check_full(None), Ok(()));
+            assert_eq!(tri.check(None), Ok(()));
             tri.add_constraint_segment(map(0.3), map(0.7), SimpleConstraint(1));
-            assert_eq!(tri.check_full(None), Ok(()));
+            assert_eq!(tri.check(None), Ok(()));
             tri.add_constraint_segment(map(0.8), map(0.1), SimpleConstraint(1));
-            assert_eq!(tri.check_full(None), Ok(()));
+            assert_eq!(tri.check(None), Ok(()));
 
             trace!("clear");
             tri.graph.clear();
             assert!(tri.graph.is_empty());
-            assert_eq!(tri.check_full(None), Ok(()));
+            assert_eq!(tri.check(None), Ok(()));
         }
     }
 

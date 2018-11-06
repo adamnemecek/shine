@@ -10,15 +10,14 @@ pub trait Builder {
     type Position: Position;
     type Constraint: Constraint;
 
+    /// Add a point to the triangulation and return the index of the generated vertex.
+    /// A hint can be provided to find the triangle containing the given point.
     fn add_vertex(&mut self, p: Self::Position, hint: Option<FaceIndex>) -> VertexIndex;
-    fn add_vertex_at(&mut self, p: Self::Position, loc: Location) -> VertexIndex;
 
-    /// Add a constraining segment.
-    /// First the two positions are inserted then the segment is added as a constraining edge.
+    /// Add the two (new) vertices and a constraining edge between them.
     fn add_constraint_segment(&mut self, p0: Self::Position, p1: Self::Position, c: Self::Constraint);
 
-    /// Add a constraining segment.
-    /// First the two positions are inserted then the segment is added as a constraining edge.
+    /// Add a constraining edge between the given vertices.
     fn add_constraint_edge(&mut self, v0: VertexIndex, v1: VertexIndex, c: Self::Constraint);
 }
 
@@ -57,6 +56,100 @@ where
 
     fn clear_constraint(&mut self, f: FaceIndex, i: Rot3) {
         self.graph[f].set_constraint(i, Default::default());
+    }
+
+    /// Set adjacent face information for two neighboring faces.
+    fn set_adjacent(&mut self, f0: FaceIndex, i0: Rot3, f1: FaceIndex, i1: Rot3) {
+        assert!(i0.is_valid() && i1.is_valid());
+        assert!(i0.id() <= self.graph.dimension() as u8 && i1.id() <= self.graph.dimension() as u8);
+        self.graph[f0].set_neighbor(i0, f1);
+        self.graph[f1].set_neighbor(i1, f0);
+    }
+
+    /// Move adjacent face information from one face into another.
+    fn move_adjacent(&mut self, f_target: FaceIndex, i_target: Rot3, f_source: FaceIndex, i_source: Rot3) {
+        let n = self.graph[f_source].neighbor(i_source);
+        let i = self.graph[n].get_neighbor_index(f_source).unwrap();
+        self.set_adjacent(f_target, i_target, n, i);
+    }
+
+    /// Flips the edge in the quadrangle defined by the two neighboring triangles.
+    pub fn flip(&mut self, face: FaceIndex, edge: Rot3) {
+        assert_eq!(self.graph.dimension(), 2);
+        assert!(face.is_valid() && edge.is_valid());
+
+        //            v3                       v3
+        //          2 * 1                      *
+        //         /  |   \                 /  1  \
+        //       /    |     \             /2  F1   0\
+        //  v0 *0  F0 | F1  0* v2    v0 * ----------- * v2
+        //       \    |    /              \0  F0   2/
+        //         \  |  /                  \  1  /
+        //          1 * 2                      *
+        //            v1                      v1
+
+        let f0 = face;
+        let i00 = edge;
+        let i01 = i00.increment();
+        let i02 = i00.decrement();
+
+        let f1 = self.graph[f0].neighbor(i00);
+        let i10 = self.graph[f1].get_neighbor_index(f0).unwrap();
+        let i11 = i10.increment();
+        let i12 = i10.decrement();
+
+        let v0 = self.graph[f0].vertex(i00);
+        let v1 = self.graph[f0].vertex(i01);
+        let v3 = self.graph[f0].vertex(i02);
+        let v2 = self.graph[f1].vertex(i10);
+        assert!(self.graph[f1].vertex(i11) == v3);
+        assert!(self.graph[f1].vertex(i12) == v1);
+
+        self.graph[f0].set_vertex(i02, v2);
+        self.graph[f1].set_vertex(i12, v0);
+        self.graph[v0].set_face(f0);
+        self.graph[v1].set_face(f0);
+        self.graph[v2].set_face(f0);
+        self.graph[v3].set_face(f1);
+
+        self.move_adjacent(f0, i00, f1, i11);
+        self.move_adjacent(f1, i10, f0, i01);
+        self.set_adjacent(f0, i01, f1, i11);
+
+        self.copy_constraint(f1, i11, f0, i00);
+        self.copy_constraint(f0, i01, f1, i10);
+        self.clear_constraint(f0, i01);
+        self.clear_constraint(f1, i11);
+    }
+
+    fn add_vertex_at(&mut self, p: PR::Position, loc: Location) -> VertexIndex {
+        match self.graph.dimension() {
+            -1 => match loc {
+                Location::Empty => self.extend_to_dim0(p),
+                loc => unreachable!(format!("Invalid location for empty triangulation: {:?}", loc)),
+            },
+            0 => match loc {
+                Location::Vertex(f, i) => self.graph[f].vertex(i),
+                Location::OutsideAffineHull => self.extend_to_dim1(p),
+                loc => unreachable!(format!("Invalid location for 0D triangulation: {:?}", loc)),
+            },
+            1 => match loc {
+                Location::Vertex(f, i) => self.graph[f].vertex(i),
+                Location::Edge(f, _) => self.split_edge_dim1(p, f),
+                Location::OutsideConvexHull(f) => self.split_edge_dim1(p, f),
+                Location::OutsideAffineHullClockwise => self.extend_to_dim2(p, false),
+                Location::OutsideAffineHullCounterClockwise => self.extend_to_dim2(p, true),
+                loc => unreachable!(format!("Invalid location for 1D triangulation: {:?}", loc)),
+            },
+            2 => match loc {
+                Location::Vertex(f, i) => self.graph[f].vertex(i),
+                Location::Edge(f, i) => self.split_edge_dim2(p, f, i),
+                Location::Face(f) => self.split_face(p, f),
+                Location::OutsideConvexHull(f) => self.insert_outside_convex_hull2(p, f),
+                _ => unreachable!(format!("Invalid location for 2D triangulation: {:?}", loc)),
+            },
+            dim => unreachable!(format!("Invalid dimension: {}, {:?}", dim, loc)),
+        }
     }
 
     fn extend_to_dim0(&mut self, p: PR::Position) -> VertexIndex {
@@ -346,70 +439,6 @@ where
         vp
     }
 
-    /// Set adjacent face information for two neighboring faces.
-    fn set_adjacent(&mut self, f0: FaceIndex, i0: Rot3, f1: FaceIndex, i1: Rot3) {
-        assert!(i0.is_valid() && i1.is_valid());
-        assert!(i0.id() <= self.graph.dimension() as u8 && i1.id() <= self.graph.dimension() as u8);
-        self.graph[f0].set_neighbor(i0, f1);
-        self.graph[f1].set_neighbor(i1, f0);
-    }
-
-    /// Move adjacent face information from one face into another.
-    fn move_adjacent(&mut self, f_target: FaceIndex, i_target: Rot3, f_source: FaceIndex, i_source: Rot3) {
-        let n = self.graph[f_source].neighbor(i_source);
-        let i = self.graph[n].get_neighbor_index(f_source).unwrap();
-        self.set_adjacent(f_target, i_target, n, i);
-    }
-
-    /// Flips the edge in the quadrangle defined by the two neighboring triangles.
-    pub fn flip(&mut self, face: FaceIndex, edge: Rot3) {
-        assert_eq!(self.graph.dimension(), 2);
-        assert!(face.is_valid() && edge.is_valid());
-
-        //            v3                       v3
-        //          2 * 1                      *
-        //         /  |   \                 /  1  \
-        //       /    |     \             /2  F1   0\
-        //  v0 *0  F0 | F1  0* v2    v0 * ----------- * v2
-        //       \    |    /              \0  F0   2/
-        //         \  |  /                  \  1  /
-        //          1 * 2                      *
-        //            v1                      v1
-
-        let f0 = face;
-        let i00 = edge;
-        let i01 = i00.increment();
-        let i02 = i00.decrement();
-
-        let f1 = self.graph[f0].neighbor(i00);
-        let i10 = self.graph[f1].get_neighbor_index(f0).unwrap();
-        let i11 = i10.increment();
-        let i12 = i10.decrement();
-
-        let v0 = self.graph[f0].vertex(i00);
-        let v1 = self.graph[f0].vertex(i01);
-        let v3 = self.graph[f0].vertex(i02);
-        let v2 = self.graph[f1].vertex(i10);
-        assert!(self.graph[f1].vertex(i11) == v3);
-        assert!(self.graph[f1].vertex(i12) == v1);
-
-        self.graph[f0].set_vertex(i02, v2);
-        self.graph[f1].set_vertex(i12, v0);
-        self.graph[v0].set_face(f0);
-        self.graph[v1].set_face(f0);
-        self.graph[v2].set_face(f0);
-        self.graph[v3].set_face(f1);
-
-        self.move_adjacent(f0, i00, f1, i11);
-        self.move_adjacent(f1, i10, f0, i01);
-        self.set_adjacent(f0, i01, f1, i11);
-
-        self.copy_constraint(f1, i11, f0, i00);
-        self.copy_constraint(f0, i01, f1, i10);
-        self.clear_constraint(f0, i01);
-        self.clear_constraint(f1, i11);
-    }
-
     fn insert_outside_convex_hull2(&mut self, p: PR::Position, face: FaceIndex) -> VertexIndex {
         let f0 = face;
         let vinf = self.graph.infinite_vertex();
@@ -515,36 +544,6 @@ where
     fn add_vertex(&mut self, p: PR::Position, hint: Option<FaceIndex>) -> VertexIndex {
         let location = self.locate_position(&p, hint).unwrap();
         self.add_vertex_at(p, location)
-    }
-
-    fn add_vertex_at(&mut self, p: PR::Position, loc: Location) -> VertexIndex {
-        match self.graph.dimension() {
-            -1 => match loc {
-                Location::Empty => self.extend_to_dim0(p),
-                loc => unreachable!(format!("Invalid location for empty triangulation: {:?}", loc)),
-            },
-            0 => match loc {
-                Location::Vertex(f, i) => self.graph[f].vertex(i),
-                Location::OutsideAffineHull => self.extend_to_dim1(p),
-                loc => unreachable!(format!("Invalid location for 0D triangulation: {:?}", loc)),
-            },
-            1 => match loc {
-                Location::Vertex(f, i) => self.graph[f].vertex(i),
-                Location::Edge(f, _) => self.split_edge_dim1(p, f),
-                Location::OutsideConvexHull(f) => self.split_edge_dim1(p, f),
-                Location::OutsideAffineHullClockwise => self.extend_to_dim2(p, false),
-                Location::OutsideAffineHullCounterClockwise => self.extend_to_dim2(p, true),
-                loc => unreachable!(format!("Invalid location for 1D triangulation: {:?}", loc)),
-            },
-            2 => match loc {
-                Location::Vertex(f, i) => self.graph[f].vertex(i),
-                Location::Edge(f, i) => self.split_edge_dim2(p, f, i),
-                Location::Face(f) => self.split_face(p, f),
-                Location::OutsideConvexHull(f) => self.insert_outside_convex_hull2(p, f),
-                _ => unreachable!(format!("Invalid location for 2D triangulation: {:?}", loc)),
-            },
-            dim => unreachable!(format!("Invalid dimension: {}, {:?}", dim, loc)),
-        }
     }
 
     fn add_constraint_segment(&mut self, p0: PR::Position, p1: PR::Position, c: F::Constraint) {

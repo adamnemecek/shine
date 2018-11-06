@@ -19,7 +19,7 @@ pub trait Checker {
     fn check_area(&self, eps: Option<f64>) -> Result<(), String>;
 
     /// Perform full check.
-    fn check_full(&self, eps_area: Option<f64>) -> Result<(), String> {
+    fn check(&self, eps_area: Option<f64>) -> Result<(), String> {
         self.check_dimension()?;
         self.check_topology()?;
         self.check_orientation()?;

@@ -1,6 +1,7 @@
 #![feature(step_trait)]
 #![feature(crate_visibility_modifier)]
 #![feature(try_from)]
+#![feature(tool_lints)]
 
 #[macro_use]
 extern crate log;
@@ -18,12 +19,12 @@ mod triangulation;
 
 pub mod geometry;
 pub mod indexing;
-pub mod types;
 pub mod traverse;
+pub mod types;
 
 pub use self::builder::*;
 pub use self::checker::*;
-pub use self::graph::*; 
+pub use self::graph::*;
 pub use self::orientationquery::*;
 pub use self::tagginglocator::*;
 pub use self::triangulation::*;

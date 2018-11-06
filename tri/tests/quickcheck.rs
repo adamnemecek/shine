@@ -33,7 +33,7 @@ fn stress_exact_i64() {
                 );
             }
         }
-        tri.check_full(None) == Ok(())
+        tri.check(None) == Ok(())
     }
 
     quickcheck(fuzzer as fn(Vec<(i8, i8)>) -> bool);
@@ -51,7 +51,7 @@ fn stress_exactf32() {
                 tri.add_vertex(Posf32 { x, y }, None);
             }
         }
-        tri.check_full(None) == Ok(())
+        tri.check(None) == Ok(())
     }
 
     fn fuzzer_01(xs: Vec<(f32, f32)>) -> bool {
@@ -67,7 +67,7 @@ fn stress_exactf32() {
                 );
             }
         }
-        tri.check_full(None) == Ok(())
+        tri.check(None) == Ok(())
     }
 
     quickcheck(fuzzer as fn(Vec<(f32, f32)>) -> bool);
