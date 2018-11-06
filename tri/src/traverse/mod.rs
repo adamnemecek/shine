@@ -1,5 +1,5 @@
+mod crossingiterator;
 mod edgecirculator;
-mod intersectingiterator;
 
+pub use self::crossingiterator::*;
 pub use self::edgecirculator::*;
-pub use self::intersectingiterator::*;
