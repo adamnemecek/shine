@@ -130,9 +130,9 @@ impl D2Trace {
         let h = if h == 0. { 1. } else { h };
 
         self.scale.0 = 2. / w;
-        self.scale.1 = 2. / h;
+        self.scale.1 = -2. / h;
         self.scale.2 = -(minx + maxx) / w;
-        self.scale.3 = -(miny + maxy) / h;
+        self.scale.3 = (miny + maxy) / h;
     }
 
     pub fn scale_position(&self, p: &(f64, f64)) -> (f64, f64) {
@@ -197,25 +197,29 @@ crate fn d2_page(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWeb
         None => 0,
     };
 
+    // 0 based counting
+    let id = id - 1;
     let (image, id, image_count) = {
         let mut img = state.d2_images.lock().unwrap();
         if img.is_empty() {
             ("<svg></svg>".into(), 0, 1)
-        } else if id < img.len() {
+        } else if id <= img.len() {
             (img[id].clone(), id, img.len())
         } else {
             (img.last().unwrap().clone(), img.len() - 1, img.len())
         }
     };
 
-    let last_id = image_count - 1;
+    // 1 based count
+    let id = id + 1;
+    let last_id = image_count;
     let next_id = if id + 1 <= last_id { id + 1 } else { last_id };
     let next_next_id = if id + 10 <= last_id { id + 10 } else { last_id };
-    let prev_id = if id > 1 { id - 1 } else { 0 };
-    let prev_prev_id = if id > 10 { id - 10 } else { 0 };
+    let prev_id = if id > 2 { id - 1 } else { 1 };
+    let prev_prev_id = if id > 11 { id - 10 } else { 1 };
 
     let mut ctx = tera::Context::new();
-    ctx.insert("image_id", &format!("{}", id));
+    ctx.insert("image_id", &id);
     ctx.insert("image_count", &image_count);
     ctx.insert("next_image_id", &next_id);
     ctx.insert("next_next_image_id", &next_next_id);

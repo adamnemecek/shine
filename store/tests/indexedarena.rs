@@ -1,18 +1,18 @@
-extern crate shine_store;
-extern crate shine_testutils;
-#[macro_use]
-extern crate log;
 extern crate env_logger;
+extern crate log;
 extern crate permutohedron;
 extern crate rand;
+extern crate shine_store;
+extern crate shine_testutils;
 
+use log::{debug, trace};
 use permutohedron::Heap;
 use rand::Rng;
 use std::cell::Cell;
 use std::mem;
 
-use shine_store::arena::*;
-use shine_testutils::*;
+use shine_store::arena::IndexedArena;
+use shine_testutils::init_test;
 
 struct DropTracker<'a>(&'a Cell<usize>);
 

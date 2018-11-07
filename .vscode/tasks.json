@@ -47,10 +47,12 @@
             "args": [
                 "test",
                 "-p",
-                "shine-tri",
+                "shine-ecs",
+                //"--test",
+                //"debug",
                 "--",
                 "--nocapture",
-                "--ignored"
+                //"--ignored"
             ],
             "presentation": {
                 "echo": true,

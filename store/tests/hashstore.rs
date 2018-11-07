@@ -1,15 +1,15 @@
+extern crate env_logger;
+extern crate log;
 extern crate shine_store;
 extern crate shine_testutils;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
 
+use log::{debug, info, trace};
 use std::env;
 use std::sync::Arc;
 use std::thread;
 
-use shine_store::hashstore::*;
-use shine_testutils::*;
+use shine_store::hashstore::{HashStore, Key};
+use shine_testutils::init_test;
 
 /// Resource id for test data
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]

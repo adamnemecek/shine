@@ -119,12 +119,13 @@ where
             } else if direction == CrossingSide::CCW {
                 circulator.advance_cw();
             } else {
-                assert_ne!(direction, CrossingSide::CW);
+                assert_eq!(direction, CrossingSide::CW);
                 circulator.advance_ccw();
             }
         };
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<CrossedFace> {
         let cur = mem::replace(&mut self.next, None);
         if let Some(ref cur) = cur {

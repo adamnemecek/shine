@@ -1,3 +1,4 @@
+use log::trace;
 use std::marker::PhantomData;
 
 /// Arena allocator that ensure stable memory location for the objects.

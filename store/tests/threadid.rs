@@ -1,16 +1,16 @@
+extern crate env_logger;
+extern crate log;
 extern crate shine_store;
 extern crate shine_testutils;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
 
+use log::info;
 use std::env;
-use std::sync::*;
+use std::sync::{Arc, Mutex};
 use std::thread;
-use std::time::*;
+use std::time::Duration;
 
 use shine_store::threadid;
-use shine_testutils::*;
+use shine_testutils::init_test;
 
 #[test]
 fn thread_count() {

@@ -1,6 +1,7 @@
 use geometry::{Orientation, Position, Predicates, Real};
 use graph::{Face, Vertex};
 use indexing::PositionQuery;
+use log::trace;
 use orientationquery::OrientationQuery;
 use triangulation::Triangulation;
 use types::rot3;

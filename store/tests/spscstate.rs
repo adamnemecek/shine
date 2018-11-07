@@ -5,8 +5,8 @@ extern crate shine_testutils;
 use std::env;
 use std::thread;
 
-use shine_store::spscstate::*;
-use shine_testutils::*;
+use shine_store::spscstate::state_channel;
+use shine_testutils::init_test;
 
 const ITER_COUNT: i32 = 0x2ffff;
 

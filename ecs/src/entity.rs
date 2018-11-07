@@ -1,4 +1,5 @@
 use graph::svec::{self, DrainIter, STVector, UnitStore};
+use log::{debug, trace};
 use shred::{Read, ResourceId, Resources, SystemData, Write};
 use std::ops::{Deref, DerefMut};
 
@@ -81,10 +82,7 @@ impl EntityStore {
         }
         self.count += 1;
 
-        debug!(
-            "create id: {}, count: {}, max: {}",
-            id, self.count, self.max_entity_count
-        );
+        debug!("create id: {}, count: {}, max: {}", id, self.count, self.max_entity_count);
 
         Entity { id }
     }

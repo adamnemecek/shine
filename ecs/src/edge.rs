@@ -1,4 +1,4 @@
-use entity::*;
+use entity::Entity;
 use std::mem;
 
 /// Connection between two entities

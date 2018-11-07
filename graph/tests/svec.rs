@@ -1,14 +1,14 @@
+extern crate env_logger;
+extern crate log;
+extern crate rand;
 extern crate shine_graph;
 extern crate shine_testutils;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-extern crate rand;
 
+use log::{debug, trace};
 use rand::Rng;
 
-use shine_graph::svec::*;
-use shine_testutils::*;
+use shine_graph::svec::{new_dvec, new_hvec, SVector, Store};
+use shine_testutils::init_test;
 
 type Data = usize;
 

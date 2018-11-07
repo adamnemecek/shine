@@ -1,9 +1,8 @@
 #![feature(custom_attribute)]
 
+extern crate log;
 extern crate shine_testutils;
 extern crate shine_tri;
-#[macro_use]
-extern crate log;
 
 mod common;
 

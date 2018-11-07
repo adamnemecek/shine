@@ -1,8 +1,9 @@
 use proc_macro;
 use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use syn::parse::Parser;
 use syn::punctuated::Punctuated;
-use syn::{Ident, IntSuffix, LitInt};
+use syn::{Ident, IntSuffix, LitInt, Token};
 
 fn impl_indexlowerbound_for_tuple(count: usize) -> TokenStream {
     let generics: Vec<_> = (0..count)

@@ -7,7 +7,6 @@ extern crate env_logger;
 extern crate futures;
 extern crate log;
 extern crate svg;
-#[macro_use]
 extern crate tera;
 
 pub mod webserver;

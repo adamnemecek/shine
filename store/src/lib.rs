@@ -1,11 +1,9 @@
 #![feature(align_offset)]
 #![feature(drain_filter)]
 
-#[macro_use]
 extern crate lazy_static;
-extern crate num_cpus;
-#[macro_use]
 extern crate log;
+extern crate num_cpus;
 
 /// Define engine limitations
 pub mod libconfig {

@@ -1,3 +1,4 @@
+use log::debug;
 use std::fmt;
 use std::mem;
 use std::ops;
@@ -44,11 +45,7 @@ impl<T> IndexedArena<T> {
         let capacity = self.items.capacity();
         unsafe { self.items.set_len(capacity) };
         for id in (start_length..self.items.len()).rev() {
-            assert!(if let Entry::Vacant(_) = self.free_head {
-                true
-            } else {
-                false
-            });
+            assert!(if let Entry::Vacant(_) = self.free_head { true } else { false });
             let head = mem::replace(&mut self.free_head, Entry::Vacant(id));
             unsafe { ptr::write(&mut self.items[id], head) };
         }
@@ -70,11 +67,7 @@ impl<T> IndexedArena<T> {
     }
 
     fn ensure_free(&mut self) {
-        assert!(if let Entry::Vacant(_) = self.free_head {
-            true
-        } else {
-            false
-        });
+        assert!(if let Entry::Vacant(_) = self.free_head { true } else { false });
         match self.free_head {
             Entry::Vacant(id) => {
                 if id == usize::max_value() {
@@ -84,11 +77,7 @@ impl<T> IndexedArena<T> {
             }
             _ => unreachable!(),
         }
-        assert!(if let Entry::Vacant(_) = self.free_head {
-            true
-        } else {
-            false
-        });
+        assert!(if let Entry::Vacant(_) = self.free_head { true } else { false });
     }
 
     pub fn is_empty(&self) -> bool {
@@ -108,11 +97,7 @@ impl<T> IndexedArena<T> {
             unreachable!()
         };
         self.free_head = mem::replace(&mut self.items[id], Entry::Occupied(data));
-        assert!(if let Entry::Vacant(_) = self.free_head {
-            true
-        } else {
-            false
-        });
+        assert!(if let Entry::Vacant(_) = self.free_head { true } else { false });
         if let Entry::Occupied(ref mut data) = &mut self.items[id] {
             (id, data)
         } else {

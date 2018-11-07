@@ -1,13 +1,14 @@
+extern crate env_logger;
+extern crate log;
+extern crate rand;
 extern crate shine_graph;
 extern crate shine_testutils;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-extern crate rand;
 
-use shine_graph::join::*;
-use shine_graph::svec::*;
-use shine_testutils::*;
+use log::debug;
+
+use shine_graph::join::IntoJoinExt;
+use shine_graph::svec::{new_dvec, new_tvec};
+use shine_testutils::init_test;
 
 #[test]
 fn test_svec_join() {

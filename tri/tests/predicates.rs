@@ -1,7 +1,6 @@
+extern crate log;
 extern crate shine_testutils;
 extern crate shine_tri;
-#[macro_use]
-extern crate log;
 
 mod common;
 
@@ -24,30 +23,24 @@ fn orientation_triangle() {
     {
         info!("{}", desc);
 
-        assert!(
-            gp.orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)))
-                .is_collinear()
-        );
-        assert!(
-            gp.orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(0., 0.)))
-                .is_collinear()
-        );
-        assert!(
-            gp.orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(1., 1.)))
-                .is_collinear()
-        );
-        assert!(
-            gp.orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(2., 2.)))
-                .is_collinear()
-        );
-        assert!(
-            gp.orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(1., 0.)))
-                .is_cw()
-        );
-        assert!(
-            gp.orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(0., 1.)))
-                .is_ccw()
-        );
+        assert!(gp
+            .orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)))
+            .is_collinear());
+        assert!(gp
+            .orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(0., 0.)))
+            .is_collinear());
+        assert!(gp
+            .orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(1., 1.)))
+            .is_collinear());
+        assert!(gp
+            .orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(2., 2.)))
+            .is_collinear());
+        assert!(gp
+            .orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(1., 0.)))
+            .is_cw());
+        assert!(gp
+            .orientation_triangle(&P::from(Sample(0., 0.)), &P::from(Sample(1., 1.)), &P::from(Sample(0., 1.)))
+            .is_ccw());
     }
 
     orientation_triangle_(Predicatesf32::<Posf32>::new(), "inexact f32");
@@ -69,92 +62,72 @@ fn test_collinear_points() {
         info!("{}", desc);
 
         //x forward
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(-1., 0.)))
-                .is_before()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)))
-                .is_first()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(1., 0.)))
-                .is_between()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(2., 0.)))
-                .is_second()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(3., 0.)))
-                .is_after()
-        );
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(-1., 0.)))
+            .is_before());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)))
+            .is_first());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(1., 0.)))
+            .is_between());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(2., 0.)))
+            .is_second());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)), &P::from(Sample(3., 0.)))
+            .is_after());
 
         //y forward
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., -1.)))
-                .is_before()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)))
-                .is_first()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., 1.)))
-                .is_between()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., 2.)))
-                .is_second()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., 3.)))
-                .is_after()
-        );
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., -1.)))
+            .is_before());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)))
+            .is_first());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., 1.)))
+            .is_between());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., 2.)))
+            .is_second());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)), &P::from(Sample(0., 3.)))
+            .is_after());
 
         //x backward
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(-1., 0.)))
-                .is_after()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)))
-                .is_second()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(1., 0.)))
-                .is_between()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)))
-                .is_first()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(3., 0.)))
-                .is_before()
-        );
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(-1., 0.)))
+            .is_after());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)))
+            .is_second());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(1., 0.)))
+            .is_between());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(2., 0.)))
+            .is_first());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(2., 0.)), &P::from(Sample(0., 0.)), &P::from(Sample(3., 0.)))
+            .is_before());
 
         //y forward
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., -1.)))
-                .is_after()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)))
-                .is_second()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 1.)))
-                .is_between()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)))
-                .is_first()
-        );
-        assert!(
-            gp.test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 3.)))
-                .is_before()
-        );
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., -1.)))
+            .is_after());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 0.)))
+            .is_second());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 1.)))
+            .is_between());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 2.)))
+            .is_first());
+        assert!(gp
+            .test_collinear_points(&P::from(Sample(0., 2.)), &P::from(Sample(0., 0.)), &P::from(Sample(0., 3.)))
+            .is_before());
     }
 
     test_collinear_points_(Predicatesf32::<Posf32>::new(), "inexact f32");

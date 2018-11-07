@@ -216,14 +216,11 @@ where
     fn locate_position_dim2(&mut self, p: &PR::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
         assert_eq!(self.graph.dimension(), 2);
 
-        let start = match hint {
-            Some(f) => f,
-            None => {
-                let start = self.graph.infinite_face();
-                match self.graph[start].get_vertex_index(self.graph.infinite_vertex()) {
-                    None => start,                            // finite face
-                    Some(i) => self.graph[start].neighbor(i), // the opposite face to an infinite vertex is finite
-                }
+        let start = {
+            let hint = hint.unwrap_or_else(|| self.graph.infinite_face());
+            match self.graph[hint].get_vertex_index(self.graph.infinite_vertex()) {
+                None => hint,                            // finite face
+                Some(i) => self.graph[hint].neighbor(i), // the opposite face to an infinite vertex is finite
             }
         };
         assert!(self.graph.is_finite_face(start));

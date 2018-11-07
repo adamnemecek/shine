@@ -1,3 +1,4 @@
+use log::{debug, trace};
 use smat::{DataPosition, DataRange, MatrixMask};
 use store::stdext::SliceOrdExt;
 

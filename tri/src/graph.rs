@@ -26,7 +26,7 @@ pub trait VertexExt: Vertex {
 impl<T> VertexExt for T where T: Vertex {}
 
 /// Edge constraint
-pub trait Constraint: Default + Clone + PartialEq {
+pub trait Constraint: Default + Clone + PartialEq + fmt::Debug {
     fn is_constraint(&self) -> bool;
 }
 

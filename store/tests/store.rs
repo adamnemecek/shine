@@ -1,15 +1,15 @@
+extern crate env_logger;
+extern crate log;
 extern crate shine_store;
 extern crate shine_testutils;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
 
+use log::{info, trace};
 use std::env;
 use std::sync::Arc;
 use std::thread;
 
-use shine_store::store::*;
-use shine_testutils::*;
+use shine_store::store::{Store, UnsafeIndex};
+use shine_testutils::init_test;
 
 /// Test resource data
 struct TestData(String);

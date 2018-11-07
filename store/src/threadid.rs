@@ -1,4 +1,6 @@
+use lazy_static::lazy_static;
 use libconfig;
+use log::info;
 use num_cpus;
 use std::sync::Mutex;
 

@@ -1,10 +1,10 @@
-#[macro_use]
 extern crate log;
 extern crate shine_ecs as ecs;
 extern crate shine_testutils;
 
 use ecs::*;
-use shine_testutils::*;
+use log::{debug, trace};
+use shine_testutils::init_test;
 
 #[derive(Debug, PartialEq)]
 struct Force {

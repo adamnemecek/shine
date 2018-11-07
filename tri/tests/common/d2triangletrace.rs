@@ -5,35 +5,47 @@ use shine_tri::geometry::position::Posf64;
 use shine_tri::geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates, Predicatesf64};
 use shine_tri::indexing::{IndexGet, PositionQuery, VertexQuery};
 use shine_tri::types::{rot3, FaceIndex, Rot3, VertexIndex};
-use shine_tri::{Face, Graph, Vertex};
+use shine_tri::{Constraint, Face, Graph, Vertex};
 
 /// Color settings for the Trace
 pub struct Coloring {
     pub vertex: String,
     pub vertex_text: String,
-    pub infinite_vertex: String,
-    pub infinite_vertex_text: String,
     pub edge: String,
     pub edge_text: String,
-    pub face: String,
     pub face_text: String,
-    pub infinite_face: String,
+
+    pub constraint_edge: String,
+    pub constraint_edge_text: String,
+
+    pub infinite_vertex: String,
+    pub infinite_vertex_text: String,
+    pub infinite_edge: String,
+    pub infinite_edge_text: String,
     pub infinite_face_text: String,
+
+    pub error: String,
 }
 
 impl Coloring {
     pub fn new() -> Coloring {
         Coloring {
-            vertex: "green".into(),
-            vertex_text: "green".into(),
-            infinite_vertex: "red".into(),
-            infinite_vertex_text: "green".into(),
+            vertex: "blueviolet".into(),
+            vertex_text: "blue".into(),
             edge: "blue".into(),
             edge_text: "blue".into(),
-            face: "yellow".into(),
-            face_text: "yellow".into(),
-            infinite_face: "grey".into(),
+            face_text: "blue".into(),
+
+            constraint_edge: "cyan".into(),
+            constraint_edge_text: "cyan".into(),
+
+            infinite_vertex: "grey".into(),
+            infinite_vertex_text: "grey".into(),
+            infinite_edge: "grey".into(),
+            infinite_edge_text: "grey".into(),
             infinite_face_text: "grey".into(),
+
+            error: "red".into(),
         }
     }
 }
@@ -97,7 +109,7 @@ impl RenderMapping {
         self.virtual_positions.push(p.into());
     }
 
-    pub fn set_virtual_position<VP: Into<Vec<Posf64>>>(&mut self, p: VP) {
+    pub fn set_virtual_positions<VP: Into<Vec<Posf64>>>(&mut self, p: VP) {
         self.virtual_positions = p.into();
     }
 
@@ -130,14 +142,13 @@ impl RenderMapping {
 
         // find virtual point best fitting the convex hull in 2d
         if vcw.is_valid() && graph.is_finite_vertex(vcw) && vccw.is_valid() && graph.is_finite_vertex(vccw) {
-            let p = Posf64::from(&graph[PositionQuery::Vertex(v)]);
             let pcw = Posf64::from(&graph[PositionQuery::Vertex(vcw)]);
             let pccw = Posf64::from(&graph[PositionQuery::Vertex(vccw)]);
             let mut best_value = 0.;
             let mut best = None;
 
             for virt_pos in self.virtual_positions.iter() {
-                let value = predicates.orientation_triangle(&pcw, &p, &pccw);
+                let value = predicates.orientation_triangle(&pccw, &virt_pos, &pcw);
                 if value > best_value {
                     best_value = value;
                     best = Some(virt_pos);
@@ -290,17 +301,25 @@ where
                 continue;
             }
 
-            //let is_virtual = positions[ edge_start ].is_virtual() || positions[ edge_end ].is_virtual();
-            //bool is_constraint = !!aself.graph[ aFace ].getConstraint( edge );
+            let is_virtual = positions[edge_start].is_virtual() || positions[edge_end].is_virtual();
+            let constraint = self.graph[f].constraint(rot3(edge as u8));
+            let (color, color_text) = match (is_virtual, constraint.is_constraint()) {
+                (true, true) => (self.coloring.error.clone(), self.coloring.error.clone()),
+                (true, false) => (self.coloring.infinite_edge.clone(), self.coloring.infinite_edge_text.clone()),
+                (false, true) => (
+                    self.coloring.constraint_edge.clone(),
+                    self.coloring.constraint_edge_text.clone(),
+                ),
+                (false, false) => (self.coloring.edge.clone(), self.coloring.edge_text.clone()),
+            };
 
-            //let n = self.graph[f].neighbor(rot3(edge));
-            //let  col = isConstraint ? aColor.edgeConstrained_ : isVirtual ? aColor.edgeInfinite_ : aColor.edge_;
+            let n = self.graph[f].neighbor(rot3(edge as u8));
             let a = positions[edge_start].position();
             let b = positions[edge_end].position();
-            let color = self.coloring.face.clone();
             tr.add_line(&(a.x, a.y), &(b.x, b.y), color);
-            //glm::vec2 ab = ( a + b ) * 0.5f;
-            //addText( ab, stdext::format( "n", aFace, ".", edge, "=", n ), col );
+            
+            let center = ((a.x+b.x) * 0.5, (a.y+b.y) * 0.5);
+            tr.add_text( &center, format!("{}.{}={}; c:{:?}",f.id(), edge, n.id(), constraint), color_text );
         }
 
         // text

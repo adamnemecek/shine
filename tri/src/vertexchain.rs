@@ -52,7 +52,7 @@ impl ChainStore {
             face,
             index,
             prev: Some(chain),
-            next: next,
+            next,
         });
         if let Some(next) = next {
             self.at_mut(next).prev = Some(id);
@@ -71,7 +71,7 @@ impl ChainStore {
         self.items.push(ChainItem {
             face,
             index,
-            prev: prev,
+            prev,
             next: Some(chain),
         });
         if let Some(prev) = prev {
@@ -150,6 +150,12 @@ impl ChainStore {
 
     fn at_mut(&mut self, id: ChainIndex) -> &mut ChainItem {
         &mut self.items[id.0 as usize]
+    }
+}
+
+impl Default for ChainStore {
+    fn default() -> ChainStore {
+        ChainStore::new()
     }
 }
 

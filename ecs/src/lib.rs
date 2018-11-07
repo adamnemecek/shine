@@ -1,6 +1,3 @@
-#![feature(tool_lints)]
-
-#[macro_use]
 extern crate log;
 extern crate shine_graph as graph;
 extern crate shine_store as store;

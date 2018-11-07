@@ -2,8 +2,8 @@ extern crate env_logger;
 extern crate shine_ecs as ecs;
 extern crate shine_testutils;
 
-use ecs::*;
-use shine_testutils::*;
+use ecs::EntityStore;
+use shine_testutils::init_test;
 
 #[test]
 fn entity_create() {

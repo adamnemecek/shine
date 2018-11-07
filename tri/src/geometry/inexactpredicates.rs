@@ -4,6 +4,8 @@ use std::marker::PhantomData;
 macro_rules! impl_inexact_predicate {
     ($predicates:ident => $float:ty) => {
 
+        #[allow(clippy::float_cmp)]
+        #[allow(clippy::cast_lossless)]
         impl Orientation for $float {
             fn is_cw(&self) -> bool {
                 *self < 0 as $float
@@ -18,6 +20,8 @@ macro_rules! impl_inexact_predicate {
             }
         }
 
+        #[allow(clippy::float_cmp)]
+        #[allow(clippy::cast_lossless)]
         impl CollinearTest for $float {
             fn is_before(&self) -> bool {
                 *self < 0 as $float
@@ -68,6 +72,8 @@ macro_rules! impl_inexact_predicate {
             }
         }
 
+        #[allow(clippy::float_cmp)]
+        #[allow(clippy::cast_lossless)]
         impl<P> Predicates for $predicates<P>
         where
             P: Position<Real = $float>,
@@ -84,8 +90,7 @@ macro_rules! impl_inexact_predicate {
                 let cay = c.y() - a.y();
                 bax * cay - bay * cax
             }            
-
-            #[allow(clippy::float_cmp)]
+            
             fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool {
                 let (ax, ay) = (a.x(), a.y());
                 let (bx, by) = (b.x(), b.y());
@@ -173,11 +178,12 @@ macro_rules! impl_inexact_nearest_point_search {
             best: Option<(&'a P, D)>,
         }
 
+        #[allow(clippy::cast_lossless)]
         impl <'a, D,P> $nearest_point_search<'a, D,P> 
         where
                 P: 'a + Position<Real = $float>,
         {
-            fn new<'b>(base: &'b P) -> $nearest_point_search<'b, D,P>  {
+            fn new(base: &P) -> $nearest_point_search<D,P>  {
                 $nearest_point_search {
                     base : (base.x(), base.y()),
                     dist: 0 as $float,

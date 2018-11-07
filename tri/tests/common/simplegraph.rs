@@ -119,7 +119,11 @@ impl Face for SimpleFace {
     }
 
     fn set_constraint(&mut self, i: Rot3, c: Self::Constraint) {
-        self.constraints[i.id() as usize].0 |= c.0
+        if c.0 == 0 {
+            self.constraints[i.id() as usize].0 = 0
+        } else {
+            self.constraints[i.id() as usize].0 |= c.0
+        }
     }
 
     fn tag(&self) -> usize {

@@ -4,19 +4,19 @@ pub trait Real {
 
 impl Real for f32 {
     fn approximate(&self) -> f64 {
-        *self as f64
+        f64::from(*self)
     }
 }
 
 impl Real for f64 {
     fn approximate(&self) -> f64 {
-        *self as f64
+        *self
     }
 }
 
 impl Real for i32 {
     fn approximate(&self) -> f64 {
-        *self as f64
+        f64::from(*self)
     }
 }
 

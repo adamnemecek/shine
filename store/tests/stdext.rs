@@ -1,11 +1,10 @@
+extern crate env_logger;
+extern crate log;
 extern crate shine_store;
 extern crate shine_testutils;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
 
-use shine_store::stdext::*;
-use shine_testutils::*;
+use shine_store::stdext::SliceOrdExt;
+use shine_testutils::init_test;
 
 #[test]
 fn lower_bound() {

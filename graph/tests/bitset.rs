@@ -1,18 +1,16 @@
-extern crate shine_graph;
-extern crate shine_testutils;
-#[macro_use]
-extern crate log;
 extern crate env_logger;
+extern crate log;
 extern crate permutohedron;
 extern crate rand;
+extern crate shine_graph;
+extern crate shine_testutils;
 
-use std::collections::HashSet;
-
+use log::{debug, trace};
 use permutohedron::Heap;
 use rand::Rng;
-
-use shine_graph::bits::*;
-use shine_testutils::*;
+use shine_graph::bits::{bitops, BitBlock, BitSet, BitSetView, BitSetViewExt};
+use shine_testutils::init_test;
+use std::collections::HashSet;
 
 fn check_bitset<'a, B: BitSetView>(bitset: B, bits: &'a [usize]) {
     assert!(bitset.into_iter().eq(bits.iter().cloned()));
