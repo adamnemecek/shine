@@ -30,12 +30,13 @@
             border-radius: 50%;
         }
         #container {
-            width: 95%;
-            height: 75%;
+            width: 60%;
+            height: 100%;
             border: 1px solid black;
-            margin: 10px;
-            padding: 3px;
-            overflow: hidden;
+            _margin: 10px;
+            _padding: 3px;
+            _overflow: hidden;
+            float: left;
         }
     </style>
 </head>
@@ -53,36 +54,108 @@
         <a href="d2.html?id={{ next_next_image_id }}" class="navigate">Next &raquo; &raquo;</a>
         <a href="d2.html?id={{ last_image_id }}" class="navigate">Last</a>
     </div>
-    <div id="container">
-        {{ svg | safe }}
 
-        <script type="text/javascript">
-            //find the svg
-            var content = document.getElementById("container").childNodes;
-            var svg = null;
-            for (var i = 0; i < content.length; i++) {
-                console.log(content[i].nodeName)
-                if (content[i].nodeName == "svg") {
-                    svg = content[i];
-                    break;
+    <div style="width: 95%; height:75%">
+        <div id="container">{{ svg | safe }}</div>
+        <div id="layers" style="margin: 10px; width: 30%;" />
+    </div>
+
+    <script type="text/javascript">
+
+        function setLayerVisibility(id, visible) {
+            console.log(id);
+            console.log(visible);
+            let node = layers[id][3];
+            console.log(node);
+            node.setAttribute("visibility", visible ? "visible" : "hidden");
+            console.log(node.getAttribute("visibility"));
+        };
+
+        var svg = null;
+        var layers = [];
+        var preserveSize = []
+
+        // find svg
+        let svgContent = document.getElementById("container").childNodes;
+        for (let i = 0; i < svgContent.length; i++) {
+            if (svgContent[i].nodeName == "svg") {
+                svg = svgContent[i];
+                break;
+            }
+        }
+        svg.setAttribute("style", "display: inline; min-width: 100%; min-height: 100%; max-width: 100%; max-height: 100%")
+
+
+        //extract svg nodes
+        let nodes = [[svg, "", 0]];
+        let auto_id = 0;
+        while (nodes.length > 0) {
+            let current = nodes.pop();
+            let children = current[0].children;
+            let parentFullName = current[1];
+            let depth = current[2];
+            for (let i = 0; i < children.length; i++) {
+                let node = children[i];
+                if (node.tagName == "g") {
+                    let name = node.id;
+                    if (!name) {
+                        name = "layer_" + auto_id;
+                        auto_id += 1;
+                    }
+                    let fullName = parentFullName + "." + name;
+                    if (node.getAttribute("preserve-size")) {
+                        preserveSize.push(node);
+                    }
+                    layers.push([name, fullName, depth + 1, node]);
+                    nodes.push([node, fullName, depth + 1]);
                 }
             }
-            svg.setAttribute("style", "display: inline; min-width: 100%; min-height: 100%; max-width: 100%; max-height: 100%")
+        }
+        //sort by full name
+        layers.sort((a, b) => a[1] > b[1]);
+        console.log(layers);
 
-            var panZoom = svgPanZoom('svg', {
-                zoomEnabled: true,
-                controlIconsEnabled: true,
-                fit: true,
-                center: true
-            });
+        //checkbox
+        let layerContent = document.getElementById("layers");
+        for (let i = 0; i < layers.length; i++) {
+            let layer = layers[i];
 
-            window.onresize = function () {
-                panZoom.resize();
-                panZoom.fit();
-                panZoom.center();
-            };
-        </script>
-    </div>
+            var checkbox = document.createElement('input');
+            checkbox.type = "checkbox";
+            checkbox.checked = true;
+            checkbox.value = i;
+            checkbox.onchange = function (event) { var event = event; setLayerVisibility(event.target.value, event.target.checked); };
+
+            var label = document.createElement('label')
+            label.htmlFor = "id";
+            label.appendChild(document.createTextNode(layer[1]));
+
+            layerContent.appendChild(checkbox);
+            layerContent.appendChild(label);
+            layerContent.appendChild(document.createElement('br'));
+        }
+
+        var panZoom = svgPanZoom('svg', {
+            zoomEnabled: true,
+            controlIconsEnabled: true,
+            fit: true,
+            center: true,
+            onZoom: function (v) {
+                let scl = 1 / v;
+                preserveSize.forEach(node => {
+                    let trsf = node.getAttribute("transform").replace(/scale\(([^)]+)\)/i, "scale(" + scl + ")");
+                    node.setAttribute("transform", trsf);
+                })
+            }
+        });
+
+        window.onresize = function () {
+            panZoom.resize();
+            panZoom.fit();
+            panZoom.center();
+        };
+    </script>
+
 </body>
 
 </html>

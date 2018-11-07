@@ -1,4 +1,5 @@
 use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
+use std::collections::HashMap;
 use svg::node::{element, Text};
 use svg::{Document, Node};
 use tera;
@@ -8,34 +9,117 @@ pub trait IntoD2Image {
     fn trace(&self, tr: &mut D2Trace);
 }
 
+enum Container {
+    Root(Document),
+    Layer(element::Group),
+}
+
+impl Container {
+    fn add_node<N: Node>(&mut self, node: N) {
+        match *self {
+            Container::Layer(ref mut group) => group.append(node),
+            Container::Root(ref mut doc) => doc.append(node),
+        }
+    }
+}
+
+struct Layer {
+    container: Container,
+    texts: HashMap<(i32, i32), Vec<(String, String)>>,
+}
+
+impl Layer {
+    fn new_root() -> Layer {
+        Layer {
+            container: Container::Root(Document::new()),
+            texts: HashMap::new(),
+        }
+    }
+
+    fn new_layer() -> Layer {
+        Layer {
+            container: Container::Layer(element::Group::new()),
+            texts: HashMap::new(),
+        }
+    }
+
+    fn add_text(&mut self, p: (f64, f64), msg: String, color: String) {
+        let key = ((p.0 * 65536.) as i32, (p.1 * 65546.) as i32);
+        self.texts.entry(key).or_insert(Vec::new()).push((msg, color));
+    }
+
+    fn add_node<N: Node>(&mut self, node: N) {
+        self.container.add_node(node);
+    }
+
+    fn finalize(mut self) -> Container {
+        if !self.texts.is_empty() {
+            for (pos, texts) in self.texts.iter() {
+                let p = (pos.0 as f32 / 65536., pos.1 as f32 / 65536.);
+                let mut group = element::Group::new()
+                    .set("preserve-size", "true")
+                    .set("transform", format!("translate({},{}) scale(1)", p.0, p.1));
+                for (i, text) in texts.iter().enumerate() {
+                    let mut node = element::Text::new()
+                        .set("x", 0)
+                        .set("y", 0.05 + i as f32 * 0.05)
+                        .set("font-size", "0.05")
+                        .set("fill", text.1.clone());
+                    node.append(Text::new(text.0.clone()));
+                    group.append(node);
+                }
+                self.container.add_node(group);
+            }
+        }
+
+        self.container
+    }
+}
+
 /// Trace 2D geometry object through the web service
 pub struct D2Trace {
-    document: Document,
-    layers: Vec<element::Group>,
+    layers: Vec<Layer>,
     scale: (f64, f64, f64, f64),
 }
 
 impl D2Trace {
     pub fn new() -> D2Trace {
         D2Trace {
-            document: Document::new(),
-            layers: Default::default(),
+            layers: vec![Layer::new_root()],
             scale: (1., 1., 0., 0.),
         }
     }
 
     pub fn push_layer(&mut self) {
-        self.layers.push(element::Group::new());
+        self.layers.push(Layer::new_layer());
     }
 
     pub fn pop_layer(&mut self) {
-        let v = self.layers.pop().unwrap();
-        self.add_node(v);
+        let layer = self.layers.pop().unwrap();
+        match layer.finalize() {
+            Container::Layer(group) => self.add_node(group),
+            _ => panic!("Poping root layer"),
+        }
     }
 
     pub fn pop_all_layers(&mut self) {
-        while !self.layers.is_empty() {
+        while self.layers.len() > 1 {
             self.pop_layer();
+        }
+    }
+
+    pub fn document(mut self) -> Document {
+        self.pop_all_layers();
+
+        let layer = self.layers.pop().unwrap();
+        match layer.finalize() {
+            Container::Root(mut document) => {
+                document.assign("width", "640");
+                document.assign("viewbox", "-1 -1 2 2");
+                document
+            }
+
+            _ => panic!("Poping root layer"),
         }
     }
 
@@ -49,9 +133,6 @@ impl D2Trace {
         self.scale.1 = 2. / h;
         self.scale.2 = -(minx + maxx) / w;
         self.scale.3 = -(miny + maxy) / h;
-        self.document.assign("width", "640");
-        //self.document.assign("height", "auto");
-        self.document.assign("viewbox", "-1 -1 2 2");
     }
 
     pub fn scale_position(&self, p: &(f64, f64)) -> (f64, f64) {
@@ -90,33 +171,19 @@ impl D2Trace {
     pub fn add_text(&mut self, p: &(f64, f64), msg: String, color: String) {
         let p = self.scale_position(p);
 
-        let mut node = element::Text::new()
-            .set("x", p.0)
-            .set("y", p.1)
-            .set("font-size", "0.05")
-            .set("fill", color);
-        node.append(Text::new(msg));
-        self.add_node(node);
+        let layer = self.layers.last_mut().unwrap();
+        layer.add_text(p, msg, color);
     }
 
     fn add_node<N: Node>(&mut self, node: N) {
-        if let Some(p) = self.layers.last_mut() {
-            p.append(node);
-        } else {
-            self.document.append(node);
-        }
+        let layer = self.layers.last_mut().unwrap();
+        layer.add_node(node);
     }
 }
 
 impl Default for D2Trace {
     fn default() -> D2Trace {
         D2Trace::new()
-    }
-}
-
-impl ToString for D2Trace {
-    fn to_string(&self) -> String {
-        self.document.to_string()
     }
 }
 

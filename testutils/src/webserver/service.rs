@@ -43,13 +43,11 @@ impl Service {
                         let template = compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"));
                         let d2_images = d2_images.clone();
                         AppContext { d2_images, template }
-                    })
-                    .middleware(middleware::Logger::default())
+                    }).middleware(middleware::Logger::default())
                     .resource("/d2.html", |r| r.method(http::Method::GET).f(d2_page))
                     .resource("/control.html", |r| r.f(control_page))
                     .handler("/", static_content)
-                })
-                .bind(bind_address.clone())
+                }).bind(bind_address.clone())
                 .expect(&format!("Cannot bind to {}", bind_address))
                 .start();
 
@@ -69,7 +67,7 @@ impl Service {
     pub fn add_d2_image<T: IntoD2Image>(&self, t: &T) {
         let mut tr = D2Trace::new();
         t.trace(&mut tr);
-        let svg = tr.to_string();
+        let svg = tr.document().to_string();
         let mut imges = self.d2_images.lock().unwrap();
         imges.push(svg);
     }
