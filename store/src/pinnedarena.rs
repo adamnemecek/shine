@@ -6,14 +6,14 @@ use std::marker::PhantomData;
 /// todo: The allocated memory is managed by the Arena using free list.
 /// Arena has no concurrency handling. At most one thread may accessing the arean at a time, hence
 /// some synchronisation method have to be used in parallel environment.
-pub struct StableArena<T> {
+pub struct PinnedArena<T> {
     size: usize,
     _ph: PhantomData<T>,
 }
 
-impl<T> StableArena<T> {
-    pub fn new() -> StableArena<T> {
-        StableArena {
+impl<T> PinnedArena<T> {
+    pub fn new() -> PinnedArena<T> {
+        PinnedArena {
             size: 0,
             _ph: PhantomData,
         }
@@ -37,7 +37,7 @@ impl<T> StableArena<T> {
     }
 }
 
-impl<T> Default for StableArena<T> {
+impl<T> Default for PinnedArena<T> {
     fn default() -> Self {
         Self::new()
     }

@@ -1,7 +1,7 @@
 use entity::Entity;
 use graph::svec;
 pub use graph::svec::Entry;
-use storagecategory::*;
+use storagecategory::{DenseStorage, SparseStorage, StorageCategory};
 
 /// Trait to assign storage policy to an entity data
 pub trait EntityComponent: Sync + Send {
@@ -72,10 +72,7 @@ where
         self.store.get(entity.id())
     }
 
-    pub fn get_mut(
-        &mut self,
-        entity: Entity,
-    ) -> Option<&mut <<T as EntityComponentDescriptor>::Store as svec::Store>::Item> {
+    pub fn get_mut(&mut self, entity: Entity) -> Option<&mut <<T as EntityComponentDescriptor>::Store as svec::Store>::Item> {
         self.store.get_mut(entity.id())
     }
 

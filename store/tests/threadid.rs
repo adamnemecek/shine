@@ -40,19 +40,46 @@ fn alloc_free() {
 
         let mut array = Arc::new(Mutex::new(Vec::new()));
         let mut threads = Vec::new();
+        let ready = Arc::new(());
 
         for _ in 0..len {
             let array = array.clone();
-            threads.push(thread::spawn(move || {
-                thread::sleep(Duration::from_millis(100));
-                {
-                    let mut array = array.lock().unwrap();
-                    array.push(threadid::get());
+            threads.push(thread::spawn({
+                let ready = Arc::downgrade(&ready);
+                move || {
+                    thread::sleep(Duration::from_millis(10));
+                    {
+                        let mut array = array.lock().unwrap();
+                        info!("id: {:?}", threadid::get());
+                        let id = threadid::get();
+                        thread::sleep(Duration::from_millis(10));
+                        assert_eq!(id, threadid::get());
+                        array.push(id);
+                    }
+
+                    // wait all the thread to request id
+                    while ready.upgrade().is_some() {
+                        thread::sleep(Duration::from_millis(10));
+                    }
                 }
-                thread::sleep(Duration::from_millis(100));
             }));
         }
 
+        // wait for all the threads to register its id
+        loop {
+            {
+                let mut array = array.lock().unwrap();
+                if array.len() == len {
+                    break;
+                }
+            }
+            thread::sleep(Duration::from_millis(10));
+        }
+
+        //notify to close threads
+        drop(ready);
+
+        //close threads (and release ids)
         for th in threads.drain(..) {
             th.join().unwrap();
         }

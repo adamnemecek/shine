@@ -1,10 +1,10 @@
 use lazy_static::lazy_static;
 use libconfig;
-use log::info;
+use log::{debug, info};
 use num_cpus;
 use std::sync::Mutex;
 
-/// Thread ID manager. Allocates and release thread ids
+/// Thread ID manager to identify threads.
 struct ThreadIdManager {
     thread_counter: usize,
     thread_limit: usize,
@@ -53,14 +53,12 @@ struct ThreadId(usize);
 impl ThreadId {
     fn new() -> ThreadId {
         let id = THREAD_ID_MANAGER.lock().unwrap().alloc();
-        //println!("thread id alloc: {}", id);
         ThreadId(id)
     }
 }
 
 impl Drop for ThreadId {
     fn drop(&mut self) {
-        //println!("thread id release: {}", self.0);
         THREAD_ID_MANAGER.lock().unwrap().dealloc(self.0);
     }
 }

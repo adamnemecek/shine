@@ -1,7 +1,7 @@
 use edge::Edge;
 use graph::smat;
 pub use graph::smat::Entry;
-use storagecategory::*;
+use storagecategory::{DenseStorage, SparseStorage, StorageCategory};
 
 /// Trait to assign storage policy to an edge data
 pub trait EdgeComponent: Sync + Send {
@@ -87,21 +87,15 @@ where
         self.store.get_entry(edge.from.id(), edge.to.id())
     }
 
-    pub fn read(
-        &self,
-    ) -> smat::WrapRowRead<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
+    pub fn read(&self) -> smat::WrapRowRead<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
         self.store.read()
     }
 
-    pub fn update(
-        &mut self,
-    ) -> smat::WrapRowUpdate<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
+    pub fn update(&mut self) -> smat::WrapRowUpdate<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
         self.store.update()
     }
 
-    pub fn write(
-        &mut self,
-    ) -> smat::WrapRowWrite<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
+    pub fn write(&mut self) -> smat::WrapRowWrite<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
         self.store.write()
     }
 }

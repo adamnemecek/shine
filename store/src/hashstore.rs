@@ -4,21 +4,20 @@ use std::hash::Hash;
 use std::marker::PhantomData;
 use std::ops;
 use std::ptr;
-use std::sync::atomic::*;
-use std::sync::*;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use arena::StableArena;
+use arena::PinnedArena;
 
 /// Trait for resource id
 pub trait Key: Clone + Send + Eq + Hash + fmt::Debug {}
 
 pub trait Data<K: Key>: From<K> {}
 
-/// Reference counted indexing of the store items in O(1).
+/// Reference counted index to access stored items in O(1).
 pub struct Index<K: Key, D: From<K>>(*mut Entry<K, D>);
 
 unsafe impl<K: Key, D: From<K>> Send for Index<K, D> {}
-
 unsafe impl<K: Key, D: From<K>> Sync for Index<K, D> {}
 
 impl<K: Key, D: From<K>> Index<K, D> {
@@ -76,7 +75,7 @@ impl<K: Key, D: From<K>> Drop for Index<K, D> {
     }
 }
 
-/// Unsafe indexing of the store items in O(1) without reference count maintenance.
+/// Unsafe indexing of the stored items in O(1), the reference count is not updated.
 pub struct UnsafeIndex<K: Key, D: From<K>>(*mut Entry<K, D>);
 
 impl<K: Key, D: From<K>> UnsafeIndex<K, D> {
@@ -147,7 +146,7 @@ impl<K: Key, D: From<K>> SharedData<K, D> {
 
 // Internal hash-store data that requires exclusive lock
 struct ExclusiveData<K: Key, D: From<K>> {
-    arena: StableArena<Entry<K, D>>,
+    arena: PinnedArena<Entry<K, D>>,
     requests: HashMap<K, *mut Entry<K, D>>,
 }
 
@@ -175,7 +174,15 @@ impl<K: Key, D: From<K>> ExclusiveData<K, D> {
     }
 }
 
-/// Resource store.
+/// Thread safe resource store.
+/// While the store is locked for reading, no resource can be updated, but new one can be created
+/// with a two phase storage policy
+/// - first the shared data is searched for an existing items
+/// - the secondary mutex guarded data is used to fing the new items
+/// When the store is write locked
+/// - the items from the secondary storage are moved into the primary one
+/// - resources can be updated
+/// - resources can be dropped if the thier ref count is zero
 pub struct HashStore<K: Key, D: From<K>> {
     shared: RwLock<SharedData<K, D>>,
     exclusive: Mutex<ExclusiveData<K, D>>,
@@ -192,7 +199,7 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
                 resources: HashMap::new(),
             }),
             exclusive: Mutex::new(ExclusiveData {
-                arena: StableArena::new(),
+                arena: PinnedArena::new(),
                 requests: HashMap::new(),
             }),
         }
@@ -205,7 +212,7 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
                 resources: HashMap::with_capacity(capacity),
             }),
             exclusive: Mutex::new(ExclusiveData {
-                arena: StableArena::new(), /*Arena::_with_capacity(page_size, capacity)*/
+                arena: PinnedArena::new(), /*Arena::_with_capacity(page_size, capacity)*/
                 requests: HashMap::with_capacity(capacity),
             }),
         }
@@ -224,9 +231,11 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
     /// Returns a write locked access
     pub fn write(&self) -> WriteGuard<K, D> {
         let shared = self.shared.try_write().unwrap();
-        let exclusive = self.exclusive.lock().unwrap();
-
-        WriteGuard { shared, exclusive }
+        let locked_exclusive = self.exclusive.lock().unwrap();
+        WriteGuard {
+            shared,
+            locked_exclusive,
+        }
     }
 }
 
@@ -277,11 +286,24 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> ReadGuard<'a, K, D> {
             return index;
         }
 
+        if let Ok(exclusive) = self.exclusive.try_lock() {
+            exclusive.get(k)
+        } else {
+            Index::null()
+        }
+    }
+
+    pub fn get_blocking(&self, k: &K) -> Index<K, D> {
+        let index = self.shared.get(k);
+        if !index.is_null() {
+            return index;
+        }
+
         let exclusive = self.exclusive.lock().unwrap();
         exclusive.get(k)
     }
 
-    pub fn get_or_add(&mut self, k: &K) -> Index<K, D> {
+    pub fn get_or_add_blocking(&mut self, k: &K) -> Index<K, D> {
         let index = self.shared.get(k);
         if !index.is_null() {
             return index;
@@ -315,7 +337,7 @@ impl<'a, 'i, K: 'a + Key, D: 'a + From<K>> ops::Index<&'i Index<K, D>> for ReadG
 /// Guarded update access to a store
 pub struct WriteGuard<'a, K: 'a + Key, D: 'a + From<K>> {
     shared: RwLockWriteGuard<'a, SharedData<K, D>>,
-    exclusive: MutexGuard<'a, ExclusiveData<K, D>>,
+    locked_exclusive: MutexGuard<'a, ExclusiveData<K, D>>,
 }
 
 impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
@@ -325,7 +347,7 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
             return index;
         }
 
-        self.exclusive.get(k)
+        self.locked_exclusive.get(k)
     }
 
     pub fn get_or_add(&mut self, k: &K) -> Index<K, D> {
@@ -334,22 +356,22 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
             return index;
         }
 
-        self.exclusive.get_or_add(&k)
+        self.locked_exclusive.get_or_add(&k)
     }
 
     /// Returns if the store is empty.
     pub fn is_empty(&self) -> bool {
-        self.exclusive.requests.is_empty() && self.shared.resources.is_empty()
+        self.locked_exclusive.requests.is_empty() && self.shared.resources.is_empty()
     }
 
     /// Merges the requests into the "active" items
     pub fn finalize_requests(&mut self) {
         // Move all resources into the stored resources
-        self.shared.resources.extend(&mut self.exclusive.requests.drain());
+        self.shared.resources.extend(&mut self.locked_exclusive.requests.drain());
     }
 
     fn drain_impl<F: FnMut(&mut D) -> bool>(
-        arena: &mut StableArena<Entry<K, D>>,
+        arena: &mut PinnedArena<Entry<K, D>>,
         v: &mut HashMap<K, *mut Entry<K, D>>,
         filter: &mut F,
     ) {
@@ -370,7 +392,7 @@ impl<'a, K: 'a + Key, D: 'a + From<K>> WriteGuard<'a, K, D> {
     /// Drain unreferenced elements those specified by the predicate.
     /// In other words, remove all unreferenced resources such that f(&mut data) returns true.
     pub fn drain_unused_filtered<F: FnMut(&mut D) -> bool>(&mut self, mut filter: F) {
-        let exclusive = &mut *self.exclusive;
+        let exclusive = &mut *self.locked_exclusive;
         Self::drain_impl(&mut exclusive.arena, &mut self.shared.resources, &mut filter);
         Self::drain_impl(&mut exclusive.arena, &mut exclusive.requests, &mut filter);
     }

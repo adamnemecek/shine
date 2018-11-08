@@ -18,11 +18,11 @@ pub mod libconfig {
 }
 
 mod indexedarena;
-mod stablearena;
+mod pinnedarena;
 
 pub mod arena {
     pub use super::indexedarena::*;
-    pub use super::stablearena::*;
+    pub use super::pinnedarena::*;
 }
 
 pub mod hashstore;

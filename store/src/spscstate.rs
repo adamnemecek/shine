@@ -189,8 +189,8 @@ impl<'a, T> DerefMut for RefReceiveBuffer<'a, T> {
 }
 
 /// Create a Sender/Receiver with an embedded shared buffer for communication.
-/// It is not a "Single Producer Single Consumer" queue as some massages can be dropped based
-/// on thread scheduling.
+/// It is not a "Single Producer Single Consumer" queue as some massages might be dropped depending
+/// on the thread scheduling.
 pub fn state_channel<T: Default>() -> (Sender<T>, Receiver<T>) {
     let a = Arc::new(TripleBuffer::new());
     (Sender::new(&a), Receiver::new(&a))

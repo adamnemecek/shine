@@ -54,17 +54,17 @@ fn simple_single_threaded() {
     debug!("request 0,1");
     {
         let mut store = store.read();
-        assert!(store.get(&TestDataId(0)).is_null());
+        assert!(store.get_blocking(&TestDataId(0)).is_null());
 
-        r0 = store.get_or_add(&TestDataId(0));
+        r0 = store.get_or_add_blocking(&TestDataId(0));
         assert!(store[&r0].0 == format!("id: {}", 0));
 
-        r1 = store.get_or_add(&TestDataId(1));
+        r1 = store.get_or_add_blocking(&TestDataId(1));
         assert!(store[&r1].0 == format!("id: {}", 1));
-        let r11 = store.get(&TestDataId(1));
+        let r11 = store.get_blocking(&TestDataId(1));
         assert!(store[&r11].0 == format!("id: {}", 1));
         assert!(r11 == r1);
-        let r12 = store.get_or_add(&TestDataId(1));
+        let r12 = store.get_or_add_blocking(&TestDataId(1));
         assert!(store[&r12].0 == format!("id: {}", 1));
         assert!(r12 == r1);
     }
@@ -79,11 +79,11 @@ fn simple_single_threaded() {
     {
         let mut store = store.read();
         assert!(store[&r0].0 == format!("id: {}", 0));
-        assert!(store.get(&TestDataId(0)) == r0);
+        assert!(store.get_blocking(&TestDataId(0)) == r0);
         assert!(store[&r1].0 == format!("id: {}", 1));
-        assert!(store.get(&TestDataId(1)) == r1);
+        assert!(store.get_blocking(&TestDataId(1)) == r1);
 
-        let r2 = store.get_or_add(&TestDataId(2));
+        let r2 = store.get_or_add_blocking(&TestDataId(2));
         assert!(store[&r2].0 == format!("id: {}", 2));
     }
 
@@ -96,16 +96,16 @@ fn simple_single_threaded() {
 
     {
         let store = store.read();
-        assert!(store.get(&TestDataId(2)).is_null());
+        assert!(store.get_blocking(&TestDataId(2)).is_null());
 
         assert!(store[&r0].0 == format!("id: {}", 0));
-        assert!(store.get(&TestDataId(0)) == r0);
+        assert!(store.get_blocking(&TestDataId(0)) == r0);
         assert!(store[&r1].0 == format!("id: {}", 1));
-        assert!(store.get(&TestDataId(1)) == r1);
+        assert!(store.get_blocking(&TestDataId(1)) == r1);
 
         r1.reset();
         // check that store is not modified
-        assert!(store[&store.get(&TestDataId(1))].0 == format!("id: {}", 1));
+        assert!(store[&store.get_blocking(&TestDataId(1))].0 == format!("id: {}", 1));
         assert!(r1.is_null());
     }
 
@@ -119,13 +119,13 @@ fn simple_single_threaded() {
     {
         let store = store.read();
         assert!(store[&r0].0 == format!("id: {}", 0));
-        assert!(store.get(&TestDataId(0)) == r0);
-        assert!(store.get(&TestDataId(1)).is_null());
-        assert!(store.get(&TestDataId(2)).is_null());
+        assert!(store.get_blocking(&TestDataId(0)) == r0);
+        assert!(store.get_blocking(&TestDataId(1)).is_null());
+        assert!(store.get_blocking(&TestDataId(2)).is_null());
 
         r0.reset();
         // check that store is not modified yet
-        assert!(store[&store.get(&TestDataId(0))].0 == format!("id: {}", 0));
+        assert!(store[&store.get_blocking(&TestDataId(0))].0 == format!("id: {}", 0));
         assert!(r0.is_null());
     }
 
@@ -159,14 +159,14 @@ fn simple_multi_threaded() {
             let store = store.clone();
             tp.push(thread::spawn(move || {
                 let mut store = store.read();
-                assert!(store.get(&TestDataId(0)).is_null());
+                assert!(store.get_blocking(&TestDataId(0)).is_null());
 
                 // request 1
-                let r1 = store.get_or_add(&TestDataId(1));
+                let r1 = store.get_or_add_blocking(&TestDataId(1));
                 assert!(store[&r1].0 == format!("id: {}", 1));
 
                 // request 100 + threadId
-                let r100 = store.get_or_add(&TestDataId(100 + i));
+                let r100 = store.get_or_add_blocking(&TestDataId(100 + i));
                 assert!(store[&r100].0 == format!("id: {}", 100 + i));
 
                 for _ in 0..100 {
@@ -194,15 +194,15 @@ fn simple_multi_threaded() {
             let store = store.clone();
             tp.push(thread::spawn(move || {
                 let store = store.read();
-                assert!(store.get(&TestDataId(0)).is_null());
+                assert!(store.get_blocking(&TestDataId(0)).is_null());
 
                 // get 1
-                let r1 = store.get(&TestDataId(1));
+                let r1 = store.get_blocking(&TestDataId(1));
                 assert!(!r1.is_null());
                 assert!(store[&r1].0 == format!("id: {}", 1));
 
                 // get 100 + threadId
-                let r100 = store.get(&TestDataId(100 + i));
+                let r100 = store.get_blocking(&TestDataId(100 + i));
                 assert!(!r100.is_null());
                 assert!(store[&r100].0 == format!("id: {}", 100 + i));
             }));
@@ -227,13 +227,13 @@ fn simple_multi_threaded() {
             let store = store.clone();
             tp.push(thread::spawn(move || {
                 let store = store.read();
-                assert!(store.get(&TestDataId(0)).is_null());
+                assert!(store.get_blocking(&TestDataId(0)).is_null());
 
                 // get 1
-                assert!(store.get(&TestDataId(1)).is_null());
+                assert!(store.get_blocking(&TestDataId(1)).is_null());
 
                 // get 100 + threadId
-                assert!(store.get(&TestDataId(100 + i)).is_null());
+                assert!(store.get_blocking(&TestDataId(100 + i)).is_null());
             }));
         }
         for t in tp.drain(..) {

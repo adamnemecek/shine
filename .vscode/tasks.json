@@ -47,7 +47,7 @@
             "args": [
                 "test",
                 "-p",
-                "shine-ecs",
+                "shine-store",
                 //"--test",
                 //"debug",
                 "--",

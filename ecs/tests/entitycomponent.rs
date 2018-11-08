@@ -2,7 +2,7 @@ extern crate log;
 extern crate shine_ecs as ecs;
 extern crate shine_testutils;
 
-use ecs::*;
+use ecs::{DenseStorage, Entity, EntityComponent, IntoJoinExt, SparseStorage, World};
 use log::{debug, trace};
 use shine_testutils::init_test;
 
