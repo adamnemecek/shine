@@ -43,13 +43,11 @@ impl Service {
                         let template = compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"));
                         let d2_images = d2_images.clone();
                         AppContext { d2_images, template }
-                    })
-                    .middleware(middleware::Logger::default())
+                    }).middleware(middleware::Logger::default())
                     .resource("/d2.html", |r| r.method(http::Method::GET).f(d2_page))
                     .resource("/control.html", |r| r.f(control_page))
                     .handler("/", static_content)
-                })
-                .bind(bind_address.clone())
+                }).bind(bind_address.clone())
                 .expect(&format!("Cannot bind to {}", bind_address))
                 .start();
 

@@ -232,7 +232,7 @@ where
     F: Face,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Tri {{ V[ ");
+        write!(f, "Tri {{ V[ ")?;
         for v in self.vertex_index_iter() {
             if self.is_infinite_vertex(v) {
                 write!(f, "*")?;
@@ -264,7 +264,7 @@ where
                 self[t].vertex(rot3(2))
             )?;
         }
-        writeln!(f, "]");
+        writeln!(f, "]")?;
 
         write!(f, "FN[ ")?;
         for t in self.face_index_iter() {

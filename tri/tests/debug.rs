@@ -46,36 +46,49 @@ fn quick_debug() {
     ]);
     let color = Coloring::new();
 
+    let map = |x, y| Posf32::from(Sample(x, y));
     {
-        tri.add_vertex(Sample(0., 0.).into(), None);
-        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
-        tri.add_vertex(Sample(1., 0.).into(), None);
-        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
-        tri.add_vertex(Sample(1., 1.).into(), None);
+        tri.add_vertex(map(0., 0.), None);
+        tri.add_vertex(map(1., 0.), None);
+        tri.add_vertex(map(1., 1.), None);
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
-        tri.add_constraint_segment(Sample(0., 0.).into(), Sample(1., 0.).into(), SimpleConstraint(1));
+        tri.add_constraint_segment(map(1., 0.), map(1., 1.), SimpleConstraint(1));
+        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.add_constraint_segment(map(0.2, 0.), map(0.5, 0.), SimpleConstraint(2));
+        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.add_constraint_segment(map(0.3, 0.), map(0.7, 0.), SimpleConstraint(4));
+        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.add_constraint_segment(map(0., 0.), map(1., 0.), SimpleConstraint(8));
+        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.add_constraint_segment(map(1., 0.), map(0., 0.), SimpleConstraint(16));
+        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.add_constraint_segment(map(1., 1.), map(0., 0.), SimpleConstraint(32));
+        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.add_constraint_segment(map(0.1, 0.1), map(0.9, 0.9), SimpleConstraint(64));
+        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.add_constraint_segment(map(0.9, 0.9), map(0.1, 0.1), SimpleConstraint(128));
+        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.add_constraint_segment(map(0.8, 0.8), map(0.2, 0.2), SimpleConstraint(256));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
-        tri.add_constraint_segment(Sample(0., 0.).into(), Sample(1., 1.).into(), SimpleConstraint(2));
+        tri.add_vertex(map(0.2, 0.5), None);
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
-
-        tri.add_constraint_segment(Sample(1., 0.).into(), Sample(1., 1.).into(), SimpleConstraint(4));
+        tri.add_vertex(map(0.5, 0.2), None);
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
-
-        tri.add_vertex(Sample(0.2, 0.).into(), None);
-        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
-        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
-
-        tri.add_vertex(Sample(0.5, 0.).into(), None);
-        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
-        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
-        
-        tri.add_vertex(Sample(0.3, 0.).into(), None);
+        tri.add_vertex(map(0.5, 0.5), None);
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
     }
