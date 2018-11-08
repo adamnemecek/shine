@@ -7,6 +7,7 @@ extern crate shine_tri;
 mod common;
 
 use common::{Sample, SimpleConstraint, SimpleFace, SimpleTrif32, SimpleTrif64, SimpleTrii32, SimpleTrii64, SimpleVertex};
+use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Position, Predicates, Real};
 use shine_tri::{Builder, Checker, Triangulation};
