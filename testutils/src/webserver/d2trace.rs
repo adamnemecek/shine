@@ -1,6 +1,7 @@
 use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
+use log::info;
 use std::collections::HashMap;
-use svg::node::{element, Text};
+use svg::node::{self, element};
 use svg::{Document, Node};
 use tera;
 use webserver::service::AppContext;
@@ -23,9 +24,15 @@ impl Container {
     }
 }
 
+struct Text {
+    text: String,
+    color: String,
+    size: f32,
+}
+
 struct Layer {
     container: Container,
-    texts: HashMap<(i32, i32), Vec<(String, String)>>,
+    texts: HashMap<(i32, i32), Vec<Text>>,
 }
 
 impl Layer {
@@ -43,9 +50,9 @@ impl Layer {
         }
     }
 
-    fn add_text(&mut self, p: (f64, f64), msg: String, color: String) {
+    fn add_text(&mut self, p: (f64, f64), text: String, color: String, size: f32) {
         let key = ((p.0 * 65536.) as i32, (p.1 * 65546.) as i32);
-        self.texts.entry(key).or_insert(Vec::new()).push((msg, color));
+        self.texts.entry(key).or_insert(Vec::new()).push(Text { text, color, size });
     }
 
     fn add_node<N: Node>(&mut self, node: N) {
@@ -59,14 +66,20 @@ impl Layer {
                 let mut group = element::Group::new()
                     .set("preserve-size", "true")
                     .set("transform", format!("translate({},{}) scale(1)", p.0, p.1));
-                for (i, text) in texts.iter().enumerate() {
-                    let mut node = element::Text::new()
-                        .set("x", 0)
-                        .set("y", 0.05 + i as f32 * 0.05)
-                        .set("font-size", "0.05")
-                        .set("fill", text.1.clone());
-                    node.append(Text::new(text.0.clone()));
-                    group.append(node);
+
+                let mut y = 0.;
+                for text in texts.iter() {
+                    for line in text.text.split("\n") {
+                        y += text.size;
+                        let mut node = element::Text::new()
+                            .set("x", 0)
+                            .set("y", y)
+                            .set("font-size", text.size)
+                            .set("xml:space", "preserve")
+                            .set("fill", text.color.clone());
+                        node.append(node::Text::new(line));
+                        group.append(node);
+                    }
                 }
                 self.container.add_node(group);
             }
@@ -168,11 +181,11 @@ impl D2Trace {
         self.add_node(node);
     }
 
-    pub fn add_text(&mut self, p: &(f64, f64), msg: String, color: String) {
+    pub fn add_text(&mut self, p: &(f64, f64), msg: String, color: String, size: f32) {
         let p = self.scale_position(p);
 
         let layer = self.layers.last_mut().unwrap();
-        layer.add_text(p, msg, color);
+        layer.add_text(p, msg, color, size);
     }
 
     fn add_node<N: Node>(&mut self, node: N) {
@@ -190,16 +203,18 @@ impl Default for D2Trace {
 crate fn d2_page(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     let state = req.state();
 
-    let id = match req.query().get("id") {
+    // input is 1 based
+    let id: usize = match req.query().get("id") {
         Some(id) => id
             .parse()
             .map_err(|_| error::ErrorBadRequest(format!("Invalid id: {}", id)))?,
-        None => 0,
+        None => 1,
     };
 
-    // 0 based counting
-    let id = id - 1;
+    // convert to 0 based
+    let id = if id == 0 { 1 } else { id - 1 };
     let (image, id, image_count) = {
+        info!("Getting image for {}", id);
         let mut img = state.d2_images.lock().unwrap();
         if img.is_empty() {
             ("<svg></svg>".into(), 0, 1)
@@ -210,7 +225,7 @@ crate fn d2_page(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWeb
         }
     };
 
-    // 1 based count
+    // convert to 1 based
     let id = id + 1;
     let last_id = image_count;
     let next_id = if id + 1 <= last_id { id + 1 } else { last_id };

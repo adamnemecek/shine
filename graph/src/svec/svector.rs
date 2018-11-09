@@ -173,12 +173,12 @@ where
     S: Store<Item = T>,
 {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "[");
+        write!(f, "[")?;
         let mut it = self.read().into_join();
         while let Some((id, e)) = it.next() {
             write!(f, "{}={:?}", id, e)?;
         }
-        write!(f, "]");
+        write!(f, "]")?;
         Ok(())
     }
 }

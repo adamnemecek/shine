@@ -1,7 +1,6 @@
 #![feature(crate_visibility_modifier)]
 
 extern crate actix;
-extern crate actix_net;
 extern crate actix_web;
 extern crate env_logger;
 extern crate futures;

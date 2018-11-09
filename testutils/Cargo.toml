@@ -14,7 +14,7 @@ env_logger = "*"
 tera =  "*"
 futures = "*"
 actix =  "*"
-actix-net =  "*"
-actix-web =  "*"
+#actix-web =  "*"
+actix-web = {git = "https://github.com/zpgaal/actix-web", branch = "issue_586"}
 
 svg =  "*"

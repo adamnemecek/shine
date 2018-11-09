@@ -1,5 +1,4 @@
 use actix;
-use actix_net;
 use actix_web::{fs, http, middleware, server, App, Error as ActixWebError, HttpRequest, HttpResponse};
 use futures::future::Future;
 use std::sync::{mpsc, Arc, Mutex};
@@ -19,7 +18,7 @@ fn control_page(_req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWeb
 
 pub struct Service {
     d2_images: Arc<Mutex<Vec<String>>>,
-    service_addr: actix::Addr<actix_net::server::Server>,
+    service_addr: actix::Addr<server::Server>,
 }
 
 impl Service {
@@ -43,11 +42,13 @@ impl Service {
                         let template = compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"));
                         let d2_images = d2_images.clone();
                         AppContext { d2_images, template }
-                    }).middleware(middleware::Logger::default())
+                    })
+                    .middleware(middleware::Logger::default())
                     .resource("/d2.html", |r| r.method(http::Method::GET).f(d2_page))
                     .resource("/control.html", |r| r.f(control_page))
                     .handler("/", static_content)
-                }).bind(bind_address.clone())
+                })
+                .bind(bind_address.clone())
                 .expect(&format!("Cannot bind to {}", bind_address))
                 .start();
 

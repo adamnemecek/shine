@@ -5,74 +5,131 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-
     <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1" />
     <style tyle="text/css">
-        html,body {
-            width: 100%;
-            height: 100%;
+        html {
+            margin: 0;
         }
-        a{
+        body {
+            height: 100%;
+            background: #2980b9;
+            color: #FFF;
+            font-family: Helvetica;
+            text-align: center;
+            margin: 0;
+        }
+
+        *, *:before, *:after {
+            -moz-box-sizing: border-box;
+            -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+        header, nav, section {
+            border: 1px solid rgba(255,255,255,0.8);
+            margin-bottom: 1vh;
+            border-radius: 3px;
+        }
+        header {
+	        width: 100vw;
+            _height: 20vh;
+            padding: 0 0;
+            overflow: auto;
+        }
+        nav {
+            width: 20vw;
+            _height: 100%;
+            margin-right: 1vw;
+            float: left;
+            overflow: auto;
+        } 
+        section {
+            width: 75vw;
+            height: 100%;
+            float: left;
+            overflow: hidden;
+        }  
+
+        .navigate a {
+            background-color: #4CAF50;
+            color: white;
+
             text-decoration: none;
             display: inline-block;
             padding: 8px 16px;
             margin: 3px;
         }
-        a:hover {
+        .navigate a:hover {
             background-color: #ddd;
             color: black;
         }
-        .navigate {
-            background-color: #4CAF50;
-            color: white;
+              
+        .layers ul { 
+            padding: 0 0 0 0;
+            list-style: none;
         }
-        .round {
-            border-radius: 50%;
-        }
-        #container {
-            width: 60%;
-            height: 100%;
-            border: 1px solid black;
-            _margin: 10px;
-            _padding: 3px;
-            _overflow: hidden;
-            float: left;
-        }
+        .layers li { 
+            padding: 2px 0 2px 32px;
+        }      
     </style>
 </head>
 
 <script src="jscript/svg-pan-zoom/svg-pan-zoom.min.js" type="text/javascript"></script>
 
 <body>
-    <h1>Image {{ image_id }} / {{ image_count }} </h1>
-    <div>
-        <a href="d2.html?id=1" class="navigate">First</a>
-        <a href="d2.html?id={{ prev_prev_image_id }}" class="navigate">&laquo; &laquo; Previous</a>
-        <a href="d2.html?id={{ prev_image_id }}" class="navigate">&laquo; Previous</a>
-        <a href="d2.html?id={{ image_id }}" class="navigate">Refresh</a>
-        <a href="d2.html?id={{ next_image_id }}" class="navigate">Next &raquo;</a>
-        <a href="d2.html?id={{ next_next_image_id }}" class="navigate">Next &raquo; &raquo;</a>
-        <a href="d2.html?id={{ last_image_id }}" class="navigate">Last</a>
-    </div>
-
-    <div style="width: 95%; height:75%">
-        <div id="container">{{ svg | safe }}</div>
-        <div id="layers" style="margin: 10px; width: 30%;" />
+    <div class="wrapper">
+        <header>
+            <h1>Image {{ image_id }} / {{ image_count }} </h1>
+        </header>
+        <header>
+            <h1>Image {{ image_id }} / {{ image_count }} </h1>
+        </header>
+        <header>
+            <h1>Image {{ image_id }} / {{ image_count }} </h1>
+        </header>
+        <header>
+            <div class="navigate">
+                <a href="d2.html?id=1">First</a>
+                <a href="d2.html?id={{ prev_prev_image_id }}">&laquo; &laquo; Previous</a>
+                <a href="d2.html?id={{ prev_image_id }}">&laquo; Previous</a>
+                <a href="d2.html?id={{ image_id }}">Refresh</a>
+                <a href="d2.html?id={{ next_image_id }}">Next &raquo;</a>
+                <a href="d2.html?id={{ next_next_image_id }}">Next &raquo; &raquo;</a>
+                <a href="d2.html?id={{ last_image_id }}">Last</a>
+            </div>
+        </header>
+        <nav>
+            <div id="layers" class="layers" />
+        </nav>
+        <section id="svgContainer">{{ svg | safe }}</section>
     </div>
 
     <script type="text/javascript">
+        function createLayerItem(layerContent, node, name) {
+            var checkbox = document.createElement('input');
+            checkbox.type = "checkbox";
+            checkbox.checked = true;
+            checkbox.onchange = function (event) {
+                let visible = event.target.checked;
+                node.setAttribute("visibility", visible ? "visible" : "hidden");
+            };
 
-        function setLayerVisibility(id, visible) {
-            let node = layers[id][3];
-            node.setAttribute("visibility", visible ? "visible" : "hidden");
-        };
+            var label = document.createElement('label')
+            //label.htmlFor = "id";
+            label.appendChild(document.createTextNode(name));
+
+            var li = document.createElement('li')
+            li.appendChild(checkbox);
+            li.appendChild(label);
+
+            layerContent.appendChild(li);
+            return li;
+        }
 
         var svg = null;
-        var layers = [];
         var preserveSize = []
 
         // find svg
-        let svgContent = document.getElementById("container").childNodes;
+        let svgContent = document.getElementById("svgContainer").childNodes;
         for (let i = 0; i < svgContent.length; i++) {
             if (svgContent[i].nodeName == "svg") {
                 svg = svgContent[i];
@@ -81,15 +138,16 @@
         }
         svg.setAttribute("style", "display: inline; min-width: 100%; min-height: 100%; max-width: 100%; max-height: 100%")
 
+        let layerContent = document.getElementById("layers");
 
-        //extract svg nodes
-        let nodes = [[svg, "", 0]];
+        //extract layers and texts
+        let nodes = [[svg, layerContent]];
         let auto_id = 0;
         while (nodes.length > 0) {
             let current = nodes.pop();
             let children = current[0].children;
-            let parentFullName = current[1];
-            let depth = current[2];
+            let docParent = current[1];
+            let listParent = undefined;
             for (let i = 0; i < children.length; i++) {
                 let node = children[i];
                 if (node.tagName == "g") {
@@ -98,44 +156,30 @@
                         name = "layer_" + auto_id;
                         auto_id += 1;
                     }
-                    let fullName = parentFullName + "." + name;
+
+                    // groups to preserve size
                     if (node.getAttribute("preserve-size")) {
                         preserveSize.push(node);
                     }
-                    layers.push([name, fullName, depth + 1, node]);
-                    nodes.push([node, fullName, depth + 1]);
+
+                    //layers
+                    if (!listParent) {
+                        listParent = docParent.appendChild(document.createElement('ul'));
+                    }
+                    let childNode = createLayerItem(listParent, node, name);
+
+                    nodes.push([node, childNode]);
                 }
             }
         }
-        //sort by full name
-        layers.sort((a, b) => a[1] > b[1]);
-        console.log(layers);
-
-        //checkbox
-        let layerContent = document.getElementById("layers");
-        for (let i = 0; i < layers.length; i++) {
-            let layer = layers[i];
-
-            var checkbox = document.createElement('input');
-            checkbox.type = "checkbox";
-            checkbox.checked = true;
-            checkbox.value = i;
-            checkbox.onchange = function (event) { var event = event; setLayerVisibility(event.target.value, event.target.checked); };
-
-            var label = document.createElement('label')
-            label.htmlFor = "id";
-            label.appendChild(document.createTextNode(layer[1]));
-
-            layerContent.appendChild(checkbox);
-            layerContent.appendChild(label);
-            layerContent.appendChild(document.createElement('br'));
-        }
+        console.log(layerContent)
 
         var panZoom = svgPanZoom('svg', {
             zoomEnabled: true,
             controlIconsEnabled: true,
             fit: true,
             center: true,
+            zoomScaleSensitivity: 0.5,
             onZoom: function (v) {
                 let scl = 1 / v;
                 preserveSize.forEach(node => {

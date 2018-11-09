@@ -8,7 +8,7 @@ mod common;
 
 use common::{trace_graph, Coloring, RenderMapping, Sample, SimpleConstraint, SimpleTrif32};
 use shine_testutils::init_webcontroll_test;
-use shine_tri::geometry::position::Posf64;
+use shine_tri::geometry::position::{Posf32, Posf64};
 use shine_tri::{Builder, Checker};
 use std::panic;
 use std::sync::{Arc, Mutex};
@@ -57,27 +57,35 @@ fn quick_debug() {
         tri.add_constraint_segment(map(1., 0.), map(1., 1.), SimpleConstraint(1));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+
         tri.add_constraint_segment(map(0.2, 0.), map(0.5, 0.), SimpleConstraint(2));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+
         tri.add_constraint_segment(map(0.3, 0.), map(0.7, 0.), SimpleConstraint(4));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+
         tri.add_constraint_segment(map(0., 0.), map(1., 0.), SimpleConstraint(8));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+
         tri.add_constraint_segment(map(1., 0.), map(0., 0.), SimpleConstraint(16));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+
         tri.add_constraint_segment(map(1., 1.), map(0., 0.), SimpleConstraint(32));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+
         tri.add_constraint_segment(map(0.1, 0.1), map(0.9, 0.9), SimpleConstraint(64));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+
         tri.add_constraint_segment(map(0.9, 0.9), map(0.1, 0.1), SimpleConstraint(128));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+
         tri.add_constraint_segment(map(0.8, 0.8), map(0.2, 0.2), SimpleConstraint(256));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
