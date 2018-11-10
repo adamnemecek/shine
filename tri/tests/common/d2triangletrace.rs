@@ -37,8 +37,8 @@ impl Coloring {
             edge_text: ("blue".into(), 0.03),
             face_text: ("blue".into(), 0.05),
 
-            constraint_edge: "cyan".into(),
-            constraint_edge_text: ("cyan".into(), 0.03),
+            constraint_edge: "green".into(),
+            constraint_edge_text: ("green".into(), 0.03),
 
             infinite_vertex: "grey".into(),
             infinite_vertex_text: ("grey".into(), 0.05),

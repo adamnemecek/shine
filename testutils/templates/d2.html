@@ -5,49 +5,43 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <meta name="viewport" content="user-scalable=no, width=device-width, initial-scale=1, maximum-scale=1" />
+
     <style tyle="text/css">
-        html {
-            margin: 0;
-        }
         body {
+            margin: 0;  
+            max-height: 100vh;
+            height: 100vh;
+
             height: 100%;
-            background: #2980b9;
+            background: #343a3f;
             color: #FFF;
             font-family: Helvetica;
             text-align: center;
-            margin: 0;
-        }
 
-        *, *:before, *:after {
-            -moz-box-sizing: border-box;
-            -webkit-box-sizing: border-box;
-            box-sizing: border-box;
-        }
-        header, nav, section {
-            border: 1px solid rgba(255,255,255,0.8);
-            margin-bottom: 1vh;
-            border-radius: 3px;
+            display: grid;
+            grid-template-rows: 1fr 5fr;
+            grid-template-columns: 1fr 5fr;
+            grid-template-areas: 
+                "header header"
+                "nav main";
+            grid-gap: .25em;        
         }
         header {
-	        width: 100vw;
-            _height: 20vh;
-            padding: 0 0;
-            overflow: auto;
+            grid-area: header;
         }
         nav {
-            width: 20vw;
-            _height: 100%;
-            margin-right: 1vw;
-            float: left;
+            grid-area: nav;
             overflow: auto;
-        } 
-        section {
-            width: 75vw;
-            height: 100%;
-            float: left;
+        }
+        main {
+            grid-area: main;
             overflow: hidden;
-        }  
+        }
+        header, nav, main {
+            border: 1px solid rgba(255,255,255,0.8);
+            _margin-bottom: 1vh;
+            border-radius: 3px;
+        }
 
         .navigate a {
             background-color: #4CAF50;
@@ -61,50 +55,43 @@
         .navigate a:hover {
             background-color: #ddd;
             color: black;
-        }
-              
+        }              
+
         .layers ul { 
             padding: 0 0 0 0;
             list-style: none;
+            text-align: left;
         }
         .layers li { 
             padding: 2px 0 2px 32px;
-        }      
+        }
     </style>
 </head>
 
 <script src="jscript/svg-pan-zoom/svg-pan-zoom.min.js" type="text/javascript"></script>
 
 <body>
-    <div class="wrapper">
-        <header>
-            <h1>Image {{ image_id }} / {{ image_count }} </h1>
-        </header>
-        <header>
-            <h1>Image {{ image_id }} / {{ image_count }} </h1>
-        </header>
-        <header>
-            <h1>Image {{ image_id }} / {{ image_count }} </h1>
-        </header>
-        <header>
-            <div class="navigate">
-                <a href="d2.html?id=1">First</a>
-                <a href="d2.html?id={{ prev_prev_image_id }}">&laquo; &laquo; Previous</a>
-                <a href="d2.html?id={{ prev_image_id }}">&laquo; Previous</a>
-                <a href="d2.html?id={{ image_id }}">Refresh</a>
-                <a href="d2.html?id={{ next_image_id }}">Next &raquo;</a>
-                <a href="d2.html?id={{ next_next_image_id }}">Next &raquo; &raquo;</a>
-                <a href="d2.html?id={{ last_image_id }}">Last</a>
-            </div>
-        </header>
-        <nav>
-            <div id="layers" class="layers" />
-        </nav>
-        <section id="svgContainer">{{ svg | safe }}</section>
-    </div>
+    <header>
+        <h1>Image {{ image_id }} / {{ image_count }} </h1>
+        <div class="navigate">
+            <a href="d2.html?id=1">First</a>
+            <a href="d2.html?id={{ prev_prev_image_id }}">&laquo; &laquo; Previous</a>
+            <a href="d2.html?id={{ prev_image_id }}">&laquo; Previous</a>
+            <a href="d2.html?id={{ image_id }}">Refresh</a>
+            <a href="d2.html?id={{ next_image_id }}">Next &raquo;</a>
+            <a href="d2.html?id={{ next_next_image_id }}">Next &raquo; &raquo;</a>
+            <a href="d2.html?id={{ last_image_id }}">Last</a>
+        </div>
+    </header>
+    <nav>
+        <div id="layers" class="layers" />
+    </nav>
+    <main>
+        <div id="svgContainer" style="height: 100%;">{{ svg | safe }}</div>
+    </main>
 
     <script type="text/javascript">
-        function createLayerItem(layerContent, node, name) {
+        function createLayerItem(layerContent, node, name, id) {
             var checkbox = document.createElement('input');
             checkbox.type = "checkbox";
             checkbox.checked = true;
@@ -114,7 +101,7 @@
             };
 
             var label = document.createElement('label')
-            //label.htmlFor = "id";
+            label.id = id;
             label.appendChild(document.createTextNode(name));
 
             var li = document.createElement('li')
@@ -140,11 +127,11 @@
 
         let layerContent = document.getElementById("layers");
 
-        //extract layers and texts
-        let nodes = [[svg, layerContent]];
+        //parse svg
+        let openNodes = [[svg, layerContent]];
         let auto_id = 0;
-        while (nodes.length > 0) {
-            let current = nodes.pop();
+        while (openNodes.length > 0) {
+            let current = openNodes.pop();
             let children = current[0].children;
             let docParent = current[1];
             let listParent = undefined;
@@ -152,10 +139,9 @@
                 let node = children[i];
                 if (node.tagName == "g") {
                     let name = node.id;
-                    if (!name) {
-                        name = "layer_" + auto_id;
-                        auto_id += 1;
-                    }
+                    let id = "layer_" + auto_id;
+                    auto_id += 1;
+                    if (!name) { name = id; }
 
                     // groups to preserve size
                     if (node.getAttribute("preserve-size")) {
@@ -166,13 +152,12 @@
                     if (!listParent) {
                         listParent = docParent.appendChild(document.createElement('ul'));
                     }
-                    let childNode = createLayerItem(listParent, node, name);
+                    let childNode = createLayerItem(listParent, node, name, id);
 
-                    nodes.push([node, childNode]);
+                    openNodes.push([node, childNode]);
                 }
             }
         }
-        console.log(layerContent)
 
         var panZoom = svgPanZoom('svg', {
             zoomEnabled: true,
