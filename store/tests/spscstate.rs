@@ -2,11 +2,9 @@ extern crate env_logger;
 extern crate shine_store;
 extern crate shine_testutils;
 
-use std::env;
-use std::thread;
-
 use shine_store::spscstate::state_channel;
-use shine_testutils::init_test;
+use shine_testutils::{init_test, init_test_no_thread};
+use std::thread;
 
 const ITER_COUNT: i32 = 0x2ffff;
 
@@ -53,12 +51,7 @@ fn single_threaded_stress_small_buffer() {
 
 #[test]
 fn multi_threaded_stress_small_buffer() {
-    init_test(module_path!());
-
-    assert!(
-        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
-        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
-    );
+    init_test_no_thread(module_path!()).expect("Single threaded test environment required");
 
     let (p, c) = state_channel();
 
@@ -167,12 +160,7 @@ fn single_threaded_stress_big_buffer() {
 
 #[test]
 fn multi_threaded_stress_big_buffer() {
-    init_test(module_path!());
-
-    assert!(
-        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
-        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
-    );
+    init_test_no_thread(module_path!()).expect("Single threaded test environment required");
 
     let (p, c) = state_channel::<BigData>();
 

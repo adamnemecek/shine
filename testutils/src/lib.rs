@@ -10,6 +10,9 @@ extern crate tera;
 
 pub mod webserver;
 
+use std::env;
+
+/// Init basic test environment and logging
 pub fn init_test(module: &str) {
     ::std::env::set_var("RUST_BACKTRACE", "1");
 
@@ -21,6 +24,25 @@ pub fn init_test(module: &str) {
     println!(""); // add a new line after the test output ...
 }
 
+/// Init test environment environment and logging for single threaded environment
+pub fn init_test_no_thread(module: &str) -> Result<(), ()> {
+    let is_single_threaded = if env::args().into_iter().find(|a| a == "--test-threads=1").is_some() {
+        true
+    } else if env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1" {
+        true
+    } else {
+        false
+    };
+
+    if is_single_threaded {
+        init_test(module);
+        Ok(())
+    } else {
+        Err(())
+    }
+}
+
+/// Init test environment environment and logging for quickcheck tests
 pub fn init_quickcheck_test(module: &str, test_count: usize) {
     ::std::env::set_var("RUST_BACKTRACE", "1");
 
@@ -34,6 +56,7 @@ pub fn init_quickcheck_test(module: &str, test_count: usize) {
     println!(""); // add a new line after the test output ...
 }
 
+/// Init test environment environment and logging with debug webserver support
 pub fn init_webcontroll_test(module: &str) -> webserver::Service {
     init_test(module);
 

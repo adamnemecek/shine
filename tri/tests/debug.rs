@@ -62,7 +62,11 @@ fn quick_debug() {
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
-        tri.add_constraint_segment(map(0.3, 0.), map(0.7, 0.), SimpleConstraint(4));
+        let va = tri.add_vertex(map(0.3, 0.), None);
+        let vb = tri.add_vertex(map(0.7, 0.), None);
+        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.add_constraint_edge(va, vb, SimpleConstraint(4));
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 

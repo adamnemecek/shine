@@ -1,6 +1,7 @@
 use actix;
 use actix_web::{fs, http, middleware, server, App, Error as ActixWebError, HttpRequest, HttpResponse};
 use futures::future::Future;
+use log::info;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use tera::{self, compile_templates};
@@ -12,7 +13,6 @@ crate struct AppContext {
 }
 
 fn control_page(_req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    println!("hello");
     Ok(HttpResponse::Ok().content_type("test/html").body("Hello"))
 }
 
@@ -69,8 +69,9 @@ impl Service {
         let mut tr = D2Trace::new();
         t.trace(&mut tr);
         let svg = tr.document().to_string();
-        let mut imges = self.d2_images.lock().unwrap();
-        imges.push(svg);
+        let mut images = self.d2_images.lock().unwrap();
+        images.push(svg);
+        info!("New d2 image added: id={}", images.len());
     }
 
     pub fn wait_user(&self) {

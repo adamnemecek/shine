@@ -39,46 +39,16 @@
             "type": "shell",
             "label": "run current test",
             "command": "cargo",
-            "options": {
-                "env": {
-                    "RUST_TEST_THREADS": "1",
-                }
-            },
             "args": [
                 "test",
                 "-p",
                 "shine-tri",
-                "--test",
-                "debug",
+                //"--test",
+                //"debug",
                 "--",
-                "--nocapture",
-                "--ignored"
-            ],
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "panel": "new"
-            },
-            "problemMatcher": [
-                "$rustc"
-            ]
-        },
-        {
-            "type": "shell",
-            "label": "run current example",
-            "command": "cargo",
-            "options": {
-                "env": {
-                    "RUST_TEST_THREADS": "1",
-                }
-            },
-            "args": [
-                "run",
-                "-p",
-                "shine-tri",
-                "--example",
-                "quickcheck"
+                //"--test-threads=1",
+                //"--nocapture",
+                //"--ignored"
             ],
             "presentation": {
                 "echo": true,

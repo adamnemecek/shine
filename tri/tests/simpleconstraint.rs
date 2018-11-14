@@ -13,7 +13,7 @@ use shine_tri::geometry::{Position, Predicates, Real};
 use shine_tri::{Builder, Checker, Triangulation};
 
 #[test]
-fn constraint_segment() {
+fn t0_constraint_segment() {
     init_test(module_path!());
 
     fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
@@ -66,7 +66,7 @@ fn constraint_segment() {
 }
 
 #[test]
-fn constraint_simple1() {
+fn t1_constraint_no_fill1() {
     init_test(module_path!());
 
     fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
@@ -126,8 +126,7 @@ fn constraint_simple1() {
 }
 
 #[test]
-#[ignore]
-fn constraint_simple2() {
+fn t2_constraint_no_fill2() {
     init_test(module_path!());
 
     fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)

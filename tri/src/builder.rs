@@ -546,6 +546,7 @@ where
         let mut chain_store = ChainStore::new();
         let mut start = v0;
         while start != v1 {
+            println!("add constrainat: {:?}->{:?}", start, v1);
             // collect intersecting faces and generate the two (top/bottom) chains
             // The edge-chain is not a whole polygon the new constraining edge is the missing closing edge
 
@@ -553,7 +554,8 @@ where
                 let mut crossing_iter = CrossingIterator::new(self, start, v1);
 
                 let cross = crossing_iter.next().unwrap();
-                if cross.side == CrossingSide::Start {
+                println!("cross: {:?}", cross);
+                if cross.side == CrossingSide::CCW || cross.side == CrossingSide::CW {
                     let mut top_chain = chain_store.new_chain(cross.face, cross.edge.increment(), true);
                     let bottom_chain = chain_store.new_chain(cross.face, cross.edge.decrement(), true);
 

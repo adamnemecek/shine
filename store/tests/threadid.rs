@@ -4,13 +4,11 @@ extern crate shine_store;
 extern crate shine_testutils;
 
 use log::info;
-use std::env;
+use shine_store::threadid;
+use shine_testutils::{init_test, init_test_no_thread};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
-
-use shine_store::threadid;
-use shine_testutils::init_test;
 
 #[test]
 fn thread_count() {
@@ -24,12 +22,7 @@ fn thread_count() {
 
 #[test]
 fn alloc_free() {
-    init_test(module_path!());
-
-    assert!(
-        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
-        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
-    );
+    init_test_no_thread(module_path!()).expect("Single threaded test environment required");
 
     let max_thread_count = threadid::get_max_thread_count();
     info!("number of threads: {}", max_thread_count);

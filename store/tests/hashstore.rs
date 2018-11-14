@@ -4,12 +4,11 @@ extern crate shine_store;
 extern crate shine_testutils;
 
 use log::{debug, info, trace};
-use std::env;
 use std::sync::Arc;
 use std::thread;
 
 use shine_store::hashstore::{HashStore, Key};
-use shine_testutils::init_test;
+use shine_testutils::{init_test, init_test_no_thread};
 
 /// Resource id for test data
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -140,12 +139,7 @@ fn simple_single_threaded() {
 
 #[test]
 fn simple_multi_threaded() {
-    init_test(module_path!());
-
-    assert!(
-        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
-        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
-    );
+    init_test_no_thread(module_path!()).expect("Single threaded test environment required");
 
     let store = HashStore::<TestDataId, TestData>::new();
     let store = Arc::new(store);
@@ -244,12 +238,7 @@ fn simple_multi_threaded() {
 
 #[test]
 fn check_lock() {
-    init_test(module_path!());
-
-    assert!(
-        env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1",
-        "This test shall run in single threaded test environment: RUST_TEST_THREADS=1"
-    );
+    init_test_no_thread(module_path!()).expect("Single threaded test environment required");
 
     use std::mem;
     use std::panic;

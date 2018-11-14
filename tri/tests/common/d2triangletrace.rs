@@ -401,18 +401,13 @@ where
 
         tr.set_scale(minx, miny, maxx, maxy);
 
-        tr.push_layer();
+        for v in self.graph.vertex_index_iter() {
+            self.add_vertex(tr, v, None);
+        }
         for f in self.graph.face_index_iter() {
             self.add_face(tr, f, None);
             //add_circum_circle( f, None );
         }
-        tr.pop_layer();
-
-        tr.push_layer();
-        for v in self.graph.vertex_index_iter() {
-            self.add_vertex(tr, v, None);
-        }
-        tr.pop_layer();
     }
 }
 

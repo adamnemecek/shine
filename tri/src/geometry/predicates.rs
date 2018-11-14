@@ -1,12 +1,13 @@
 use geometry::{Position, Real};
+use std::fmt;
 
-pub trait Orientation {
+pub trait Orientation: fmt::Debug {
     fn is_cw(&self) -> bool;
     fn is_collinear(&self) -> bool;
     fn is_ccw(&self) -> bool;
 }
 
-pub trait CollinearTest {
+pub trait CollinearTest: fmt::Debug {
     fn is_before(&self) -> bool;
     fn is_first(&self) -> bool;
     fn is_between(&self) -> bool;
