@@ -195,3 +195,54 @@ fn t2_constraint_no_fill2() {
     test_(SimpleTrii32::default(), "exact i32");
     test_(SimpleTrii64::default(), "exact i64");
 }
+
+fn t2_constraint_concave() {
+    init_test(module_path!());
+
+    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
+    where
+        R: Real,
+        P: Default + Position<Real = R> + From<Sample>,
+        PR: Default + Predicates<Position = P, Real = R>,
+    {
+        info!("{}", desc);
+
+        let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
+            ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
+            ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
+            ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
+            ("(x, -y)", Box::new(|x, y| Sample(x, -y).into())),
+            ("(y, x)", Box::new(|x, y| Sample(y, x).into())),
+            ("(-y, x)", Box::new(|x, y| Sample(-y, x).into())),
+            ("(-y, -x)", Box::new(|x, y| Sample(-y, -x).into())),
+            ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
+        ];
+
+        for (info, map) in transforms.iter() {
+            debug!("transformation: {}", info);
+
+            let e = tri.addVertex(map(2.0, 2.5));
+            let d = tri.addVertex(map(3.5, 2.5));
+            let b = tri.addVertex(map(2.0, 0.5));
+            let c = tri.addVertex(map(3.5, 0.0));
+            let a = tri.addVertex(map(1.0, 0.0));
+            let p0 = tri.addVertex(map(0.0, 1.0));
+            let f = tri.addVertex(map(1.0, 1.5));
+            let p1 = tri.addVertex(map(4.0, 1.0));
+            assert_eq!(tri.check(None), Ok(()));
+
+            tri.addConstraint(p0, p1, 0x1);
+            assert_eq!(tri.check(None), Ok(()));
+
+            trace!("clear");
+            tri.graph.clear();
+            assert!(tri.graph.is_empty());
+            assert_eq!(tri.check(None), Ok(()));
+        }
+    }
+
+    test_(SimpleTrif32::default(), "inexact f32");
+    test_(SimpleTrif64::default(), "inexact f64");
+    test_(SimpleTrii32::default(), "exact i32");
+    test_(SimpleTrii64::default(), "exact i64");
+}

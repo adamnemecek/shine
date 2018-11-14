@@ -15,13 +15,11 @@ use std::env;
 /// Init basic test environment and logging
 pub fn init_test(module: &str) {
     ::std::env::set_var("RUST_BACKTRACE", "1");
-
     if ::std::env::var("RUST_LOG").is_err() {
         ::std::env::set_var("RUST_LOG", format!("info,{}=debug", module));
     }
 
     let _ = env_logger::try_init();
-    println!(""); // add a new line after the test output ...
 }
 
 /// Init test environment environment and logging for single threaded environment
@@ -45,15 +43,12 @@ pub fn init_test_no_thread(module: &str) -> Result<(), ()> {
 /// Init test environment environment and logging for quickcheck tests
 pub fn init_quickcheck_test(module: &str, test_count: usize) {
     ::std::env::set_var("RUST_BACKTRACE", "1");
-
     if ::std::env::var("RUST_LOG").is_err() {
         ::std::env::set_var("RUST_LOG", format!("info,{}=debug,quickcheck=debug", module));
     }
     ::std::env::set_var("QUICKCHECK_TESTS", format!("{}", test_count));
 
     let _ = env_logger::try_init();
-
-    println!(""); // add a new line after the test output ...
 }
 
 /// Init test environment environment and logging with debug webserver support

@@ -1,5 +1,5 @@
 use indexing::IndexGet;
-use std::{fmt, mem};
+use std::{io, mem};
 use types::{FaceIndex, Rot3};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -119,7 +119,7 @@ impl ChainStore {
         (prev, next)
     }
 
-    pub fn dump(&self, chain: ChainIndex, f: &mut fmt::Formatter) -> fmt::Result {
+    pub fn dump<F: io::Write>(&self, chain: ChainIndex, f: &mut F) -> Result<(), io::Error> {
         let mut cur = chain;
         loop {
             let item = self.at(cur);

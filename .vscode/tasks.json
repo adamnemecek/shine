@@ -43,12 +43,11 @@
                 "test",
                 "-p",
                 "shine-tri",
-                //"--test",
-                //"debug",
+                "--test",
+                "debug",
                 "--",
-                //"--test-threads=1",
                 //"--nocapture",
-                //"--ignored"
+                "--ignored"
             ],
             "presentation": {
                 "echo": true,

@@ -582,6 +582,8 @@ where
                         };
                     }
 
+                    chain_store.dump(top_chain, &mut std::io::stdout()).unwrap();
+                    chain_store.dump(bottom_chain, &mut std::io::stdout()).unwrap();
                     //edge = triangulateHole( chain_store, top_chain, bottom_chain );
                     //startV = tri_.getEndVertex( edge );
                     chain_store.clear();
