@@ -7,11 +7,11 @@ use types::{FaceIndex, Rot3, VertexIndex};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CrossingSide {
-    /// vertex_to lies on the query-edge
+    /// crossed edge and query-edge are coincident
     Coincident,
-    /// vertex_to is on the positive side of edge
+    /// vertex_from is on the positive side of edge
     CCW,
-    /// vertex_to is on the negative side of edge
+    /// vertex_from is on the negative side of edge
     CW,
     /// End of iteration, end of query (v1) reached
     End,
@@ -21,8 +21,8 @@ pub enum CrossingSide {
 pub struct CrossedEdge {
     pub face: FaceIndex,
     pub edge: Rot3,
-    pub vertex_to: VertexIndex,
-    pub side: CrossingSide,
+    pub vertex_from: VertexIndex,
+    pub side_from: CrossingSide,
 }
 
 pub struct CrossingIterator<'a, PR, V, F>
@@ -54,27 +54,32 @@ where
             current: CrossedEdge {
                 face,
                 edge,
-                vertex_to: v0,
-                side: CrossingSide::Coincident,
+                vertex_from: v0,
+                side_from: CrossingSide::Coincident,
             },
         }
     }
 
     /// Find next edge to continue after a coincident edge.
-    /// It requires a full circular search around the vertex_to point as the next crossed face might not be adjacent
+    /// It requires a full circular search around the vertex_from point as the next crossed face might not be adjacent
     /// to the previous face.
     fn next_restart(&self) -> CrossedEdge {
-        assert_eq!(self.current.side, CrossingSide::Coincident);
-        assert_ne!(self.current.vertex_to, self.v1);
+        assert_eq!(self.current.side_from, CrossingSide::Coincident);
+        assert_ne!(self.current.vertex_from, self.v1);
 
-        println!("next_restart {:?},{:?}, {:?}", self.v0, self.v1, self.current.vertex_to);
+        println!("next_restart {:?},{:?}, {:?}", self.v0, self.v1, self.current.vertex_from);
 
-        let mut direction = CrossingSide::Coincident;
-        let mut circulator = EdgeCirculator::new(self.tri, self.current.vertex_to);
+        let mut start_orientation = CrossingSide::Coincident;
+        let mut circulator = EdgeCirculator::new(self.tri, self.current.vertex_from);
 
         loop {
             let vertex = circulator.vertex();
-            println!("(next)vertex: {:?}", vertex);
+            println!(
+                "edge {:?},{:?},{:?}",
+                circulator.face(),
+                circulator.edge(),
+                circulator.vertex()
+            );
             if self.tri.graph.is_infinite_vertex(vertex) {
                 // skip infinite edges
                 circulator.advance_cw();
@@ -82,12 +87,11 @@ where
             }
 
             if vertex == self.v1 {
-                println!("vertex = v1: {:?}", vertex);
                 return CrossedEdge {
                     face: circulator.face(),
                     edge: circulator.edge(),
-                    vertex_to: vertex,
-                    side: CrossingSide::End,
+                    vertex_from: vertex,
+                    side_from: CrossingSide::End,
                 };
             }
 
@@ -111,8 +115,8 @@ where
                         return CrossedEdge {
                             face: circulator.face(),
                             edge: circulator.edge(),
-                            vertex_to: vertex,
-                            side: CrossingSide::Coincident,
+                            vertex_from: vertex,
+                            side_from: CrossingSide::Coincident,
                         };
                     }
                     CrossingSide::CCW
@@ -122,79 +126,87 @@ where
                     CrossingSide::CW
                 }
             };
+            println!("start_orientation = {:?}", start_orientation);
             println!("orientation = {:?}", orientation);
-            println!("direction = {:?}", direction);
 
-            if direction == CrossingSide::Coincident {
+            if start_orientation == CrossingSide::Coincident {
                 // "first" loop iteration, find circulating direction
                 assert!(orientation == CrossingSide::CCW || orientation == CrossingSide::CW);
-                direction = orientation;
+                start_orientation = orientation;
             }
 
-            if direction != orientation {
+            if start_orientation != orientation {
                 // orientation has changed -> we have the edge crossing the query
-                if direction == CrossingSide::CW {
+                if orientation == CrossingSide::CCW {
+                    // we have just passed our edge, go back
                     circulator.advance_cw();
                 }
 
                 return CrossedEdge {
                     face: circulator.face(),
-                    edge: circulator.edge(),
-                    vertex_to: circulator.vertex(),
-                    side: orientation, // todo: or direction???
+                    edge: circulator.edge().increment(),
+                    vertex_from: circulator.vertex(),
+                    side_from: CrossingSide::CW,
                 };
-            } else if direction == CrossingSide::CCW {
+            } else if start_orientation == CrossingSide::CCW {
                 circulator.advance_cw();
             } else {
-                assert_eq!(direction, CrossingSide::CW);
+                assert_eq!(start_orientation, CrossingSide::CW);
                 circulator.advance_ccw();
             }
         }
     }
 
     fn next_crossed(&self) -> CrossedEdge {
-        assert!(self.current.side != CrossingSide::CCW || self.current.side != CrossingSide::CW);
-        assert!(self.current.vertex_to != self.v1);
+        assert!(self.current.side_from != CrossingSide::CCW || self.current.side_from != CrossingSide::CW);
+        assert!(self.current.vertex_from != self.v1);
+
+        println!(
+            "next_crossed {:?},{:?},{:?}",
+            self.current.face, self.current.edge, self.current.vertex_from
+        );
 
         let face = self.tri.graph[self.current.face].neighbor(self.current.edge);
         let vertex_index = self.tri.graph[face].get_neighbor_index(self.current.face).unwrap();
         let vertex = self.tri.graph[face].vertex(vertex_index);
 
+        println!("check {:?},{:?},{:?}", face, vertex_index, vertex);
+
         if vertex == self.v1 {
             return CrossedEdge {
                 face,
                 edge: vertex_index.increment(),
-                vertex_to: vertex,
-                side: CrossingSide::End,
+                vertex_from: vertex,
+                side_from: CrossingSide::End,
             };
         };
 
         let p0 = &self.tri.graph[PositionQuery::Vertex(self.v0)];
         let p1 = &self.tri.graph[PositionQuery::Vertex(self.v1)];
-        let pn = &self.tri.graph[PositionQuery::Vertex(self.current.vertex_to)];
+        let pn = &self.tri.graph[PositionQuery::Vertex(vertex)];
         let orientation = self.tri.predicates.orientation_triangle(p0, p1, pn);
-        println!("orientation: {:?}", orientation);
+        println!("orientation({:?},{:?},{:?}): {:?}", self.v0, self.v1, vertex, orientation);
         assert!(!orientation.is_collinear(), "next != v1, but v0,v1,next are collinear");
         if orientation.is_ccw() {
             return CrossedEdge {
                 face,
                 edge: vertex_index.increment(),
-                vertex_to: vertex,
-                side: CrossingSide::CCW,
+                vertex_from: vertex,
+                side_from: CrossingSide::CCW,
             };
         } else {
             return CrossedEdge {
                 face,
                 edge: vertex_index.decrement(),
-                vertex_to: vertex,
-                side: CrossingSide::CW,
+                vertex_from: vertex,
+                side_from: CrossingSide::CW,
             };
         }
     }
 
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<CrossedEdge> {
-        let next = match self.current.side {
+        let next = match self.current.side_from {
             CrossingSide::Coincident => self.next_restart(),
             CrossingSide::CCW | CrossingSide::CW => self.next_crossed(),
             CrossingSide::End => return None,

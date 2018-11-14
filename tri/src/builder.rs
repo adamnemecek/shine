@@ -554,10 +554,13 @@ where
                 let mut crossing_iter = CrossingIterator::new(self, start, v1);
 
                 let cross = crossing_iter.next().unwrap();
-                println!("cross: {:?}", cross);
-                if cross.side == CrossingSide::CCW || cross.side == CrossingSide::CW {
+                println!("crossing edge: {:?}", cross);
+                if cross.side_from == CrossingSide::CCW || cross.side_from == CrossingSide::CW {
                     let mut top_chain = chain_store.new_chain(cross.face, cross.edge.increment(), true);
                     let bottom_chain = chain_store.new_chain(cross.face, cross.edge.decrement(), true);
+
+                    //chain_store.dump(top_chain, &mut std::io::stdout()).unwrap();
+                    //chain_store.dump(bottom_chain, &mut std::io::stdout()).unwrap();
 
                     while let Some(cross) = crossing_iter.next() {
                         //if self.tri.graph.getConstraint( edge ) ) {
@@ -565,7 +568,8 @@ where
                         //unimplemented!( "Not implemented" );
                         //}
 
-                        match cross.side {
+                        println!("crossing edge: {:?}", cross);
+                        match cross.side_from {
                             CrossingSide::CCW => {
                                 top_chain = chain_store.insert_before(top_chain, cross.face, cross.edge.increment());
                             }
@@ -580,6 +584,9 @@ where
                             }
                             _ => unreachable!(),
                         };
+
+                        //chain_store.dump(top_chain, &mut std::io::stdout()).unwrap();
+                        //chain_store.dump(bottom_chain, &mut std::io::stdout()).unwrap();
                     }
 
                     chain_store.dump(top_chain, &mut std::io::stdout()).unwrap();

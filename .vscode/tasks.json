@@ -46,7 +46,7 @@
                 "--test",
                 "debug",
                 "--",
-                //"--nocapture",
+                "--nocapture",
                 "--ignored"
             ],
             "presentation": {
