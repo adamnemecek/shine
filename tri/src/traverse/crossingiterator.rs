@@ -1,19 +1,16 @@
 use geometry::{CollinearTest, Orientation, Predicates};
 use graph::{Face, Vertex};
 use indexing::PositionQuery;
+use std::mem;
 use traverse::edgecirculator::EdgeCirculator;
 use triangulation::Triangulation;
 use types::{FaceIndex, Rot3, VertexIndex};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CrossingSide {
-    /// crossed edge and query-edge are coincident
     Coincident,
-    /// vertex_from is on the positive side of edge
     CCW,
-    /// vertex_from is on the negative side of edge
     CW,
-    /// End of iteration, end of query (v1) reached
     End,
 }
 
@@ -21,11 +18,10 @@ pub enum CrossingSide {
 pub struct CrossedEdge {
     pub face: FaceIndex,
     pub edge: Rot3,
-    pub vertex_from: VertexIndex,
-    pub side_from: CrossingSide,
+    pub side: CrossingSide,
 }
 
-pub struct CrossingIterator<'a, PR, V, F>
+struct CrossingSearch<'a, PR, V, F>
 where
     PR: 'a + Predicates,
     V: 'a + Vertex<Position = PR::Position>,
@@ -34,52 +30,21 @@ where
     tri: &'a Triangulation<PR, V, F>,
     v0: VertexIndex,
     v1: VertexIndex,
-    current: CrossedEdge,
 }
 
-impl<'a, PR, V, F> CrossingIterator<'a, PR, V, F>
+impl<'a, PR, V, F> CrossingSearch<'a, PR, V, F>
 where
     PR: 'a + Predicates,
     V: 'a + Vertex<Position = PR::Position>,
     F: 'a + Face,
 {
-    pub fn new(tri: &Triangulation<PR, V, F>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<PR, V, F> {
-        assert_eq!(tri.graph.dimension(), 2);
-        let face = tri.graph[v0].face();
-        let edge = tri.graph[face].get_vertex_index(v0).unwrap();
-        CrossingIterator {
-            tri,
-            v0,
-            v1,
-            current: CrossedEdge {
-                face,
-                edge,
-                vertex_from: v0,
-                side_from: CrossingSide::Coincident,
-            },
-        }
-    }
-
-    /// Find next edge to continue after a coincident edge.
-    /// It requires a full circular search around the vertex_from point as the next crossed face might not be adjacent
-    /// to the previous face.
-    fn next_restart(&self) -> CrossedEdge {
-        assert_eq!(self.current.side_from, CrossingSide::Coincident);
-        assert_ne!(self.current.vertex_from, self.v1);
-
-        println!("next_restart {:?},{:?}, {:?}", self.v0, self.v1, self.current.vertex_from);
-
+    /// Find next crossing edge by circulating the edges around a vertex.
+    fn search_vertex(&self, start_vertex: VertexIndex) -> Option<CrossedEdge> {
         let mut start_orientation = CrossingSide::Coincident;
-        let mut circulator = EdgeCirculator::new(self.tri, self.current.vertex_from);
+        let mut circulator = EdgeCirculator::new(self.tri, start_vertex);
 
         loop {
             let vertex = circulator.vertex();
-            println!(
-                "edge {:?},{:?},{:?}",
-                circulator.face(),
-                circulator.edge(),
-                circulator.vertex()
-            );
             if self.tri.graph.is_infinite_vertex(vertex) {
                 // skip infinite edges
                 circulator.advance_cw();
@@ -87,12 +52,7 @@ where
             }
 
             if vertex == self.v1 {
-                return CrossedEdge {
-                    face: circulator.face(),
-                    edge: circulator.edge(),
-                    vertex_from: vertex,
-                    side_from: CrossingSide::End,
-                };
+                return None;
             }
 
             let orientation = {
@@ -101,7 +61,6 @@ where
                 let pos = &self.tri.graph[PositionQuery::Vertex(vertex)];
 
                 let orient = self.tri.predicates.orientation_triangle(p0, p1, pos);
-                println!("orient({:?},{:?},{:?}) = {:?}", self.v0, self.v1, vertex, orient);
                 if orient.is_collinear() {
                     let t = self.tri.predicates.test_collinear_points(p0, p1, pos);
                     if t.is_first() {
@@ -112,12 +71,11 @@ where
                         panic!("invalid triangulation, collinear, pos is not contained in the (p0,p1) segment");
                     } else if t.is_between() {
                         // pe is between p0 and p1
-                        return CrossedEdge {
+                        return Some(CrossedEdge {
                             face: circulator.face(),
                             edge: circulator.edge(),
-                            vertex_from: vertex,
-                            side_from: CrossingSide::Coincident,
-                        };
+                            side: CrossingSide::Coincident,
+                        });
                     }
                     CrossingSide::CCW
                 } else if orient.is_ccw() {
@@ -126,8 +84,6 @@ where
                     CrossingSide::CW
                 }
             };
-            println!("start_orientation = {:?}", start_orientation);
-            println!("orientation = {:?}", orientation);
 
             if start_orientation == CrossingSide::Coincident {
                 // "first" loop iteration, find circulating direction
@@ -142,12 +98,11 @@ where
                     circulator.advance_cw();
                 }
 
-                return CrossedEdge {
+                return Some(CrossedEdge {
                     face: circulator.face(),
                     edge: circulator.edge().increment(),
-                    vertex_from: circulator.vertex(),
-                    side_from: CrossingSide::CW,
-                };
+                    side: CrossingSide::CW,
+                });
             } else if start_orientation == CrossingSide::CCW {
                 circulator.advance_cw();
             } else {
@@ -157,62 +112,79 @@ where
         }
     }
 
-    fn next_crossed(&self) -> CrossedEdge {
-        assert!(self.current.side_from != CrossingSide::CCW || self.current.side_from != CrossingSide::CW);
-        assert!(self.current.vertex_from != self.v1);
+    /// Find next crossing edge by circulating the edges around the vertex of a face
+    fn search_face_vertex(&self, start_face: FaceIndex, start_edge: Rot3) -> Option<CrossedEdge> {
+        let start_vertex = self.tri.graph[start_face].vertex(start_edge);
+        self.search_vertex(start_vertex)
+    }
 
-        println!(
-            "next_crossed {:?},{:?},{:?}",
-            self.current.face, self.current.edge, self.current.vertex_from
-        );
-
-        let face = self.tri.graph[self.current.face].neighbor(self.current.edge);
-        let vertex_index = self.tri.graph[face].get_neighbor_index(self.current.face).unwrap();
+    /// Find next crossing edge by checking the opposite face.
+    fn search_edge(&self, start_face: FaceIndex, start_edge: Rot3) -> Option<CrossedEdge> {
+        let face = self.tri.graph[start_face].neighbor(start_edge);
+        let vertex_index = self.tri.graph[face].get_neighbor_index(start_face).unwrap();
         let vertex = self.tri.graph[face].vertex(vertex_index);
 
-        println!("check {:?},{:?},{:?}", face, vertex_index, vertex);
-
         if vertex == self.v1 {
-            return CrossedEdge {
-                face,
-                edge: vertex_index.increment(),
-                vertex_from: vertex,
-                side_from: CrossingSide::End,
-            };
+            return None;
         };
 
         let p0 = &self.tri.graph[PositionQuery::Vertex(self.v0)];
         let p1 = &self.tri.graph[PositionQuery::Vertex(self.v1)];
         let pn = &self.tri.graph[PositionQuery::Vertex(vertex)];
         let orientation = self.tri.predicates.orientation_triangle(p0, p1, pn);
-        println!("orientation({:?},{:?},{:?}): {:?}", self.v0, self.v1, vertex, orientation);
         assert!(!orientation.is_collinear(), "next != v1, but v0,v1,next are collinear");
         if orientation.is_ccw() {
-            return CrossedEdge {
+            return Some(CrossedEdge {
                 face,
                 edge: vertex_index.increment(),
-                vertex_from: vertex,
-                side_from: CrossingSide::CCW,
-            };
+                side: CrossingSide::CCW,
+            });
         } else {
-            return CrossedEdge {
+            return Some(CrossedEdge {
                 face,
                 edge: vertex_index.decrement(),
-                vertex_from: vertex,
-                side_from: CrossingSide::CW,
-            };
+                side: CrossingSide::CW,
+            });
         }
+    }
+}
+
+pub struct CrossingIterator<'a, PR, V, F>
+where
+    PR: 'a + Predicates,
+    V: 'a + Vertex<Position = PR::Position>,
+    F: 'a + Face,
+{
+    search: CrossingSearch<'a, PR, V, F>,
+    current: Option<CrossedEdge>,
+}
+
+impl<'a, PR, V, F> CrossingIterator<'a, PR, V, F>
+where
+    PR: 'a + Predicates,
+    V: 'a + Vertex<Position = PR::Position>,
+    F: 'a + Face,
+{
+    pub fn new(tri: &Triangulation<PR, V, F>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<PR, V, F> {
+        assert_eq!(tri.graph.dimension(), 2);
+        let search = CrossingSearch { tri, v0, v1 };
+        let current = search.search_vertex(v0);
+        CrossingIterator { search, current }
     }
 
     #[allow(clippy::should_implement_trait)]
     pub fn next(&mut self) -> Option<CrossedEdge> {
-        let next = match self.current.side_from {
-            CrossingSide::Coincident => self.next_restart(),
-            CrossingSide::CCW | CrossingSide::CW => self.next_crossed(),
-            CrossingSide::End => return None,
+        let next = {
+            let current = self.current.as_ref().unwrap();
+            let search = &self.search;
+
+            match current.side {
+                CrossingSide::Coincident => search.search_face_vertex(current.face, current.edge),
+                CrossingSide::CW => search.search_edge(current.face, current.edge),
+                CrossingSide::CCW => search.search_edge(current.face, current.edge),
+            }
         };
 
-        self.current = next;
-        Some(self.current.clone())
+        mem::replace(&mut self.current, next)
     }
 }

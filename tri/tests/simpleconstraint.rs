@@ -196,7 +196,9 @@ fn t2_constraint_no_fill2() {
     test_(SimpleTrii64::default(), "exact i64");
 }
 
-fn t2_constraint_concave() {
+#[test]
+#[ignore]
+fn t3_constraint_concave() {
     init_test(module_path!());
 
     fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
@@ -221,17 +223,17 @@ fn t2_constraint_concave() {
         for (info, map) in transforms.iter() {
             debug!("transformation: {}", info);
 
-            let e = tri.addVertex(map(2.0, 2.5));
-            let d = tri.addVertex(map(3.5, 2.5));
-            let b = tri.addVertex(map(2.0, 0.5));
-            let c = tri.addVertex(map(3.5, 0.0));
-            let a = tri.addVertex(map(1.0, 0.0));
-            let p0 = tri.addVertex(map(0.0, 1.0));
-            let f = tri.addVertex(map(1.0, 1.5));
-            let p1 = tri.addVertex(map(4.0, 1.0));
+            let _e = tri.add_vertex(map(2.0, 2.5), None);
+            let _d = tri.add_vertex(map(3.5, 2.5), None);
+            let _b = tri.add_vertex(map(2.0, 0.5), None);
+            let _c = tri.add_vertex(map(3.5, 0.0), None);
+            let _a = tri.add_vertex(map(1.0, 0.0), None);
+            let p0 = tri.add_vertex(map(0.0, 1.0), None);
+            let _f = tri.add_vertex(map(1.0, 1.5), None);
+            let p1 = tri.add_vertex(map(4.0, 1.0), None);
             assert_eq!(tri.check(None), Ok(()));
 
-            tri.addConstraint(p0, p1, 0x1);
+            tri.add_constraint_edge(p0, p1, SimpleConstraint(1));
             assert_eq!(tri.check(None), Ok(()));
 
             trace!("clear");

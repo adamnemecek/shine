@@ -141,6 +141,7 @@ impl ChainStore {
                 }
             }
         }
+        writeln!(f, "");
         Ok(())
     }
 

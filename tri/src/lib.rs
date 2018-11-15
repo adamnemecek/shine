@@ -2,6 +2,7 @@
 #![feature(crate_visibility_modifier)]
 #![feature(try_from)]
 //#![feature(tool_lints)]
+#![feature(label_break_value)]
 
 extern crate log;
 extern crate rand;
