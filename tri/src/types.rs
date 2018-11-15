@@ -79,6 +79,25 @@ impl From<VertexIndex> for usize {
     }
 }
 
+/// Selection of an edge by a face and an index
+pub struct FaceEdge {
+    pub face: FaceIndex,
+    pub edge: Rot3,
+}
+
+
+/// Selection of a vertex by a face and an index
+pub struct FaceVertex {
+    pub face: FaceIndex,
+    pub vertex: Rot3,
+}
+
+/// Selection of a face as a neighbor of another face
+pub struct FaceNeighbor {
+    pub face: FaceIndex,
+    pub neighbor: Rot3,
+}
+
 /// Implement Step required for Range<...>
 macro_rules! step_impl {
     ($t:ident) => (

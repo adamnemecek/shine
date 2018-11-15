@@ -1,10 +1,34 @@
 use geometry::{Position, Real};
 use std::fmt;
 
+pub enum OrientationType {
+    CW,
+    Collinear,
+    CCW,
+}
+
 pub trait Orientation: fmt::Debug {
     fn is_cw(&self) -> bool;
     fn is_collinear(&self) -> bool;
     fn is_ccw(&self) -> bool;
+
+    fn into_type(&self) -> OrientationType {
+        if self.is_cw() {
+            OrientationType::CW
+        } else if self.is_ccw() {
+            OrientationType::CCW
+        } else {
+            OrientationType::Collinear
+        }
+    }
+}
+
+pub enum CollinearTestType {
+    Before,
+    First,
+    Between,
+    Second,
+    After,
 }
 
 pub trait CollinearTest: fmt::Debug {
@@ -13,6 +37,20 @@ pub trait CollinearTest: fmt::Debug {
     fn is_between(&self) -> bool;
     fn is_second(&self) -> bool;
     fn is_after(&self) -> bool;
+
+    fn into_type(&self) -> CollinearTestType {
+        if self.is_before() {
+            CollinearTestType::Before
+        } else if self.is_first() {
+            CollinearTestType::First
+        } else if self.is_between() {
+            CollinearTestType::Between
+        } else if self.is_second() {
+            CollinearTestType::Second
+        } else {
+            CollinearTestType::After
+        }
+    }
 }
 
 pub trait Predicates {
