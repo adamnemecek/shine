@@ -73,11 +73,11 @@ impl From<FaceVertex> for VertexClue {
     }
 }
 
-pub fn start_of(e: &FaceEdge) -> VertexClue {
+pub fn start_of(e: FaceEdge) -> VertexClue {
     VertexClue::EdgeStart(e.face, e.edge)
 }
 
-pub fn end_of(e: &FaceEdge) -> VertexClue {
+pub fn end_of(e: FaceEdge) -> VertexClue {
     VertexClue::EdgeStart(e.face, e.edge)
 }
 

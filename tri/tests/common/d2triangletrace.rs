@@ -272,8 +272,8 @@ where
     pub fn add_face_edge(&self, tr: &mut D2Trace, f: FaceIndex, i: Rot3, msg: Option<&str>) {
         self.add_edge(
             tr,
-            self.graph.vi(start_of(&FaceEdge::from(f, i))),
-            self.graph.vi(end_of(&FaceEdge::from(f, i))),
+            self.graph.vi(start_of(FaceEdge::from(f, i))),
+            self.graph.vi(end_of(FaceEdge::from(f, i))),
             msg,
         );
     }
