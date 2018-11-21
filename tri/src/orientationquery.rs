@@ -1,8 +1,8 @@
 use geometry::{Orientation, Predicates};
 use graph::{Face, Vertex};
-use indexing::PositionQuery;
+use indexing::VertexQuery;
 use triangulation::Triangulation;
-use types::{FaceIndex, Rot3, VertexIndex};
+use types::{FaceIndex, FaceVertex, Rot3, VertexIndex};
 
 pub trait OrientationQuery {
     type Orientation: Orientation;
@@ -22,9 +22,9 @@ where
 
     fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Self::Orientation {
         assert!(self.graph.is_finite_vertex(v0) && self.graph.is_finite_vertex(v1) && self.graph.is_finite_vertex(v2));
-        let a = &self.graph[PositionQuery::Vertex(v0)];
-        let b = &self.graph[PositionQuery::Vertex(v1)];
-        let c = &self.graph[PositionQuery::Vertex(v2)];
+        let a = self.pos(v0);
+        let b = self.pos(v1);
+        let c = self.pos(v2);
         self.predicates.orientation_triangle(a, b, c)
     }
 
@@ -46,10 +46,10 @@ where
         assert!(self.graph.is_finite_face(nf));
         let ni = self.graph[nf].get_neighbor_index(f).unwrap();
 
-        let p0 = &self.graph[PositionQuery::Face(f, i0)];
-        let p1 = &self.graph[PositionQuery::Face(f, i1)];
-        let p2 = &self.graph[PositionQuery::Face(nf, ni)];
-        let p3 = &self.graph[PositionQuery::Face(f, i2)];
+        let p0 = &self.pos(FaceVertex::from(f, i0));
+        let p1 = &self.pos(FaceVertex::from(f, i1));
+        let p2 = &self.pos(FaceVertex::from(nf, ni));
+        let p3 = &self.pos(FaceVertex::from(f, i2));
 
         self.predicates.orientation_triangle(p0, p1, p2).is_ccw() && self.predicates.orientation_triangle(p2, p3, p0).is_ccw()
     }

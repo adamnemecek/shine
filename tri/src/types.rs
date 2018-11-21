@@ -22,12 +22,12 @@ impl Rot3 {
 
     pub fn increment(self) -> Rot3 {
         assert!(self.is_valid());
-        rot3( (self.0 + 1) % 3 )
+        rot3((self.0 + 1) % 3)
     }
 
     pub fn decrement(self) -> Rot3 {
         assert!(self.is_valid());
-        rot3( (self.0 + 2) % 3 )
+        rot3((self.0 + 2) % 3)
     }
 
     pub fn mirror(self, over: u8) -> Rot3 {
@@ -47,14 +47,17 @@ impl From<Rot3> for usize {
     }
 }
 
-
 /// Index used for Vertex indentification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct FaceIndex(usize);
 
 impl FaceIndex {
-    pub fn is_valid(self) -> bool { self.0 != usize::max_value() }
-    pub fn id(self) -> usize { self.0 }
+    pub fn is_valid(self) -> bool {
+        self.0 != usize::max_value()
+    }
+    pub fn id(self) -> usize {
+        self.0
+    }
 }
 
 impl From<FaceIndex> for usize {
@@ -63,14 +66,17 @@ impl From<FaceIndex> for usize {
     }
 }
 
-
 /// Index used for vertex indentification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct VertexIndex(usize);
 
 impl VertexIndex {
-    pub fn is_valid(self) -> bool { self.0 != usize::max_value() }
-    pub fn id(self) -> usize { self.0 }
+    pub fn is_valid(self) -> bool {
+        self.0 != usize::max_value()
+    }
+    pub fn id(self) -> usize {
+        self.0
+    }
 }
 
 impl From<VertexIndex> for usize {
@@ -79,23 +85,43 @@ impl From<VertexIndex> for usize {
     }
 }
 
-/// Selection of an edge by a face and an index
-pub struct FaceEdge {
-    pub face: FaceIndex,
-    pub edge: Rot3,
-}
-
-
 /// Selection of a vertex by a face and an index
+#[derive(Clone, Copy, Debug)]
 pub struct FaceVertex {
     pub face: FaceIndex,
     pub vertex: Rot3,
 }
 
+impl FaceVertex {
+    pub fn from(face: FaceIndex, vertex: Rot3) -> Self {
+        FaceVertex { face, vertex }
+    }
+}
+
+/// Selection of an edge by a face and an index
+#[derive(Clone, Copy, Debug)]
+pub struct FaceEdge {
+    pub face: FaceIndex,
+    pub edge: Rot3,
+}
+
+impl FaceEdge {
+    pub fn from(face: FaceIndex, edge: Rot3) -> Self {
+        FaceEdge { face, edge }
+    }
+}
+
 /// Selection of a face as a neighbor of another face
+#[derive(Clone, Copy, Debug)]
 pub struct FaceNeighbor {
     pub face: FaceIndex,
     pub neighbor: Rot3,
+}
+
+impl FaceNeighbor {
+    pub fn from(face: FaceIndex, neighbor: Rot3) -> Self {
+        FaceNeighbor { face, neighbor }
+    }
 }
 
 /// Implement Step required for Range<...>
@@ -148,7 +174,6 @@ step_impl!(FaceIndex);
 /// A range of faces
 pub type FaceRange = Range<FaceIndex>;
 
-
 /// Create a Rot3 from the given index
 pub fn rot3(i: u8) -> Rot3 {
     let v = Rot3(i);
@@ -179,4 +204,3 @@ pub fn face_index(i: usize) -> FaceIndex {
     assert!(v.is_valid());
     v
 }
-

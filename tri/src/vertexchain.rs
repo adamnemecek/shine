@@ -1,4 +1,3 @@
-use indexing::IndexGet;
 use std::{io, mem};
 use types::{FaceIndex, Rot3};
 
@@ -141,8 +140,7 @@ impl ChainStore {
                 }
             }
         }
-        writeln!(f, "");
-        Ok(())
+        writeln!(f, "")
     }
 
     fn at(&self, id: ChainIndex) -> &ChainItem {
@@ -157,14 +155,5 @@ impl ChainStore {
 impl Default for ChainStore {
     fn default() -> ChainStore {
         ChainStore::new()
-    }
-}
-
-impl IndexGet<ChainIndex> for ChainStore {
-    type Output = (FaceIndex, Rot3);
-
-    fn index_get(&self, id: ChainIndex) -> Self::Output {
-        let item = self.at(id);
-        (item.face, item.index)
     }
 }

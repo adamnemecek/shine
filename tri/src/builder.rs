@@ -1,9 +1,9 @@
 use geometry::{CollinearTest, Orientation, Position, Predicates};
 use graph::{Constraint, Face, FaceExt, Vertex};
-use indexing::{IndexGet, PositionQuery, VertexQuery};
+use indexing::VertexQuery;
 use orientationquery::OrientationQuery;
 use tagginglocator::{Location, TaggingLocator};
-use traverse::{CrossingIterator, CrossingSide};
+use traverse::{Crossing, CrossingIterator};
 use triangulation::Triangulation;
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
 use vertexchain::{ChainIndex, ChainStore};
@@ -522,9 +522,9 @@ where
         // find the direction to reach v1 from v0
         let reverse_dir = if self.graph.is_finite_vertex(vn) {
             // test direction to traverse by point order
-            let p0 = &self.graph[PositionQuery::Vertex(v0)];
-            let p1 = &self.graph[PositionQuery::Vertex(v1)];
-            let pn = &self.graph[PositionQuery::Vertex(vn)];
+            let p0 = self.pos(v0);
+            let p1 = self.pos(v1);
+            let pn = self.pos(vn);
             // p0,p1,pn and any other (finite) point must be collinear as dim==1,
             let direction = self.predicates.test_collinear_points(p0, p1, pn);
             assert!(
@@ -563,11 +563,11 @@ where
     fn add_constraint_dim2(&mut self, v0: VertexIndex, v1: VertexIndex, c: &F::Constraint, context: &mut BuilderContext) {
         let chain_store = &mut context.chain_store;
         let mut start = v0;
-        while start != v1 {
+        /*while start != v1 {
             println!("add constrainat: {:?}->{:?}", start, v1);
             // collect intersecting faces and generate the two (top/bottom) chains
             // The edge-chain is not a whole polygon the new constraining edge is the missing closing edge
-
+        
             let (face, edge) = 'itertion_block: {
                 let mut top_chain;
                 let mut bottom_chain;
@@ -575,28 +575,28 @@ where
                     let mut crossing_iter = CrossingIterator::new(self, start, v1);
                     let cross = crossing_iter.next().unwrap();
                     println!("crossing edge: {:?}", cross);
-
+        
                     if cross.side == CrossingSide::Coincident {
                         // single coincident edge detected, no hole filling is required
                         break 'itertion_block (cross.face, cross.edge);
                     }
-
+        
                     top_chain = chain_store.new_chain(cross.face, cross.edge.increment(), true);
                     bottom_chain = chain_store.new_chain(cross.face, cross.edge.decrement(), true);
-
+        
                     loop {
                         let cross = crossing_iter.next();
                         println!("crossing edge: {:?}", cross);
-
+        
                         if cross.is_none() {
                             break;
                         }
-
+        
                         let cross = cross.unwrap();
-
+        
                         //test if crossed edge is constrainet
                         //todo
-
+        
                         match cross.side {
                             CrossingSide::Coincident => {
                                 break;
@@ -609,10 +609,10 @@ where
                 self.triangulate_hole(chain_store, top_chain, bottom_chain)
             };
             chain_store.clear();
-
+        
             self.make_constraint(face, edge, c.clone());
             start = self.graph.index_get(VertexQuery::EdgeEnd(face, edge));
-        }
+        }*/
     }
 
     fn triangulate_hole(&mut self, chains: &mut ChainStore, top: ChainIndex, bottom: ChainIndex) -> (FaceIndex, Rot3) {

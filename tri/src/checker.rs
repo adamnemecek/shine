@@ -1,10 +1,10 @@
 use geometry::{Orientation, Position, Predicates, Real};
 use graph::{Face, Vertex};
-use indexing::PositionQuery;
+use indexing::VertexQuery;
 use log::trace;
 use orientationquery::OrientationQuery;
 use triangulation::Triangulation;
-use types::rot3;
+use types::{rot3, FaceVertex};
 
 pub trait Checker {
     /// Check dimension and count based invariants.
@@ -263,9 +263,9 @@ where
                 continue;
             }
 
-            let a = &self.graph[PositionQuery::Face(f, rot3(0))];
-            let b = &self.graph[PositionQuery::Face(f, rot3(1))];
-            let c = &self.graph[PositionQuery::Face(f, rot3(2))];
+            let a = self.pos(FaceVertex::from(f, rot3(0)));
+            let b = self.pos(FaceVertex::from(f, rot3(1)));
+            let c = self.pos(FaceVertex::from(f, rot3(2)));
 
             let ax: f64 = a.x().approximate();
             let ay: f64 = a.y().approximate();
@@ -288,8 +288,8 @@ where
             let iid = self.graph[cur].get_vertex_index(self.graph.infinite_vertex()).unwrap(); // index of infinite vertex
             let aid = iid.decrement();
             let bid = iid.increment();
-            let a = &self.graph[PositionQuery::Face(cur, aid)];
-            let b = &self.graph[PositionQuery::Face(cur, bid)];
+            let a = self.pos(FaceVertex::from(cur, aid));
+            let b = self.pos(FaceVertex::from(cur, bid));
             let ax: f64 = a.x().approximate();
             let ay: f64 = a.y().approximate();
             let bx: f64 = b.x().approximate();

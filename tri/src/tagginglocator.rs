@@ -1,8 +1,8 @@
 use geometry::{CollinearTest, Orientation, Position, Predicates};
 use graph::{Face, Vertex};
-use indexing::PositionQuery;
+use indexing::VertexQuery;
 use triangulation::Triangulation;
-use types::{invalid_face_index, rot3, vertex_index, FaceIndex, Rot3};
+use types::{invalid_face_index, rot3, vertex_index, FaceIndex, FaceVertex, Rot3};
 
 #[derive(Debug)]
 enum ContainmentResult {
@@ -77,7 +77,7 @@ where
             }
         };
 
-        let p0 = &self.graph[v0].position();
+        let p0 = &self.graph.pos(v0);
         if self.predicates.test_coincident_points(p, p0) {
             let f0 = self.graph[v0].face();
             Ok(Location::Vertex(f0, self.graph[f0].get_vertex_index(v0).unwrap()))
@@ -97,12 +97,12 @@ where
         // first point of the convex hull (segments)
         let f0 = self.graph.infinite_face();
         let iv0 = self.graph[f0].get_vertex_index(vinf).unwrap();
-        let cp0 = &self.graph[PositionQuery::Face(f0, iv0.mirror(2))];
+        let cp0 = &self.graph.pos(FaceVertex::from(f0, iv0.mirror(2)));
 
         // last point of the convex hull (segments)
         let f1 = self.graph[f0].neighbor(iv0.mirror(2));
         let iv1 = self.graph[f1].get_vertex_index(vinf).unwrap();
-        let cp1 = &self.graph[PositionQuery::Face(f1, iv1.mirror(2))];
+        let cp1 = &self.graph.pos(FaceVertex::from(f1, iv1.mirror(2)));
 
         let orient = self.predicates.orientation_triangle(cp0, cp1, p);
         if orient.is_cw() {
@@ -130,8 +130,8 @@ where
                     let cur = self.graph[prev].neighbor(dir);
                     assert!(self.graph.is_finite_face(cur));
 
-                    let p0 = &self.graph[PositionQuery::Face(cur, rot3(0))];
-                    let p1 = &self.graph[PositionQuery::Face(cur, rot3(1))];
+                    let p0 = &self.graph.pos(FaceVertex::from(cur, rot3(0)));
+                    let p1 = &self.graph.pos(FaceVertex::from(cur, rot3(1)));
 
                     let t = self.predicates.test_collinear_points(p0, p1, p);
                     if t.is_first() {
@@ -156,9 +156,9 @@ where
 
     /// Test which halfspace contains the p point.
     fn test_containment_face(&self, pos: &PR::Position, face: FaceIndex) -> ContainmentResult {
-        let p0 = &self.graph[PositionQuery::Face(face, rot3(0))];
-        let p1 = &self.graph[PositionQuery::Face(face, rot3(1))];
-        let p2 = &self.graph[PositionQuery::Face(face, rot3(2))];
+        let p0 = &self.graph.pos(FaceVertex::from(face, rot3(0)));
+        let p1 = &self.graph.pos(FaceVertex::from(face, rot3(1)));
+        let p2 = &self.graph.pos(FaceVertex::from(face, rot3(2)));
 
         let e01 = self.predicates.orientation_triangle(p0, p1, pos);
         if e01.is_cw() {
@@ -187,8 +187,8 @@ where
 
     /// Test the containment of the p position with respect to the half spaces defined by the (a,b) and (b,c) edges.
     fn test_containment(&self, pos: &PR::Position, face: FaceIndex, a: Rot3, b: Rot3, c: Rot3, tag: usize) -> ContainmentResult {
-        let pa = &self.graph[PositionQuery::Face(face, a)];
-        let pb = &self.graph[PositionQuery::Face(face, b)];
+        let pa = &self.graph.pos(FaceVertex::from(face, a));
+        let pb = &self.graph.pos(FaceVertex::from(face, b));
         let ab = self.predicates.orientation_triangle(&pa, &pb, pos);
 
         if ab.is_cw() {
@@ -198,7 +198,7 @@ where
             }
         }
 
-        let pc = &self.graph[PositionQuery::Face(face, c)];
+        let pc = &self.graph.pos(FaceVertex::from(face, c));
         let bc = self.predicates.orientation_triangle(pb, pc, pos);
         if bc.is_cw() {
             let next = self.graph[face].neighbor(a);

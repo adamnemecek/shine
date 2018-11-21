@@ -10,7 +10,7 @@ use common::{Sample, SimpleFace, SimpleTrif32, SimpleTrif64, SimpleTrii32, Simpl
 use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Position, Predicates, Real};
-use shine_tri::indexing::PositionQuery;
+use shine_tri::indexing::VertexQuery;
 use shine_tri::{Builder, Checker, Triangulation};
 use std::fmt::Debug;
 
@@ -184,7 +184,7 @@ fn simple_points_dim2() {
                         let pos = map(x, y);
                         trace!("add {:?}", pos);
                         let vi = tri.add_vertex(pos, None);
-                        trace!("{:?} = {:?}", vi, tri.graph[PositionQuery::Vertex(vi)]);
+                        trace!("{:?} = {:?}", vi, tri.pos(vi));
                         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
                         let pos = map(x, y);

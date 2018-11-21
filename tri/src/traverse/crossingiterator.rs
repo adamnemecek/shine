@@ -1,6 +1,6 @@
 use geometry::{CollinearTest, Orientation, OrientationType, Predicates};
 use graph::{Face, Vertex};
-use indexing::PositionQuery;
+use indexing::VertexQuery;
 use std::mem;
 use traverse::edgecirculator::EdgeCirculator;
 use triangulation::Triangulation;
@@ -38,7 +38,7 @@ where
         let mut circulator = EdgeCirculator::new(self.tri, start_vertex);
 
         loop {
-            let vertex = circulator.vertex();
+            let vertex = circulator.end_vertex();
             if self.tri.graph.is_infinite_vertex(vertex) {
                 // skip infinite edges
                 circulator.advance_cw();
@@ -48,14 +48,14 @@ where
             if vertex == self.v1 {
                 return Crossing::End {
                     face: circulator.face(),
-                    vertex: circulator.edge.decrement(),
+                    vertex: circulator.edge().decrement(),
                 };
             }
 
             let orientation = {
-                let p0 = &self.tri.graph[PositionQuery::Vertex(self.v0)];
-                let p1 = &self.tri.graph[PositionQuery::Vertex(self.v1)];
-                let pos = &self.tri.graph[PositionQuery::Vertex(vertex)];
+                let p0 = &self.tri.pos(self.v0);
+                let p1 = &self.tri.pos(self.v1);
+                let pos = &self.tri.pos(vertex);
 
                 let orient = self.tri.predicates.orientation_triangle(p0, p1, pos);
                 if orient.is_collinear() {
@@ -120,12 +120,15 @@ where
         let vertex = self.tri.graph[face].vertex(vertex_index);
 
         if vertex == self.v1 {
-            return Crossing::End { face, vertex };
+            return Crossing::End {
+                face,
+                vertex: vertex_index,
+            };
         };
 
-        let p0 = &self.tri.graph[PositionQuery::Vertex(self.v0)];
-        let p1 = &self.tri.graph[PositionQuery::Vertex(self.v1)];
-        let pn = &self.tri.graph[PositionQuery::Vertex(vertex)];
+        let p0 = &self.tri.pos(self.v0);
+        let p1 = &self.tri.pos(self.v1);
+        let pn = &self.tri.pos(vertex);
         let orientation = self.tri.predicates.orientation_triangle(p0, p1, pn);
         assert!(!orientation.is_collinear(), "next != v1, but v0,v1,next are collinear");
         if orientation.is_ccw() {
@@ -166,10 +169,11 @@ where
     }
 
     pub fn advance(&mut self) -> Crossing {
-        let next = {
+        unimplemented!()
+        /*let next = {
             let current = self.current.as_ref().unwrap();
             let search = &self.search;
-
+        
             match current {
                 Crossing::Start { ref face, ref vertex } => search.search_face_vertex(face, vertex),
                 Crossing::Vertex { ref face, ref vertex } => search.search_face_vertex(face, vertex),
@@ -178,7 +182,7 @@ where
                 Crossing::End {} => panic!("advance beyond end"),
             }
         };
-
-        mem::replace(&mut self.current, next)
+        
+        mem::replace(&mut self.current, next)*/
     }
 }

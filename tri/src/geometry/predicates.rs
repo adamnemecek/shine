@@ -1,6 +1,7 @@
 use geometry::{Position, Real};
 use std::fmt;
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum OrientationType {
     CW,
     Collinear,
@@ -23,6 +24,7 @@ pub trait Orientation: fmt::Debug {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CollinearTestType {
     Before,
     First,

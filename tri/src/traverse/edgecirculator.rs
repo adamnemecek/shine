@@ -1,6 +1,6 @@
 use geometry::Predicates;
 use graph::{Face, Vertex};
-use indexing::{IndexGet, VertexQuery};
+use indexing::{end_of, start_of, VertexQuery};
 use triangulation::Triangulation;
 use types::{FaceEdge, FaceIndex, Rot3, VertexIndex};
 
@@ -13,8 +13,7 @@ where
     tri: &'a Triangulation<PR, V, F>,
     vertex: VertexIndex,
 
-    face: FaceIndex,
-    edge: Rot3,
+    current: FaceEdge,
 }
 
 impl<'a, PR, V, F> EdgeCirculator<'a, PR, V, F>
@@ -31,40 +30,51 @@ where
         EdgeCirculator {
             tri,
             vertex: start,
-            face,
-            edge,
+            current: FaceEdge { face, edge },
         }
     }
 
-    pub fn base_vertex(&self) -> VertexIndex {
+    pub fn start_vertex(&self) -> VertexIndex {
         self.vertex
     }
 
-    pub fn advance_ccw(&mut self) -> FaceEdge {
-        assert_eq!(self.tri.graph.dimension(), 2);
-        assert!(self.face.is_valid());
-        assert!(self.tri.graph.index_get(VertexQuery::EdgeStart(self.face, self.edge)) == self.vertex);
-
-        self.face = self.tri.graph[self.face].neighbor(self.edge.decrement());
-        self.edge = self.tri.graph[self.face].get_vertex_index(self.vertex).unwrap().decrement();
-
-        FaceEdge {
-            face: self.face,
-            edge: self.edge,
-        }
+    pub fn current(&self) -> &FaceEdge {
+        &self.current
     }
 
-    pub fn advance_cw(&mut self) -> (FaceIndex, Rot3) {
+    pub fn face(&self) -> FaceIndex {
+        self.current.face
+    }
+
+    pub fn edge(&self) -> Rot3 {
+        self.current.edge
+    }
+
+    pub fn end_vertex(&self) -> VertexIndex {
+        self.tri.vi(end_of(&self.current))
+    }
+
+    pub fn advance_ccw(&mut self) {
         assert_eq!(self.tri.graph.dimension(), 2);
-        assert!(self.face.is_valid());
-        assert!(self.tri.graph.index_get(VertexQuery::EdgeStart(self.face, self.edge)) == self.vertex);
+        assert!(self.current.face.is_valid());
+        assert!(self.tri.vi(start_of(&self.current)) == self.vertex);
 
-        self.face = self.tri.graph[self.face].neighbor(self.edge);
-        self.edge = self.tri.graph[self.face].get_vertex_index(self.vertex).unwrap().decrement();
+        self.current.face = self.tri.graph[self.current.face].neighbor(self.current.edge.decrement());
+        self.current.edge = self.tri.graph[self.current.face]
+            .get_vertex_index(self.vertex)
+            .unwrap()
+            .decrement();
+    }
 
-        FaceEdge {
-            face: self.face,
-            edge: self.edge,
-        }
+    pub fn advance_cw(&mut self) {
+        assert_eq!(self.tri.graph.dimension(), 2);
+        assert!(self.current.face.is_valid());
+        assert!(self.tri.vi(start_of(&self.current)) == self.vertex);
+
+        self.current.face = self.tri.graph[self.current.face].neighbor(self.current.edge);
+        self.current.edge = self.tri.graph[self.current.face]
+            .get_vertex_index(self.vertex)
+            .unwrap()
+            .decrement();
     }
 }
