@@ -78,7 +78,7 @@ pub fn start_of(e: FaceEdge) -> VertexClue {
 }
 
 pub fn end_of(e: FaceEdge) -> VertexClue {
-    VertexClue::EdgeStart(e.face, e.edge)
+    VertexClue::EdgeEnd(e.face, e.edge)
 }
 
 /// Trait to query VertexIndex

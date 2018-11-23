@@ -9,6 +9,7 @@ mod common;
 use common::{trace_graph, Coloring, RenderMapping, Sample, SimpleConstraint, SimpleTrif32};
 use shine_testutils::init_webcontroll_test;
 use shine_tri::geometry::position::{Posf32, Posf64};
+use shine_tri::traverse::{Crossing, CrossingIterator};
 use shine_tri::{Builder, Checker};
 use std::panic;
 use std::sync::{Arc, Mutex};
@@ -50,21 +51,30 @@ fn quick_debug() {
             (&map(2., -2.)).into(),
         ]);
 
-        let _e = tri.add_vertex(map(2.0, 2.5), None);
+        /*let _e = tri.add_vertex(map(2.0, 2.5), None);
         let _d = tri.add_vertex(map(3.5, 2.5), None);
         let _b = tri.add_vertex(map(2.0, 0.5), None);
         let _c = tri.add_vertex(map(3.5, 0.0), None);
         let _a = tri.add_vertex(map(1.0, 0.0), None);
         let p0 = tri.add_vertex(map(0.0, 1.0), None);
         let _f = tri.add_vertex(map(1.0, 1.5), None);
-        let p1 = tri.add_vertex(map(4.0, 1.0), None);
+        let p1 = tri.add_vertex(map(4.0, 1.0), None);*/
+
+        let _1 = tri.add_vertex(map(2.0, 1.0), None);
+        let _2 = tri.add_vertex(map(4.0, 1.0), None);
+        let _3 = tri.add_vertex(map(1.0, 2.0), None);
+        let _4 = tri.add_vertex(map(1.0, 0.0), None);
+        let v5 = tri.add_vertex(map(0.0, 1.0), None);
+        let _6 = tri.add_vertex(map(5.0, 2.0), None);
+        let _7 = tri.add_vertex(map(5.0, 0.0), None);
+        let v8 = tri.add_vertex(map(6.0, 1.0), None);
 
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
-        tri.add_constraint_edge(p0, p1, SimpleConstraint(1));
-        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
-        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        for crossing in CrossingIterator::new(&tri, v5, v8) {
+            println!("{:?}", crossing);
+        }
     }
 
     webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));

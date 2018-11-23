@@ -34,12 +34,16 @@ where
         }
     }
 
+    pub fn current(&self) -> &FaceEdge {
+        &self.current
+    }
+
     pub fn start_vertex(&self) -> VertexIndex {
         self.vertex
     }
 
-    pub fn current(&self) -> &FaceEdge {
-        &self.current
+    pub fn end_vertex(&self) -> VertexIndex {
+        self.tri.vi(end_of(self.current))
     }
 
     pub fn face(&self) -> FaceIndex {
@@ -48,10 +52,6 @@ where
 
     pub fn edge(&self) -> Rot3 {
         self.current.edge
-    }
-
-    pub fn end_vertex(&self) -> VertexIndex {
-        self.tri.vi(end_of(self.current))
     }
 
     pub fn advance_ccw(&mut self) {

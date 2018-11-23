@@ -8,14 +8,14 @@ use types::{FaceIndex, Rot3, VertexIndex};
 
 #[derive(Clone, Debug)]
 pub enum Crossing {
-    Start { face: FaceIndex, edge: Rot3 },
-    CWEdge { face: FaceIndex, edge: Rot3 },
-    CCWEdge { face: FaceIndex, edge: Rot3 },
-    Vertex { face: FaceIndex, vertex: Rot3 },
+    Start { face: FaceIndex, vertex: Rot3 },
     End { face: FaceIndex, vertex: Rot3 },
+    CoincidentEdge { face: FaceIndex, edge: Rot3 },
+    PositiveEdge { face: FaceIndex, edge: Rot3 },
+    NegativeEdge { face: FaceIndex, edge: Rot3 },
 }
 
-struct CrossingSearch<'a, PR, V, F>
+pub struct CrossingIterator<'a, PR, V, F>
 where
     PR: 'a + Predicates,
     V: 'a + Vertex<Position = PR::Position>,
@@ -24,21 +24,59 @@ where
     tri: &'a Triangulation<PR, V, F>,
     v0: VertexIndex,
     v1: VertexIndex,
+    current: Option<Crossing>,
 }
 
-impl<'a, PR, V, F> CrossingSearch<'a, PR, V, F>
+impl<'a, PR, V, F> CrossingIterator<'a, PR, V, F>
 where
     PR: 'a + Predicates,
     V: 'a + Vertex<Position = PR::Position>,
     F: 'a + Face,
 {
+    pub fn new(tri: &Triangulation<PR, V, F>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<PR, V, F> {
+        assert_eq!(tri.graph.dimension(), 2);
+        assert_ne!(v0, v1);
+        assert!(tri.graph.is_finite_vertex(v0));
+        assert!(tri.graph.is_finite_vertex(v1));
+
+        let mut iter = CrossingIterator {
+            tri,
+            v0,
+            v1,
+            current: None,
+        };
+        iter.current = Some(iter.search_vertex(iter.v0));
+        iter
+    }
+
+    fn advance(&mut self) -> Option<Crossing> {
+        let next = match self.current {
+            None => None,
+            Some(Crossing::Start { face, vertex }) => Some(self.search_edge(face, vertex.increment())),
+            Some(Crossing::End { face, vertex }) => Some(self.search_face_vertex(face, vertex)),
+            Some(Crossing::CoincidentEdge { face, edge }) => Some(self.search_edge(face, edge)),
+            Some(Crossing::PositiveEdge { face, edge }) => Some(self.search_edge(face, edge)),
+            Some(Crossing::NegativeEdge { face, edge }) => Some(self.search_edge(face, edge)),
+        };
+
+        mem::replace(&mut self.current, next)
+    }
+
     /// Find next crossing edge by circulating the edges around a vertex.
     fn search_vertex(&self, start_vertex: VertexIndex) -> Crossing {
         let mut start_orientation = OrientationType::Collinear;
         let mut circulator = EdgeCirculator::new(self.tri, start_vertex);
 
+        println!("search_vertex: {:?}", start_vertex);
+
         loop {
             let vertex = circulator.end_vertex();
+            println!(
+                "current edge: {:?}, ({:?},{:?})",
+                circulator.current(),
+                circulator.start_vertex(),
+                vertex
+            );
             if self.tri.graph.is_infinite_vertex(vertex) {
                 // skip infinite edges
                 circulator.advance_cw();
@@ -46,10 +84,12 @@ where
             }
 
             if vertex == self.v1 {
-                return Crossing::End {
+                let res = Crossing::End {
                     face: circulator.face(),
                     vertex: circulator.edge().decrement(),
                 };
+                println!("ret: {:?}", res);
+                return res;
             }
 
             let orientation = {
@@ -58,6 +98,7 @@ where
                 let pos = &self.tri.pos(vertex);
 
                 let orient = self.tri.predicates.orientation_triangle(p0, p1, pos);
+                println!("orient: {:?}", orient);
                 if orient.is_collinear() {
                     let t = self.tri.predicates.test_collinear_points(p0, p1, pos);
                     if t.is_first() {
@@ -68,10 +109,12 @@ where
                         panic!("invalid triangulation, collinear, pos is not contained in the (p0,p1) segment");
                     } else if t.is_between() {
                         // pe is between p0 and p1
-                        return Crossing::Start {
+                        let res = Crossing::CoincidentEdge {
                             face: circulator.face(),
                             edge: circulator.edge(),
                         };
+                        println!("ret: {:?}", res);
+                        return res;
                     }
                     OrientationType::CCW
                 } else if orient.is_ccw() {
@@ -94,14 +137,18 @@ where
                     circulator.advance_cw();
                 }
 
-                return Crossing::CWEdge {
+                let res = Crossing::Start {
                     face: circulator.face(),
-                    edge: circulator.edge().increment(),
+                    vertex: circulator.edge().increment(),
                 };
+                println!("ret: {:?}", res);
+                return res;
             } else if start_orientation == OrientationType::CCW {
+                println!("advance cw");
                 circulator.advance_cw();
             } else {
                 assert_eq!(start_orientation, OrientationType::CW);
+                println!("advance ccw");
                 circulator.advance_ccw();
             }
         }
@@ -119,11 +166,16 @@ where
         let vertex_index = self.tri.graph[face].get_neighbor_index(start_face).unwrap();
         let vertex = self.tri.graph[face].vertex(vertex_index);
 
+        println!("search_edge: {:?}, {:?}", start_face, start_edge);
+        println!("face, vertex_index, vertex: {:?}, {:?}, {:?}", face, vertex_index, vertex);
+
         if vertex == self.v1 {
-            return Crossing::End {
+            let res = Crossing::End {
                 face,
                 vertex: vertex_index,
             };
+            println!("res: {:?}", res);
+            return res;
         };
 
         let p0 = &self.tri.pos(self.v0);
@@ -131,58 +183,31 @@ where
         let pn = &self.tri.pos(vertex);
         let orientation = self.tri.predicates.orientation_triangle(p0, p1, pn);
         assert!(!orientation.is_collinear(), "next != v1, but v0,v1,next are collinear");
-        if orientation.is_ccw() {
-            return Crossing::CCWEdge {
+        let res = if orientation.is_ccw() {
+            Crossing::NegativeEdge {
                 face,
                 edge: vertex_index.increment(),
-            };
+            }
         } else {
-            return Crossing::CWEdge {
+            Crossing::PositiveEdge {
                 face,
                 edge: vertex_index.decrement(),
-            };
-        }
-    }
-}
-
-pub struct CrossingIterator<'a, PR, V, F>
-where
-    PR: 'a + Predicates,
-    V: 'a + Vertex<Position = PR::Position>,
-    F: 'a + Face,
-{
-    search: CrossingSearch<'a, PR, V, F>,
-    current: Crossing,
-}
-
-impl<'a, PR, V, F> CrossingIterator<'a, PR, V, F>
-where
-    PR: 'a + Predicates,
-    V: 'a + Vertex<Position = PR::Position>,
-    F: 'a + Face,
-{
-    pub fn new(tri: &Triangulation<PR, V, F>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<PR, V, F> {
-        assert_eq!(tri.graph.dimension(), 2);
-        let search = CrossingSearch { tri, v0, v1 };
-        let current = search.search_vertex(v0);
-        CrossingIterator { search, current }
-    }
-
-    pub fn advance(&mut self) -> Crossing {
-        unimplemented!()
-        /*let next = {
-            let current = self.current.as_ref().unwrap();
-            let search = &self.search;
-        
-            match current {
-                Crossing::Start { ref face, ref vertex } => search.search_face_vertex(face, vertex),
-                Crossing::Vertex { ref face, ref vertex } => search.search_face_vertex(face, vertex),
-                Crossing::CWEdge { ref face, ref edge } => search.search_edge(face, edge),
-                Crossing::CCWEdge { ref face, ref edge } => search.search_edge(face, edge),
-                Crossing::End {} => panic!("advance beyond end"),
             }
         };
-        
-        mem::replace(&mut self.current, next)*/
+        println!("res: {:?}", res);
+        return res;
+    }
+}
+
+impl<'a, PR, V, F> Iterator for CrossingIterator<'a, PR, V, F>
+where
+    PR: 'a + Predicates,
+    V: 'a + Vertex<Position = PR::Position>,
+    F: 'a + Face,
+{
+    type Item = Crossing;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.advance()
     }
 }
