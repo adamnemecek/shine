@@ -76,9 +76,9 @@ where
             }
 
             if vertex == self.v1 {
-                return Crossing::End {
+                return Crossing::CoincidentEdge {
                     face: circulator.face(),
-                    vertex: circulator.edge().decrement(),
+                    edge: circulator.edge(),
                 };
             }
 

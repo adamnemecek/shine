@@ -41,7 +41,7 @@ fn quick_debug() {
     let mut rm = RenderMapping::new();
     let color = Coloring::new();
 
-    let map = |x: f32, y: f32| Posf32::from(Sample(-y, -x));
+    let map = |x: f32, y: f32| Posf32::from(Sample(x, y));
 
     {
         rm.set_virtual_positions(vec![
@@ -60,8 +60,8 @@ fn quick_debug() {
         let _f = tri.add_vertex(map(1.0, 1.5), None);
         let p1 = tri.add_vertex(map(4.0, 1.0), None);*/
 
-        let _1 = tri.add_vertex(map(2.0, 1.0), None);
-        let _2 = tri.add_vertex(map(4.0, 1.0), None);
+        let v1 = tri.add_vertex(map(2.0, 1.0), None);
+        let v2 = tri.add_vertex(map(4.0, 1.0), None);
         let _3 = tri.add_vertex(map(1.0, 2.0), None);
         let _4 = tri.add_vertex(map(1.0, 0.0), None);
         let v5 = tri.add_vertex(map(0.0, 1.0), None);
@@ -71,13 +71,26 @@ fn quick_debug() {
         let _ = tri.add_vertex(map(0.5, 1.2), None);
         let _ = tri.add_vertex(map(0.5, 0.8), None);
         let _ = tri.add_vertex(map(0.8, 1.0), None);
+        let _ = tri.add_vertex(map(3.0, 1.0), None);
 
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
+        /*for crossing in CrossingIterator::new(&tri, v1, v2) {
+            println!("{:?}", crossing);
+        }
+        
+        println!("-----------");
+        
         for crossing in CrossingIterator::new(&tri, v5, v8) {
             println!("{:?}", crossing);
         }
+        
+        println!("-----------");*/
+
+        /*for crossing in CrossingIterator::new(&tri, v8, v5) {
+            println!("{:?}", crossing);
+        }*/
     }
 
     webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
