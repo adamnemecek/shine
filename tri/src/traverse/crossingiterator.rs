@@ -6,7 +6,7 @@ use traverse::edgecirculator::EdgeCirculator;
 use triangulation::Triangulation;
 use types::{FaceIndex, Rot3, VertexIndex};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Crossing {
     Start { face: FaceIndex, vertex: Rot3 },
     End { face: FaceIndex, vertex: Rot3 },
@@ -52,9 +52,9 @@ where
     fn advance(&mut self) -> Option<Crossing> {
         let next = match self.current {
             None => None,
-            Some(Crossing::Start { face, vertex }) => Some(self.search_edge(face, vertex.increment())),
-            Some(Crossing::End { face, vertex }) => Some(self.search_face_vertex(face, vertex)),
-            Some(Crossing::CoincidentEdge { face, edge }) => Some(self.search_edge(face, edge)),
+            Some(Crossing::Start { face, vertex }) => Some(self.search_edge(face, vertex)),
+            Some(Crossing::End { face, vertex }) => self.search_face_vertex(face, vertex),
+            Some(Crossing::CoincidentEdge { face, edge }) => self.search_face_vertex(face, edge.decrement()),
             Some(Crossing::PositiveEdge { face, edge }) => Some(self.search_edge(face, edge)),
             Some(Crossing::NegativeEdge { face, edge }) => Some(self.search_edge(face, edge)),
         };
@@ -67,16 +67,8 @@ where
         let mut start_orientation = OrientationType::Collinear;
         let mut circulator = EdgeCirculator::new(self.tri, start_vertex);
 
-        println!("search_vertex: {:?}", start_vertex);
-
         loop {
             let vertex = circulator.end_vertex();
-            println!(
-                "current edge: {:?}, ({:?},{:?})",
-                circulator.current(),
-                circulator.start_vertex(),
-                vertex
-            );
             if self.tri.graph.is_infinite_vertex(vertex) {
                 // skip infinite edges
                 circulator.advance_cw();
@@ -84,12 +76,10 @@ where
             }
 
             if vertex == self.v1 {
-                let res = Crossing::End {
+                return Crossing::End {
                     face: circulator.face(),
                     vertex: circulator.edge().decrement(),
                 };
-                println!("ret: {:?}", res);
-                return res;
             }
 
             let orientation = {
@@ -98,7 +88,6 @@ where
                 let pos = &self.tri.pos(vertex);
 
                 let orient = self.tri.predicates.orientation_triangle(p0, p1, pos);
-                println!("orient: {:?}", orient);
                 if orient.is_collinear() {
                     let t = self.tri.predicates.test_collinear_points(p0, p1, pos);
                     if t.is_first() {
@@ -109,12 +98,10 @@ where
                         panic!("invalid triangulation, collinear, pos is not contained in the (p0,p1) segment");
                     } else if t.is_between() {
                         // pe is between p0 and p1
-                        let res = Crossing::CoincidentEdge {
+                        return Crossing::CoincidentEdge {
                             face: circulator.face(),
                             edge: circulator.edge(),
                         };
-                        println!("ret: {:?}", res);
-                        return res;
                     }
                     OrientationType::CCW
                 } else if orient.is_ccw() {
@@ -137,27 +124,17 @@ where
                     circulator.advance_cw();
                 }
 
-                let res = Crossing::Start {
+                return Crossing::Start {
                     face: circulator.face(),
                     vertex: circulator.edge().increment(),
                 };
-                println!("ret: {:?}", res);
-                return res;
             } else if start_orientation == OrientationType::CCW {
-                println!("advance cw");
                 circulator.advance_cw();
             } else {
                 assert_eq!(start_orientation, OrientationType::CW);
-                println!("advance ccw");
                 circulator.advance_ccw();
             }
         }
-    }
-
-    /// Find next crossing edge by circulating the edges around the vertex of a face
-    fn search_face_vertex(&self, start_face: FaceIndex, start_edge: Rot3) -> Crossing {
-        let start_vertex = self.tri.graph[start_face].vertex(start_edge);
-        self.search_vertex(start_vertex)
     }
 
     /// Find next crossing edge by checking the opposite face.
@@ -166,24 +143,23 @@ where
         let vertex_index = self.tri.graph[face].get_neighbor_index(start_face).unwrap();
         let vertex = self.tri.graph[face].vertex(vertex_index);
 
-        println!("search_edge: {:?}, {:?}", start_face, start_edge);
-        println!("face, vertex_index, vertex: {:?}, {:?}, {:?}", face, vertex_index, vertex);
-
         if vertex == self.v1 {
-            let res = Crossing::End {
+            return Crossing::End {
                 face,
                 vertex: vertex_index,
             };
-            println!("res: {:?}", res);
-            return res;
         };
 
         let p0 = &self.tri.pos(self.v0);
         let p1 = &self.tri.pos(self.v1);
         let pn = &self.tri.pos(vertex);
         let orientation = self.tri.predicates.orientation_triangle(p0, p1, pn);
-        assert!(!orientation.is_collinear(), "next != v1, but v0,v1,next are collinear");
-        let res = if orientation.is_ccw() {
+        if orientation.is_collinear() {
+            Crossing::End {
+                face,
+                vertex: vertex_index,
+            }
+        } else if orientation.is_ccw() {
             Crossing::NegativeEdge {
                 face,
                 edge: vertex_index.increment(),
@@ -193,9 +169,17 @@ where
                 face,
                 edge: vertex_index.decrement(),
             }
-        };
-        println!("res: {:?}", res);
-        return res;
+        }
+    }
+
+    /// Find next crossing edge by circulating the edges around the vertex of a face
+    fn search_face_vertex(&self, start_face: FaceIndex, start_edge: Rot3) -> Option<Crossing> {
+        let start_vertex = self.tri.graph[start_face].vertex(start_edge);
+        if start_vertex == self.v1 {
+            None
+        } else {
+            Some(self.search_vertex(start_vertex))
+        }
     }
 }
 

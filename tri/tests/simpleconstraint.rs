@@ -10,6 +10,7 @@ use common::{Sample, SimpleConstraint, SimpleFace, SimpleTrif32, SimpleTrif64, S
 use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Position, Predicates, Real};
+use shine_tri::traverse::CrossingIterator;
 use shine_tri::{Builder, Checker, Triangulation};
 
 #[test]
@@ -197,8 +198,63 @@ fn t2_constraint_no_fill2() {
 }
 
 #[test]
+fn t3_crossing_iterator() {
+    init_test(module_path!());
+
+    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
+    where
+        R: Real,
+        P: Default + Position<Real = R> + From<Sample>,
+        PR: Default + Predicates<Position = P, Real = R>,
+    {
+        info!("{}", desc);
+
+        let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
+            ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
+            ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
+            ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
+            ("(x, -y)", Box::new(|x, y| Sample(x, -y).into())),
+            ("(y, x)", Box::new(|x, y| Sample(y, x).into())),
+            ("(-y, x)", Box::new(|x, y| Sample(-y, x).into())),
+            ("(-y, -x)", Box::new(|x, y| Sample(-y, -x).into())),
+            ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
+        ];
+
+        for (info, map) in transforms.iter() {
+            debug!("transformation: {}", info);
+
+            let _1 = tri.add_vertex(map(2.0, 1.0), None);
+            let _2 = tri.add_vertex(map(4.0, 1.0), None);
+            let _3 = tri.add_vertex(map(1.0, 2.0), None);
+            let _4 = tri.add_vertex(map(1.0, 0.0), None);
+            let v5 = tri.add_vertex(map(0.0, 1.0), None);
+            let _6 = tri.add_vertex(map(5.0, 2.0), None);
+            let _7 = tri.add_vertex(map(5.0, 0.0), None);
+            let v8 = tri.add_vertex(map(6.0, 1.0), None);
+            let _ = tri.add_vertex(map(0.5, 1.2), None);
+            let _ = tri.add_vertex(map(0.5, 0.8), None);
+            let _ = tri.add_vertex(map(0.8, 1.0), None);
+            assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v5, v8).collect();
+            assert_eq!(crossing.len(), 8, "{:?}", crossing);
+
+            trace!("clear");
+            tri.graph.clear();
+            assert!(tri.graph.is_empty());
+            assert_eq!(tri.check(None), Ok(()));
+        }
+    }
+
+    test_(SimpleTrif32::default(), "inexact f32");
+    test_(SimpleTrif64::default(), "inexact f64");
+    test_(SimpleTrii32::default(), "exact i32");
+    test_(SimpleTrii64::default(), "exact i64");
+}
+
+#[test]
 #[ignore]
-fn t3_constraint_concave() {
+fn t4_constraint_concave() {
     init_test(module_path!());
 
     fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)

@@ -41,7 +41,7 @@ fn quick_debug() {
     let mut rm = RenderMapping::new();
     let color = Coloring::new();
 
-    let map = |x, y| Posf32::from(Sample(x, y));
+    let map = |x: f32, y: f32| Posf32::from(Sample(-y, -x));
 
     {
         rm.set_virtual_positions(vec![
@@ -68,6 +68,9 @@ fn quick_debug() {
         let _6 = tri.add_vertex(map(5.0, 2.0), None);
         let _7 = tri.add_vertex(map(5.0, 0.0), None);
         let v8 = tri.add_vertex(map(6.0, 1.0), None);
+        let _ = tri.add_vertex(map(0.5, 1.2), None);
+        let _ = tri.add_vertex(map(0.5, 0.8), None);
+        let _ = tri.add_vertex(map(0.8, 1.0), None);
 
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
