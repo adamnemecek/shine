@@ -78,7 +78,7 @@ fn quick_debug() {
 
         println!("--------");
         let mut cnt = 0;
-        for crossing in CrossingIterator::new(&tri, v1, v2) {
+        for crossing in CrossingIterator::new(&tri, v8, v1) {
             println!("crossing: {:?}", crossing);
             cnt += 1;
             if cnt > 5 {

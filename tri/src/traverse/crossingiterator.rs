@@ -1,6 +1,6 @@
 use geometry::{CollinearTest, CollinearTestType, Orientation, OrientationType, Predicates};
 use graph::{Face, Vertex};
-use indexing::{end_of, VertexQuery};
+use indexing::{end_of, start_of, VertexQuery};
 use std::mem;
 use traverse::edgecirculator::EdgeCirculator;
 use triangulation::Triangulation;
@@ -45,7 +45,7 @@ where
             v1,
             current: None,
         };
-        iter.current = iter.search_vertex(iter.v0);
+        iter.current = iter.search_vertex(iter.v0, iter.v0);
         iter
     }
 
@@ -54,24 +54,30 @@ where
         let next = match self.current {
             None => None,
             Some(Crossing::Start { face, vertex }) => self.search_edge(face, vertex),
-            Some(Crossing::End { face, vertex }) => self.search_vertex(self.tri.vi(FaceVertex { face, vertex })),
-            Some(Crossing::CoincidentEdge { face, edge }) => self.search_vertex(self.tri.vi(end_of(FaceEdge { face, edge }))),
+            Some(Crossing::End { face, vertex }) => self.search_vertex(self.tri.vi(FaceVertex { face, vertex }), self.v0),
+            Some(Crossing::CoincidentEdge { face, edge }) => self.search_vertex(
+                self.tri.vi(end_of(FaceEdge { face, edge })),
+                self.tri.vi(start_of(FaceEdge { face, edge })),
+            ),
             Some(Crossing::PositiveEdge { face, edge }) => self.search_edge(face, edge),
             Some(Crossing::NegativeEdge { face, edge }) => self.search_edge(face, edge),
         };
 
         //println!("advance next: {:?}", next);
-
         mem::replace(&mut self.current, next)
     }
 
-    /// Find next crossing edge by circulating the edges around a vertex.
-    fn search_vertex(&self, start_vertex: VertexIndex) -> Option<Crossing> {
+    /// Find next crossing edge by circulating the edges around the base_vertex.
+    /// start_vertex is used to avoid going backward whan collinear edges are detected.
+    fn search_vertex(&self, base_vertex: VertexIndex, start_vertex: VertexIndex) -> Option<Crossing> {
         let mut start_orientation = OrientationType::Collinear;
-        let mut circulator = EdgeCirculator::new(self.tri, start_vertex);
+        let mut circulator = EdgeCirculator::new(self.tri, base_vertex);
 
-        //println!("search_vertex ({:?},{:?}): {:?}", self.v0, self.v1, start_vertex);
-        if start_vertex == self.v1 {
+        /*println!(
+            "search_vertex ({:?},{:?}): {:?},{:?}",
+            self.v0, self.v1, start_vertex, base_vertex
+        );*/
+        if base_vertex == self.v1 {
             return None;
         }
 
@@ -91,9 +97,10 @@ where
                 });
             }
 
-            let orientation = if vertex == self.v0 {
-                // rare case, we are on the (v0,vertex) edge and it is collinear to v0,v1
-                // we can pick any orientation to rotate around vertex
+            let orientation = if vertex == start_vertex {
+                // we are on the edge (base_vertex, start_vertex) edge which is just the opposite
+                // direction of the crosiing edge, thus any orientation can be picked for the rotate
+                //println!("backward edge {:?},{:?}", base_vertex, vertex);
                 OrientationType::CCW
             } else {
                 let p0 = &self.tri.pos(self.v0);

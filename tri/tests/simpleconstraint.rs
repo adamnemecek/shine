@@ -198,7 +198,6 @@ fn t2_constraint_no_fill2() {
 }
 
 #[test]
-#[ignore]
 fn t3_crossing_iterator() {
     init_test(module_path!());
 
@@ -238,22 +237,22 @@ fn t3_crossing_iterator() {
             let _ = tri.add_vertex(map(3.0, 1.0), None);
             assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
-            let crossing: Vec<_> = CrossingIterator::new(&tri, v1, v2).collect();
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v1, v2).take(10).collect();
             assert_eq!(crossing.len(), 2, "{:?}", crossing);
 
-            let crossing: Vec<_> = CrossingIterator::new(&tri, v2, v1).collect();
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v2, v1).take(10).collect();
             assert_eq!(crossing.len(), 2, "{:?}", crossing);
 
-            let crossing: Vec<_> = CrossingIterator::new(&tri, v5, v2).collect();
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v5, v2).take(10).collect();
             assert_eq!(crossing.len(), 7, "{:?}", crossing);
 
-            let crossing: Vec<_> = CrossingIterator::new(&tri, v2, v5).collect();
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v2, v5).take(10).collect();
             assert_eq!(crossing.len(), 7, "{:?}", crossing);
 
-            let crossing: Vec<_> = CrossingIterator::new(&tri, v5, v8).collect();
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v5, v8).take(20).collect();
             assert_eq!(crossing.len(), 9, "{:?}", crossing);
 
-            let crossing: Vec<_> = CrossingIterator::new(&tri, v8, v5).collect();
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v8, v5).take(20).collect();
             assert_eq!(crossing.len(), 9, "{:?}", crossing);
 
             trace!("clear");
