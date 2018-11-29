@@ -1,6 +1,7 @@
 use geometry::{CollinearTest, Orientation, Position, Predicates};
 use graph::{Face, Vertex};
 use indexing::VertexQuery;
+use std::cell::RefMut;
 use triangulation::Triangulation;
 use types::{invalid_face_index, rot3, vertex_index, FaceIndex, FaceVertex, Rot3};
 
@@ -57,11 +58,16 @@ pub trait TaggingLocator {
     fn locate_position(&mut self, p: &Self::Position, hint: Option<FaceIndex>) -> Result<Location, String>;
 }
 
-impl<PR, V, F> Triangulation<PR, V, F>
+pub trait TagContext {
+    fn tag(&self) -> RefMut<usize>;
+}
+
+impl<PR, V, F, C> Triangulation<PR, V, F, C>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,
     F: Face,
+    C: TagContext,
 {
     /// Find the location of a point in a single point triangulation (dimension = 0).
     fn locate_position_dim0(&mut self, p: &PR::Position) -> Result<Location, String> {
@@ -230,7 +236,7 @@ where
         //let mut count = 0;
 
         // keep a mutable reference to tag to avoid any additional interference in tag increment during traverse
-        let mut tag = self.tag.borrow_mut();
+        let mut tag = self.context.tag();
         *tag += 1;
 
         loop {
@@ -269,11 +275,12 @@ where
     }
 }
 
-impl<PR, V, F> TaggingLocator for Triangulation<PR, V, F>
+impl<PR, V, F, C> TaggingLocator for Triangulation<PR, V, F, C>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,
     F: Face,
+    C: TagContext,
 {
     type Position = PR::Position;
 

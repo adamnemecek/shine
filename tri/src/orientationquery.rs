@@ -12,7 +12,7 @@ pub trait OrientationQuery {
     fn is_convex(&self, f: FaceIndex, i: Rot3) -> bool;
 }
 
-impl<PR, V, F> OrientationQuery for Triangulation<PR, V, F>
+impl<PR, V, F, C> OrientationQuery for Triangulation<PR, V, F, C>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,

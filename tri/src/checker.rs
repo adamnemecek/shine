@@ -29,7 +29,7 @@ pub trait Checker {
     }
 }
 
-impl<PR, V, F> Triangulation<PR, V, F>
+impl<PR, V, F, C> Triangulation<PR, V, F, C>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,

@@ -133,7 +133,7 @@ where
     }
 }
 
-impl<PR, V, F> VertexQuery for Triangulation<PR, V, F>
+impl<PR, V, F, S> VertexQuery for Triangulation<PR, V, F, S>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,

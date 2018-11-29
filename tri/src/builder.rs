@@ -2,7 +2,8 @@ use geometry::{CollinearTest, Orientation, Position, Predicates};
 use graph::{Constraint, Face, FaceExt, Vertex};
 use indexing::VertexQuery;
 use orientationquery::OrientationQuery;
-use tagginglocator::{Location, TaggingLocator};
+use std::cell::RefMut;
+use tagginglocator::{Location, TagContext, TaggingLocator};
 use traverse::{Crossing, CrossingIterator};
 use triangulation::Triangulation;
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
@@ -21,31 +22,21 @@ pub trait Builder {
 
     /// Add a constraining edge between the given vertices.
     fn add_constraint_edge(&mut self, v0: VertexIndex, v1: VertexIndex, c: Self::Constraint);
+
+    /// Flip the edges between two adjacent triangles
+    fn flip(&mut self, face: FaceIndex, edge: Rot3);
 }
 
-pub struct BuilderContext {
-    chain_store: ChainStore,
+pub trait BuilderContext {
+    fn chain_store(&self) -> RefMut<ChainStore>;
 }
 
-impl BuilderContext {
-    fn new() -> BuilderContext {
-        BuilderContext {
-            chain_store: ChainStore::new(),
-        }
-    }
-}
-
-impl Default for BuilderContext {
-    fn default() -> Self {
-        BuilderContext::new()
-    }
-}
-
-impl<PR, V, F> Triangulation<PR, V, F>
+impl<PR, V, F, C> Triangulation<PR, V, F, C>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,
     F: Face,
+    C: BuilderContext + TagContext,
 {
     fn create_infinite_vertex(&mut self) -> VertexIndex {
         let v = self.graph.store_vertex(Default::default());
@@ -101,8 +92,7 @@ where
         self.set_adjacent(f_target, i_target, n, i);
     }
 
-    /// Flips the edge in the quadrangle defined by the two neighboring triangles.
-    pub fn flip(&mut self, face: FaceIndex, edge: Rot3) {
+    pub fn flip_face(&mut self, face: FaceIndex, edge: Rot3) {
         assert_eq!(self.graph.dimension(), 2);
         assert!(face.is_valid() && edge.is_valid());
 
@@ -484,7 +474,7 @@ where
             if !self.get_edge_vertex_orientation(fcw, i, vp).is_ccw() {
                 break;
             }
-            self.flip(fcw, i.increment());
+            self.flip_face(fcw, i.increment());
             fcw = next;
         }
 
@@ -494,7 +484,7 @@ where
             if !self.get_edge_vertex_orientation(fccw, i, vp).is_ccw() {
                 break;
             }
-            self.flip(fccw, i.decrement());
+            self.flip_face(fccw, i.decrement());
             fccw = next;
         }
 
@@ -560,14 +550,15 @@ where
     }
 
     /// Adds the constraining edge between the two vertex when dim=2
-    fn add_constraint_dim2(&mut self, v0: VertexIndex, v1: VertexIndex, c: &F::Constraint, context: &mut BuilderContext) {
-        let chain_store = &mut context.chain_store;
+    fn add_constraint_dim2(&mut self, v0: VertexIndex, v1: VertexIndex, c: &F::Constraint) {
+        //let chain_store = &mut context.chain_store;
+        let mut chain_store = self.context.chain_store();
         let mut start = v0;
         /*while start != v1 {
             println!("add constrainat: {:?}->{:?}", start, v1);
             // collect intersecting faces and generate the two (top/bottom) chains
             // The edge-chain is not a whole polygon the new constraining edge is the missing closing edge
-        
+
             let (face, edge) = 'itertion_block: {
                 let mut top_chain;
                 let mut bottom_chain;
@@ -575,28 +566,28 @@ where
                     let mut crossing_iter = CrossingIterator::new(self, start, v1);
                     let cross = crossing_iter.next().unwrap();
                     println!("crossing edge: {:?}", cross);
-        
+
                     if cross.side == CrossingSide::Coincident {
                         // single coincident edge detected, no hole filling is required
                         break 'itertion_block (cross.face, cross.edge);
                     }
-        
+
                     top_chain = chain_store.new_chain(cross.face, cross.edge.increment(), true);
                     bottom_chain = chain_store.new_chain(cross.face, cross.edge.decrement(), true);
-        
+
                     loop {
                         let cross = crossing_iter.next();
                         println!("crossing edge: {:?}", cross);
-        
+
                         if cross.is_none() {
                             break;
                         }
-        
+
                         let cross = cross.unwrap();
-        
+
                         //test if crossed edge is constrainet
                         //todo
-        
+
                         match cross.side {
                             CrossingSide::Coincident => {
                                 break;
@@ -609,7 +600,7 @@ where
                 self.triangulate_hole(chain_store, top_chain, bottom_chain)
             };
             chain_store.clear();
-        
+
             self.make_constraint(face, edge, c.clone());
             start = self.graph.index_get(VertexQuery::EdgeEnd(face, edge));
         }*/
@@ -621,11 +612,12 @@ where
     }
 }
 
-impl<PR, V, F> Builder for Triangulation<PR, V, F>
+impl<PR, V, F, C> Builder for Triangulation<PR, V, F, C>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,
     F: Face,
+    C: TagContext + BuilderContext,
 {
     type Position = PR::Position;
     type Constraint = F::Constraint;
@@ -655,48 +647,69 @@ where
 
         match self.graph.dimension() {
             1 => self.add_constraint_dim1(v0, v1, &c),
-            2 => self.add_constraint_dim2(v0, v1, &c, &mut BuilderContext::new()),
+            2 => self.add_constraint_dim2(v0, v1, &c),
             _ => unreachable!("Inconsistent triangulation"),
         }
     }
-}
 
-impl<'a, PR, V, F> Builder for &'a mut (Triangulation<PR, V, F>, BuilderContext)
+    fn flip(&mut self, face: FaceIndex, edge: Rot3) {
+        self.flip_face(face, edge);
+    }
+}
+/*
+pub struct TriBuilder<'a, PR, V, F, C>
 where
     PR: 'a + Predicates,
     V: 'a + Vertex<Position = PR::Position>,
     F: 'a + Face,
+    C: BuilderContext2
+{
+    tri: &'a mut Triangulation<PR, V, F>,
+    context: &'a mut C,
+}
+
+impl<'a, PR, V, F, C> Builder for TriBuilder<'a, PR, V, F>
+where
+    PR: 'a + Predicates,
+    V: 'a + Vertex<Position = PR::Position>,
+    F: 'a + Face,
+    C: 'a + BuilderContextProvider,
 {
     type Position = PR::Position;
     type Constraint = F::Constraint;
 
     fn add_vertex(&mut self, p: PR::Position, hint: Option<FaceIndex>) -> VertexIndex {
-        let location = self.0.locate_position(&p, hint).unwrap();
-        self.0.add_vertex_at(p, location)
+        let location = self.tri.locate_position(&p, hint).unwrap();
+        self.tri.add_vertex_at(p, location)
     }
 
     fn add_constraint_segment(&mut self, p0: PR::Position, p1: PR::Position, c: F::Constraint) {
         assert!(c.is_constraint());
         let v0 = self.add_vertex(p0, None);
-        let start_face = self.0.graph[v0].face();
+        let start_face = self.tri.graph[v0].face();
         let v1 = self.add_vertex(p1, Some(start_face));
-        self.0.add_constraint_edge(v0, v1, c);
+        self.tri.add_constraint_edge(v0, v1, c);
     }
 
     fn add_constraint_edge(&mut self, v0: VertexIndex, v1: VertexIndex, c: F::Constraint) {
         assert!(c.is_constraint());
         assert!(v0.is_valid());
         assert!(v1.is_valid());
-        assert!(self.0.graph.is_finite_vertex(v0));
-        assert!(self.0.graph.is_finite_vertex(v1));
+        assert!(self.tri.graph.is_finite_vertex(v0));
+        assert!(self.tri.graph.is_finite_vertex(v1));
         if v0 == v1 {
             return;
         }
 
         match self.0.graph.dimension() {
-            1 => self.0.add_constraint_dim1(v0, v1, &c),
-            2 => self.0.add_constraint_dim2(v0, v1, &c, &mut self.1),
+            1 => self.tri.add_constraint_dim1(v0, v1, &c),
+            2 => self.tri.add_constraint_dim2(v0, v1, &c, &mut self.context),
             _ => unreachable!("Inconsistent triangulation"),
         }
     }
+
+    fn flip(&mut self, face: FaceIndex, edge: Rot3) {
+        self.flip_face(face, edge);
+    }
 }
+*/
