@@ -76,20 +76,24 @@ fn quick_debug() {
         webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
-        /*for crossing in CrossingIterator::new(&tri, v1, v2) {
-            println!("{:?}", crossing);
+        println!("--------");
+        let mut cnt = 0;
+        for crossing in CrossingIterator::new(&tri, v1, v2) {
+            println!("crossing: {:?}", crossing);
+            cnt += 1;
+            if cnt > 5 {
+                break;
+            }
         }
-        
-        println!("-----------");
-        
-        for crossing in CrossingIterator::new(&tri, v5, v8) {
-            println!("{:?}", crossing);
-        }
-        
-        println!("-----------");*/
 
-        /*for crossing in CrossingIterator::new(&tri, v8, v5) {
-            println!("{:?}", crossing);
+        /*println!("--------");
+        for crossing in CrossingIterator::new(&tri, v5, v8) {
+            println!("crossing: {:?}", crossing);
+        }
+
+        println!("--------");
+        for crossing in CrossingIterator::new(&tri, v2, v1) {
+            println!("crossing: {:?}", crossing);
         }*/
     }
 

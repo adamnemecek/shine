@@ -32,10 +32,10 @@ impl Coloring {
     pub fn new() -> Coloring {
         Coloring {
             vertex: "blueviolet".into(),
-            vertex_text: ("blue".into(), 0.05),
-            edge: "blue".into(),
-            edge_text: ("blue".into(), 0.03),
-            face_text: ("blue".into(), 0.05),
+            vertex_text: ("yellow".into(), 0.05),
+            edge: "yellow".into(),
+            edge_text: ("yellow".into(), 0.03),
+            face_text: ("yellow".into(), 0.05),
 
             constraint_edge: "green".into(),
             constraint_edge_text: ("green".into(), 0.03),

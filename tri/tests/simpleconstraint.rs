@@ -241,6 +241,15 @@ fn t3_crossing_iterator() {
             let crossing: Vec<_> = CrossingIterator::new(&tri, v1, v2).collect();
             assert_eq!(crossing.len(), 2, "{:?}", crossing);
 
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v2, v1).collect();
+            assert_eq!(crossing.len(), 2, "{:?}", crossing);
+
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v5, v2).collect();
+            assert_eq!(crossing.len(), 7, "{:?}", crossing);
+
+            let crossing: Vec<_> = CrossingIterator::new(&tri, v2, v5).collect();
+            assert_eq!(crossing.len(), 7, "{:?}", crossing);
+
             let crossing: Vec<_> = CrossingIterator::new(&tri, v5, v8).collect();
             assert_eq!(crossing.len(), 9, "{:?}", crossing);
 

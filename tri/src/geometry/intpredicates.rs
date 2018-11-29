@@ -1,50 +1,50 @@
 use geometry::{CollinearTest, Orientation, Position, Predicates, NearestPointSearch, NearestPointSearchBuilder};
 use std::marker::PhantomData;
 
-macro_rules! impl_inexact_predicate {
-    ($predicates:ident, $eps:expr => $float:ty) => {
+macro_rules! impl_int_predicate {
+    ($predicates:ident => $int:ty) => {
 
-        #[allow(clippy::cast_lossless)]
-        impl Orientation for $float {
+        impl Orientation for $int {
             fn is_cw(&self) -> bool {
-                *self < -$eps
+                *self < 0
             }
 
             fn is_collinear(&self) -> bool {
-                (*self).abs() <= $eps
+                *self == 0
             }
 
             fn is_ccw(&self) -> bool {
-                *self > $eps
+                *self > 0
             }
         }
 
         #[allow(clippy::cast_lossless)]
-        impl CollinearTest for $float {
+        impl CollinearTest for $int {
             fn is_before(&self) -> bool {
-                *self < -$eps
+                *self < 0
             }
 
             fn is_first(&self) -> bool {
-                (*self).abs() <= $eps
+                *self == 0
             }
 
             fn is_between(&self) -> bool {
-                *self > $eps && *self < 2. - $eps
+                *self > 0 && *self < 2
             }
 
+            #[allow(clippy::int_cmp)]
             fn is_second(&self) -> bool {
-                (*self - 2.).abs() <= $eps
+                *self == 2
             }
 
             fn is_after(&self) -> bool {
-                *self > 2. + $eps
+                *self > 2
             }
         }
 
         pub struct $predicates<P>
         where
-            P: Position<Real = $float>,
+            P: Position<Real = $int>,
         {
             phantom: PhantomData<P>,
         }
@@ -52,7 +52,7 @@ macro_rules! impl_inexact_predicate {
 
         impl<P> $predicates<P>
         where
-            P: Position<Real = $float>,
+            P: Position<Real = $int>,
         {
             pub fn new() -> $predicates<P> {
                 $predicates { phantom: PhantomData }
@@ -61,21 +61,20 @@ macro_rules! impl_inexact_predicate {
 
         impl<P> Default for $predicates<P>
         where
-            P: Position<Real = $float>,
+            P: Position<Real = $int>,
         {
             fn default() -> Self {
                 Self::new()
             }
         }
 
-        #[allow(clippy::cast_lossless)]
         impl<P> Predicates for $predicates<P>
         where
-            P: Position<Real = $float>,
+            P: Position<Real = $int>,
         {
-            type Real = $float;
-            type Orientation = $float;
-            type CollinearTest = $float;
+            type Real = $int;
+            type Orientation = $int;
+            type CollinearTest = $int;
             type Position = P;
 
             fn orientation_triangle(&self, a: &Self::Position, b: &Self::Position, c: &Self::Position) -> Self::Orientation {
@@ -104,54 +103,54 @@ macro_rules! impl_inexact_predicate {
                 if abx.abs() > aby.abs() {
                     // x-major line
                     let apx = ax - px;
-                    if apx.abs() <= $eps {
-                        0.
+                    if apx == 0 {
+                        0
                     } else {
                         let bpx = bx - px;
-                        if  bpx.abs() <= $eps {
-                            2.
-                        } else if abx < -$eps {
-                            if apx > $eps {
-                                -1.
-                            } else if bpx < -$eps {
-                                3.
+                        if bpx == 0 {
+                            2
+                        } else if abx < 0 {
+                            if apx > 0 {
+                                -1
+                            } else if bpx < 0 {
+                                3
                             } else {
-                                1.
+                                1
                             }
                         } else {
-                            if apx < -$eps {
-                                -1.
-                            } else if bpx > $eps {
-                                3.
+                            if apx < 0 {
+                                -1
+                            } else if bpx > 0 {
+                                3
                             } else {
-                                1.
+                                1
                             }
                         }
                     }
                 } else {
                     // y-major line
                     let apy = ay - py;
-                    if  apy.abs() <= $eps {
-                        0.
+                    if apy == 0 {
+                        0
                     } else {
                         let bpy = by - py;
-                        if  bpy.abs() <= $eps {
-                            2.
-                        } else if aby < -$eps {
-                            if apy > $eps {
-                                -1.
-                            } else if bpy < -$eps {
-                                3.
+                        if bpy == 0 {
+                            2
+                        } else if aby < 0 {
+                            if apy > 0 {
+                                -1
+                            } else if bpy < 0 {
+                                3
                             } else {
-                                1.
+                                1
                             }
                         } else {
-                            if apy < -$eps {
-                                -1.
-                            } else if bpy > $eps {
-                                3.
+                            if apy < 0 {
+                                -1
+                            } else if bpy > 0 {
+                                3
                             } else {
-                                1.
+                                1
                             }
                         }
                     }
@@ -162,26 +161,26 @@ macro_rules! impl_inexact_predicate {
 }
 
 
-macro_rules! impl_inexact_nearest_point_search {
-    ($nearest_point_search:ident => ($float:ty, $predicates:ident)) => {
+macro_rules! impl_int_nearest_point_search {
+    ($nearest_point_search:ident => ($int:ty, $predicates:ident)) => {
         pub struct $nearest_point_search<'a, D,P> 
         where
-            P: 'a + Position<Real = $float>,
+            P: 'a + Position<Real = $int>,
         {
-            base: ($float,$float),
-            dist: $float,                
+            base: ($int,$int),
+            dist: $int,                
             best: Option<(&'a P, D)>,
         }
 
         #[allow(clippy::cast_lossless)]
         impl <'a, D,P> $nearest_point_search<'a, D,P> 
         where
-                P: 'a + Position<Real = $float>,
+                P: 'a + Position<Real = $int>,
         {
             fn new(base: &P) -> $nearest_point_search<D,P>  {
                 $nearest_point_search {
                     base : (base.x(), base.y()),
-                    dist: 0.,
+                    dist: 0,
                     best: None,
                 }
             }
@@ -189,7 +188,7 @@ macro_rules! impl_inexact_nearest_point_search {
 
         impl<'a, D,P> NearestPointSearch<'a, D> for $nearest_point_search<'a,D,P> 
         where
-                P: 'a + Position<Real = $float>
+                P: 'a + Position<Real = $int>
         {
             type Position = P;
 
@@ -211,7 +210,7 @@ macro_rules! impl_inexact_nearest_point_search {
         }
 
         impl<'a, D, P> NearestPointSearchBuilder<'a,D> for $predicates<P> 
-        where P: 'a + Position<Real = $float>,
+        where P: 'a + Position<Real = $int>,
         {
             type NearestPointSearch = $nearest_point_search<'a,D,P>;
 
@@ -223,8 +222,8 @@ macro_rules! impl_inexact_nearest_point_search {
     }
 }
 
-impl_inexact_predicate!(Predicatesf32, 1e-6 => f32);
-impl_inexact_nearest_point_search!(NearestPointSearchf32 => (f32, Predicatesf32));
+impl_int_predicate!(Predicatesi32 => i32);
+impl_int_nearest_point_search!(NearestPointSearchi32 => (i32, Predicatesi32));
 
-impl_inexact_predicate!(Predicatesf64, 1e-12 => f64);
-impl_inexact_nearest_point_search!(NearestPointSearchf64 => (f64, Predicatesf64));
+impl_int_predicate!(Predicatesi64 => i64);
+impl_int_nearest_point_search!(NearestPointSearchi64 => (i64, Predicatesi64));

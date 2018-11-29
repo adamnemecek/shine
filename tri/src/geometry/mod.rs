@@ -34,9 +34,11 @@ pub trait Position {
 }
 
 mod inexactpredicates;
+mod intpredicates;
 mod predicates;
 
 pub mod position;
 
 pub use self::inexactpredicates::*;
+pub use self::intpredicates::*;
 pub use self::predicates::*;
