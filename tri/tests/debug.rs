@@ -10,7 +10,7 @@ use common::{trace_graph, Coloring, RenderMapping, Sample, SimpleConstraint, Sim
 use shine_testutils::init_webcontroll_test;
 use shine_tri::geometry::position::{Posf32, Posf64};
 use shine_tri::traverse::{Crossing, CrossingIterator};
-use shine_tri::{Builder, Checker};
+use shine_tri::{Builder, Checker, Context};
 use std::panic;
 use std::sync::{Arc, Mutex};
 
@@ -36,7 +36,7 @@ fn quick_debug() {
         })
     });
 
-    let mut tri = SimpleTrif32::default();
+    let mut tri = SimpleTrif32::new(Context::new().with_tag().with_builder());
 
     let mut rm = RenderMapping::new();
     let color = Coloring::new();

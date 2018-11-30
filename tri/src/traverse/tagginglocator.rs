@@ -1,8 +1,7 @@
+use context::{PredicatesContext, TagContext};
 use geometry::{CollinearTest, Orientation, Position, Predicates};
-use graph::{Face, Vertex};
 use indexing::VertexQuery;
-use std::cell::RefMut;
-use triangulation::Triangulation;
+use triangulation::{Face, Triangulation, Vertex};
 use types::{invalid_face_index, rot3, vertex_index, FaceIndex, FaceVertex, Rot3};
 
 #[derive(Debug)]
@@ -58,35 +57,33 @@ pub trait TaggingLocator {
     fn locate_position(&mut self, p: &Self::Position, hint: Option<FaceIndex>) -> Result<Location, String>;
 }
 
-pub trait TagContext {
-    fn tag(&self) -> RefMut<usize>;
-}
-
-impl<PR, V, F, C> Triangulation<PR, V, F, C>
+impl<PR, V, F, C> Triangulation<PR::Position, V, F, C>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,
     F: Face,
-    C: TagContext,
+    C: TagContext + PredicatesContext<Predicates = PR>,
 {
     /// Find the location of a point in a single point triangulation (dimension = 0).
     fn locate_position_dim0(&mut self, p: &PR::Position) -> Result<Location, String> {
-        assert!(self.graph.dimension() == 0);
+        assert!(self.dimension() == 0);
+
+        let pr = self.context.predicates();
 
         // find the (only) finite vertex
         let v0 = {
             let v = vertex_index(1);
-            if !self.graph.is_infinite_vertex(v) {
+            if !self.is_infinite_vertex(v) {
                 v
             } else {
                 vertex_index(0)
             }
         };
+        let p0 = self.pos(v0);
 
-        let p0 = &self.graph.pos(v0);
-        if self.predicates.test_coincident_points(p, p0) {
-            let f0 = self.graph[v0].face();
-            Ok(Location::Vertex(f0, self.graph[f0].get_vertex_index(v0).unwrap()))
+        if pr.test_coincident_points(p, p0) {
+            let f0 = self[v0].face();
+            Ok(Location::Vertex(f0, self[f0].get_vertex_index(v0).unwrap()))
         } else {
             Ok(Location::OutsideAffineHull)
         }
@@ -94,30 +91,32 @@ where
 
     /// Find the location of a point in a straight line strip. (dimension = 1)
     fn locate_position_dim1(&mut self, p: &PR::Position) -> Result<Location, String> {
-        assert!(self.graph.dimension() == 1);
+        assert!(self.dimension() == 1);
+
+        let pr = self.context.predicates();
 
         // calculate the convex hull of the 1-d mesh
         // the convex hull is a segment made up from the two (finite) neighboring vertices of the infinite vertex
 
-        let vinf = self.graph.infinite_vertex();
+        let vinf = self.infinite_vertex();
         // first point of the convex hull (segments)
-        let f0 = self.graph.infinite_face();
-        let iv0 = self.graph[f0].get_vertex_index(vinf).unwrap();
-        let cp0 = &self.graph.pos(FaceVertex::from(f0, iv0.mirror(2)));
+        let f0 = self.infinite_face();
+        let iv0 = self[f0].get_vertex_index(vinf).unwrap();
+        let cp0 = self.pos(FaceVertex::from(f0, iv0.mirror(2)));
 
         // last point of the convex hull (segments)
-        let f1 = self.graph[f0].neighbor(iv0.mirror(2));
-        let iv1 = self.graph[f1].get_vertex_index(vinf).unwrap();
-        let cp1 = &self.graph.pos(FaceVertex::from(f1, iv1.mirror(2)));
+        let f1 = self[f0].neighbor(iv0.mirror(2));
+        let iv1 = self[f1].get_vertex_index(vinf).unwrap();
+        let cp1 = self.pos(FaceVertex::from(f1, iv1.mirror(2)));
 
-        let orient = self.predicates.orientation_triangle(cp0, cp1, p);
+        let orient = pr.orientation_triangle(cp0, cp1, p);
         if orient.is_cw() {
             Ok(Location::OutsideAffineHullClockwise)
         } else if orient.is_ccw() {
             Ok(Location::OutsideAffineHullCounterClockwise)
         } else {
             // point is on the line
-            let t = self.predicates.test_collinear_points(cp0, cp1, p);
+            let t = pr.test_collinear_points(cp0, cp1, p);
             if t.is_before() {
                 Ok(Location::OutsideConvexHull(f0))
             } else if t.is_first() {
@@ -133,13 +132,13 @@ where
                 let mut prev = f0;
                 let mut dir = iv0;
                 loop {
-                    let cur = self.graph[prev].neighbor(dir);
-                    assert!(self.graph.is_finite_face(cur));
+                    let cur = self[prev].neighbor(dir);
+                    assert!(self.is_finite_face(cur));
 
-                    let p0 = &self.graph.pos(FaceVertex::from(cur, rot3(0)));
-                    let p1 = &self.graph.pos(FaceVertex::from(cur, rot3(1)));
+                    let p0 = self.pos(FaceVertex::from(cur, rot3(0)));
+                    let p1 = self.pos(FaceVertex::from(cur, rot3(1)));
 
-                    let t = self.predicates.test_collinear_points(p0, p1, p);
+                    let t = pr.test_collinear_points(p0, p1, p);
                     if t.is_first() {
                         // identical to p0
                         return Ok(Location::Vertex(cur, rot3(0)));
@@ -151,7 +150,7 @@ where
                         return Ok(Location::Edge(cur, rot3(2)));
                     } else {
                         // advance to the next edge
-                        let vi = self.graph[cur].get_neighbor_index(prev).unwrap();
+                        let vi = self[cur].get_neighbor_index(prev).unwrap();
                         prev = cur;
                         dir = vi.mirror(2);
                     }
@@ -162,25 +161,27 @@ where
 
     /// Test which halfspace contains the p point.
     fn test_containment_face(&self, pos: &PR::Position, face: FaceIndex) -> ContainmentResult {
-        let p0 = &self.graph.pos(FaceVertex::from(face, rot3(0)));
-        let p1 = &self.graph.pos(FaceVertex::from(face, rot3(1)));
-        let p2 = &self.graph.pos(FaceVertex::from(face, rot3(2)));
+        let pr = self.context.predicates();
 
-        let e01 = self.predicates.orientation_triangle(p0, p1, pos);
+        let p0 = self.pos(FaceVertex::from(face, rot3(0)));
+        let p1 = self.pos(FaceVertex::from(face, rot3(1)));
+        let p2 = self.pos(FaceVertex::from(face, rot3(2)));
+
+        let e01 = pr.orientation_triangle(p0, p1, pos);
         if e01.is_cw() {
-            let next = self.graph[face].neighbor(rot3(2));
+            let next = self[face].neighbor(rot3(2));
             return ContainmentResult::Continue(next);
         }
 
-        let e20 = self.predicates.orientation_triangle(p2, p0, pos);
+        let e20 = pr.orientation_triangle(p2, p0, pos);
         if e20.is_cw() {
-            let next = self.graph[face].neighbor(rot3(1));
+            let next = self[face].neighbor(rot3(1));
             return ContainmentResult::Continue(next);
         }
 
-        let e12 = self.predicates.orientation_triangle(&p1, &p2, pos);
+        let e12 = pr.orientation_triangle(&p1, &p2, pos);
         if e12.is_cw() {
-            let next = self.graph[face].neighbor(rot3(0));
+            let next = self[face].neighbor(rot3(0));
             return ContainmentResult::Continue(next);
         }
 
@@ -193,22 +194,23 @@ where
 
     /// Test the containment of the p position with respect to the half spaces defined by the (a,b) and (b,c) edges.
     fn test_containment(&self, pos: &PR::Position, face: FaceIndex, a: Rot3, b: Rot3, c: Rot3, tag: usize) -> ContainmentResult {
-        let pa = &self.graph.pos(FaceVertex::from(face, a));
-        let pb = &self.graph.pos(FaceVertex::from(face, b));
-        let ab = self.predicates.orientation_triangle(&pa, &pb, pos);
+        let pr = self.context.predicates();
 
+        let pa = self.pos(FaceVertex::from(face, a));
+        let pb = self.pos(FaceVertex::from(face, b));
+        let ab = pr.orientation_triangle(&pa, &pb, pos);
         if ab.is_cw() {
-            let next = self.graph[face].neighbor(c);
-            if self.graph[next].tag() != tag {
+            let next = self[face].neighbor(c);
+            if self[next].tag() != tag {
                 return ContainmentResult::Continue(next);
             }
         }
 
-        let pc = &self.graph.pos(FaceVertex::from(face, c));
-        let bc = self.predicates.orientation_triangle(pb, pc, pos);
+        let pc = self.pos(FaceVertex::from(face, c));
+        let bc = pr.orientation_triangle(pb, pc, pos);
         if bc.is_cw() {
-            let next = self.graph[face].neighbor(a);
-            assert!(self.graph[next].tag() != tag);
+            let next = self[face].neighbor(a);
+            assert!(self[next].tag() != tag);
             return ContainmentResult::Continue(next);
         }
 
@@ -220,16 +222,16 @@ where
 
     // Find the location of a point in a triangulation. (dimension = 2)
     fn locate_position_dim2(&mut self, p: &PR::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
-        assert_eq!(self.graph.dimension(), 2);
+        assert_eq!(self.dimension(), 2);
 
         let start = {
-            let hint = hint.unwrap_or_else(|| self.graph.infinite_face());
-            match self.graph[hint].get_vertex_index(self.graph.infinite_vertex()) {
-                None => hint,                            // finite face
-                Some(i) => self.graph[hint].neighbor(i), // the opposite face to an infinite vertex is finite
+            let hint = hint.unwrap_or_else(|| self.infinite_face());
+            match self[hint].get_vertex_index(self.infinite_vertex()) {
+                None => hint,                      // finite face
+                Some(i) => self[hint].neighbor(i), // the opposite face to an infinite vertex is finite
             }
         };
-        assert!(self.graph.is_finite_face(start));
+        assert!(self.is_finite_face(start));
 
         let mut prev = invalid_face_index();
         let mut cur = start;
@@ -240,12 +242,12 @@ where
         *tag += 1;
 
         loop {
-            if self.graph.is_infinite_face(cur) {
+            if self.is_infinite_face(cur) {
                 return Ok(Location::OutsideConvexHull(cur));
             }
 
-            self.graph[cur].set_tag(*tag);
-            let from = self.graph[cur].get_neighbor_index(prev);
+            self.inner[cur].set_tag(*tag);
+            let from = self.inner[cur].get_neighbor_index(prev);
 
             let test_result = match from.map(|r| r.id()) {
                 None => self.test_containment_face(p, cur),
@@ -275,17 +277,17 @@ where
     }
 }
 
-impl<PR, V, F, C> TaggingLocator for Triangulation<PR, V, F, C>
+impl<PR, V, F, C> TaggingLocator for Triangulation<PR::Position, V, F, C>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,
     F: Face,
-    C: TagContext,
+    C: TagContext + PredicatesContext<Predicates = PR>,
 {
     type Position = PR::Position;
 
     fn locate_position(&mut self, p: &PR::Position, hint: Option<FaceIndex>) -> Result<Location, String> {
-        match self.graph.dimension() {
+        match self.dimension() {
             -1 => Ok(Location::Empty),
             0 => self.locate_position_dim0(p),
             1 => self.locate_position_dim1(p),

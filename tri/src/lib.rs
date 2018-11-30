@@ -10,22 +10,21 @@ extern crate rand;
 #[cfg(test)]
 extern crate shine_testutils;
 
-mod builder;
+//mod builder;
 mod checker;
-mod graph;
+mod context;
 mod orientationquery;
-mod tagginglocator;
+mod traverse;
 mod triangulation;
 
 pub mod geometry;
 pub mod indexing;
-pub mod traverse;
 pub mod types;
 pub mod vertexchain;
 
-pub use self::builder::*;
+//pub use self::builder::*;
 pub use self::checker::*;
-pub use self::graph::*;
+pub use self::context::*;
 pub use self::orientationquery::*;
-pub use self::tagginglocator::*;
+pub use self::traverse::*;
 pub use self::triangulation::*;

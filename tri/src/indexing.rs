@@ -1,10 +1,9 @@
-use geometry::{Position, Predicates};
-use graph::{Face, Graph, Vertex};
+use geometry::Position;
 use std::ops::{Index, IndexMut};
-use triangulation::Triangulation;
+use triangulation::{Face, Triangulation, Vertex};
 use types::{FaceEdge, FaceIndex, FaceVertex, Rot3, VertexIndex};
 
-impl<P, V, F> Index<VertexIndex> for Graph<P, V, F>
+impl<P, V, F, C> Index<VertexIndex> for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -17,7 +16,7 @@ where
     }
 }
 
-impl<P, V, F> IndexMut<VertexIndex> for Graph<P, V, F>
+impl<P, V, F, C> IndexMut<VertexIndex> for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -28,7 +27,7 @@ where
     }
 }
 
-impl<P, V, F> Index<FaceIndex> for Graph<P, V, F>
+impl<P, V, F, C> Index<FaceIndex> for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -41,7 +40,7 @@ where
     }
 }
 
-impl<P, V, F> IndexMut<FaceIndex> for Graph<P, V, F>
+impl<P, V, F, C> IndexMut<FaceIndex> for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -93,7 +92,7 @@ pub trait VertexQuery {
     fn pos_mut<T: Into<VertexClue>>(&mut self, id: T) -> &mut Self::Position;
 }
 
-impl<P, V, F> VertexQuery for Graph<P, V, F>
+impl<P, V, F, C> VertexQuery for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -130,35 +129,5 @@ where
     fn pos_mut<T: Into<VertexClue>>(&mut self, id: T) -> &mut Self::Position {
         let vi = self.vi(id);
         self[vi].position_mut()
-    }
-}
-
-impl<PR, V, F, S> VertexQuery for Triangulation<PR, V, F, S>
-where
-    PR: Predicates,
-    V: Vertex<Position = PR::Position>,
-    F: Face,
-{
-    type Position = PR::Position;
-    type Vertex = V;
-
-    fn vi<T: Into<VertexClue>>(&self, id: T) -> VertexIndex {
-        self.graph.vi(id)
-    }
-
-    fn v<T: Into<VertexClue>>(&self, id: T) -> &Self::Vertex {
-        self.graph.v(id)
-    }
-
-    fn v_mut<T: Into<VertexClue>>(&mut self, id: T) -> &mut Self::Vertex {
-        self.graph.v_mut(id)
-    }
-
-    fn pos<T: Into<VertexClue>>(&self, id: T) -> &Self::Position {
-        self.graph.pos(id)
-    }
-
-    fn pos_mut<T: Into<VertexClue>>(&mut self, id: T) -> &mut Self::Position {
-        self.graph.pos_mut(id)
     }
 }
