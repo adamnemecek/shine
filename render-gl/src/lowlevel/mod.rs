@@ -3,6 +3,7 @@ pub mod vertexbinding;
 pub mod indexbinding;
 pub mod texturebinding;
 pub mod programbinding;
+pub mod states;
 
 mod vertexbuffer;
 mod indexbuffer;
@@ -18,6 +19,7 @@ pub use self::vertexbinding::*;
 pub use self::indexbinding::*;
 pub use self::programbinding::*;
 pub use self::texturebinding::*;
+pub use self::states::*;
 
 pub use self::indexbuffer::*;
 pub use self::vertexbuffer::*;
@@ -36,17 +38,23 @@ pub struct LowLevel {
     pub index_binding: IndexBinding,
     pub texture_binding: TextureBinding,
     pub program_binding: ProgramBinding,
+    pub states: StateManager
 }
 
 impl LowLevel {
     pub fn new() -> LowLevel {
-        LowLevel {
+        let mut ll = LowLevel {
             screen_size: Size::from((0, 0)),
             vertex_binding: VertexBinding::new(),
             index_binding: IndexBinding::new(),
             texture_binding: TextureBinding::new(),
             program_binding: ProgramBinding::new(),
-        }
+            states: StateManager::new(),
+        };
+
+        ll.set_forced(false);
+
+        ll
     }
 
     pub fn release(&mut self) {}
@@ -63,11 +71,10 @@ impl LowLevel {
         self.vertex_binding.set_forced(force);
         self.index_binding.set_forced(force);
         self.program_binding.set_forced(force);
+        self.states.set_forced(force);
     }
 
-    pub fn start_render(&mut self) {
-        self.set_forced(true);
-    }
+    pub fn start_render(&mut self) {}
 
     pub fn end_render(&mut self) {}
 
@@ -84,6 +91,7 @@ impl LowLevel {
         self.vertex_binding.commit();
         self.index_binding.commit();
         self.texture_binding.commit();
+        self.states.commit();
 
         gl_check_error();
         if !self.index_binding.is_indexed() {

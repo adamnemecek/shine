@@ -42,7 +42,7 @@ pub mod limits {
 /// Helper macro to hide unsafe blocks for API calls
 #[macro_export]
 macro_rules! ugl {
-    ( $cmd:ident($( $arg:expr ),*) ) => { unsafe { gl::$cmd($($arg,)*) } };
+    ( $cmd:ident($( $arg:expr ),*) ) => { unsafe { /*println!("{}", stringify!(gl::$cmd($($arg,)*)));*/ gl::$cmd($($arg,)*) } };
 }
 
 pub mod lowlevel;

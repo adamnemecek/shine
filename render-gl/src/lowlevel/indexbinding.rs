@@ -114,6 +114,6 @@ impl IndexBinding {
         if self.bound_index.time_stamp != self.time_stamp {
             self.bind_no_index();
         }
-        self.time_stamp = self.time_stamp.wrapping_add(1);
+        self.time_stamp += 1;
     }
 }

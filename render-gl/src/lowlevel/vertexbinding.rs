@@ -137,20 +137,22 @@ impl VertexBinding {
 
         let attr = &mut self.bound_attributes[location as usize];
         assert!(attr.time_stamp != self.time_stamp, "Vertex attribute ({}) already bound for drawing", location);
+        attr.time_stamp = self.time_stamp;
+
         gl_check_error();
         if self.force || attr.hw_id != hw_id || attr.attribute != *attribute {
-            //bind buffer
-            if self.force || self.bound_id == hw_id {
+            // bind changed attributes
+            if self.force || self.bound_id != hw_id {
                 ugl!(BindBuffer(gl::ARRAY_BUFFER, hw_id));
-                ugl!(VertexAttribPointer(location,
-                                        attribute.components, attribute.component_type, attribute.normalize,
-                                        attribute.stride, attribute.offset as *const GLvoid));
-                ugl!(EnableVertexAttribArray(location));
+                self.bound_id = hw_id;
             }
-            self.bound_id = hw_id;
+
+            ugl!(VertexAttribPointer(location,
+                                     attribute.components, attribute.component_type, attribute.normalize,
+                                     attribute.stride, attribute.offset as *const GLvoid));
+            ugl!(EnableVertexAttribArray(location));
             attr.hw_id = hw_id;
             attr.attribute = *attribute;
-            attr.time_stamp = self.time_stamp;
             gl_check_error();
         }
     }
@@ -176,6 +178,6 @@ impl VertexBinding {
             }
         }
 
-        self.time_stamp = self.time_stamp.wrapping_add(1);
+        self.time_stamp += 1;
     }
 }

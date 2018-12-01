@@ -48,7 +48,6 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
         }
     }).collect::<Vec<_>>();
     let source_ref_count = source_refs.len();
-    println!("{:?}", source_refs);
 
     let source_datas = source_input.iter().filter_map(|&(sh_type, ref source)| {
         match source {
@@ -58,6 +57,7 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
                 let p = env::current_dir().unwrap();
 
                 let root = env::var("CARGO_MANIFEST_DIR").expect("Environmant variable CARGO_MANIFEST_DIR is not set");
+                //todo: find the location of the source file. Span::SourceFile::path()
                 let full_path = Path::new(&root).join("tests").join(&path);
 
                 if full_path.is_file() {
@@ -93,9 +93,10 @@ pub fn impl_shader_declaration(ast: &syn::DeriveInput) -> quote::Tokens {
 
             #[allow(dead_code)]
             fn source_iter() -> slice::Iter<'static, (ShaderType, &'static str)> {
-                const SOURCE_REF : [&str; #source_ref_count] = #source_refs;
-                const SOURCE : [(ShaderType,&str); #source_count] = #sources;
-                SOURCE.iter()
+                // workaround to make the compilation depend on the input files
+                const _SOURCE_REF : [&str; #source_ref_count] = #source_refs;
+                const SOURCES : [(ShaderType,&str); #source_count] = #sources;
+                SOURCES.iter()
             }
         }
     };

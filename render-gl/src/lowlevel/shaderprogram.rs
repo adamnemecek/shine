@@ -168,31 +168,30 @@ impl GLShaderProgram {
 
     fn attach_shader(&mut self, shader_type: GLenum, shader_source: &[u8]) -> Result<(), ShaderError> {
         gl_check_error();
-        unsafe {
-            let shader_id = gl::CreateShader(shader_type);
-            let source_len = shader_source.len() as GLint;
-            let sources_ptr = shader_source.as_ptr() as *const GLchar;
-            gl::ShaderSource(shader_id, 1, &sources_ptr as *const *const GLchar, &source_len as *const GLsizei);
-            gl::CompileShader(shader_id);
 
-            let mut status: GLint = gl::FALSE as GLint;
-            gl::GetShaderiv(shader_id, gl::COMPILE_STATUS, &mut status);
+        let shader_id = ugl!(CreateShader(shader_type));
+        let source_len = shader_source.len() as GLint;
+        let sources_ptr = shader_source.as_ptr() as *const GLchar;
+        ugl!(ShaderSource(shader_id, 1, &sources_ptr as *const *const GLchar, &source_len as *const GLsizei));
+        ugl!(CompileShader(shader_id));
 
-            if status != gl::TRUE as GLint {
-                let mut info_len: GLsizei = 0;
-                gl::GetShaderiv(shader_id, gl::INFO_LOG_LENGTH, &mut info_len);
-                let info_buf = vec![0u8; info_len as usize];
-                gl::GetShaderInfoLog(shader_id, info_len, &mut info_len, info_buf.as_ptr() as *mut GLchar);
-                let result_msg = from_utf8(info_buf.as_slice()).unwrap().to_string();
-                gl::DeleteShader(shader_id);
-                gl_check_error();
-                Err(ShaderError(result_msg))
-            } else {
-                gl::AttachShader(self.hw_id, shader_id);
-                gl::DeleteShader(shader_id);
-                gl_check_error();
-                Ok(())
-            }
+        let mut status: GLint = gl::FALSE as GLint;
+        ugl!(GetShaderiv(shader_id, gl::COMPILE_STATUS, &mut status));
+
+        if status != gl::TRUE as GLint {
+            let mut info_len: GLsizei = 0;
+            ugl!(GetShaderiv(shader_id, gl::INFO_LOG_LENGTH, &mut info_len));
+            let info_buf = vec![0u8; info_len as usize];
+            ugl!(GetShaderInfoLog(shader_id, info_len, &mut info_len, info_buf.as_ptr() as *mut GLchar));
+            let result_msg = from_utf8(info_buf.as_slice()).unwrap().to_string();
+            ugl!(DeleteShader(shader_id));
+            gl_check_error();
+            Err(ShaderError(result_msg))
+        } else {
+            ugl!(AttachShader(self.hw_id, shader_id));
+            ugl!(DeleteShader(shader_id));
+            gl_check_error();
+            Ok(())
         }
     }
 
@@ -216,22 +215,20 @@ impl GLShaderProgram {
         }
 
         gl_check_error();
-        unsafe {
-            gl::LinkProgram(self.hw_id);
+        ugl!(LinkProgram(self.hw_id));
 
-            let mut status: GLint = gl::FALSE as GLint;
-            gl::GetProgramiv(self.hw_id, gl::LINK_STATUS, &mut status);
+        let mut status: GLint = gl::FALSE as GLint;
+        ugl!(GetProgramiv(self.hw_id, gl::LINK_STATUS, &mut status));
 
-            if status != gl::TRUE as GLint {
-                let mut info_len: GLsizei = 0;
-                gl::GetProgramiv(self.hw_id, gl::INFO_LOG_LENGTH, &mut info_len);
-                let info_buf = vec![0u8; info_len as usize];
-                gl::GetProgramInfoLog(self.hw_id, info_len, &mut info_len, info_buf.as_ptr() as *mut GLchar);
-                let result_msg = from_utf8(info_buf.as_slice()).unwrap().to_string();
-                println!("Shader program link failed:\n{}", result_msg);
-                self.release(ll);
-                return;
-            }
+        if status != gl::TRUE as GLint {
+            let mut info_len: GLsizei = 0;
+            ugl!(GetProgramiv(self.hw_id, gl::INFO_LOG_LENGTH, &mut info_len));
+            let info_buf = vec![0u8; info_len as usize];
+            ugl!(GetProgramInfoLog(self.hw_id, info_len, &mut info_len, info_buf.as_ptr() as *mut GLchar));
+            let result_msg = from_utf8(info_buf.as_slice()).unwrap().to_string();
+            println!("Shader program link failed:\n{}", result_msg);
+            self.release(ll);
+            return;
         }
 
         gl_check_error();
