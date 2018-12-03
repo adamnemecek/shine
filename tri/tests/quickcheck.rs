@@ -14,7 +14,6 @@ use shine_tri::geometry::{Posf32, Posi64};
 use shine_tri::{Builder, FullChecker};
 
 #[test]
-#[ignore]
 fn stress_exact_i64() {
     init_quickcheck_test(module_path!(), 1000);
 

@@ -52,14 +52,6 @@ fn quick_debug() {
             (&map(2., -2.)).into(),
         ]);
 
-        /*let _e = tri.add_vertex(map(2.0, 2.5), None);
-        let _d = tri.add_vertex(map(3.5, 2.5), None);
-        let _b = tri.add_vertex(map(2.0, 0.5), None);
-        let _c = tri.add_vertex(map(3.5, 0.0), None);
-        let _a = tri.add_vertex(map(1.0, 0.0), None);
-        let p0 = tri.add_vertex(map(0.0, 1.0), None);
-        let _f = tri.add_vertex(map(1.0, 1.5), None);
-        let p1 = tri.add_vertex(map(4.0, 1.0), None);*/
         let v1 = tri.add_vertex(map(2.0, 1.0), None);
         let v2 = tri.add_vertex(map(4.0, 1.0), None);
         let _3 = tri.add_vertex(map(1.0, 2.0), None);
@@ -73,8 +65,10 @@ fn quick_debug() {
         let _ = tri.add_vertex(map(0.8, 1.0), None);
         let _ = tri.add_vertex(map(3.0, 1.0), None);
 
-        //webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
-        //assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        tri.trace_begin();
+        tri.trace();
+        tri.trace_end();
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
         println!("--------");
         let mut cnt = 0;

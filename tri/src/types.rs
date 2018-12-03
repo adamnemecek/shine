@@ -206,6 +206,10 @@ pub enum VertexClue {
 }
 
 impl VertexClue {
+    pub fn face_vertex(f: FaceIndex, v: Rot3) -> VertexClue {
+        VertexClue::FaceVertex(f, v)
+    }
+
     pub fn edge_start(f: FaceIndex, e: Rot3) -> VertexClue {
         VertexClue::EdgeStart(f, e)
     }

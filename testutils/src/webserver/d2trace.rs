@@ -218,7 +218,7 @@ crate fn d2_page(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWeb
         let mut img = state.d2_images.lock().unwrap();
         if img.is_empty() {
             ("<svg></svg>".into(), 0, 1)
-        } else if id <= img.len() {
+        } else if id < img.len() {
             (img[id].clone(), id, img.len())
         } else {
             (img.last().unwrap().clone(), img.len() - 1, img.len())

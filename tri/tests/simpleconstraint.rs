@@ -14,7 +14,6 @@ use shine_tri::{Builder, BuilderContext, CrossingIterator, FullChecker, Predicat
 use std::fmt::Debug;
 
 #[test]
-#[ignore]
 fn t0_constraint_segment() {
     init_test(module_path!());
 
@@ -97,7 +96,6 @@ fn t0_constraint_segment() {
 }
 
 #[test]
-#[ignore]
 fn t1_constraint_no_fill1() {
     init_test(module_path!());
 
@@ -187,7 +185,6 @@ fn t1_constraint_no_fill1() {
 }
 
 #[test]
-#[ignore]
 fn t2_constraint_no_fill2() {
     init_test(module_path!());
 
@@ -288,7 +285,6 @@ fn t2_constraint_no_fill2() {
 }
 
 #[test]
-#[ignore]
 fn t3_crossing_iterator() {
     init_test(module_path!());
 
