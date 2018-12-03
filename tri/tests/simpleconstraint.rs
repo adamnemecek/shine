@@ -10,7 +10,8 @@ use common::{Sample, SimpleConstraint, SimpleContext, SimpleFace, SimpleVertex};
 use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
-use shine_tri::{Builder, BuilderContext, CrossingIterator, FullChecker, PredicatesContext, TagContext, Triangulation};
+use shine_tri::traverse::CrossingIterator;
+use shine_tri::{Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, Triangulation};
 use std::fmt::Debug;
 
 #[test]

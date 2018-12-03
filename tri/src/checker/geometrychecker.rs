@@ -31,9 +31,9 @@ where
                 continue;
             }
 
-            let v0 = self[f].vertex(rot3(0));
-            let v1 = self[f].vertex(rot3(1));
-            let v2 = self[f].vertex(rot3(2));
+            let v0 = self.graph[f].vertex(rot3(0));
+            let v1 = self.graph[f].vertex(rot3(1));
+            let v2 = self.graph[f].vertex(rot3(2));
 
             if !self.get_vertices_orientation(v0, v1, v2).is_ccw() {
                 return Err(format!("Count-clockwise property is violated for {:?}", f));
@@ -77,7 +77,7 @@ where
         let end = self.graph.infinite_face();
         let mut cur = end;
         loop {
-            let iid = self[cur].get_vertex_index(self.graph.infinite_vertex()).unwrap(); // index of infinite vertex
+            let iid = self.graph[cur].get_vertex_index(self.graph.infinite_vertex()).unwrap(); // index of infinite vertex
             let aid = iid.decrement();
             let bid = iid.increment();
             let a = self.graph.pos(FaceVertex::from(cur, aid));
@@ -88,7 +88,7 @@ where
             let by: f64 = b.y().approximate();
 
             convex_area += ax * by - bx * ay;
-            cur = self[cur].neighbor(aid);
+            cur = self.graph[cur].neighbor(aid);
             if cur == end {
                 break;
             }

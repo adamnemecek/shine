@@ -19,12 +19,12 @@ where
 {
     fn check_vertex_face_link(&self) -> Result<(), String> {
         for v in self.graph.vertex_index_iter() {
-            if !self[v].face().is_valid() {
+            if !self.graph[v].face().is_valid() {
                 return Err(format!("Vertex-face link is invalid, no face for {:?} ", v));
             }
 
-            let nf = self[v].face();
-            let _vi = self[nf]
+            let nf = self.graph[v].face();
+            let _vi = self.graph[nf]
                 .get_vertex_index(v)
                 .ok_or_else(|| format!("Vertex-face link is invalid {:?} is not a neighbor of {:?}", nf, v))?;
         }
@@ -35,7 +35,7 @@ where
         for f in self.graph.face_index_iter() {
             for d in 0..self.graph.dimension() {
                 let i = rot3(d as u8);
-                let nf = self[f].neighbor(i);
+                let nf = self.graph[f].neighbor(i);
                 if !nf.is_valid() {
                     return Err(format!(
                         "Face-face link is invalid, no neighboring face for {:?} at {:?}",
@@ -43,7 +43,7 @@ where
                     ));
                 }
 
-                let ni = self[nf].get_neighbor_index(f).ok_or_else(|| {
+                let ni = self.graph[nf].get_neighbor_index(f).ok_or_else(|| {
                     format!(
                         "Face-face link is invalid, missing backward link between ({:?},{:?}) and {:?}",
                         f, i, nf
@@ -52,7 +52,7 @@ where
 
                 match self.graph.dimension() {
                     1 => {
-                        if self[f].vertex(i.mirror(2)) != self[nf].vertex(ni.mirror(2)) {
+                        if self.graph[f].vertex(i.mirror(2)) != self.graph[nf].vertex(ni.mirror(2)) {
                             return Err(format!(
                                 "Face-face link is invalid, vertex relation in dim1 ({:?},{:?}) <-> ({:?},{:?})",
                                 f, i, nf, ni
@@ -60,15 +60,15 @@ where
                         }
                     }
                     2 => {
-                        if self[f].vertex(i.decrement()) != self[nf].vertex(ni.increment())
-                            || self[f].vertex(i.increment()) != self[nf].vertex(ni.decrement())
+                        if self.graph[f].vertex(i.decrement()) != self.graph[nf].vertex(ni.increment())
+                            || self.graph[f].vertex(i.increment()) != self.graph[nf].vertex(ni.decrement())
                         {
                             return Err(format!(
                                 "Face-face link is invalid, vertex relation in dim2 ({:?},{:?}) <-> ({:?},{:?})",
                                 f, d, nf, ni
                             ));
                         }
-                        if self[f].constraint(i) != self[nf].constraint(ni) {
+                        if self.graph[f].constraint(i) != self.graph[nf].constraint(ni) {
                             return Err(format!(
                                 "Face-face link is invalid, non-matching constraints in dim2 ({:?},{:?}) <-> ({:?},{:?})",
                                 f, d, nf, ni
@@ -122,7 +122,7 @@ where
             for f in self.graph.face_index_iter() {
                 for r in 0..3 {
                     let d = rot3(r);
-                    if self[f].vertex(d).is_valid() != (r <= self.graph.dimension() as u8) {
+                    if self.graph[f].vertex(d).is_valid() != (r <= self.graph.dimension() as u8) {
                         return Err(format!(
                             "A face({:?}) has invalid dimension at {:?} (dim:{})",
                             f,
@@ -177,9 +177,9 @@ where
                 let mut cur = end;
                 loop {
                     hull_count += 1;
-                    let iid = self[cur].get_vertex_index(self.graph.infinite_vertex()).unwrap(); // index of infinite vertex
+                    let iid = self.graph[cur].get_vertex_index(self.graph.infinite_vertex()).unwrap(); // index of infinite vertex
                     let aid = iid.decrement();
-                    cur = self[cur].neighbor(aid);
+                    cur = self.graph[cur].neighbor(aid);
                     if cur == end {
                         break;
                     }

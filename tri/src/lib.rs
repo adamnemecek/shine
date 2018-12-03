@@ -15,10 +15,10 @@ mod construct;
 mod context;
 mod graph;
 mod orientationquery;
-mod traverse;
 mod triangulation;
 
 pub mod geometry;
+pub mod traverse;
 pub mod types;
 pub mod vertexchain;
 
@@ -27,6 +27,4 @@ pub use self::construct::*;
 pub use self::context::*;
 pub use self::graph::*;
 pub use self::orientationquery::*;
-pub use self::traverse::*;
 pub use self::triangulation::*;
-

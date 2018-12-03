@@ -9,7 +9,8 @@ mod common;
 use common::{D2TriTrace, Sample, SimpleConstraint, SimpleContext};
 use shine_testutils::init_webcontroll_test;
 use shine_tri::geometry::Posf32;
-use shine_tri::{Builder, CrossingIterator, FullChecker, Trace};
+use shine_tri::traverse::CrossingIterator;
+use shine_tri::{Builder, FullChecker, Trace};
 use std::panic;
 
 #[test]

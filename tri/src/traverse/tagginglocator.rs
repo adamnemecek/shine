@@ -54,8 +54,8 @@ where
         let p0 = self.graph.pos(v0);
 
         if pr.test_coincident_points(p, p0) {
-            let f0 = self[v0].face();
-            Ok(Location::Vertex(f0, self[f0].get_vertex_index(v0).unwrap()))
+            let f0 = self.graph[v0].face();
+            Ok(Location::Vertex(f0, self.graph[f0].get_vertex_index(v0).unwrap()))
         } else {
             Ok(Location::OutsideAffineHull)
         }
@@ -73,12 +73,12 @@ where
         let vinf = self.graph.infinite_vertex();
         // first point of the convex hull (segments)
         let f0 = self.graph.infinite_face();
-        let iv0 = self[f0].get_vertex_index(vinf).unwrap();
+        let iv0 = self.graph[f0].get_vertex_index(vinf).unwrap();
         let cp0 = self.graph.pos(FaceVertex::from(f0, iv0.mirror(2)));
 
         // last point of the convex hull (segments)
-        let f1 = self[f0].neighbor(iv0.mirror(2));
-        let iv1 = self[f1].get_vertex_index(vinf).unwrap();
+        let f1 = self.graph[f0].neighbor(iv0.mirror(2));
+        let iv1 = self.graph[f1].get_vertex_index(vinf).unwrap();
         let cp1 = self.graph.pos(FaceVertex::from(f1, iv1.mirror(2)));
 
         let orient = pr.orientation_triangle(cp0, cp1, p);
@@ -102,7 +102,7 @@ where
                 let mut prev = f0;
                 let mut dir = iv0;
                 loop {
-                    let cur = self[prev].neighbor(dir);
+                    let cur = self.graph[prev].neighbor(dir);
                     assert!(self.graph.is_finite_face(cur));
 
                     let p0 = self.graph.pos(FaceVertex::from(cur, rot3(0)));
@@ -120,7 +120,7 @@ where
                         return Ok(Location::Edge(cur, rot3(2)));
                     } else {
                         // advance to the next edge
-                        let vi = self[cur].get_neighbor_index(prev).unwrap();
+                        let vi = self.graph[cur].get_neighbor_index(prev).unwrap();
                         prev = cur;
                         dir = vi.mirror(2);
                     }
@@ -139,19 +139,19 @@ where
 
         let e01 = pr.orientation_triangle(p0, p1, pos);
         if e01.is_cw() {
-            let next = self[face].neighbor(rot3(2));
+            let next = self.graph[face].neighbor(rot3(2));
             return ContainmentResult::Continue(next);
         }
 
         let e20 = pr.orientation_triangle(p2, p0, pos);
         if e20.is_cw() {
-            let next = self[face].neighbor(rot3(1));
+            let next = self.graph[face].neighbor(rot3(1));
             return ContainmentResult::Continue(next);
         }
 
         let e12 = pr.orientation_triangle(&p1, &p2, pos);
         if e12.is_cw() {
-            let next = self[face].neighbor(rot3(0));
+            let next = self.graph[face].neighbor(rot3(0));
             return ContainmentResult::Continue(next);
         }
 
@@ -170,8 +170,8 @@ where
         let pb = self.graph.pos(FaceVertex::from(face, b));
         let ab = pr.orientation_triangle(&pa, &pb, pos);
         if ab.is_cw() {
-            let next = self[face].neighbor(c);
-            if self[next].tag() != tag {
+            let next = self.graph[face].neighbor(c);
+            if self.graph[next].tag() != tag {
                 return ContainmentResult::Continue(next);
             }
         }
@@ -179,8 +179,8 @@ where
         let pc = self.graph.pos(FaceVertex::from(face, c));
         let bc = pr.orientation_triangle(pb, pc, pos);
         if bc.is_cw() {
-            let next = self[face].neighbor(a);
-            assert!(self[next].tag() != tag);
+            let next = self.graph[face].neighbor(a);
+            assert!(self.graph[next].tag() != tag);
             return ContainmentResult::Continue(next);
         }
 
@@ -196,9 +196,9 @@ where
 
         let start = {
             let hint = hint.unwrap_or_else(|| self.graph.infinite_face());
-            match self[hint].get_vertex_index(self.graph.infinite_vertex()) {
-                None => hint,                      // finite face
-                Some(i) => self[hint].neighbor(i), // the opposite face to an infinite vertex is finite
+            match self.graph[hint].get_vertex_index(self.graph.infinite_vertex()) {
+                None => hint,                            // finite face
+                Some(i) => self.graph[hint].neighbor(i), // the opposite face to an infinite vertex is finite
             }
         };
         assert!(self.graph.is_finite_face(start));

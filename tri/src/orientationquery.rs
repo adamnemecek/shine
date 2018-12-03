@@ -34,8 +34,8 @@ where
 
     fn get_edge_vertex_orientation(&self, f: FaceIndex, i: Rot3, v: VertexIndex) -> Self::Orientation {
         let va = v;
-        let vb = self[f].vertex(i.increment());
-        let vc = self[f].vertex(i.decrement());
+        let vb = self.graph[f].vertex(i.increment());
+        let vc = self.graph[f].vertex(i.decrement());
         self.get_vertices_orientation(va, vb, vc)
     }
 
@@ -46,9 +46,9 @@ where
         let i1 = i.increment();
         let i2 = i.decrement();
 
-        let nf = self[f].neighbor(i0);
+        let nf = self.graph[f].neighbor(i0);
         assert!(self.graph.is_finite_face(nf));
-        let ni = self[nf].get_neighbor_index(f).unwrap();
+        let ni = self.graph[nf].get_neighbor_index(f).unwrap();
 
         let p0 = &self.graph.pos(FaceVertex::from(f, i0));
         let p1 = &self.graph.pos(FaceVertex::from(f, i1));
