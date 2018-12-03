@@ -7,10 +7,8 @@ mod common;
 use common::Sample;
 use log::info;
 use shine_testutils::init_test;
-use shine_tri::geometry::position::{Posf32, Posf64, Posi32, Posi64};
-use shine_tri::geometry::{
-    CollinearTest, Orientation, Position, Predicates, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64, Real,
-};
+use shine_tri::geometry::{CollinearTest, Orientation, Position, Predicates, Real};
+use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64};
 
 #[test]
 fn orientation_triangle() {

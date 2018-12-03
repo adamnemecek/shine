@@ -16,6 +16,7 @@ fn control_page(_req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWeb
     Ok(HttpResponse::Ok().content_type("test/html").body("Hello"))
 }
 
+#[derive(Clone)]
 pub struct Service {
     d2_images: Arc<Mutex<Vec<String>>>,
     service_addr: actix::Addr<server::Server>,
@@ -65,13 +66,17 @@ impl Service {
         let _ = self.service_addr.send(server::StopServer { graceful: true }).wait();
     }
 
-    pub fn add_d2_image<T: IntoD2Image>(&self, t: &T) {
-        let mut tr = D2Trace::new();
-        t.trace(&mut tr);
+    pub fn add_d2(&self, tr: D2Trace) {
         let svg = tr.document().to_string();
         let mut images = self.d2_images.lock().unwrap();
         images.push(svg);
         info!("New d2 image added: id={}", images.len());
+    }
+
+    pub fn add_d2_image<T: IntoD2Image>(&self, t: &T) {
+        let mut tr = D2Trace::new();
+        t.trace(&mut tr);
+        self.add_d2(tr);
     }
 
     pub fn wait_user(&self) {

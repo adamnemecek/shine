@@ -6,17 +6,16 @@ extern crate shine_tri;
 
 mod common;
 
-use common::{trace_graph, Coloring, RenderMapping, Sample, SimpleConstraint};
+use common::{D2TriTrace, PredicatesPosf32, Sample, SimpleConstraint, SimpleFace, SimpleVertex};
 use shine_testutils::init_webcontroll_test;
-use shine_tri::geometry::position::{Posf32, Posf64};
-use shine_tri::{Builder, Context, Crossing, CrossingIterator, Triangulation};
+use shine_tri::geometry::Posf32;
+use shine_tri::{Builder, Context, CrossingIterator, FullChecker, Trace};
 use std::panic;
-use std::sync::{Arc, Mutex};
 
 #[test]
 #[ignore]
 fn quick_debug() {
-    let webctrl = Arc::new(Mutex::new(init_webcontroll_test(module_path!())));
+    let webctrl = init_webcontroll_test(module_path!());
 
     panic::set_hook({
         let webctrl = webctrl.clone();
@@ -31,19 +30,22 @@ fn quick_debug() {
             } else {
                 println!("panic occurred but can't get location information...");
             }
-            webctrl.lock().unwrap().wait_user();
+            webctrl.wait_user();
         })
     });
 
-    let mut tri = Context::new().with_tag().with_builder().create();
-
-    let mut rm = RenderMapping::new();
-    let color = Coloring::new();
+    let mut tri = Context::new()
+        .with_predicates(PredicatesPosf32::new())
+        .with_tag()
+        .with_builder()
+        .with_trace(D2TriTrace::new(webctrl.clone()))
+        .create::<Posf32, SimpleVertex<Posf32>, SimpleFace>();
 
     let map = |x: f32, y: f32| Posf32::from(Sample(x, y));
 
     {
-        rm.set_virtual_positions(vec![
+        use shine_tri::TraceContext;
+        tri.context.trace_mapping_mut().set_virtual_positions(vec![
             (&map(-2., 2.)).into(),
             (&map(5., 2.)).into(),
             (&map(2., 5.)).into(),
@@ -58,7 +60,6 @@ fn quick_debug() {
         let p0 = tri.add_vertex(map(0.0, 1.0), None);
         let _f = tri.add_vertex(map(1.0, 1.5), None);
         let p1 = tri.add_vertex(map(4.0, 1.0), None);*/
-
         let v1 = tri.add_vertex(map(2.0, 1.0), None);
         let v2 = tri.add_vertex(map(4.0, 1.0), None);
         let _3 = tri.add_vertex(map(1.0, 2.0), None);
@@ -72,8 +73,8 @@ fn quick_debug() {
         let _ = tri.add_vertex(map(0.8, 1.0), None);
         let _ = tri.add_vertex(map(3.0, 1.0), None);
 
-        webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
-        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        //webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
+        //assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
         println!("--------");
         let mut cnt = 0;
@@ -96,8 +97,10 @@ fn quick_debug() {
         }*/
     }
 
-    webctrl.lock().unwrap().add_d2_image(&trace_graph(&tri.graph, &rm, &color));
-    webctrl.lock().unwrap().wait_user();
+    tri.trace_begin();
+    tri.trace();
+    tri.trace_end();
+    webctrl.wait_user();
 
     assert_eq!(tri.graph.dimension(), 2);
     assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);

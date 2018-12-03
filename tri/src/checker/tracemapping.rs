@@ -1,4 +1,4 @@
-use geometry::position::Posf64;
+use geometry::Posf64;
 
 /// Vertex trace visualization info
 #[derive(Debug)]

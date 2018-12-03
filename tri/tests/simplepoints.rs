@@ -1,4 +1,3 @@
-#![cfg(off)]
 #![feature(custom_attribute)]
 
 extern crate log;
@@ -11,15 +10,14 @@ use common::{Sample, SimpleFace, SimpleTrif32, SimpleTrif64, SimpleTrii32, Simpl
 use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Position, Predicates, Real};
-use shine_tri::indexing::VertexQuery;
-use shine_tri::{Builder, Checker, Triangulation};
+use shine_tri::{Builder, FullChecker, Triangulation, VertexQuery};
 use std::fmt::Debug;
 
 #[test]
 fn simple_points() {
     init_test(module_path!());
 
-    fn test_<R, P, PR>(tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
+    fn test_<R, P, PR, C>(tri: Triangulation<PR, SimpleVertex<P>, SimpleFace, C>, desc: &str)
     where
         R: Real,
         P: Default + Position<Real = R> + From<Sample> + Debug,
@@ -37,7 +35,7 @@ fn simple_points() {
     test_(SimpleTrii32::default(), "exact i32");
     test_(SimpleTrii64::default(), "exact i64");
 }
-
+/*
 #[test]
 fn simple_points_dim0() {
     init_test(module_path!());
@@ -159,7 +157,7 @@ fn simple_points_dim2() {
 
         #[allow(unused_attributes)]
         #[rustfmt_skip]
-        let test_cases = vec![        
+        let test_cases = vec![
             vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0)],
             vec![(0.0, 0.0), (1.0, 0.0), (2.0, 0.0), (1.0, 2.0)],
             vec![(0., 0.), (0.5, 0.), (1., 0.), (1.5, 0.), (2., 0.), (1., 2.)],
@@ -211,3 +209,4 @@ fn simple_points_dim2() {
     test_(SimpleTrii32::default(), "exact i32");
     test_(SimpleTrii64::default(), "exact i64");
 }
+*/

@@ -1,4 +1,4 @@
-use checker::{Coloring, TraceMapping};
+use checker::{Coloring, TraceMapping, TraceRender};
 use geometry::{Position, Predicates};
 use graph::{Face, Vertex};
 use std::cell::{Ref, RefCell, RefMut};
@@ -43,7 +43,10 @@ pub trait PredicatesContext {
 }
 
 impl<Tag, Builder, Trace> Context<(), Tag, Builder, Trace> {
-    pub fn with_predicates<PR: Predicates>(self, predicates: PR) -> Context<PR, Tag, Builder, Trace> {
+    pub fn with_predicates<PredicateCtx: Predicates>(
+        self,
+        predicates: PredicateCtx,
+    ) -> Context<PredicateCtx, Tag, Builder, Trace> {
         Context {
             predicates,
             tag: self.tag,
@@ -53,11 +56,11 @@ impl<Tag, Builder, Trace> Context<(), Tag, Builder, Trace> {
     }
 }
 
-impl<PR, Tag, Builder, Trace> PredicatesContext for Context<PR, Tag, Builder, Trace>
+impl<PredicateCtx, Tag, Builder, Trace> PredicatesContext for Context<PredicateCtx, Tag, Builder, Trace>
 where
-    PR: Predicates,
+    PredicateCtx: Predicates,
 {
-    type Predicates = PR;
+    type Predicates = PredicateCtx;
 
     fn predicates(&self) -> &Self::Predicates {
         &self.predicates
@@ -116,6 +119,7 @@ impl<Predicates, Tag, Trace> BuilderContext for Context<Predicates, Tag, Builder
 
 /// Trait to provide tracing capabilities
 pub trait TraceContext {
+    fn trace_render(&self) -> RefMut<TraceRender>;
     fn trace_coloring(&self) -> Ref<Coloring>;
     fn trace_coloring_mut(&self) -> RefMut<Coloring>;
     fn trace_mapping(&self) -> Ref<TraceMapping>;
@@ -123,33 +127,44 @@ pub trait TraceContext {
 }
 
 /// Store tracing helpers
-pub struct TraceCtx(RefCell<Coloring>, RefCell<TraceMapping>);
+pub struct TraceCtx<TP: TraceRender>(RefCell<TP>, RefCell<Coloring>, RefCell<TraceMapping>);
 
 impl<Predicates, Tag, Builder> Context<Predicates, Tag, Builder, ()> {
-    pub fn with_trace(self) -> Context<Predicates, Tag, Builder, TraceCtx> {
+    pub fn with_trace<TP: TraceRender>(self, tracer: TP) -> Context<Predicates, Tag, Builder, TraceCtx<TP>> {
         Context {
             predicates: self.predicates,
             tag: self.tag,
             builder: self.builder,
-            trace: TraceCtx(RefCell::new(Coloring::new()), RefCell::new(TraceMapping::new())),
+            trace: TraceCtx(
+                RefCell::new(tracer),
+                RefCell::new(Coloring::new()),
+                RefCell::new(TraceMapping::new()),
+            ),
         }
     }
 }
 
-impl<Predicates, Tag, Builder> TraceContext for Context<Predicates, Tag, Builder, TraceCtx> {
-    fn trace_coloring(&self) -> Ref<Coloring> {
-        self.trace.0.borrow()
-    }
-
-    fn trace_coloring_mut(&self) -> RefMut<Coloring> {
+impl<Predicates, Tag, Builder, TP> TraceContext for Context<Predicates, Tag, Builder, TraceCtx<TP>>
+where
+    TP: TraceRender,
+{
+    fn trace_render(&self) -> RefMut<TraceRender> {
         self.trace.0.borrow_mut()
     }
 
-    fn trace_mapping(&self) -> Ref<TraceMapping> {
+    fn trace_coloring(&self) -> Ref<Coloring> {
         self.trace.1.borrow()
     }
 
-    fn trace_mapping_mut(&self) -> RefMut<TraceMapping> {
+    fn trace_coloring_mut(&self) -> RefMut<Coloring> {
         self.trace.1.borrow_mut()
+    }
+
+    fn trace_mapping(&self) -> Ref<TraceMapping> {
+        self.trace.2.borrow()
+    }
+
+    fn trace_mapping_mut(&self) -> RefMut<TraceMapping> {
+        self.trace.2.borrow_mut()
     }
 }

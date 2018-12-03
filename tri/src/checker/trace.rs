@@ -1,17 +1,19 @@
 use checker::TracePosition;
 use context::TraceContext;
-use geometry::position::Posf64;
-use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates, Predicatesf64};
+use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
+use geometry::{Posf64, Predicatesf64};
 use graph::{Constraint, Face, Vertex, VertexQuery};
 use triangulation::Triangulation;
 use types::{rot3, FaceIndex, Rot3, VertexClue, VertexIndex};
 
-pub trait TracePrimitive {
-    fn push_layer(&mut self);
-    fn pop_layer(&mut self);
-    fn pop_all_layers(&mut self);
+pub trait TraceRender {
+    fn begin(&mut self);
+    fn end(&mut self);
 
     fn set_viewport(&mut self, minx: f64, miny: f64, maxx: f64, maxy: f64);
+
+    fn push_layer(&mut self);
+    fn pop_layer(&mut self);
 
     fn add_point(&mut self, p: &(f64, f64), color: String);
     fn add_line(&mut self, a: &(f64, f64), b: &(f64, f64), color: String);
@@ -21,12 +23,15 @@ pub trait TracePrimitive {
 pub trait Trace {
     fn trace_map_vertex(&self, v: VertexIndex, vcw: VertexIndex, vccw: VertexIndex) -> TracePosition;
 
-    fn trace_vertex(&self, tr: &mut TracePrimitive, v: VertexIndex, msg: Option<&str>);
-    fn trace_edge(&self, tr: &mut TracePrimitive, a: VertexIndex, b: VertexIndex, msg: Option<&str>);
-    fn trace_face(&self, tr: &mut TracePrimitive, f: FaceIndex, msg: Option<&str>);
-    fn trace_face_edge(&self, tr: &mut TracePrimitive, f: FaceIndex, i: Rot3, msg: Option<&str>);
+    fn trace_vertex(&self, v: VertexIndex, msg: Option<&str>);
+    fn trace_edge(&self, a: VertexIndex, b: VertexIndex, msg: Option<&str>);
+    fn trace_face(&self, f: FaceIndex, msg: Option<&str>);
+    fn trace_face_edge(&self, f: FaceIndex, i: Rot3, msg: Option<&str>);
 
-    fn trace(&self, tr: &mut TracePrimitive);
+    fn trace(&self);
+
+    fn trace_begin(&self);
+    fn trace_end(&self);
 }
 
 impl<P, V, F, C> Trace for Triangulation<P, V, F, C>
@@ -52,8 +57,6 @@ where
         if mapping.virtual_positions.is_empty() {
             return TracePosition::Invisible;
         }
-
-        let predicates = Predicatesf64::<Posf64>::new();
 
         // find virtual point best fitting the convex hull in 2d
         if vcw.is_valid() && self.graph.is_finite_vertex(vcw) && vccw.is_valid() && self.graph.is_finite_vertex(vccw) {
@@ -95,7 +98,7 @@ where
         TracePosition::Invisible
     }
 
-    fn trace_vertex(&self, tr: &mut TracePrimitive, v: VertexIndex, msg: Option<&str>)
+    fn trace_vertex(&self, v: VertexIndex, msg: Option<&str>)
     where
         P: Position,
         V: Vertex<Position = P>,
@@ -105,6 +108,7 @@ where
             return;
         }
 
+        let mut tr = self.context.trace_render();
         let mapping = self.context.trace_mapping();
         let coloring = self.context.trace_coloring();
 
@@ -127,7 +131,7 @@ where
         }
     }
 
-    fn trace_edge(&self, tr: &mut TracePrimitive, a: VertexIndex, b: VertexIndex, msg: Option<&str>)
+    fn trace_edge(&self, a: VertexIndex, b: VertexIndex, msg: Option<&str>)
     where
         P: Position,
         V: Vertex<Position = P>,
@@ -137,6 +141,7 @@ where
             return;
         }
 
+        let mut tr = self.context.trace_render();
         let coloring = self.context.trace_coloring();
 
         let msg = msg
@@ -151,21 +156,20 @@ where
         tr.add_text(&(x, y), msg, coloring.edge_text.0.clone(), coloring.edge_text.1);
     }
 
-    fn trace_face_edge(&self, tr: &mut TracePrimitive, f: FaceIndex, i: Rot3, msg: Option<&str>) {
+    fn trace_face_edge(&self, f: FaceIndex, i: Rot3, msg: Option<&str>) {
         self.trace_edge(
-            tr,
             self.vi(VertexClue::edge_start(f, i)),
             self.vi(VertexClue::edge_end(f, i)),
             msg,
         );
     }
 
-    fn trace_face(&self, tr: &mut TracePrimitive, f: FaceIndex, msg: Option<&str>) {
+    fn trace_face(&self, f: FaceIndex, msg: Option<&str>) {
         if !f.is_valid() {
             return;
         }
 
-        let mapping = self.context.trace_mapping();
+        let mut tr = self.context.trace_render();
         let coloring = self.context.trace_coloring();
 
         let verts = [
@@ -250,7 +254,20 @@ where
         }
     }
 
-    fn trace(&self, tr: &mut TracePrimitive) {
+    fn trace(&self) {
+        for v in self.graph.vertex_index_iter() {
+            self.trace_vertex(v, None);
+        }
+        for f in self.graph.face_index_iter() {
+            self.trace_face(f, None);
+            //trace_circum_circle( f, None );
+        }
+    }
+
+    fn trace_begin(&self) {
+        let mut tr = self.context.trace_render();
+        tr.begin();
+
         use std::f64;
         let (mut minx, mut miny) = (f64::MAX, f64::MAX);
         let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
@@ -281,13 +298,10 @@ where
         maxy = maxy + h * 0.02;
 
         tr.set_viewport(minx, miny, maxx, maxy);
+    }
 
-        for v in self.graph.vertex_index_iter() {
-            self.trace_vertex(tr, v, None);
-        }
-        for f in self.graph.face_index_iter() {
-            self.trace_face(tr, f, None);
-            //trace_circum_circle( f, None );
-        }
+    fn trace_end(&self) {
+        let mut tr = self.context.trace_render();
+        tr.end();
     }
 }

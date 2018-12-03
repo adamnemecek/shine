@@ -4,8 +4,7 @@ use geometry::{CollinearTest, Position, Predicates};
 use graph::{Constraint, Face, Vertex, VertexQuery};
 use traverse::TaggingLocator;
 use triangulation::Triangulation;
-use types::{rot3, FaceIndex, Location, Rot3, VertexIndex};
-use vertexchain::{ChainIndex, ChainStore};
+use types::{rot3, FaceIndex, Location, VertexIndex};
 
 pub trait Builder {
     type Position: Position;
@@ -175,10 +174,10 @@ where
         }*/
     }
 
-    fn triangulate_hole(&mut self, chains: &mut ChainStore, top: ChainIndex, bottom: ChainIndex) -> (FaceIndex, Rot3) {
+    /*fn triangulate_hole(&mut self, chains: &mut ChainStore, top: ChainIndex, bottom: ChainIndex) -> (FaceIndex, Rot3) {
         chains.dump(top, &mut std::io::stdout()).unwrap();
         unimplemented!()
-    }
+    }*/
 }
 
 impl<PR, V, F, C> Builder for Triangulation<PR::Position, V, F, C>
