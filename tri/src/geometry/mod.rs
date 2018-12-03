@@ -1,30 +1,15 @@
-pub trait Real {
-    fn approximate(&self) -> f64;
-}
 
-impl Real for f32 {
-    fn approximate(&self) -> f64 {
-        f64::from(*self)
-    }
-}
+mod inexactpredicates;
+mod exactpredicates;
+mod position;
+mod predicates;
+mod real;
 
-impl Real for f64 {
-    fn approximate(&self) -> f64 {
-        *self
-    }
-}
-
-impl Real for i32 {
-    fn approximate(&self) -> f64 {
-        f64::from(*self)
-    }
-}
-
-impl Real for i64 {
-    fn approximate(&self) -> f64 {
-        *self as f64
-    }
-}
+pub use self::inexactpredicates::*;
+pub use self::exactpredicates::*;
+pub use self::position::*;
+pub use self::predicates::*;
+pub use self::real::*;
 
 pub trait Position {
     type Real: Real;
@@ -33,12 +18,3 @@ pub trait Position {
     fn y(&self) -> Self::Real;
 }
 
-mod inexactpredicates;
-mod intpredicates;
-mod predicates;
-mod position;
-
-pub use self::inexactpredicates::*;
-pub use self::intpredicates::*;
-pub use self::predicates::*;
-pub use self::position::*;

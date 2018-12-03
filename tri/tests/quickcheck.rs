@@ -1,4 +1,3 @@
-#![cfg(off)]
 #![feature(custom_attribute)]
 
 extern crate log;
@@ -8,13 +7,14 @@ extern crate shine_tri;
 
 mod common;
 
-use common::{SimpleTrif32, SimpleTrii64};
+use common::SimpleContext;
 use quickcheck::quickcheck;
 use shine_testutils::init_quickcheck_test;
-use shine_tri::geometry::position::{Posf32, Posi64};
-use shine_tri::{Builder, Checker};
+use shine_tri::geometry::{Posf32, Posi64};
+use shine_tri::{Builder, FullChecker};
 
 #[test]
+#[ignore]
 fn stress_exact_i64() {
     init_quickcheck_test(module_path!(), 1000);
 
@@ -22,7 +22,11 @@ fn stress_exact_i64() {
     //  - avoid overflow error.
     //  - test gets more dense to generate more extremal case
     fn fuzzer(xs: Vec<(i8, i8)>) -> bool {
-        let mut tri = SimpleTrii64::default();
+        let mut tri = SimpleContext::<Posi64>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create();
         {
             for &(x, y) in xs.iter() {
                 tri.add_vertex(
@@ -46,7 +50,11 @@ fn stress_exactf32() {
     init_quickcheck_test(module_path!(), 1000);
 
     fn fuzzer(xs: Vec<(f32, f32)>) -> bool {
-        let mut tri = SimpleTrif32/*Exact*/::default();
+        let mut tri = SimpleContext::<Posf32>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create();
         {
             for &(x, y) in xs.iter() {
                 tri.add_vertex(Posf32 { x, y }, None);
@@ -56,7 +64,11 @@ fn stress_exactf32() {
     }
 
     fn fuzzer_01(xs: Vec<(f32, f32)>) -> bool {
-        let mut tri = SimpleTrif32/*Exact*/::default();
+        let mut tri = SimpleContext::<Posf32>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create();
         {
             for &(x, y) in xs.iter() {
                 tri.add_vertex(

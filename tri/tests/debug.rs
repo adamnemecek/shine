@@ -6,10 +6,10 @@ extern crate shine_tri;
 
 mod common;
 
-use common::{D2TriTrace, PredicatesPosf32, Sample, SimpleConstraint, SimpleFace, SimpleVertex};
+use common::{D2TriTrace, Sample, SimpleConstraint, SimpleContext, SimpleFace, SimpleVertex};
 use shine_testutils::init_webcontroll_test;
 use shine_tri::geometry::Posf32;
-use shine_tri::{Builder, Context, CrossingIterator, FullChecker, Trace};
+use shine_tri::{Builder, CrossingIterator, FullChecker, Trace};
 use std::panic;
 
 #[test]
@@ -34,12 +34,12 @@ fn quick_debug() {
         })
     });
 
-    let mut tri = Context::new()
-        .with_predicates(PredicatesPosf32::new())
+    let mut tri = SimpleContext::<Posf32>::new()
+        .with_inexact_predicates()
         .with_tag()
         .with_builder()
         .with_trace(D2TriTrace::new(webctrl.clone()))
-        .create::<Posf32, SimpleVertex<Posf32>, SimpleFace>();
+        .create();
 
     let map = |x: f32, y: f32| Posf32::from(Sample(x, y));
 

@@ -313,8 +313,8 @@ where
 
             let orient = {
                 let pr = self.context.predicates();
-                let cp0 = self.pos(VertexClue::edge_start(f0, i0));
-                let cp1 = self.pos(VertexClue::edge_end(f0, i0));
+                let cp0 = self.pos(VertexClue::edge_end(f0, i0));
+                let cp1 = self.pos(VertexClue::edge_start(f0, i0));
                 let p = self.pos(vert);
                 pr.orientation_triangle(cp0, cp1, p)
             };

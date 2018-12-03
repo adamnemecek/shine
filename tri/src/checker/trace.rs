@@ -1,7 +1,7 @@
 use checker::TracePosition;
 use context::TraceContext;
+use geometry::{InexactPredicates, Posf64};
 use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
-use geometry::{Posf64, Predicatesf64};
 use graph::{Constraint, Face, Vertex, VertexQuery};
 use triangulation::Triangulation;
 use types::{rot3, FaceIndex, Rot3, VertexClue, VertexIndex};
@@ -47,7 +47,7 @@ where
         }
 
         let mapping = self.context.trace_mapping();
-        let approximate_predicates = Predicatesf64::<Posf64>::new();
+        let approximate_predicates = InexactPredicates::<Posf64>::new();
 
         if self.graph.is_finite_vertex(v) {
             let p = Posf64::from(self.pos(v));
@@ -68,8 +68,8 @@ where
 
             for virt_pos in mapping.virtual_positions.iter() {
                 let value = approximate_predicates.orientation_triangle(&pccw, &virt_pos, &pcw);
-                if value > best_value {
-                    best_value = value;
+                if value.0 > best_value {
+                    best_value = value.0;
                     best = Some(virt_pos);
                 }
             }

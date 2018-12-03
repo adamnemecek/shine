@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
 use shine_tri::geometry::Position;
-use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64};
 use shine_tri::types::{invalid_face_index, invalid_vertex_index, rot3, FaceIndex, Rot3, VertexIndex};
-use shine_tri::{Constraint, Face, Vertex};
+use shine_tri::{Constraint, Context, Face, Vertex};
 
 pub struct SimpleVertex<P>
 where
@@ -134,23 +133,5 @@ impl Face for SimpleFace {
         self.tag = tag
     }
 }
-/*
-pub struct SimpleTri<P>
-where
-    P: Position
-{
-    phantom: P,
-}
 
-impl SimpleTri<P>
-where
-    P: Position
-{
-    pub  fn new() -> Trinagulation<>
-}
-*/
-
-pub type PredicatesPosf32 = Predicatesf32<Posf32>;
-pub type PredicatesPosf64 = Predicatesf64<Posf64>;
-pub type PredicatesPosi32 = Predicatesi32<Posi32>;
-pub type PredicatesPosi64 = Predicatesi64<Posi64>;
+pub type SimpleContext<P> = Context<P, SimpleVertex<P>, SimpleFace>;

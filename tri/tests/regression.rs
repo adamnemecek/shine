@@ -1,4 +1,3 @@
-#![cfg(off)]
 #![feature(custom_attribute)]
 
 extern crate log;
@@ -7,14 +6,19 @@ extern crate shine_tri;
 
 mod common;
 
-use common::SimpleTrif32;
+use common::SimpleContext;
 use shine_testutils::init_test;
-use shine_tri::geometry::position::Posf32;
-use shine_tri::{Builder, Checker};
+use shine_tri::geometry::Posf32;
+use shine_tri::{Builder, FullChecker};
 
 #[test]
+#[ignore]
 fn issue39_1() {
-    let mut tri = SimpleTrif32::default();
+    let mut tri = SimpleContext::<Posf32>::new()
+        .with_inexact_predicates()
+        .with_tag()
+        .with_builder()
+        .create();
 
     let pnts = vec![(0.0, 0.0), (2.0, 0.0), (1.0, 2.0), (-3.0, -3.0)];
 
@@ -29,10 +33,15 @@ fn issue39_1() {
 }
 
 #[test]
+#[ignore]
 fn issue39_2() {
     init_test(module_path!());
 
-    let mut tri = SimpleTrif32::default();
+    let mut tri = SimpleContext::<Posf32>::new()
+        .with_inexact_predicates()
+        .with_tag()
+        .with_builder()
+        .create();
 
     let pnts = vec![(0.0, 0.0), (0.0, 1.0), (-1.0, 0.0), (1.0, 3.0)];
 

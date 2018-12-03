@@ -1,4 +1,4 @@
-use geometry::{Position, Real};
+use geometry::Position;
 use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -56,11 +56,9 @@ pub trait CollinearTest: fmt::Debug {
 }
 
 pub trait Predicates {
-    type Real: Real;
-
+    type Position: Position;
     type Orientation: Orientation;
     type CollinearTest: CollinearTest;
-    type Position: Position<Real = Self::Real>;
 
     // Find the orientation_triangle of three points.
     fn orientation_triangle(&self, a: &Self::Position, b: &Self::Position, c: &Self::Position) -> Self::Orientation;

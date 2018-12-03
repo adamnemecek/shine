@@ -1,63 +1,71 @@
 use geometry::{
-    CollinearTest, InexactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
+    CollinearTest, ExactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
 };
+use std::marker::PhantomData;
 
 #[derive(Clone, Copy, Debug)]
-pub struct WrapInexactReal<R: InexactReal>(pub R, pub R);
+pub struct WrapExactReal<R: ExactReal>(pub R);
 
-impl<R: InexactReal> Orientation for WrapInexactReal<R> {
+impl<R> Orientation for WrapExactReal<R>
+where
+    R: ExactReal,
+{
     fn is_cw(&self) -> bool {
-        self.0 < -self.1
+        self.0 < R::from_i32(0)
     }
 
     fn is_collinear(&self) -> bool {
-        self.0.abs() <= self.1
+        self.0 == R::from_i32(0)
     }
 
     fn is_ccw(&self) -> bool {
-        self.0 > self.1
+        self.0 > R::from_i32(0)
     }
 }
 
-impl<R: InexactReal> CollinearTest for WrapInexactReal<R> {
+impl<R> CollinearTest for WrapExactReal<R>
+where
+    R: ExactReal,
+{
     fn is_before(&self) -> bool {
-        self.0 < -self.1
+        self.0 < R::from_i32(0)
     }
 
     fn is_first(&self) -> bool {
-        self.0.abs() <= self.1
+        self.0 == R::from_i32(0)
     }
 
     fn is_between(&self) -> bool {
-        self.0 > self.1 && self.0 < R::from_i32(2) - self.1
+        self.0 > R::from_i32(0) && self.0 < R::from_i32(2)
     }
 
+    #[allow(clippy::int_cmp)]
     fn is_second(&self) -> bool {
-        (self.0 - R::from_i32(2)).abs() <= self.1
+        self.0 == R::from_i32(2)
     }
 
     fn is_after(&self) -> bool {
-        self.0 > R::from_i32(2) + self.1
+        self.0 > R::from_i32(2)
     }
 }
 
-pub struct InexactNearestPointSearch<'a, P, D>
+pub struct ExactNearestPointSearch<'a, P, D>
 where
     P: 'a + Position,
-    P::Real: InexactReal,
+    P::Real: ExactReal,
 {
     base: (P::Real, P::Real),
     dist: P::Real,
     best: Option<(&'a P, D)>,
 }
 
-impl<'a, P, D> InexactNearestPointSearch<'a, P, D>
+impl<'a, P, D> ExactNearestPointSearch<'a, P, D>
 where
     P: 'a + Position,
-    P::Real: InexactReal,
+    P::Real: ExactReal,
 {
-    fn new(base: &P) -> InexactNearestPointSearch<P, D> {
-        InexactNearestPointSearch {
+    fn new(base: &P) -> ExactNearestPointSearch<P, D> {
+        ExactNearestPointSearch {
             base: (base.x(), base.y()),
             dist: P::Real::from_i32(0),
             best: None,
@@ -65,10 +73,10 @@ where
     }
 }
 
-impl<'a, P, D> NearestPointSearch<'a, D> for InexactNearestPointSearch<'a, P, D>
+impl<'a, P, D> NearestPointSearch<'a, D> for ExactNearestPointSearch<'a, P, D>
 where
     P: 'a + Position,
-    P::Real: InexactReal,
+    P::Real: ExactReal,
 {
     type Position = P;
 
@@ -89,55 +97,49 @@ where
     }
 }
 
-pub struct InexactPredicates<P>
+pub struct ExactPredicates<P>
 where
     P: Position,
-    P::Real: InexactReal,
+    P::Real: ExactReal,
 {
-    eps: P::Real,
+    phantom: PhantomData<P::Real>,
 }
 
-impl<P> InexactPredicates<P>
+impl<P> ExactPredicates<P>
 where
     P: Position,
-    P::Real: InexactReal,
+    P::Real: ExactReal,
 {
-    pub fn new() -> InexactPredicates<P> {
-        InexactPredicates {
-            eps: <P::Real as InexactReal>::eps(),
-        }
-    }
-
-    pub fn with_eps(eps: P::Real) -> InexactPredicates<P> {
-        InexactPredicates { eps }
+    pub fn new() -> ExactPredicates<P> {
+        ExactPredicates { phantom: PhantomData }
     }
 }
 
-impl<P> Default for InexactPredicates<P>
+impl<P> Default for ExactPredicates<P>
 where
     P: Position,
-    P::Real: InexactReal,
+    P::Real: ExactReal,
 {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<P> Predicates for InexactPredicates<P>
+impl<P> Predicates for ExactPredicates<P>
 where
     P: Position,
-    P::Real: InexactReal,
+    P::Real: ExactReal,
 {
     type Position = P;
-    type Orientation = WrapInexactReal<P::Real>;
-    type CollinearTest = WrapInexactReal<P::Real>;
+    type Orientation = WrapExactReal<P::Real>;
+    type CollinearTest = WrapExactReal<P::Real>;
 
     fn orientation_triangle(&self, a: &Self::Position, b: &Self::Position, c: &Self::Position) -> Self::Orientation {
         let bax = b.x() - a.x();
         let bay = b.y() - a.y();
         let cax = c.x() - a.x();
         let cay = c.y() - a.y();
-        WrapInexactReal(bax * cay - bay * cax, self.eps)
+        WrapExactReal(bax * cay - bay * cax)
     }
 
     fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool {
@@ -158,24 +160,24 @@ where
         let r = if abx.abs() > aby.abs() {
             // x-major line
             let apx = ax - px;
-            if apx.abs() <= self.eps {
+            if apx == P::Real::from_i32(0) {
                 P::Real::from_i32(0)
             } else {
                 let bpx = bx - px;
-                if bpx.abs() <= self.eps {
+                if bpx == P::Real::from_i32(0) {
                     P::Real::from_i32(2)
-                } else if abx < -self.eps {
-                    if apx > self.eps {
+                } else if abx < P::Real::from_i32(0) {
+                    if apx > P::Real::from_i32(0) {
                         P::Real::from_i32(-1)
-                    } else if bpx < -self.eps {
+                    } else if bpx < P::Real::from_i32(0) {
                         P::Real::from_i32(3)
                     } else {
                         P::Real::from_i32(1)
                     }
                 } else {
-                    if apx < -self.eps {
+                    if apx < P::Real::from_i32(0) {
                         P::Real::from_i32(-1)
-                    } else if bpx > self.eps {
+                    } else if bpx > P::Real::from_i32(0) {
                         P::Real::from_i32(3)
                     } else {
                         P::Real::from_i32(1)
@@ -185,24 +187,24 @@ where
         } else {
             // y-major line
             let apy = ay - py;
-            if apy.abs() <= self.eps {
+            if apy == P::Real::from_i32(0) {
                 P::Real::from_i32(0)
             } else {
                 let bpy = by - py;
-                if bpy.abs() <= self.eps {
+                if bpy == P::Real::from_i32(0) {
                     P::Real::from_i32(2)
-                } else if aby < -self.eps {
-                    if apy > self.eps {
+                } else if aby < P::Real::from_i32(0) {
+                    if apy > P::Real::from_i32(0) {
                         P::Real::from_i32(-1)
-                    } else if bpy < -self.eps {
+                    } else if bpy < P::Real::from_i32(0) {
                         P::Real::from_i32(3)
                     } else {
                         P::Real::from_i32(1)
                     }
                 } else {
-                    if apy < -self.eps {
+                    if apy < P::Real::from_i32(0) {
                         P::Real::from_i32(-1)
-                    } else if bpy > self.eps {
+                    } else if bpy > P::Real::from_i32(0) {
                         P::Real::from_i32(3)
                     } else {
                         P::Real::from_i32(1)
@@ -210,19 +212,19 @@ where
                 }
             }
         };
-        
-        WrapInexactReal(r, self.eps)
+
+        WrapExactReal(r)
     }
 }
 
-impl<'a, P, D> NearestPointSearchBuilder<'a, D> for InexactPredicates<P>
+impl<'a, P, D> NearestPointSearchBuilder<'a, D> for ExactPredicates<P>
 where
     P: 'a + Position,
-    P::Real: InexactReal,
+    P::Real: ExactReal,
 {
-    type NearestPointSearch = InexactNearestPointSearch<'a, P, D>;
+    type NearestPointSearch = ExactNearestPointSearch<'a, P, D>;
 
     fn nearest_point_search(&self, base: &'a Self::Position) -> Self::NearestPointSearch {
-        InexactNearestPointSearch::new(base)
+        ExactNearestPointSearch::new(base)
     }
 }

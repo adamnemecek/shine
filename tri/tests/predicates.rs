@@ -8,7 +8,7 @@ use common::Sample;
 use log::info;
 use shine_testutils::init_test;
 use shine_tri::geometry::{CollinearTest, Orientation, Position, Predicates, Real};
-use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64};
+use shine_tri::geometry::{ExactPredicates, InexactPredicates, Posf32, Posf64, Posi32, Posi64};
 
 #[test]
 fn orientation_triangle() {
@@ -18,7 +18,7 @@ fn orientation_triangle() {
     where
         R: Real,
         P: Position<Real = R> + From<Sample>,
-        PR: Predicates<Real = R, Position = P>,
+        PR: Predicates<Position = P>,
     {
         info!("{}", desc);
 
@@ -42,10 +42,10 @@ fn orientation_triangle() {
             .is_ccw());
     }
 
-    orientation_triangle_(Predicatesf32::<Posf32>::new(), "inexact f32");
-    orientation_triangle_(Predicatesf64::<Posf64>::new(), "inexact f64");
-    orientation_triangle_(Predicatesi32::<Posi32>::new(), "exact i32");
-    orientation_triangle_(Predicatesi64::<Posi64>::new(), "exact i64");
+    orientation_triangle_(InexactPredicates::<Posf32>::new(), "inexact f32");
+    orientation_triangle_(InexactPredicates::<Posf64>::new(), "inexact f64");
+    orientation_triangle_(ExactPredicates::<Posi32>::new(), "exact i32");
+    orientation_triangle_(ExactPredicates::<Posi64>::new(), "exact i64");
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn test_collinear_points() {
     where
         R: Real,
         P: Position<Real = R> + From<Sample>,
-        PR: Predicates<Real = R, Position = P>,
+        PR: Predicates<Position = P>,
     {
         info!("{}", desc);
 
@@ -129,8 +129,8 @@ fn test_collinear_points() {
             .is_before());
     }
 
-    test_collinear_points_(Predicatesf32::<Posf32>::new(), "inexact f32");
-    test_collinear_points_(Predicatesf64::<Posf64>::new(), "inexact f64");
-    test_collinear_points_(Predicatesi32::<Posi32>::new(), "exact i32");
-    test_collinear_points_(Predicatesi64::<Posi64>::new(), "exact i64");
+    test_collinear_points_(InexactPredicates::<Posf32>::new(), "inexact f32");
+    test_collinear_points_(InexactPredicates::<Posf64>::new(), "inexact f64");
+    test_collinear_points_(ExactPredicates::<Posi32>::new(), "exact i32");
+    test_collinear_points_(ExactPredicates::<Posi64>::new(), "exact i64");
 }

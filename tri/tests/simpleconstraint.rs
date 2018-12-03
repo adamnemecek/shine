@@ -1,4 +1,3 @@
-#![cfg(off)]
 #![feature(custom_attribute)]
 
 extern crate log;
@@ -7,22 +6,24 @@ extern crate shine_tri;
 
 mod common;
 
-use common::{Sample, SimpleConstraint, SimpleFace, SimpleTrif32, SimpleTrif64, SimpleTrii32, SimpleTrii64, SimpleVertex};
+use common::{Sample, SimpleConstraint, SimpleContext, SimpleFace, SimpleVertex};
 use log::{debug, info, trace};
 use shine_testutils::init_test;
-use shine_tri::geometry::{Position, Predicates, Real};
-use shine_tri::traverse::CrossingIterator;
-use shine_tri::{Builder, Checker, Triangulation};
+use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
+use shine_tri::{Builder, BuilderContext, CrossingIterator, FullChecker, PredicatesContext, TagContext, Triangulation};
+use std::fmt::Debug;
 
 #[test]
+#[ignore]
 fn t0_constraint_segment() {
     init_test(module_path!());
 
-    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
+    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
     where
-        R: Real,
-        P: Default + Position<Real = R> + From<Sample>,
-        PR: Default + Predicates<Position = P, Real = R>,
+        P: Default + Position + From<Sample> + Debug,
+        P::Real: Real,
+        PR: Default + Predicates<Position = P>,
+        C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
@@ -61,21 +62,51 @@ fn t0_constraint_segment() {
         }
     }
 
-    test_(SimpleTrif32::default(), "inexact f32");
-    test_(SimpleTrif64::default(), "inexact f64");
-    test_(SimpleTrii32::default(), "exact i32");
-    test_(SimpleTrii64::default(), "exact i64");
+    test(
+        SimpleContext::<Posf32>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f32",
+    );
+    test(
+        SimpleContext::<Posf64>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f64",
+    );
+    test(
+        SimpleContext::<Posi32>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i32",
+    );
+    test(
+        SimpleContext::<Posi64>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i64",
+    );
 }
 
 #[test]
+#[ignore]
 fn t1_constraint_no_fill1() {
     init_test(module_path!());
 
-    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
+    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
     where
-        R: Real,
-        P: Default + Position<Real = R> + From<Sample>,
-        PR: Default + Predicates<Position = P, Real = R>,
+        P: Default + Position + From<Sample> + Debug,
+        P::Real: Real,
+        PR: Default + Predicates<Position = P>,
+        C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
@@ -121,21 +152,51 @@ fn t1_constraint_no_fill1() {
         }
     }
 
-    test_(SimpleTrif32::default(), "inexact f32");
-    test_(SimpleTrif64::default(), "inexact f64");
-    test_(SimpleTrii32::default(), "exact i32");
-    test_(SimpleTrii64::default(), "exact i64");
+    test(
+        SimpleContext::<Posf32>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f32",
+    );
+    test(
+        SimpleContext::<Posf64>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f64",
+    );
+    test(
+        SimpleContext::<Posi32>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i32",
+    );
+    test(
+        SimpleContext::<Posi64>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i64",
+    );
 }
 
 #[test]
+#[ignore]
 fn t2_constraint_no_fill2() {
     init_test(module_path!());
 
-    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
+    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
     where
-        R: Real,
-        P: Default + Position<Real = R> + From<Sample>,
-        PR: Default + Predicates<Position = P, Real = R>,
+        P: Default + Position + From<Sample> + Debug,
+        P::Real: Real,
+        PR: Default + Predicates<Position = P>,
+        C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
@@ -192,21 +253,51 @@ fn t2_constraint_no_fill2() {
         }
     }
 
-    test_(SimpleTrif32::default(), "inexact f32");
-    test_(SimpleTrif64::default(), "inexact f64");
-    test_(SimpleTrii32::default(), "exact i32");
-    test_(SimpleTrii64::default(), "exact i64");
+    test(
+        SimpleContext::<Posf32>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f32",
+    );
+    test(
+        SimpleContext::<Posf64>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f64",
+    );
+    test(
+        SimpleContext::<Posi32>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i32",
+    );
+    test(
+        SimpleContext::<Posi64>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i64",
+    );
 }
 
 #[test]
+#[ignore]
 fn t3_crossing_iterator() {
     init_test(module_path!());
 
-    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
+    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
     where
-        R: Real,
-        P: Default + Position<Real = R> + From<Sample>,
-        PR: Default + Predicates<Position = P, Real = R>,
+        P: Default + Position + From<Sample> + Debug,
+        P::Real: Real,
+        PR: Default + Predicates<Position = P>,
+        C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
@@ -263,10 +354,38 @@ fn t3_crossing_iterator() {
         }
     }
 
-    test_(SimpleTrif32::default(), "inexact f32");
-    test_(SimpleTrif64::default(), "inexact f64");
-    test_(SimpleTrii32::default(), "exact i32");
-    test_(SimpleTrii64::default(), "exact i64");
+    test(
+        SimpleContext::<Posf32>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f32",
+    );
+    test(
+        SimpleContext::<Posf64>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f64",
+    );
+    test(
+        SimpleContext::<Posi32>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i32",
+    );
+    test(
+        SimpleContext::<Posi64>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i64",
+    );
 }
 
 #[test]
@@ -274,11 +393,12 @@ fn t3_crossing_iterator() {
 fn t4_constraint_concave() {
     init_test(module_path!());
 
-    fn test_<R, P, PR>(mut tri: Triangulation<PR, SimpleVertex<P>, SimpleFace>, desc: &str)
+    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
     where
-        R: Real,
-        P: Default + Position<Real = R> + From<Sample>,
-        PR: Default + Predicates<Position = P, Real = R>,
+        P: Default + Position + From<Sample> + Debug,
+        P::Real: Real,
+        PR: Default + Predicates<Position = P>,
+        C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
@@ -316,8 +436,36 @@ fn t4_constraint_concave() {
         }
     }
 
-    test_(SimpleTrif32::default(), "inexact f32");
-    test_(SimpleTrif64::default(), "inexact f64");
-    test_(SimpleTrii32::default(), "exact i32");
-    test_(SimpleTrii64::default(), "exact i64");
+    test(
+        SimpleContext::<Posf32>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f32",
+    );
+    test(
+        SimpleContext::<Posf64>::new()
+            .with_inexact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "inexact f64",
+    );
+    test(
+        SimpleContext::<Posi32>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i32",
+    );
+    test(
+        SimpleContext::<Posi64>::new()
+            .with_exact_predicates()
+            .with_tag()
+            .with_builder()
+            .create(),
+        "exact i64",
+    );
 }
