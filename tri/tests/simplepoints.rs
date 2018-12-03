@@ -1,3 +1,4 @@
+#![cfg(off)]
 #![feature(custom_attribute)]
 
 extern crate log;

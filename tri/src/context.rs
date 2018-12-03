@@ -1,21 +1,37 @@
-use geometry::Predicates;
-use std::cell::{RefCell, RefMut};
+use checker::{Coloring, TraceMapping};
+use geometry::{Position, Predicates};
+use graph::{Face, Vertex};
+use std::cell::{Ref, RefCell, RefMut};
+use triangulation::Triangulation;
 use vertexchain::ChainStore;
 
 /// Context the enables/disables triangulation features and also stores the required datas
-pub struct Context<Predicates = (), Tag = (), Builder = ()> {
+pub struct Context<Predicates = (), Tag = (), Builder = (), Trace = ()> {
     predicates: Predicates,
     tag: Tag,
     builder: Builder,
+    trace: Trace,
 }
 
-impl Context<(), (), ()> {
-    fn new() -> Context<(), ()> {
+impl Context<(), (), (), ()> {
+    pub fn new() -> Context {
         Context {
             predicates: (),
             tag: (),
             builder: (),
+            trace: (),
         }
+    }
+}
+
+impl<Predicates, Tag, Builder, Trace> Context<Predicates, Tag, Builder, Trace> {
+    pub fn create<P, V, F>(self) -> Triangulation<P, V, F, Self>
+    where
+        P: Position,
+        V: Vertex<Position = P>,
+        F: Face,
+    {
+        Triangulation::new(self)
     }
 }
 
@@ -26,17 +42,18 @@ pub trait PredicatesContext {
     fn predicates(&self) -> &Self::Predicates;
 }
 
-impl<Tag, Builder> Context<(), Tag, Builder> {
-    fn with_predicates<PR: Predicates>(self, predicates: PR) -> Context<PR, Tag, Builder> {
+impl<Tag, Builder, Trace> Context<(), Tag, Builder, Trace> {
+    pub fn with_predicates<PR: Predicates>(self, predicates: PR) -> Context<PR, Tag, Builder, Trace> {
         Context {
             predicates,
             tag: self.tag,
             builder: self.builder,
+            trace: self.trace,
         }
     }
 }
 
-impl<PR, Tag, Builder> PredicatesContext for Context<PR, Tag, Builder>
+impl<PR, Tag, Builder, Trace> PredicatesContext for Context<PR, Tag, Builder, Trace>
 where
     PR: Predicates,
 {
@@ -55,31 +72,20 @@ pub trait TagContext {
 /// Store taging information
 pub struct TagCtx(RefCell<usize>);
 
-impl TagCtx {
-    fn new() -> TagCtx {
-        TagCtx(RefCell::new(0))
-    }
-}
-
-impl TagContext for TagCtx {
-    fn tag(&self) -> RefMut<usize> {
-        self.0.borrow_mut()
-    }
-}
-
-impl<Predicates, Builder> Context<Predicates, (), Builder> {
-    fn with_tag(self) -> Context<Predicates, TagCtx, Builder> {
+impl<Predicates, Builder, Trace> Context<Predicates, (), Builder, Trace> {
+    pub fn with_tag(self) -> Context<Predicates, TagCtx, Builder, Trace> {
         Context {
             predicates: self.predicates,
             tag: TagCtx(RefCell::new(0)),
             builder: self.builder,
+            trace: self.trace,
         }
     }
 }
 
-impl<Predicates, Builder> TagContext for Context<Predicates, TagCtx, Builder> {
+impl<Predicates, Builder, Trace> TagContext for Context<Predicates, TagCtx, Builder, Trace> {
     fn tag(&self) -> RefMut<usize> {
-        self.tag.tag()
+        self.tag.0.borrow_mut()
     }
 }
 
@@ -91,30 +97,59 @@ pub trait BuilderContext {
 /// Store temporaries for build
 pub struct BuilderCtx(RefCell<ChainStore>);
 
-impl BuilderCtx {
-    fn new() -> BuilderCtx {
-        BuilderCtx(RefCell::new(ChainStore::new()))
-    }
-}
-
-impl BuilderContext for BuilderCtx {
-    fn chain_store(&self) -> RefMut<ChainStore> {
-        self.0.borrow_mut()
-    }
-}
-
-impl<Predicates, Tag> Context<Predicates, Tag, ()> {
-    fn with_builder(self) -> Context<Predicates, Tag, BuilderCtx> {
+impl<Predicates, Tag, Trace> Context<Predicates, Tag, (), Trace> {
+    pub fn with_builder(self) -> Context<Predicates, Tag, BuilderCtx, Trace> {
         Context {
             predicates: self.predicates,
             tag: self.tag,
             builder: BuilderCtx(RefCell::new(ChainStore::new())),
+            trace: self.trace,
         }
     }
 }
 
-impl<Predicates, Tag> BuilderContext for Context<Predicates, Tag, BuilderCtx> {
+impl<Predicates, Tag, Trace> BuilderContext for Context<Predicates, Tag, BuilderCtx, Trace> {
     fn chain_store(&self) -> RefMut<ChainStore> {
-        self.builder.chain_store()
+        self.builder.0.borrow_mut()
+    }
+}
+
+/// Trait to provide tracing capabilities
+pub trait TraceContext {
+    fn trace_coloring(&self) -> Ref<Coloring>;
+    fn trace_coloring_mut(&self) -> RefMut<Coloring>;
+    fn trace_mapping(&self) -> Ref<TraceMapping>;
+    fn trace_mapping_mut(&self) -> RefMut<TraceMapping>;
+}
+
+/// Store tracing helpers
+pub struct TraceCtx(RefCell<Coloring>, RefCell<TraceMapping>);
+
+impl<Predicates, Tag, Builder> Context<Predicates, Tag, Builder, ()> {
+    pub fn with_trace(self) -> Context<Predicates, Tag, Builder, TraceCtx> {
+        Context {
+            predicates: self.predicates,
+            tag: self.tag,
+            builder: self.builder,
+            trace: TraceCtx(RefCell::new(Coloring::new()), RefCell::new(TraceMapping::new())),
+        }
+    }
+}
+
+impl<Predicates, Tag, Builder> TraceContext for Context<Predicates, Tag, Builder, TraceCtx> {
+    fn trace_coloring(&self) -> Ref<Coloring> {
+        self.trace.0.borrow()
+    }
+
+    fn trace_coloring_mut(&self) -> RefMut<Coloring> {
+        self.trace.0.borrow_mut()
+    }
+
+    fn trace_mapping(&self) -> Ref<TraceMapping> {
+        self.trace.1.borrow()
+    }
+
+    fn trace_mapping_mut(&self) -> RefMut<TraceMapping> {
+        self.trace.1.borrow_mut()
     }
 }

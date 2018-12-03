@@ -1,5 +1,6 @@
 use geometry::Position;
-use triangulation::{Face, Triangulation, Vertex};
+use graph::{Face, Vertex};
+use triangulation::Triangulation;
 use types::rot3;
 
 pub trait TopologyChecker {

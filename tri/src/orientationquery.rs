@@ -1,7 +1,7 @@
 use context::PredicatesContext;
 use geometry::{Orientation, Predicates};
-use indexing::VertexQuery;
-use triangulation::{Face, Triangulation, Vertex};
+use graph::{Face, Vertex, VertexQuery};
+use triangulation::Triangulation;
 use types::{FaceIndex, FaceVertex, Rot3, VertexIndex};
 
 pub trait OrientationQuery {

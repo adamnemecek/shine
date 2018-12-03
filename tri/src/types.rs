@@ -126,7 +126,7 @@ impl FaceNeighbor {
 
 /// Implement Step required for Range<...>
 macro_rules! step_impl {
-    ($t:ident) => (
+    ($t:ident) => {
         impl Step for $t {
             #[inline]
             fn steps_between(start: &Self, end: &Self) -> Option<usize> {
@@ -163,7 +163,7 @@ macro_rules! step_impl {
                 $t(self.0 - 1)
             }
         }
-    )
+    };
 }
 
 step_impl!(VertexIndex);
@@ -173,6 +173,67 @@ pub type VertexRange = Range<VertexIndex>;
 step_impl!(FaceIndex);
 /// A range of faces
 pub type FaceRange = Range<FaceIndex>;
+
+///Result of a point location query
+#[derive(Debug)]
+pub enum Location {
+    /// Triangulation is empty
+    Empty,
+
+    /// Point is on the vertex of a triangle
+    Vertex(FaceIndex, Rot3),
+
+    /// Point is on the edge of a triangle
+    Edge(FaceIndex, Rot3),
+
+    /// Point is inside a triangle
+    Face(FaceIndex),
+
+    /// Point is outside the convex hull
+    OutsideConvexHull(FaceIndex),
+
+    /// Point is outside the affine hull, dimension have to be extended
+    OutsideAffineHull,
+}
+
+/// Multiple way to reference a vertex in a triangulation
+#[derive(Clone, Debug)]
+pub enum VertexClue {
+    VertexIndex(VertexIndex),
+    FaceVertex(FaceIndex, Rot3),
+    EdgeStart(FaceIndex, Rot3),
+    EdgeEnd(FaceIndex, Rot3),
+}
+
+impl VertexClue {
+    pub fn edge_start(f: FaceIndex, e: Rot3) -> VertexClue {
+        VertexClue::EdgeStart(f, e)
+    }
+
+    pub fn edge_end(f: FaceIndex, e: Rot3) -> VertexClue {
+        VertexClue::EdgeEnd(f, e)
+    }
+
+    pub fn start_of(e: FaceEdge) -> VertexClue {
+        VertexClue::EdgeStart(e.face, e.edge)
+    }
+
+    pub fn end_of(e: FaceEdge) -> VertexClue {
+        VertexClue::EdgeEnd(e.face, e.edge)
+    }
+}
+
+impl From<VertexIndex> for VertexClue {
+    fn from(v: VertexIndex) -> VertexClue {
+        VertexClue::VertexIndex(v)
+    }
+}
+
+impl From<FaceVertex> for VertexClue {
+    fn from(v: FaceVertex) -> VertexClue {
+        VertexClue::FaceVertex(v.face, v.vertex)
+    }
+}
 
 /// Create a Rot3 from the given index
 pub fn rot3(i: u8) -> Rot3 {

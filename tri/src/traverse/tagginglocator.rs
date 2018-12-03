@@ -1,8 +1,8 @@
 use context::{PredicatesContext, TagContext};
 use geometry::{CollinearTest, Orientation, Position, Predicates};
-use indexing::VertexQuery;
-use triangulation::{Face, Triangulation, Vertex};
-use types::{invalid_face_index, rot3, vertex_index, FaceIndex, FaceVertex, Rot3};
+use graph::{Face, Vertex, VertexQuery};
+use triangulation::Triangulation;
+use types::{invalid_face_index, rot3, vertex_index, FaceIndex, FaceVertex, Location, Rot3};
 
 #[derive(Debug)]
 enum ContainmentResult {
@@ -20,34 +20,6 @@ impl ContainmentResult {
             }
         }
     }
-}
-
-///Result of a point location query
-#[derive(Debug)]
-pub enum Location {
-    /// Point is inside a triangle
-    Face(FaceIndex),
-
-    /// Point is on the edge of a triangle
-    Edge(FaceIndex, Rot3),
-
-    /// Point is on the vertex of a triangle
-    Vertex(FaceIndex, Rot3),
-
-    /// Triangulation is empty
-    Empty,
-
-    /// Point is outside the affine hull of a 0D triangulation (the query point and triangulation forms a segment)
-    OutsideAffineHull,
-
-    /// Point is outside the affine hull of a 1D triangulation (the query point and triangulation forms a cw triangle)
-    OutsideAffineHullClockwise,
-
-    /// Point is outside the affine hull of a 1D triangulation (the query point and triangulation forms a ccw triangle)
-    OutsideAffineHullCounterClockwise,
-
-    /// Point is outside the affine hull of a 2D triangulation, with the given nearest face
-    OutsideConvexHull(FaceIndex),
 }
 
 pub trait TaggingLocator {
@@ -110,10 +82,8 @@ where
         let cp1 = self.pos(FaceVertex::from(f1, iv1.mirror(2)));
 
         let orient = pr.orientation_triangle(cp0, cp1, p);
-        if orient.is_cw() {
-            Ok(Location::OutsideAffineHullClockwise)
-        } else if orient.is_ccw() {
-            Ok(Location::OutsideAffineHullCounterClockwise)
+        if !orient.is_collinear() {
+            Ok(Location::OutsideAffineHull)
         } else {
             // point is on the line
             let t = pr.test_collinear_points(cp0, cp1, p);
@@ -246,8 +216,8 @@ where
                 return Ok(Location::OutsideConvexHull(cur));
             }
 
-            self.inner[cur].set_tag(*tag);
-            let from = self.inner[cur].get_neighbor_index(prev);
+            self.graph[cur].set_tag(*tag);
+            let from = self.graph[cur].get_neighbor_index(prev);
 
             let test_result = match from.map(|r| r.id()) {
                 None => self.test_containment_face(p, cur),

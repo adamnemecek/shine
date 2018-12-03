@@ -1,9 +1,8 @@
 #![allow(dead_code)]
 
-use shine_tri::geometry::position::{Posf32, Posf64, Posi32, Posi64};
-use shine_tri::geometry::{Position, Predicatesf32, Predicatesf64, Predicatesi32, Predicatesi64};
+use shine_tri::geometry::Position;
 use shine_tri::types::{invalid_face_index, invalid_vertex_index, rot3, FaceIndex, Rot3, VertexIndex};
-use shine_tri::{Constraint, Face, Triangulation, Vertex};
+use shine_tri::{Constraint, Face, Vertex};
 
 pub struct SimpleVertex<P>
 where
@@ -119,11 +118,11 @@ impl Face for SimpleFace {
     }
 
     fn set_constraint(&mut self, i: Rot3, c: Self::Constraint) {
-        if c.0 == 0 {
-            self.constraints[i.id() as usize].0 = 0
-        } else {
-            self.constraints[i.id() as usize].0 |= c.0
-        }
+        self.constraints[i.id() as usize].0 = c;
+    }
+
+    fn merge_constraint(&mut self, i: Rot3, c: Self::Constraint) {
+        self.constraints[i.id() as usize].0 |= c.0;
     }
 
     fn tag(&self) -> usize {
@@ -135,9 +134,10 @@ impl Face for SimpleFace {
     }
 }
 
-type SimpleTri<P, PR> = Triangulation<PR, SimpleVertex<P>, SimpleFace>;
+/*type SimpleTri<P, PR> = Triangulation<PR, SimpleVertex<P>, SimpleFace>;
 
 pub type SimpleTrif32 = SimpleTri<Posf32, Predicatesf32<Posf32>>;
 pub type SimpleTrif64 = SimpleTri<Posf64, Predicatesf64<Posf64>>;
 pub type SimpleTrii32 = SimpleTri<Posi32, Predicatesi32<Posi32>>;
 pub type SimpleTrii64 = SimpleTri<Posi64, Predicatesi64<Posi64>>;
+*/

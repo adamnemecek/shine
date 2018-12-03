@@ -1,9 +1,9 @@
 use context::PredicatesContext;
 use geometry::{Orientation, Position, Predicates, Real};
-use indexing::VertexQuery;
+use graph::{Face, Vertex, VertexQuery};
 use log::trace;
 use orientationquery::OrientationQuery;
-use triangulation::{Face, Triangulation, Vertex};
+use triangulation::Triangulation;
 use types::{rot3, FaceVertex};
 
 pub trait GeometryChecker {

@@ -1,10 +1,10 @@
+use context::PredicatesContext;
 use geometry::{CollinearTest, CollinearTestType, Orientation, OrientationType, Predicates};
-use graph::{Face, Vertex};
-use indexing::{end_of, start_of, VertexQuery};
+use graph::{Face, Vertex, VertexQuery};
 use std::mem;
-use traverse::edgecirculator::EdgeCirculator;
+use traverse::EdgeCirculator;
 use triangulation::Triangulation;
-use types::{FaceEdge, FaceIndex, FaceVertex, Rot3, VertexIndex};
+use types::{FaceIndex, FaceVertex, Rot3, VertexClue, VertexIndex};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Crossing {
@@ -15,25 +15,27 @@ pub enum Crossing {
     NegativeEdge { face: FaceIndex, edge: Rot3 },
 }
 
-pub struct CrossingIterator<'a, PR, V, F>
+pub struct CrossingIterator<'a, PR, V, F, C>
 where
     PR: 'a + Predicates,
     V: 'a + Vertex<Position = PR::Position>,
     F: 'a + Face,
+    C: 'a + PredicatesContext<Predicates = PR>,
 {
-    tri: &'a Triangulation<PR, V, F>,
+    tri: &'a Triangulation<PR::Position, V, F, C>,
     v0: VertexIndex,
     v1: VertexIndex,
     current: Option<Crossing>,
 }
 
-impl<'a, PR, V, F> CrossingIterator<'a, PR, V, F>
+impl<'a, PR, V, F, C> CrossingIterator<'a, PR, V, F, C>
 where
     PR: 'a + Predicates,
     V: 'a + Vertex<Position = PR::Position>,
     F: 'a + Face,
+    C: 'a + PredicatesContext<Predicates = PR>,
 {
-    pub fn new(tri: &Triangulation<PR, V, F>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<PR, V, F> {
+    pub fn new(tri: &Triangulation<PR::Position, V, F, C>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<PR, V, F, C> {
         assert_eq!(tri.graph.dimension(), 2);
         assert_ne!(v0, v1);
         assert!(tri.graph.is_finite_vertex(v0));
@@ -56,8 +58,8 @@ where
             Some(Crossing::Start { face, vertex }) => self.search_edge(face, vertex),
             Some(Crossing::End { face, vertex }) => self.search_vertex(self.tri.vi(FaceVertex { face, vertex }), self.v0),
             Some(Crossing::CoincidentEdge { face, edge }) => self.search_vertex(
-                self.tri.vi(end_of(FaceEdge { face, edge })),
-                self.tri.vi(start_of(FaceEdge { face, edge })),
+                self.tri.vi(VertexClue::edge_end(face, edge)),
+                self.tri.vi(VertexClue::edge_start(face, edge)),
             ),
             Some(Crossing::PositiveEdge { face, edge }) => self.search_edge(face, edge),
             Some(Crossing::NegativeEdge { face, edge }) => self.search_edge(face, edge),
@@ -80,6 +82,8 @@ where
         if base_vertex == self.v1 {
             return None;
         }
+
+        let pr = self.tri.context.predicates();
 
         loop {
             //println!("current edge: {:?}, {:?}", circulator.current(), circulator.end_vertex());
@@ -107,7 +111,7 @@ where
                 let p1 = &self.tri.pos(self.v1);
                 let pos = &self.tri.pos(vertex);
 
-                let orient = self.tri.predicates.orientation_triangle(p0, p1, pos);
+                let orient = pr.orientation_triangle(p0, p1, pos);
                 /*println!(
                     "orient: {:?},{:?},{:?}: {:?}({:?})",
                     self.v0,
@@ -117,7 +121,7 @@ where
                     orient.into_type()
                 );*/
                 if orient.is_collinear() {
-                    let collinear_test = self.tri.predicates.test_collinear_points(p0, p1, pos).into_type();
+                    let collinear_test = pr.test_collinear_points(p0, p1, pos).into_type();
                     //println!("collinear test: {:?}", collinear_test);
                     match collinear_test {
                         CollinearTestType::Before => {
@@ -192,7 +196,9 @@ where
         let p0 = &self.tri.pos(self.v0);
         let p1 = &self.tri.pos(self.v1);
         let pn = &self.tri.pos(vertex);
-        let orientation = self.tri.predicates.orientation_triangle(p0, p1, pn);
+        let pr = self.tri.context.predicates();
+
+        let orientation = pr.orientation_triangle(p0, p1, pn);
         if orientation.is_collinear() {
             Some(Crossing::End {
                 face,
@@ -212,11 +218,12 @@ where
     }
 }
 
-impl<'a, PR, V, F> Iterator for CrossingIterator<'a, PR, V, F>
+impl<'a, PR, V, F, C> Iterator for CrossingIterator<'a, PR, V, F, C>
 where
     PR: 'a + Predicates,
     V: 'a + Vertex<Position = PR::Position>,
     F: 'a + Face,
+    C: 'a + PredicatesContext<Predicates = PR>,
 {
     type Item = Crossing;
 
