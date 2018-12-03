@@ -26,17 +26,17 @@ fn stress_exact_i64() {
             .with_tag()
             .with_builder()
             .create();
-        {
-            for &(x, y) in xs.iter() {
-                tri.add_vertex(
-                    Posi64 {
-                        x: x as i64,
-                        y: y as i64,
-                    },
-                    None,
-                );
-            }
+
+        for &(x, y) in xs.iter() {
+            tri.add_vertex(
+                Posi64 {
+                    x: x as i64,
+                    y: y as i64,
+                },
+                None,
+            );
         }
+
         tri.check(None) == Ok(())
     }
 
@@ -54,11 +54,11 @@ fn stress_exactf32() {
             .with_tag()
             .with_builder()
             .create();
-        {
-            for &(x, y) in xs.iter() {
-                tri.add_vertex(Posf32 { x, y }, None);
-            }
+
+        for &(x, y) in xs.iter() {
+            tri.add_vertex(Posf32 { x, y }, None);
         }
+
         tri.check(None) == Ok(())
     }
 
@@ -68,17 +68,17 @@ fn stress_exactf32() {
             .with_tag()
             .with_builder()
             .create();
-        {
-            for &(x, y) in xs.iter() {
-                tri.add_vertex(
-                    Posf32 {
-                        x: x.fract(),
-                        y: y.fract(),
-                    },
-                    None,
-                );
-            }
+
+        for &(x, y) in xs.iter() {
+            tri.add_vertex(
+                Posf32 {
+                    x: x.fract(),
+                    y: y.fract(),
+                },
+                None,
+            );
         }
+
         tri.check(None) == Ok(())
     }
 

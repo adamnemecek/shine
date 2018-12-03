@@ -37,6 +37,30 @@ where
     }
 }
 
+impl<P, V, F> Context<P, V, F, (), (), (), ()>
+where
+    P: Position,
+    P::Real: InexactReal,
+    V: Vertex<Position = P>,
+    F: Face,
+{
+    pub fn new_inexact_common() -> Context<P, V, F, InexactPredicates<P>, TagCtx, BuilderCtx, ()> {
+        Context::<P, V, F>::new().with_inexact_predicates().with_tag().with_builder()
+    }
+}
+
+impl<P, V, F> Context<P, V, F, (), (), (), ()>
+where
+    P: Position,
+    P::Real: ExactReal,
+    V: Vertex<Position = P>,
+    F: Face,
+{
+    pub fn new_exact_common() -> Context<P, V, F, ExactPredicates<P>, TagCtx, BuilderCtx, ()> {
+        Context::<P, V, F>::new().with_exact_predicates().with_tag().with_builder()
+    }
+}
+
 impl<P, V, F, Predicates, Tag, Builder, Trace> Context<P, V, F, Predicates, Tag, Builder, Trace>
 where
     P: Position,

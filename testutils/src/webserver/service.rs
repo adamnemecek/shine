@@ -49,6 +49,7 @@ impl Service {
                     .resource("/control.html", |r| r.f(control_page))
                     .handler("/", static_content)
                 })
+                .workers(1)
                 .bind(bind_address.clone())
                 .expect(&format!("Cannot bind to {}", bind_address))
                 .start();

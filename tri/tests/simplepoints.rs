@@ -32,38 +32,10 @@ fn simple_points() {
         assert_eq!(tri.check(None), Ok(()));
     }
 
-    test(
-        SimpleContext::<Posf32>::new()
-            .with_inexact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "inexact f32",
-    );
-    test(
-        SimpleContext::<Posf64>::new()
-            .with_inexact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "inexact f64",
-    );
-    test(
-        SimpleContext::<Posi32>::new()
-            .with_exact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "exact i32",
-    );
-    test(
-        SimpleContext::<Posi64>::new()
-            .with_exact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "exact i64",
-    );
+    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
@@ -97,38 +69,10 @@ fn simple_points_dim0() {
         assert_eq!(tri.check(None), Ok(()));
     }
 
-    test(
-        SimpleContext::<Posf32>::new()
-            .with_inexact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "inexact f32",
-    );
-    test(
-        SimpleContext::<Posf64>::new()
-            .with_inexact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "inexact f64",
-    );
-    test(
-        SimpleContext::<Posi32>::new()
-            .with_exact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "exact i32",
-    );
-    test(
-        SimpleContext::<Posi64>::new()
-            .with_exact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "exact i64",
-    );
+    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
@@ -186,38 +130,10 @@ fn simple_points_dim1() {
         }
     }
 
-    test(
-        SimpleContext::<Posf32>::new()
-            .with_inexact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "inexact f32",
-    );
-    test(
-        SimpleContext::<Posf64>::new()
-            .with_inexact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "inexact f64",
-    );
-    test(
-        SimpleContext::<Posi32>::new()
-            .with_exact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "exact i32",
-    );
-    test(
-        SimpleContext::<Posi64>::new()
-            .with_exact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "exact i64",
-    );
+    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
@@ -293,36 +209,8 @@ fn simple_points_dim2() {
         }
     }
 
-    test(
-        SimpleContext::<Posf32>::new()
-            .with_inexact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "inexact f32",
-    );
-    test(
-        SimpleContext::<Posf64>::new()
-            .with_inexact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "inexact f64",
-    );
-    test(
-        SimpleContext::<Posi32>::new()
-            .with_exact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "exact i32",
-    );
-    test(
-        SimpleContext::<Posi64>::new()
-            .with_exact_predicates()
-            .with_tag()
-            .with_builder()
-            .create(),
-        "exact i64",
-    );
+    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
 }

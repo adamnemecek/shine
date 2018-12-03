@@ -6,7 +6,7 @@ extern crate shine_tri;
 
 mod common;
 
-use common::{D2TriTrace, Sample, SimpleConstraint, SimpleContext, SimpleFace, SimpleVertex};
+use common::{D2TriTrace, Sample, SimpleConstraint, SimpleContext};
 use shine_testutils::init_webcontroll_test;
 use shine_tri::geometry::Posf32;
 use shine_tri::{Builder, CrossingIterator, FullChecker, Trace};
@@ -34,10 +34,7 @@ fn quick_debug() {
         })
     });
 
-    let mut tri = SimpleContext::<Posf32>::new()
-        .with_inexact_predicates()
-        .with_tag()
-        .with_builder()
+    let mut tri = SimpleContext::<Posf32>::new_inexact_common()
         .with_trace(D2TriTrace::new(webctrl.clone()))
         .create();
 
@@ -80,7 +77,7 @@ fn quick_debug() {
             }
         }
 
-        /*println!("--------");
+        println!("--------");
         for crossing in CrossingIterator::new(&tri, v5, v8) {
             println!("crossing: {:?}", crossing);
         }
@@ -88,7 +85,7 @@ fn quick_debug() {
         println!("--------");
         for crossing in CrossingIterator::new(&tri, v2, v1) {
             println!("crossing: {:?}", crossing);
-        }*/
+        }
     }
 
     tri.trace_begin();
