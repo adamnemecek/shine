@@ -22,12 +22,12 @@ where
     C: PredicatesContext<Predicates = PR>,
 {
     fn check_orientation(&self) -> Result<(), String> {
-        if self.dimension() < 2 {
+        if self.graph.dimension() < 2 {
             return Ok(());
         }
 
-        for f in self.face_index_iter() {
-            if self.is_infinite_face(f) {
+        for f in self.graph.face_index_iter() {
+            if self.graph.is_infinite_face(f) {
                 continue;
             }
 
@@ -44,20 +44,20 @@ where
     }
 
     fn check_area(&self, eps: Option<f64>) -> Result<(), String> {
-        if self.dimension() != 2 {
+        if self.graph.dimension() != 2 {
             return Ok(());
         }
 
         // calculate the area of the triangles
         let mut tri_area = 0.;
-        for f in self.face_index_iter() {
-            if self.is_infinite_face(f) {
+        for f in self.graph.face_index_iter() {
+            if self.graph.is_infinite_face(f) {
                 continue;
             }
 
-            let a = self.pos(FaceVertex::from(f, rot3(0)));
-            let b = self.pos(FaceVertex::from(f, rot3(1)));
-            let c = self.pos(FaceVertex::from(f, rot3(2)));
+            let a = self.graph.pos(FaceVertex::from(f, rot3(0)));
+            let b = self.graph.pos(FaceVertex::from(f, rot3(1)));
+            let c = self.graph.pos(FaceVertex::from(f, rot3(2)));
 
             let ax: f64 = a.x().approximate();
             let ay: f64 = a.y().approximate();
@@ -74,14 +74,14 @@ where
 
         // calculate the area of the convex hull
         let mut convex_area = 0.;
-        let end = self.infinite_face();
+        let end = self.graph.infinite_face();
         let mut cur = end;
         loop {
-            let iid = self[cur].get_vertex_index(self.infinite_vertex()).unwrap(); // index of infinite vertex
+            let iid = self[cur].get_vertex_index(self.graph.infinite_vertex()).unwrap(); // index of infinite vertex
             let aid = iid.decrement();
             let bid = iid.increment();
-            let a = self.pos(FaceVertex::from(cur, aid));
-            let b = self.pos(FaceVertex::from(cur, bid));
+            let a = self.graph.pos(FaceVertex::from(cur, aid));
+            let b = self.graph.pos(FaceVertex::from(cur, bid));
             let ax: f64 = a.x().approximate();
             let ay: f64 = a.y().approximate();
             let bx: f64 = b.x().approximate();

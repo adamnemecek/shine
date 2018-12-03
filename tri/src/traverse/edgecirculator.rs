@@ -45,7 +45,7 @@ where
     }
 
     pub fn end_vertex(&self) -> VertexIndex {
-        self.tri.vi(VertexClue::end_of(self.current))
+        self.tri.graph.vi(VertexClue::end_of(self.current))
     }
 
     pub fn face(&self) -> FaceIndex {
@@ -59,7 +59,7 @@ where
     pub fn advance_ccw(&mut self) {
         assert_eq!(self.tri.graph.dimension(), 2);
         assert!(self.current.face.is_valid());
-        assert!(self.tri.vi(VertexClue::start_of(self.current)) == self.vertex);
+        assert!(self.tri.graph.vi(VertexClue::start_of(self.current)) == self.vertex);
 
         self.current.face = self.tri.graph[self.current.face].neighbor(self.current.edge.decrement());
         self.current.edge = self.tri.graph[self.current.face]
@@ -71,7 +71,7 @@ where
     pub fn advance_cw(&mut self) {
         assert_eq!(self.tri.graph.dimension(), 2);
         assert!(self.current.face.is_valid());
-        assert!(self.tri.vi(VertexClue::start_of(self.current)) == self.vertex);
+        assert!(self.tri.graph.vi(VertexClue::start_of(self.current)) == self.vertex);
 
         self.current.face = self.tri.graph[self.current.face].neighbor(self.current.edge);
         self.current.edge = self.tri.graph[self.current.face]

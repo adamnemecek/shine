@@ -313,9 +313,9 @@ where
 
             let orient = {
                 let pr = self.context.predicates();
-                let cp0 = self.pos(VertexClue::face_vertex(f0, im));
-                let cp1 = self.pos(VertexClue::face_vertex(fm, i0));
-                let p = self.pos(vert);
+                let cp0 = self.graph.pos(VertexClue::face_vertex(f0, im));
+                let cp1 = self.graph.pos(VertexClue::face_vertex(fm, i0));
+                let p = self.graph.pos(vert);
                 pr.orientation_triangle(cp0, cp1, p)
             };
             assert!(!orient.is_collinear());

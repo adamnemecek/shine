@@ -50,7 +50,7 @@ where
         let approximate_predicates = InexactPredicates::<Posf64>::new();
 
         if self.graph.is_finite_vertex(v) {
-            let p = Posf64::from(self.pos(v));
+            let p = Posf64::from(self.graph.pos(v));
             return TracePosition::Real(p);
         }
 
@@ -60,8 +60,8 @@ where
 
         // find virtual point best fitting the convex hull in 2d
         if vcw.is_valid() && self.graph.is_finite_vertex(vcw) && vccw.is_valid() && self.graph.is_finite_vertex(vccw) {
-            let pcw = Posf64::from(self.pos(vcw));
-            let pccw = Posf64::from(self.pos(vccw));
+            let pcw = Posf64::from(self.graph.pos(vcw));
+            let pccw = Posf64::from(self.graph.pos(vccw));
 
             let mut best_value = 0.;
             let mut best = None;
@@ -82,7 +82,7 @@ where
         // find virtual point best fitting the convex hull in 1d
         for &candidate in [vcw, vccw].iter() {
             if candidate.is_valid() && self.graph.is_finite_vertex(candidate) {
-                let p = Posf64::from(self.pos(candidate));
+                let p = Posf64::from(self.graph.pos(candidate));
                 let mut search = approximate_predicates.nearest_point_search(&p);
 
                 for virt_pos in mapping.virtual_positions.iter() {
@@ -115,7 +115,7 @@ where
         let msg = msg.map(|m| format!("V: {}", m)).unwrap_or_else(|| format!("V: {}", v.id()));
 
         if self.graph.is_finite_vertex(v) {
-            let p = Posf64::from(self.pos(v));
+            let p = Posf64::from(self.graph.pos(v));
             tr.add_point(&(p.x, p.y), coloring.vertex.clone());
             tr.add_text(&(p.x, p.y), msg, coloring.vertex_text.0.clone(), coloring.vertex_text.1);
         } else {
@@ -148,8 +148,8 @@ where
             .map(|m| format!("E: {}", m))
             .unwrap_or_else(|| format!("E: ({},{})", a.id(), b.id()));
 
-        let pa = Posf64::from(self.pos(a));
-        let pb = Posf64::from(self.pos(b));
+        let pa = Posf64::from(self.graph.pos(a));
+        let pb = Posf64::from(self.graph.pos(b));
         tr.add_line(&(pa.x, pa.y), &(pb.x, pb.y), coloring.edge.clone());
         let x = (pa.x + pb.x) * 0.5;
         let y = (pa.y + pb.y) * 0.5;
@@ -158,8 +158,8 @@ where
 
     fn trace_face_edge(&self, f: FaceIndex, i: Rot3, msg: Option<&str>) {
         self.trace_edge(
-            self.vi(VertexClue::edge_start(f, i)),
-            self.vi(VertexClue::edge_end(f, i)),
+            self.graph.vi(VertexClue::edge_start(f, i)),
+            self.graph.vi(VertexClue::edge_end(f, i)),
             msg,
         );
     }
@@ -273,7 +273,7 @@ where
         let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
 
         for v in self.graph.vertex_index_iter() {
-            let p = Posf64::from(self.pos(v));
+            let p = Posf64::from(self.graph.pos(v));
             minx = if p.x < minx { p.x } else { minx };
             maxx = if p.x > maxx { p.x } else { maxx };
             miny = if p.y < minx { p.y } else { minx };

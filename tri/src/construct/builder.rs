@@ -78,9 +78,9 @@ where
         // find the direction to reach v1 from v0
         let reverse_dir = if self.graph.is_finite_vertex(vn) {
             // test direction to traverse by point order
-            let p0 = self.pos(v0);
-            let p1 = self.pos(v1);
-            let pn = self.pos(vn);
+            let p0 = self.graph.pos(v0);
+            let p1 = self.graph.pos(v1);
+            let pn = self.graph.pos(vn);
             let pr = self.context.predicates();
 
             // p0,p1,pn and any other (finite) point must be collinear as dim==1,

@@ -188,7 +188,7 @@ fn simple_points_dim2() {
                         let pos = map(x, y);
                         trace!("add {:?}", pos);
                         let vi = tri.add_vertex(pos, None);
-                        trace!("{:?} = {:?}", vi, tri.pos(vi));
+                        trace!("{:?} = {:?}", vi, tri.graph.pos(vi));
                         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
                         let pos = map(x, y);

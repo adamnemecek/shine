@@ -56,10 +56,10 @@ where
         let next = match self.current {
             None => None,
             Some(Crossing::Start { face, vertex }) => self.search_edge(face, vertex),
-            Some(Crossing::End { face, vertex }) => self.search_vertex(self.tri.vi(FaceVertex { face, vertex }), self.v0),
+            Some(Crossing::End { face, vertex }) => self.search_vertex(self.tri.graph.vi(FaceVertex { face, vertex }), self.v0),
             Some(Crossing::CoincidentEdge { face, edge }) => self.search_vertex(
-                self.tri.vi(VertexClue::edge_end(face, edge)),
-                self.tri.vi(VertexClue::edge_start(face, edge)),
+                self.tri.graph.vi(VertexClue::edge_end(face, edge)),
+                self.tri.graph.vi(VertexClue::edge_start(face, edge)),
             ),
             Some(Crossing::PositiveEdge { face, edge }) => self.search_edge(face, edge),
             Some(Crossing::NegativeEdge { face, edge }) => self.search_edge(face, edge),
@@ -107,9 +107,9 @@ where
                 //println!("backward edge {:?},{:?}", base_vertex, vertex);
                 OrientationType::CCW
             } else {
-                let p0 = &self.tri.pos(self.v0);
-                let p1 = &self.tri.pos(self.v1);
-                let pos = &self.tri.pos(vertex);
+                let p0 = &self.tri.graph.pos(self.v0);
+                let p1 = &self.tri.graph.pos(self.v1);
+                let pos = &self.tri.graph.pos(vertex);
 
                 let orient = pr.orientation_triangle(p0, p1, pos);
                 /*println!(
@@ -193,9 +193,9 @@ where
             });
         };
 
-        let p0 = &self.tri.pos(self.v0);
-        let p1 = &self.tri.pos(self.v1);
-        let pn = &self.tri.pos(vertex);
+        let p0 = &self.tri.graph.pos(self.v0);
+        let p1 = &self.tri.graph.pos(self.v1);
+        let pn = &self.tri.graph.pos(vertex);
         let pr = self.tri.context.predicates();
 
         let orientation = pr.orientation_triangle(p0, p1, pn);

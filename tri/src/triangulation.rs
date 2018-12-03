@@ -1,7 +1,7 @@
 use geometry::Position;
 use graph::{Face, Graph, Vertex};
 use std::fmt;
-use std::ops::{Deref, DerefMut, Index, IndexMut};
+use std::ops::{Index, IndexMut};
 use types::{FaceIndex, VertexIndex};
 
 /// Triangulation.
@@ -26,30 +26,6 @@ where
             graph: Graph::new(),
             context,
         }
-    }
-}
-
-impl<P, V, F, C> Deref for Triangulation<P, V, F, C>
-where
-    P: Position,
-    V: Vertex<Position = P>,
-    F: Face,
-{
-    type Target = Graph<P, V, F>;
-
-    fn deref(&self) -> &Graph<P, V, F> {
-        &self.graph
-    }
-}
-
-impl<P, V, F, C> DerefMut for Triangulation<P, V, F, C>
-where
-    P: Position,
-    V: Vertex<Position = P>,
-    F: Face,
-{
-    fn deref_mut(&mut self) -> &mut Graph<P, V, F> {
-        &mut self.graph
     }
 }
 
