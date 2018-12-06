@@ -58,35 +58,20 @@ fn quick_debug() {
         let _6 = tri.add_vertex(map(5.0, 2.0), None);
         let _7 = tri.add_vertex(map(5.0, 0.0), None);
         let v8 = tri.add_vertex(map(6.0, 1.0), None);
-        let _ = tri.add_vertex(map(0.5, 1.2), None);
-        let _ = tri.add_vertex(map(0.5, 0.8), None);
-        let _ = tri.add_vertex(map(0.8, 1.0), None);
-        let _ = tri.add_vertex(map(3.0, 1.0), None);
+        let _9 = tri.add_vertex(map(0.5, 1.2), None);
+        let _10 = tri.add_vertex(map(0.5, 0.8), None);
+        let v11 = tri.add_vertex(map(0.8, 1.0), None);
+        let _12 = tri.add_vertex(map(3.0, 1.0), None);
 
         tri.trace_begin();
         tri.trace();
         tri.trace_end();
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
-        println!("--------");
-        let mut cnt = 0;
-        for crossing in CrossingIterator::new(&tri, v8, v1) {
-            println!("crossing: {:?}", crossing);
-            cnt += 1;
-            if cnt > 5 {
-                break;
-            }
-        }
-
-        println!("--------");
-        for crossing in CrossingIterator::new(&tri, v5, v8) {
-            println!("crossing: {:?}", crossing);
-        }
-
-        println!("--------");
-        for crossing in CrossingIterator::new(&tri, v2, v1) {
-            println!("crossing: {:?}", crossing);
-        }
+        tri.add_constraint_edge(v8, v1, SimpleConstraint(1));
+        tri.add_constraint_edge(v8, v5, SimpleConstraint(2));
+        tri.add_constraint_edge(v5, v8, SimpleConstraint(4));
+        tri.add_constraint_edge(v11, v2, SimpleConstraint(16));
     }
 
     tri.trace_begin();
