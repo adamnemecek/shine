@@ -17,14 +17,7 @@ pub mod libconfig {
     pub const PREFERRED_THREAD_COUNT: usize = 0;
 }
 
-mod indexedarena;
-mod pinnedarena;
-
-pub mod arena {
-    pub use super::indexedarena::*;
-    pub use super::pinnedarena::*;
-}
-
+pub mod arena;
 pub mod hashstore;
 pub mod spscstate;
 pub mod stdext;

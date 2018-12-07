@@ -11,6 +11,7 @@ keywords = ["shine", "triangulation", "robust"]
 [dependencies]
 log = "*"
 rand = "*"
+shine-store = {path = "../store"}
 
 [dev-dependencies]
 env_logger = "*"
