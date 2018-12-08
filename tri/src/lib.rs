@@ -6,6 +6,7 @@
 
 extern crate log;
 extern crate rand;
+extern crate shine_store;
 
 #[cfg(test)]
 extern crate shine_testutils;
@@ -20,7 +21,6 @@ mod triangulation;
 pub mod geometry;
 pub mod traverse;
 pub mod types;
-pub mod vertexchain;
 
 pub use self::checker::*;
 pub use self::construct::*;

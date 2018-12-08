@@ -6,7 +6,7 @@ use traverse::TaggingLocator;
 use traverse::{Crossing, CrossingIterator};
 use triangulation::Triangulation;
 use types::{rot3, FaceIndex, Location, VertexClue, VertexIndex};
-use vertexchain::{ChainIndex, ChainStore};
+use vertexchain::{Chain, ChainStore};
 
 pub trait Builder {
     type Position: Position;
@@ -121,67 +121,56 @@ where
 
     /// Adds the constraining edge between the two vertex when dim=2
     fn add_constraint_dim2(&mut self, mut v0: VertexIndex, v1: VertexIndex, _c: &F::Constraint) {
-        let mut chain_store = self.context.chain_store();
+        let mut edge_chain = self.context.create_chain(false);
+        let mut top_chain = self.context.create_chain(true);
+        let mut bottom_chain = self.context.create_chain(true);
+
         while v0 != v1 {
             println!("add constrainat: {:?}->{:?}", v0, v1);
             // collect intersecting faces and generate the two (top/bottom) chains
             // The edge-chain is not a whole polygon the new constraining edge is the missing closing edge
+            
+            let mut crossing_iter = CrossingIterator::new(self, v0, v1);
+            let mut cross = crossing_iter.next();
+            println!("cross edge: {:?}", cross);
 
-            let (edge_chain, hole_chain) = {
-                let mut crossing_iter = CrossingIterator::new(self, v0, v1);
-                let mut cross = crossing_iter.next();
-                println!("cross edge: {:?}", cross);
+            // loop over coincident edges
+            while let Some(Crossing::CoincidentEdge { face, edge }) = cross {
+                edge_chain.push_back(face, edge);
+                v0 = self.graph.vi(VertexClue::edge_end(face, edge));
+                cross = crossing_iter.next();
+                println!("cross edge: {:?}, v0: {:?}", cross, v0);
+            }
 
-                // loop over coincident edges
-                let edge_chain = if let Some(Crossing::CoincidentEdge { face, edge }) = cross {
-                    let edge_chain = chain_store.new_chain(face, edge, true);
+            if let Some(Crossing::Start { face, vertex }) = cross {
+                top_chain.push_back(face, vertex);
+                bottom_chain.push_back(face, vertex);
+                loop {
                     cross = crossing_iter.next();
-                    v0 = self.graph.vi(VertexClue::edge_end(face, edge));
                     println!("cross edge: {:?}", cross);
-                    while let Some(Crossing::CoincidentEdge { face, edge }) = cross {
-                        chain_store.insert_before(edge_chain, face, edge);
-                        v0 = self.graph.vi(VertexClue::edge_end(face, edge));
-                        cross = crossing_iter.next();
-                        println!("cross edge: {:?}, v0: {:?}", cross, v0);
+                    if let Some(Crossing::End { face, vertex }) = cross {
+                        v0 = self.graph.vi(VertexClue::face_vertex(face, vertex));
+                        println!("v0: {:?}", v0);
+                        break;
                     }
-                    Some(edge_chain)
-                } else {
-                    None
-                };
-
-                let hole_chain = if let Some(Crossing::Start { face, vertex }) = cross {
-                    let top_chain = chain_store.new_chain(face, vertex, true);
-                    let bottom_chain = chain_store.new_chain(face, vertex, true);
-                    loop {
-                        cross = crossing_iter.next();
-                        println!("cross edge: {:?}", cross);
-                        if let Some(Crossing::End { face, vertex }) = cross {
-                            v0 = self.graph.vi(VertexClue::face_vertex(face, vertex));
-                            println!("v0: {:?}", v0);
-                            break;
-                        }
-                    }
-                    Some((top_chain, bottom_chain))
-                } else {
-                    None
-                };
-
-                (edge_chain, hole_chain)
-            };
-
-            if let Some(edge_chain) = edge_chain {
-                println!("edge constraint");
+                }
             }
 
-            if let Some((top_chain, bottom_chain)) = hole_chain {
-                println!("fill hole");
-                //self.triangulate_hole(&mut chain_store, top_chain, bottom_chain)
+            if !edge_chain.is_empty() {
+                println!("edge constraint:{:?}", edge_chain);
             }
-            chain_store.clear();
+
+            if top_chain.is_empty() {
+                println!("fill hole\ntop:{:?}\nbottom:{:?}", top_chain, bottom_chain);
+                //self.triangulate_hole(&mut top_chain, bottom_chain);
+            }
+            edge_chain.release();
+            top_chain.release();
+            bottom_chain.release();
         }
     }
 
-    fn triangulate_hole(&mut self, chains: &mut ChainStore, top: ChainIndex, bottom: ChainIndex) {
+    fn triangulate_hole(&mut self, chains: &mut ChainStore, top: &mut Chain, bottom: &mut Chain) {
         //chains.dump(top, &mut std::io::stdout()).unwrap();
         //unimplemented!()
     }

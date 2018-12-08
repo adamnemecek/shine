@@ -2,9 +2,10 @@ use checker::{Coloring, TraceMapping, TraceRender};
 use geometry::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
 use graph::{Face, Vertex};
 use std::cell::{Ref, RefCell, RefMut};
+use std::rc::Rc;
 use std::marker::PhantomData;
 use triangulation::Triangulation;
-use vertexchain::ChainStore;
+use vertexchain::{ChainStore, Chain};
 
 /// Context the enables/disables triangulation features and also stores the required datas
 pub struct Context<P, V, F, Predicates = (), Tag = (), Builder = (), Trace = ()>
@@ -197,11 +198,11 @@ where
 
 /// Trait to provide temporaries for trienagulation building
 pub trait BuilderContext {
-    fn chain_store(&self) -> RefMut<ChainStore>;
+    fn create_chain(&self, closed: bool) -> Chain;
 }
 
 /// Store temporaries for build
-pub struct BuilderCtx(RefCell<ChainStore>);
+pub struct BuilderCtx(Rc<RefCell<ChainStore>>);
 
 impl<P, V, F, Predicates, Tag, Trace> Context<P, V, F, Predicates, Tag, (), Trace>
 where
@@ -213,7 +214,7 @@ where
         Context {
             predicates: self.predicates,
             tag: self.tag,
-            builder: BuilderCtx(RefCell::new(ChainStore::new())),
+            builder: BuilderCtx(Default::default()),
             trace: self.trace,
             phantom: self.phantom,
         }
@@ -226,8 +227,8 @@ where
     V: Vertex<Position = P>,
     F: Face,
 {
-    fn chain_store(&self) -> RefMut<ChainStore> {
-        self.builder.0.borrow_mut()
+    fn create_chain(&self, closed: bool) -> Chain {
+        Chain::new( self.builder.0.clone(), closed)
     }
 }
 
