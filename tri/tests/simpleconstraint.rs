@@ -10,6 +10,7 @@ use common::{Sample, SimpleConstraint, SimpleContext, SimpleFace, SimpleVertex};
 use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
+use shine_tri::types::{face_index, rot3};
 use shine_tri::traverse::CrossingIterator;
 use shine_tri::{Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, Triangulation};
 use std::fmt::Debug;
@@ -274,8 +275,41 @@ fn t3_crossing_iterator() {
 }
 
 #[test]
+fn t4_vertexchain() {
+    init_test(module_path!());
+
+    let store = Rc::new(RefCell::new(vertexchain::ChainStore::new()));
+    
+    let chain = store.new(store, true);    
+    chain.push_back(face_index(0), rot3(0));
+    chain.push_back(face_index(1), rot3(0));
+    chain.push_back(face_index(2), rot3(0));
+    chain.push_back(face_index(3), rot3(0));
+    let res = format!("{:?}", chain);
+
+    let chain = store.new(store, true);    
+    chain.push_front(face_index(0), rot3(0));
+    chain.push_front(face_index(1), rot3(0));
+    chain.push_front(face_index(2), rot3(0));
+    let res = format!("{:?}", chain);
+    chain.clear();
+
+    let chain = store.new(store, true);    
+    chain.push_back(face_index(0), rot3(0));
+    chain.push_back(face_index(1), rot3(0));
+    chain.push_back(face_index(2), rot3(0));
+    let res = format!("{:?}", chain);
+
+    let chain = store.new(store, false);    
+    chain.push_front(face_index(0), rot3(0));
+    chain.push_front(face_index(1), rot3(0));
+    chain.push_front(face_index(2), rot3(0));
+    let res = format!("{:?}", chain);
+}
+
+#[test]
 #[ignore]
-fn t4_constraint_concave() {
+fn t5_constraint_concave() {
     init_test(module_path!());
 
     fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)

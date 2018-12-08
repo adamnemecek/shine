@@ -7,10 +7,10 @@ use triangulation::Triangulation;
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexClue, VertexIndex};
 
 pub trait Updater {
-    /// Split and edge by the given vertex. No geometry constraint is checked.
+    /// Split an edge by the given vertex. No geometry constraint is checked.
     fn split_edge(&mut self, face: FaceIndex, edge: Rot3, vert: VertexIndex);
 
-    /// Split and face by the given vertex. No geometry constraint is checked.
+    /// Split a face by the given vertex. No geometry constraint is checked.
     fn split_face(&mut self, face: FaceIndex, vert: VertexIndex);
 
     /// Extend the dimension of the triangualtion using the given vertex. No geometry constraint is checked.
@@ -273,13 +273,12 @@ where
         self.set_adjacent(f2, rot3(0), f0, rot3(1));
     }
 
-    /// Extends dimension from 1D to 2D by creating triangles(2d face) out of the segments (1D faces).
+    /// Extends dimension from 1D to 2D by creating triangles (2d fac0es) out of the segments (1D faces).
     /// The infinite vertex and triangulation can be seen as an n+1 dimensional shell. The
     /// edges of the convex hull of an nD object is connected to the infinite vertex, which can be seen as
     /// a normal point in (n+1)D which is "above" the nD points.
-    /// For 1D -> 2D lifting we have to extended each segment into a triangle that creates a shell in 3D space
-    /// After lifting each segment, we have to fill the holes on the shell in 3D by generating the infinite faces
-    /// of 2D.
+    /// For 1D -> 2D lifting we have to extended each segment into a triangle that creates a shell in 3D space.
+    /// After transforming each segment int a triangle, we have to add the cap in 3D by generating the infinite faces.
     fn extend_to_dim2(&mut self, vert: VertexIndex) {
         assert_eq!(self.graph.dimension(), 1);
 
