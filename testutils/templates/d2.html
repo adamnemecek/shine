@@ -42,15 +42,29 @@
             border-radius: 3px;
         }
 
-        .navigate a {
+        .controls button {
             background-color: #4CAF50;
             color: white;
-
+            border: 0;
+            font-family: Helvetica;
             text-decoration: none;
             display: inline-block;
             padding: 8px 16px;
             margin: 3px;
         }
+        .controls button:hover {
+            background-color: #ddd;
+            color: black;
+        }  
+
+        .navigate a {
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 3px;
+        }        
         .navigate a:hover {
             background-color: #ddd;
             color: black;
@@ -80,6 +94,9 @@
             <a href="d2.html?id={{ next_image_id }}">Next &raquo;</a>
             <a href="d2.html?id={{ next_next_image_id }}">Next &raquo; &raquo;</a>
             <a href="d2.html?id={{ last_image_id }}">Last</a>
+        </div>
+        <div class="controls">
+            {% include "controls.html" %}
         </div>
     </header>
     <nav>

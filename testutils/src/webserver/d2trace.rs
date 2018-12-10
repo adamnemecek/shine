@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use svg::node::{self, element};
 use svg::{Document, Node};
 use tera;
-use webserver::service::AppContext;
+use webserver::appcontext::AppContext;
 
 pub trait IntoD2Image {
     fn trace(&self, tr: &mut D2Trace);
@@ -200,7 +200,7 @@ impl Default for D2Trace {
     }
 }
 
-crate fn d2_page(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+pub fn handle_d2_image_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     let state = req.state();
 
     // input is 1 based

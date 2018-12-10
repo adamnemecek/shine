@@ -1,0 +1,9 @@
+<script type="text/javascript">
+    function notifyUser() {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "control/notify", true);
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.send(JSON.stringify({}));
+    }
+</script>
+<button onclick="notifyUser()">Continue</button>

@@ -17,23 +17,6 @@ use std::panic;
 fn quick_debug() {
     let webctrl = init_webcontroll_test(module_path!());
 
-    panic::set_hook({
-        let webctrl = webctrl.clone();
-        Box::new(move |panic_info| {
-            if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
-                println!("panic occurred: {:?}", s);
-            } else {
-                println!("panic occurred");
-            }
-            if let Some(location) = panic_info.location() {
-                println!("panic occurred in file '{}' at line {}", location.file(), location.line());
-            } else {
-                println!("panic occurred but can't get location information...");
-            }
-            webctrl.wait_user();
-        })
-    });
-
     let mut tri = SimpleContext::<Posf32>::new_inexact_common()
         .with_trace(D2TriTrace::new(webctrl.clone()))
         .create();
@@ -49,47 +32,51 @@ fn quick_debug() {
             (&map(2., 5.)).into(),
             (&map(2., -2.)).into(),
         ]);
-
-        let v0 = tri.add_vertex(map(2.0, 1.0), None);
-        let v2 = tri.add_vertex(map(4.0, 1.0), None);
-        let _3 = tri.add_vertex(map(1.0, 2.0), None);
-        let _4 = tri.add_vertex(map(1.0, 0.0), None);
-        let v5 = tri.add_vertex(map(0.0, 1.0), None);
-        let _6 = tri.add_vertex(map(5.0, 2.0), None);
-        let v7 = tri.add_vertex(map(5.0, 0.0), None);
-        let v8 = tri.add_vertex(map(6.0, 1.0), None);
-        let _9 = tri.add_vertex(map(0.5, 1.2), None);
-        let _10 = tri.add_vertex(map(0.5, 0.8), None);
-        let v11 = tri.add_vertex(map(0.8, 1.0), None);
-        let v12 = tri.add_vertex(map(3.0, 1.0), None);
-        tri.trace();
-
-        tri.add_constraint_edge(v5, v7, SimpleConstraint(1));
-        tri.trace();
-
-        tri.add_constraint_edge(v8, v5, SimpleConstraint(2));
-        tri.trace();
-
-        tri.add_constraint_edge(v5, v8, SimpleConstraint(4));
-        tri.trace();
-
-        tri.add_constraint_edge(v11, v2, SimpleConstraint(8));
-        tri.trace();
-
-        /*let _e = tri.add_vertex(map(2.0, 2.5), None);
-        let _d = tri.add_vertex(map(3.5, 2.5), None);
-        let _b = tri.add_vertex(map(2.0, 0.5), None);
-        let _c = tri.add_vertex(map(3.5, 0.0), None);
-        let _a = tri.add_vertex(map(1.0, 0.0), None);
-        let p0 = tri.add_vertex(map(0.0, 1.0), None);
-        let _f = tri.add_vertex(map(1.0, 1.5), None);
-        let p1 = tri.add_vertex(map(4.0, 1.0), None);
-
-        tri.trace();
-        assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
-
-        tri.add_constraint_edge(p0, p1, SimpleConstraint(1));*/
     }
+
+    let v0 = tri.add_vertex(map(2.0, 1.0), None);
+    let v2 = tri.add_vertex(map(4.0, 1.0), None);
+    let _3 = tri.add_vertex(map(1.0, 2.0), None);
+    let _4 = tri.add_vertex(map(1.0, 0.0), None);
+    let v5 = tri.add_vertex(map(0.0, 1.0), None);
+    let _6 = tri.add_vertex(map(5.0, 2.0), None);
+    let v7 = tri.add_vertex(map(5.0, 0.0), None);
+    let v8 = tri.add_vertex(map(6.0, 1.0), None);
+    let _9 = tri.add_vertex(map(0.5, 1.2), None);
+    let _10 = tri.add_vertex(map(0.5, 0.8), None);
+    let v11 = tri.add_vertex(map(0.8, 1.0), None);
+    let v12 = tri.add_vertex(map(3.0, 1.0), None);
+    tri.trace();
+
+    tri.add_constraint_edge(v5, v7, SimpleConstraint(1));
+    tri.trace();
+    webctrl.wait_user();
+
+    /*tri.add_constraint_edge(v8, v5, SimpleConstraint(2));
+    tri.trace();
+    webctrl.wait_user();
+
+    tri.add_constraint_edge(v5, v8, SimpleConstraint(4));
+    tri.trace();
+    webctrl.wait_user();
+
+    tri.add_constraint_edge(v11, v2, SimpleConstraint(8));
+    tri.trace();
+    webctrl.wait_user();*/
+
+    /*let _e = tri.add_vertex(map(2.0, 2.5), None);
+    let _d = tri.add_vertex(map(3.5, 2.5), None);
+    let _b = tri.add_vertex(map(2.0, 0.5), None);
+    let _c = tri.add_vertex(map(3.5, 0.0), None);
+    let _a = tri.add_vertex(map(1.0, 0.0), None);
+    let p0 = tri.add_vertex(map(0.0, 1.0), None);
+    let _f = tri.add_vertex(map(1.0, 1.5), None);
+    let p1 = tri.add_vertex(map(4.0, 1.0), None);
+
+    tri.trace();
+    assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
+
+    tri.add_constraint_edge(p0, p1, SimpleConstraint(1));*/
 
     tri.trace();
     webctrl.wait_user();

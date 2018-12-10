@@ -1,35 +1,31 @@
 use actix;
-use actix_web::{fs, http, middleware, server, App, Error as ActixWebError, HttpRequest, HttpResponse};
+use actix_web::{fs, http, middleware, server, App, Error as ActixWebError};
 use futures::future::Future;
 use log::info;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
-use tera::{self, compile_templates};
-use webserver::d2trace::{d2_page, D2Trace, IntoD2Image};
-
-crate struct AppContext {
-    crate d2_images: Arc<Mutex<Vec<String>>>,
-    crate template: tera::Tera,
-}
-
-fn control_page(_req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    Ok(HttpResponse::Ok().content_type("test/html").body("Hello"))
-}
+use tera::compile_templates;
+use webserver::appcontext::AppContext;
+use webserver::control::{handle_notify_user, Control};
+use webserver::d2trace::{handle_d2_image_request, D2Trace, IntoD2Image};
 
 #[derive(Clone)]
 pub struct Service {
-    d2_images: Arc<Mutex<Vec<String>>>,
     service_addr: actix::Addr<server::Server>,
+    control: Control,
+    d2_images: Arc<Mutex<Vec<String>>>,
 }
 
 impl Service {
     pub fn start(bind_address: Option<&str>) -> Result<Service, ActixWebError> {
         let bind_address = bind_address.unwrap_or("0.0.0.0:80").to_owned();
         let d2_images = Arc::new(Mutex::new(Vec::new()));
+        let control = Control::new();
         let (tx, rx) = mpsc::channel();
 
         thread::spawn({
             let d2_images = d2_images.clone();
+            let control = control.clone();
             move || {
                 let sys = actix::System::new("d2-server");
 
@@ -42,11 +38,16 @@ impl Service {
                     App::with_state({
                         let template = compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"));
                         let d2_images = d2_images.clone();
-                        AppContext { d2_images, template }
+                        let control = control.clone();
+                        AppContext {
+                            d2_images,
+                            control,
+                            template,
+                        }
                     })
                     .middleware(middleware::Logger::default())
-                    .resource("/d2.html", |r| r.method(http::Method::GET).f(d2_page))
-                    .resource("/control.html", |r| r.f(control_page))
+                    .resource("/d2.html", |r| r.method(http::Method::GET).f(handle_d2_image_request))
+                    .resource("/control/notify", |r| r.method(http::Method::POST).f(handle_notify_user))
                     .handler("/", static_content)
                 })
                 .workers(1)
@@ -60,7 +61,11 @@ impl Service {
         });
 
         let service_addr = rx.recv().unwrap();
-        Ok(Service { service_addr, d2_images })
+        Ok(Service {
+            service_addr,
+            control,
+            d2_images,
+        })
     }
 
     pub fn stop(self) {
@@ -81,6 +86,10 @@ impl Service {
     }
 
     pub fn wait_user(&self) {
-        loop {}
+        self.control.wait()
+    }
+
+    pub fn notify_user(&self) {
+        self.control.notify()
     }
 }
