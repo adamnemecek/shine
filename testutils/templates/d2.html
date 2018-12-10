@@ -107,20 +107,19 @@
     </main>
 
     <script type="text/javascript">
-        function createLayerItem(layerContent, node, name, id) {
-            var checkbox = document.createElement('input');
-            checkbox.type = "checkbox";
+        function createLayerItem(layerContent, node, name) {
+            let checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
             checkbox.checked = true;
             checkbox.onchange = function (event) {
                 let visible = event.target.checked;
-                node.setAttribute("visibility", visible ? "visible" : "hidden");
+                node.setAttribute('visibility', visible ? 'visible' : 'hidden');
             };
 
-            var label = document.createElement('label')
-            label.id = id;
+            let label = document.createElement('label')
             label.appendChild(document.createTextNode(name));
 
-            var li = document.createElement('li')
+            let li = document.createElement('li')
             li.appendChild(checkbox);
             li.appendChild(label);
 
@@ -132,16 +131,16 @@
         var preserveSize = []
 
         // find svg
-        let svgContent = document.getElementById("svgContainer").childNodes;
+        let svgContent = document.getElementById('svgContainer').childNodes;
         for (let i = 0; i < svgContent.length; i++) {
-            if (svgContent[i].nodeName == "svg") {
+            if (svgContent[i].nodeName == 'svg') {
                 svg = svgContent[i];
                 break;
             }
         }
-        svg.setAttribute("style", "display: inline; min-width: 100%; min-height: 100%; max-width: 100%; max-height: 100%")
+        svg.setAttribute('style', 'display: inline; min-width: 100%; min-height: 100%; max-width: 100%; max-height: 100%')
 
-        let layerContent = document.getElementById("layers");
+        let layerContent = document.getElementById('layers');
 
         //parse svg
         let openNodes = [[svg, layerContent]];
@@ -153,23 +152,29 @@
             let listParent = undefined;
             for (let i = 0; i < children.length; i++) {
                 let node = children[i];
-                if (node.tagName == "g") {
-                    let name = node.id;
-                    let id = "layer_" + auto_id;
+                if (node.tagName == 'g') {
+                    let name = node.getAttribute('layer-name');
                     auto_id += 1;
-                    if (!name) { name = id; }
+                    if (!name) { 'layer_' + auto_id; }
+
 
                     // groups to preserve size
-                    if (node.getAttribute("preserve-size")) {
+                    if (node.getAttribute('preserve-size')) {
+                        // for now it means text
                         preserveSize.push(node);
                     }
 
-                    //layers
-                    if (!listParent) {
-                        listParent = docParent.appendChild(document.createElement('ul'));
+                    let childNode;
+                    if (name != '*') {
+                        //layers
+                        if (!listParent) {
+                            listParent = docParent.appendChild(document.createElement('ul'));
+                        }
+                        childNode = createLayerItem(listParent, node, name);
                     }
-                    let childNode = createLayerItem(listParent, node, name, id);
-
+                    else {
+                        childNode = docParent;
+                    }
                     openNodes.push([node, childNode]);
                 }
             }
@@ -184,8 +189,8 @@
             onZoom: function (v) {
                 let scl = 1 / v;
                 preserveSize.forEach(node => {
-                    let trsf = node.getAttribute("transform").replace(/scale\(([^)]+)\)/i, "scale(" + scl + ")");
-                    node.setAttribute("transform", trsf);
+                    let trsf = node.getAttribute('transform').replace(/scale\(([^)]+)\)/i, 'scale(' + scl + ')');
+                    node.setAttribute('transform', trsf);
                 })
             }
         });

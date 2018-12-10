@@ -1,4 +1,4 @@
-use checker::{Coloring, TraceMapping, TracePosition};
+use check::{Coloring, TraceMapping, TracePosition};
 use geometry::{InexactPredicates, Posf64};
 use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
 use graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
@@ -11,7 +11,7 @@ pub trait TraceRender {
 
     fn set_viewport(&mut self, minx: f64, miny: f64, maxx: f64, maxy: f64);
 
-    fn push_layer(&mut self);
+    fn push_layer(&mut self, name: Option<String>);
     fn pop_layer(&mut self);
 
     fn add_point(&mut self, p: &(f64, f64), color: String);
@@ -39,13 +39,45 @@ pub trait Trace {
 
     fn trace_begin(&self);
     fn trace_end(&self);
+    fn trace_push_layer<S: Into<String>>(&self, name: Option<S>);
+    fn trace_pop_layer(&self);
     fn trace_pause(&self);
 
     fn trace(&self) {
         self.trace_begin();
+        self.trace_push_layer(Some("hi".to_string()));
         self.trace_tri();
+        self.trace_pop_layer();
         self.trace_end();
     }
+}
+
+impl<P, V, F, C> Trace for Triangulation<P, V, F, C>
+where
+    P: Position,
+    V: Vertex<Position = P>,
+    F: Face,
+{
+    default fn trace_map_vertex(&self, v: VertexIndex, _vcw: VertexIndex, _vccw: VertexIndex) -> TracePosition {
+        if self.is_finite_vertex(v) {
+            let p = Posf64::from(self.p(v));
+            return TracePosition::Real(p);
+        } else {
+            TracePosition::Invisible
+        }
+    }
+
+    default fn trace_vertex(&self, _v: VertexIndex, _msg: Option<&str>) {}
+    default fn trace_edge(&self, _a: VertexIndex, _b: VertexIndex, _msg: Option<&str>) {}
+    default fn trace_face(&self, _f: FaceIndex, _msg: Option<&str>) {}
+    default fn trace_face_edge(&self, _f: FaceIndex, _i: Rot3, _msg: Option<&str>) {}
+    default fn trace_tri(&self) {}
+
+    default fn trace_begin(&self) {}
+    default fn trace_end(&self) {}
+    default fn trace_push_layer<S: Into<String>>(&self, _name: Option<S>) {}
+    default fn trace_pop_layer(&self) {}
+    default fn trace_pause(&self) {}
 }
 
 impl<P, V, F, C> Trace for Triangulation<P, V, F, C>
@@ -336,6 +368,18 @@ where
         let render = self.context.trace_render();
         let mut render = render.borrow_mut();
         render.end();
+    }
+
+    fn trace_push_layer<S: Into<String>>(&self, name: Option<S>) {
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+        render.push_layer(name.map(|n| n.into()));
+    }
+
+    fn trace_pop_layer(&self) {
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+        render.pop_layer();
     }
 
     fn trace_pause(&self) {

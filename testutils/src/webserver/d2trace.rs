@@ -37,15 +37,20 @@ struct Layer {
 
 impl Layer {
     fn new_root() -> Layer {
+        let doc = Document::new().set("layer-name", "root");
         Layer {
-            container: Container::Root(Document::new()),
+            container: Container::Root(doc),
             texts: HashMap::new(),
         }
     }
 
-    fn new_layer() -> Layer {
+    fn new_layer(name: Option<String>) -> Layer {
+        let mut group = element::Group::new();
+        if let Some(name) = name {
+            group = group.set("layer-name", name);
+        }
         Layer {
-            container: Container::Layer(element::Group::new()),
+            container: Container::Layer(group),
             texts: HashMap::new(),
         }
     }
@@ -65,6 +70,7 @@ impl Layer {
                 let p = (pos.0 as f32 / 65536., pos.1 as f32 / 65536.);
                 let mut group = element::Group::new()
                     .set("preserve-size", "true")
+                    .set("layer-name", "*")
                     .set("transform", format!("translate({},{}) scale(1)", p.0, p.1));
 
                 let mut y = 0.;
@@ -104,7 +110,11 @@ impl D2Trace {
     }
 
     pub fn push_layer(&mut self) {
-        self.layers.push(Layer::new_layer());
+        self.layers.push(Layer::new_layer(None));
+    }
+
+    pub fn push_layer_with_name<S: Into<String>>(&mut self, name: S) {
+        self.layers.push(Layer::new_layer(Some(name.into())));
     }
 
     pub fn pop_layer(&mut self) {

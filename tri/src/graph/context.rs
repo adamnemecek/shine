@@ -1,4 +1,4 @@
-use checker::{TraceControl, TraceRender};
+use check::{TraceControl, TraceRender};
 use geometry::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
 use graph::{Face, Triangulation, Vertex};
 use std::cell::RefCell;

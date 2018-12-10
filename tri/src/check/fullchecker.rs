@@ -1,4 +1,4 @@
-use checker::{GeometryChecker, TopologyChecker};
+use check::{GeometryChecker, TopologyChecker};
 use geometry::Predicates;
 use graph::{Face, Vertex, Triangulation, PredicatesContext};
 

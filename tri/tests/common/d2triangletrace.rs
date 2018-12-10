@@ -31,9 +31,13 @@ impl TraceRender for D2TriTraceRender {
         }
     }
 
-    fn push_layer(&mut self) {
+    fn push_layer(&mut self, name: Option<String>) {
         if let Some(ref mut tr) = self.render.as_mut() {
-            tr.push_layer();
+            if let Some(name) = name {
+                tr.push_layer_with_name(name);
+            } else {
+                tr.push_layer();
+            }
         }
     }
 
