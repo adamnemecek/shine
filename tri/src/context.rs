@@ -1,11 +1,12 @@
 use checker::{Coloring, TraceMapping, TraceRender};
 use geometry::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
 use graph::{Face, Vertex};
-use std::cell::{Ref, RefCell, RefMut};
+use types::{FaceVertex, FaceEdge};
 use std::rc::Rc;
+use std::cell::{Ref, RefCell, RefMut};
+use std::collections::HashMap;
 use std::marker::PhantomData;
 use triangulation::Triangulation;
-use vertexchain::{ChainStore, Chain};
 
 /// Context the enables/disables triangulation features and also stores the required datas
 pub struct Context<P, V, F, Predicates = (), Tag = (), Builder = (), Trace = ()>
@@ -162,11 +163,14 @@ where
 
 /// Trait to provide tagging information
 pub trait TagContext {
-    fn tag(&self) -> RefMut<usize>;
+    fn tag(&self) -> Rc<RefCell<usize>>;
 }
 
 /// Store taging information
-pub struct TagCtx(RefCell<usize>);
+#[derive(Default)]
+pub struct TagCtx {
+    tag_value: Rc<RefCell<usize>>,
+}
 
 impl<P, V, F, Predicates, Builder, Trace> Context<P, V, F, Predicates, (), Builder, Trace>
 where
@@ -177,7 +181,7 @@ where
     pub fn with_tag(self) -> Context<P, V, F, Predicates, TagCtx, Builder, Trace> {
         Context {
             predicates: self.predicates,
-            tag: TagCtx(RefCell::new(0)),
+            tag: Default::default(),
             builder: self.builder,
             trace: self.trace,
             phantom: self.phantom,
@@ -191,18 +195,29 @@ where
     V: Vertex<Position = P>,
     F: Face,
 {
-    fn tag(&self) -> RefMut<usize> {
-        self.tag.0.borrow_mut()
+    fn tag(&self) -> Rc<RefCell<usize>> {
+        self.tag.tag_value.clone()
     }
 }
 
 /// Trait to provide temporaries for trienagulation building
 pub trait BuilderContext {
-    fn create_chain(&self, closed: bool) -> Chain;
+    fn get_face_vertex_vector(&self, name: &str) -> Rc<RefCell<Vec<FaceVertex>>>;
+    fn get_face_edge_vector(&self, name: &str) -> Rc<RefCell<Vec<FaceEdge>>>;
+}
+
+
+#[derive(Default)]
+pub struct BuilderCache {
+    face_vertex_vector: HashMap<String, Rc<RefCell<Vec<FaceVertex>>>>,
+    face_edge_vector: HashMap<String, Rc<RefCell<Vec<FaceEdge>>>>,
 }
 
 /// Store temporaries for build
-pub struct BuilderCtx(Rc<RefCell<ChainStore>>);
+#[derive(Default)]
+pub struct BuilderCtx {
+    cache: RefCell<BuilderCache>,
+}
 
 impl<P, V, F, Predicates, Tag, Trace> Context<P, V, F, Predicates, Tag, (), Trace>
 where
@@ -214,7 +229,7 @@ where
         Context {
             predicates: self.predicates,
             tag: self.tag,
-            builder: BuilderCtx(Default::default()),
+            builder: Default::default(),
             trace: self.trace,
             phantom: self.phantom,
         }
@@ -227,8 +242,28 @@ where
     V: Vertex<Position = P>,
     F: Face,
 {
-    fn create_chain(&self, closed: bool) -> Chain {
-        Chain::new( self.builder.0.clone(), closed)
+    fn get_face_vertex_vector(&self, name: &str) -> Rc<RefCell<Vec<FaceVertex>>> {
+        let mut cache = self.builder.cache.borrow_mut();
+        let cache = &mut cache.face_vertex_vector;
+        if let Some(entry) = cache.get(name) {
+            return entry.clone();
+        }
+         
+        let entry = Rc::new(RefCell::new(Vec::new()));
+        cache.insert(name.to_string(), entry.clone());
+        entry
+    }
+
+    fn get_face_edge_vector(&self, name: &str) -> Rc<RefCell<Vec<FaceEdge>>> {
+        let mut cache = self.builder.cache.borrow_mut();
+        let cache = &mut cache.face_edge_vector;
+        if let Some(entry) = cache.get(name) {
+            return entry.clone();
+        }
+
+        let entry = Rc::new(RefCell::new(Vec::new()));
+        cache.insert(name.to_string(), entry.clone());
+        entry        
     }
 }
 

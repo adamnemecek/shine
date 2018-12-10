@@ -1,8 +1,8 @@
 use construct::factory::Factory;
 use context::PredicatesContext;
 use geometry::{Orientation, Predicates};
-use graph::{Face, FaceExt, Vertex, VertexQuery};
-use orientationquery::OrientationQuery;
+use graph::{Face, FaceExt, Vertex};
+use query::{GeometryQuery, TopologyQuery};
 use triangulation::Triangulation;
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexClue, VertexIndex};
 

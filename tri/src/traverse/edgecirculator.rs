@@ -1,6 +1,7 @@
 use context::PredicatesContext;
 use geometry::Predicates;
-use graph::{Face, Vertex, VertexQuery};
+use graph::{Face, Vertex};
+use query::TopologyQuery;
 use triangulation::Triangulation;
 use types::{FaceEdge, FaceIndex, Rot3, VertexClue, VertexIndex};
 

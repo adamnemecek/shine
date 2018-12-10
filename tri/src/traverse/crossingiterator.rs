@@ -1,6 +1,7 @@
 use context::PredicatesContext;
 use geometry::{CollinearTest, CollinearTestType, Orientation, OrientationType, Predicates};
-use graph::{Face, Vertex, VertexQuery};
+use graph::{Face, Vertex};
+use query::TopologyQuery;
 use std::mem;
 use traverse::EdgeCirculator;
 use triangulation::Triangulation;

@@ -1,10 +1,11 @@
 use context::PredicatesContext;
 use geometry::{Orientation, Predicates};
-use graph::{Face, Vertex, VertexQuery};
+use graph::{Face, Vertex};
+use query::TopologyQuery;
 use triangulation::Triangulation;
 use types::{FaceIndex, FaceVertex, Rot3, VertexIndex};
 
-pub trait OrientationQuery {
+pub trait GeometryQuery {
     type Orientation: Orientation;
 
     fn get_vertices_orientation(&self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> Self::Orientation;
@@ -12,7 +13,7 @@ pub trait OrientationQuery {
     fn is_convex(&self, f: FaceIndex, i: Rot3) -> bool;
 }
 
-impl<PR, V, F, C> OrientationQuery for Triangulation<PR::Position, V, F, C>
+impl<PR, V, F, C> GeometryQuery for Triangulation<PR::Position, V, F, C>
 where
     PR: Predicates,
     V: Vertex<Position = PR::Position>,

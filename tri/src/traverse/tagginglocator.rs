@@ -1,6 +1,7 @@
 use context::{PredicatesContext, TagContext};
 use geometry::{CollinearTest, Orientation, Position, Predicates};
-use graph::{Face, Vertex, VertexQuery};
+use graph::{Face, Vertex};
+use query::TopologyQuery;
 use triangulation::Triangulation;
 use types::{invalid_face_index, rot3, vertex_index, FaceIndex, FaceVertex, Location, Rot3};
 

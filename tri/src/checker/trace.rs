@@ -2,7 +2,8 @@ use checker::TracePosition;
 use context::TraceContext;
 use geometry::{InexactPredicates, Posf64};
 use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
-use graph::{Constraint, Face, Vertex, VertexQuery};
+use graph::{Constraint, Face, Vertex};
+use query::TopologyQuery;
 use triangulation::Triangulation;
 use types::{rot3, FaceIndex, Rot3, VertexClue, VertexIndex};
 

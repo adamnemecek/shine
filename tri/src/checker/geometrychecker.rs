@@ -1,8 +1,8 @@
 use context::PredicatesContext;
 use geometry::{Orientation, Position, Predicates, Real};
-use graph::{Face, Vertex, VertexQuery};
+use graph::{Face, Vertex};
 use log::trace;
-use orientationquery::OrientationQuery;
+use query::{TopologyQuery, GeometryQuery};
 use triangulation::Triangulation;
 use types::{rot3, FaceVertex};
 

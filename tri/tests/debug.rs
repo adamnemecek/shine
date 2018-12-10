@@ -50,28 +50,63 @@ fn quick_debug() {
             (&map(2., -2.)).into(),
         ]);
 
-        let v1 = tri.add_vertex(map(2.0, 1.0), None);
+        let v0 = tri.add_vertex(map(2.0, 1.0), None);
         let v2 = tri.add_vertex(map(4.0, 1.0), None);
         let _3 = tri.add_vertex(map(1.0, 2.0), None);
         let _4 = tri.add_vertex(map(1.0, 0.0), None);
         let v5 = tri.add_vertex(map(0.0, 1.0), None);
         let _6 = tri.add_vertex(map(5.0, 2.0), None);
-        let _7 = tri.add_vertex(map(5.0, 0.0), None);
+        let v7 = tri.add_vertex(map(5.0, 0.0), None);
         let v8 = tri.add_vertex(map(6.0, 1.0), None);
         let _9 = tri.add_vertex(map(0.5, 1.2), None);
         let _10 = tri.add_vertex(map(0.5, 0.8), None);
         let v11 = tri.add_vertex(map(0.8, 1.0), None);
-        let _12 = tri.add_vertex(map(3.0, 1.0), None);
+        let v12 = tri.add_vertex(map(3.0, 1.0), None);
+
+        tri.trace_begin();
+        tri.trace();
+        tri.trace_end();
+
+        tri.add_constraint_edge(v5, v7, SimpleConstraint(1));
+
+        tri.trace_begin();
+        tri.trace();
+        tri.trace_end();
+        
+        tri.add_constraint_edge(v8, v5, SimpleConstraint(2));
+
+        tri.trace_begin();
+        tri.trace();
+        tri.trace_end();
+
+        tri.add_constraint_edge(v5, v8, SimpleConstraint(4));
+
+        tri.trace_begin();
+        tri.trace();
+        tri.trace_end();
+
+        tri.add_constraint_edge(v11, v2, SimpleConstraint(8));
+
+        tri.trace_begin();
+        tri.trace();
+        tri.trace_end();
+
+        /*let _e = tri.add_vertex(map(2.0, 2.5), None);
+        let _d = tri.add_vertex(map(3.5, 2.5), None);
+        let _b = tri.add_vertex(map(2.0, 0.5), None);
+        let _c = tri.add_vertex(map(3.5, 0.0), None);
+        let _a = tri.add_vertex(map(1.0, 0.0), None);
+        let p0 = tri.add_vertex(map(0.0, 1.0), None);
+        let _f = tri.add_vertex(map(1.0, 1.5), None);
+        let p1 = tri.add_vertex(map(4.0, 1.0), None);
 
         tri.trace_begin();
         tri.trace();
         tri.trace_end();
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
 
-        tri.add_constraint_edge(v8, v1, SimpleConstraint(1));
-        tri.add_constraint_edge(v8, v5, SimpleConstraint(2));
-        tri.add_constraint_edge(v5, v8, SimpleConstraint(4));
-        tri.add_constraint_edge(v11, v2, SimpleConstraint(16));
+        tri.add_constraint_edge(p0, p1, SimpleConstraint(1));*/
+
     }
 
     tri.trace_begin();

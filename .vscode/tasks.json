@@ -47,8 +47,7 @@
                 "debug",
                 "--",
                 "--nocapture",
-                //"--ignored"
-                "t4_vertexchain"
+                "--ignored"
             ],
             "presentation": {
                 "echo": true,

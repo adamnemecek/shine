@@ -15,7 +15,7 @@ mod checker;
 mod construct;
 mod context;
 mod graph;
-mod orientationquery;
+mod query;
 mod triangulation;
 
 pub mod geometry;
@@ -26,5 +26,5 @@ pub use self::checker::*;
 pub use self::construct::*;
 pub use self::context::*;
 pub use self::graph::*;
-pub use self::orientationquery::*;
-pub use self::triangulation::*;
+pub use self::query::*;
+
