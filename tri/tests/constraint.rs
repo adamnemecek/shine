@@ -56,8 +56,8 @@ fn t0_constraint_segment() {
             assert_eq!(tri.check(None), Ok(()));
 
             trace!("clear");
-            tri.graph.clear();
-            assert!(tri.graph.is_empty());
+            tri.clear();
+            assert!(tri.is_empty());
             assert_eq!(tri.check(None), Ok(()));
         }
     }
@@ -117,8 +117,8 @@ fn t1_constraint_no_fill1() {
             assert_eq!(tri.check(None), Ok(()));
 
             trace!("clear");
-            tri.graph.clear();
-            assert!(tri.graph.is_empty());
+            tri.clear();
+            assert!(tri.is_empty());
             assert_eq!(tri.check(None), Ok(()));
         }
     }
@@ -189,8 +189,8 @@ fn t2_constraint_no_fill2() {
             assert_eq!(tri.check(None), Ok(()));
 
             trace!("clear");
-            tri.graph.clear();
-            assert!(tri.graph.is_empty());
+            tri.clear();
+            assert!(tri.is_empty());
             assert_eq!(tri.check(None), Ok(()));
         }
     }
@@ -240,7 +240,7 @@ fn t3_crossing_iterator() {
             let _ = tri.add_vertex(map(0.5, 0.8), None);
             let _ = tri.add_vertex(map(0.8, 1.0), None);
             let _ = tri.add_vertex(map(3.0, 1.0), None);
-            assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+            assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
 
             let crossing: Vec<_> = CrossingIterator::new(&tri, v1, v2).take(10).collect();
             assert_eq!(crossing.len(), 2, "{:?}", crossing);
@@ -261,8 +261,8 @@ fn t3_crossing_iterator() {
             assert_eq!(crossing.len(), 9, "{:?}", crossing);
 
             trace!("clear");
-            tri.graph.clear();
-            assert!(tri.graph.is_empty());
+            tri.clear();
+            assert!(tri.is_empty());
             assert_eq!(tri.check(None), Ok(()));
         }
     }
@@ -314,8 +314,8 @@ fn t4_constraint_concave() {
             assert_eq!(tri.check(None), Ok(()));
 
             trace!("clear");
-            tri.graph.clear();
-            assert!(tri.graph.is_empty());
+            tri.clear();
+            assert!(tri.is_empty());
             assert_eq!(tri.check(None), Ok(()));
         }
     }

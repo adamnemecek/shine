@@ -1,12 +1,9 @@
 use construct::{Factory, Updater};
-use context::{BuilderContext, PredicatesContext, TagContext};
 use geometry::{CollinearTest, Position, Predicates};
-use graph::{Constraint, Face, Vertex};
-use query::TopologyQuery;
-use traverse::TaggingLocator;
-use traverse::{Crossing, CrossingIterator};
-use triangulation::Triangulation;
-use types::{rot3, FaceIndex, Location, VertexClue, VertexIndex, FaceEdge};
+use graph::{BuilderContext, Constraint, Face, PredicatesContext, TagContext, Triangulation, Vertex};
+use query::{TopologyQuery, VertexClue};
+use traverse::{Crossing, CrossingIterator, TaggingLocator};
+use types::{rot3, FaceEdge, FaceIndex, Location, VertexIndex};
 
 pub trait Builder {
     type Position: Position;
@@ -38,7 +35,7 @@ where
                 vert
             }
             Location::Vertex(f, v) => {
-                let vert = self.graph[f].vertex(v);
+                let vert = self[f].vertex(v);
                 vert
             }
             Location::Edge(f, e) => {
@@ -66,23 +63,23 @@ where
         assert_ne!(v1, v0);
 
         // start by the face of the first vertex
-        let f0 = self.graph[v0].face();
-        let i0 = self.graph[f0].get_vertex_index(v0).unwrap();
+        let f0 = self[v0].face();
+        let i0 = self[f0].get_vertex_index(v0).unwrap();
 
         // next vertex
-        let vn = self.graph[f0].vertex(i0.mirror(2));
+        let vn = self[f0].vertex(i0.mirror(2));
         if vn == v1 {
             // v0-v1 edge was just found
-            self.graph[f0].merge_constraint(rot3(2), c.clone());
+            self[f0].merge_constraint(rot3(2), c.clone());
             return;
         }
 
         // find the direction to reach v1 from v0
         let reverse_dir = if self.is_finite_vertex(vn) {
             // test direction to traverse by point order
-            let p0 = self.pos(v0);
-            let p1 = self.pos(v1);
-            let pn = self.pos(vn);
+            let p0 = self.p(v0);
+            let p1 = self.p(v1);
+            let pn = self.p(vn);
             let pr = self.context.predicates();
 
             // p0,p1,pn and any other (finite) point must be collinear as dim==1,
@@ -98,8 +95,8 @@ where
 
         let (mut cur, mut cur_i) = if reverse_dir {
             // opposite direction
-            let next = self.graph[f0].neighbor(i0.mirror(2));
-            let next_i = self.graph[next].get_neighbor_index(f0).unwrap().mirror(2);
+            let next = self[f0].neighbor(i0.mirror(2));
+            let next_i = self[next].get_neighbor_index(f0).unwrap().mirror(2);
             (next, next_i)
         } else {
             (f0, i0)
@@ -108,13 +105,13 @@ where
         // mark all edges constraint until the end vertex is reached
         // no geometry have to be tested, as we are on a straight line and no segment may overlap
         loop {
-            self.graph[cur].merge_constraint(rot3(2), c.clone());
-            if self.graph[cur].vertex(cur_i.mirror(2)) == v1 {
+            self[cur].merge_constraint(rot3(2), c.clone());
+            if self[cur].vertex(cur_i.mirror(2)) == v1 {
                 break;
             }
 
-            let next = self.graph[cur].neighbor(cur_i);
-            cur_i = self.graph[next].get_neighbor_index(cur).unwrap().mirror(2);
+            let next = self[cur].neighbor(cur_i);
+            cur_i = self[next].get_neighbor_index(cur).unwrap().mirror(2);
             cur = next;
         }
     }
@@ -133,38 +130,56 @@ where
             println!("add constrainat: {:?}->{:?}", v0, v1);
             // collect intersecting faces and generate the two (top/bottom) chains
             // The edge-chain is not a whole polygon the new constraining edge is the missing closing edge
-            
+
             {
-            let mut crossing_iter = CrossingIterator::new(self, v0, v1);
-            let mut cross = crossing_iter.next();
+                let mut crossing_iter = CrossingIterator::new(self, v0, v1);
+                let mut cross = crossing_iter.next();
 
-            // loop over coincident edges
-            while let Some(Crossing::CoincidentEdge { face, edge }) = cross {
-                edge_chain.push(FaceEdge{face, edge});
-                cross = crossing_iter.next();
-            }
-
-            if let Some(Crossing::Start { face, vertex }) = cross {
-                top_chain.push(FaceEdge{face, edge:vertex.increment()});
-                bottom_chain.push(FaceEdge{face, edge:vertex.decrement()});
-                loop {
+                // loop over coincident edges
+                while let Some(Crossing::CoincidentEdge { face, edge }) = cross {
+                    edge_chain.push(FaceEdge { face, edge });
                     cross = crossing_iter.next();
-                    match cross {
-                        Some(Crossing::PositiveEdge { face, edge }) => {
-                            bottom_chain.push(FaceEdge{face, edge:edge.decrement()});
+                }
+
+                if let Some(Crossing::Start { face, vertex }) = cross {
+                    top_chain.push(FaceEdge {
+                        face,
+                        edge: vertex.increment(),
+                    });
+                    bottom_chain.push(FaceEdge {
+                        face,
+                        edge: vertex.decrement(),
+                    });
+                    loop {
+                        cross = crossing_iter.next();
+                        match cross {
+                            Some(Crossing::PositiveEdge { face, edge }) => {
+                                bottom_chain.push(FaceEdge {
+                                    face,
+                                    edge: edge.decrement(),
+                                });
+                            }
+                            Some(Crossing::NegativeEdge { face, edge }) => {
+                                top_chain.push(FaceEdge {
+                                    face,
+                                    edge: edge.increment(),
+                                });
+                            }
+                            Some(Crossing::End { face, vertex }) => {
+                                top_chain.push(FaceEdge {
+                                    face,
+                                    edge: vertex.decrement(),
+                                });
+                                bottom_chain.push(FaceEdge {
+                                    face,
+                                    edge: vertex.increment(),
+                                });
+                                break;
+                            }
+                            _ => unreachable!(),
                         }
-                        Some(Crossing::NegativeEdge { face, edge }) => {
-                            top_chain.push(FaceEdge{face, edge:edge.increment()});
-                        }
-                        Some(Crossing::End { face, vertex }) => {
-                            top_chain.push(FaceEdge{face, edge:vertex.decrement()});
-                            bottom_chain.push(FaceEdge{face, edge:vertex.increment()});                                                        
-                            break;
-                        }
-                        _ => unreachable!()
                     }
                 }
-            }
             }
 
             if !edge_chain.is_empty() {
@@ -178,7 +193,10 @@ where
             if !top_chain.is_empty() {
                 v0 = self.vi(VertexClue::end_of(*bottom_chain.last().unwrap()));
                 top_chain.reverse();
-                println!("fill hole {:?}->{:?}\ntop:{:?}\nbottom:{:?}", start, v0, top_chain, bottom_chain);
+                println!(
+                    "fill hole {:?}->{:?}\ntop:{:?}\nbottom:{:?}",
+                    start, v0, top_chain, bottom_chain
+                );
                 //self.triangulate_hole(&mut top_chain, &mut bottom_chain);
             }
             edge_chain.clear();
@@ -187,20 +205,20 @@ where
         }
     }
 
-    fn triangulate_half_hole(&mut self, chain: &mut Vec<FaceEdge> ) -> FaceEdge {
-        assert!(chain.len() > 0);
-        let mut cur = 0;        
+    fn triangulate_half_hole(&mut self, chain: &mut Vec<FaceEdge>) -> FaceEdge {
+        /*assert!(chain.len() > 0);
+        let mut cur = 0;
         while chain.len() > 1 {
             let next = cur + 1;
-            let cur_edge = chain[ cur ];
-            let next_edge = chain[ next ];
+            let cur_edge = chain[cur];
+            let next_edge = chain[next];
 
             let p0 = self.vi(VertexClue::start_of(cur_edge));
             let p1 = self.vi(VertexClue::end_of(cur_edge));
-            assert_eq!( p1 == self.vi(VertexClue::start_of(next_edge)), "Edges are not continouous");
+            assert_eq!(p1 == self.vi(VertexClue::start_of(next_edge)), "Edges are not continouous");
             let p2 = self.vi(VertexClue::end_of(next_edge));
 
-            if !self.get_vertices_orientation( p0, p1, p2 ).is_ccw()  {
+            if !self.get_vertices_orientation(p0, p1, p2).is_ccw() {
                 // cannot clip, not an ear
                 cur += 1;
                 continue;
@@ -212,61 +230,59 @@ where
 
             if next + 1 < chain.len() {
                 // remove next from the list and make it the clipped ear
-                chain.remove( next );
+                chain.remove(next);
 
-                self.graph[ cur_edge.face ].set_vertex( cur_edge.edge.decrement(), p2 );
-                self.graph[ next_edge.face ].set_vertex( next_edge.edge, p0 );
+                self[cur_edge.face].set_vertex(cur_edge.edge.decrement(), p2);
+                self[next_edge.face].set_vertex(next_edge.edge, p0);
 
                 /*let ne = tri_.getOppositeEdge( curCI.edge_ );
                 tri_.setAdjacent( ne, nextCI.edge_.getCW() );
                 tri_.setAdjacent( curCI.edge_, nextCI.edge_.getCCW() );*/
+        self[p0].set_face(next_edge.face);
+        self[p1].set_face(next_edge.face);
+        self[p2].set_face(next_edge.face);
 
-                self[ p0 ].set_face( next_edge.face );
-                self[ p1 ].set_face( next_edge.face );
-                self[ p2 ].set_face( next_edge.face );
+        //self[ next_edge.face ].setConstraint( nextCI.edge_.index_.decremented(), tri_[ curCI.edge_.face_ ].getConstraint( curCI.edge_.index_ ) );
+        self[cur_edge.face].clear_constraint(cur_edge.edge);
+        self[next_edge.face].clear_constraint(next_edge.edge.incremented());
 
-                //self[ next_edge.face ].setConstraint( nextCI.edge_.index_.decremented(), tri_[ curCI.edge_.face_ ].getConstraint( curCI.edge_.index_ ) );
-                self[ cur_edge.face ].clear_constraint( cur_edge.edge );
-                self[ next_edge.face ].clear_constraint( next_edge.edge.incremented() );
-                
-                if cur > 0 {
-                    // step back
-                    cur -= 1;
-                }
-            } else {
-                // remove cur from the list and make it the clipped ear
-                assert!( cur > 0 );
-                chain.remove( cur );
+        if cur > 0 {
+        // step back
+        cur -= 1;
+        }
+        } else {
+        // remove cur from the list and make it the clipped ear
+        assert!(cur > 0);
+        chain.remove(cur);
 
-                self[ cur_edge.face ].set_vertex( cur_edge.edge, p2 );
-                self[ next_edge.face ].set_vertex( next_edge.edge.increment(), p0 );
+        self[cur_edge.face].set_vertex(cur_edge.edge, p2);
+        self[next_edge.face].set_vertex(next_edge.edge.increment(), p0);
 
-                /*Edge ne = tri_.getOppositeEdge( nextCI.edge_ );
-                tri_.setAdjacent( ne, curCI.edge_.getCCW() );
-                tri_.setAdjacent( nextCI.edge_, curCI.edge_.getCW() );*/
+        /*Edge ne = tri_.getOppositeEdge( nextCI.edge_ );
+        tri_.setAdjacent( ne, curCI.edge_.getCCW() );
+        tri_.setAdjacent( nextCI.edge_, curCI.edge_.getCW() );*/
+        self[p0].set_face(cur_edge.face);
+        self[p1].set_face(cur_edge.face);
+        self[p2].set_face(cur_edge.face);
 
-                self[ p0 ].set_face( cur_edge.face );
-                self[ p1 ].set_face( cur_edge.face );
-                self[ p2 ].set_face( cur_edge.face );
-
-                /*tri_[ curCI.edge_.face_ ].setConstraint( curCI.edge_.index_.incremented(), tri_[ nextCI.edge_.face_ ].getConstraint( nextCI.edge_.index_ ) );
-                tri_[ curCI.edge_.face_ ].clearConstraint( curCI.edge_.index_.decremented() );
-                tri_[ nextCI.edge_.face_ ].clearConstraint( nextCI.edge_.index_ );*/                    
-
-                // step back
-                cur -= 1;
-            }
+        /*tri_[ curCI.edge_.face_ ].setConstraint( curCI.edge_.index_.incremented(), tri_[ nextCI.edge_.face_ ].getConstraint( nextCI.edge_.index_ ) );
+        tri_[ curCI.edge_.face_ ].clearConstraint( curCI.edge_.index_.decremented() );
+        tri_[ nextCI.edge_.face_ ].clearConstraint( nextCI.edge_.index_ );*/
+        // step back
+        cur -= 1;
+        }
         }
 
-        return chain.pop.unwrap();
+        chain.pop.unwrap()*/
+        unimplemented!()
     }
 
     /// Triangulates an edge-visible hole given by the edge chain of the upper(lower) polygon.
     /// On completion it returns the edge that separates the upper and lower half of the polygon.
     fn triangulate_hole(&mut self, top: &mut Vec<FaceEdge>, bottom: &mut Vec<FaceEdge>) {
-        assert!( top.len() >= 2 && bottom.len() >= 2 );
-        let top = self.triangulate_half_hole( top );
-        let bottom = self.triangulate_half_hole( bottom );
+        assert!(top.len() >= 2 && bottom.len() >= 2);
+        let top = self.triangulate_half_hole(top);
+        let bottom = self.triangulate_half_hole(bottom);
         /*let top = top.getCCW();
         let bottom =  bottom.getCCW();
         self.setAdjacent( top, bottom );
@@ -293,7 +309,7 @@ where
     fn add_constraint_segment(&mut self, p0: PR::Position, p1: PR::Position, c: F::Constraint) {
         assert!(c.is_constraint());
         let v0 = self.add_vertex(p0, None);
-        let start_face = self.graph[v0].face();
+        let start_face = self[v0].face();
         let v1 = self.add_vertex(p1, Some(start_face));
         self.add_constraint_edge(v0, v1, c);
     }

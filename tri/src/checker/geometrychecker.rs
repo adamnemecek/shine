@@ -1,9 +1,7 @@
-use context::PredicatesContext;
 use geometry::{Orientation, Position, Predicates, Real};
-use graph::{Face, Vertex};
+use graph::{Face, PredicatesContext, Triangulation, Vertex};
 use log::trace;
 use query::{TopologyQuery, GeometryQuery};
-use triangulation::Triangulation;
 use types::{rot3, FaceVertex};
 
 pub trait GeometryChecker {
@@ -22,18 +20,18 @@ where
     C: PredicatesContext<Predicates = PR>,
 {
     fn check_orientation(&self) -> Result<(), String> {
-        if self.graph.dimension() < 2 {
+        if self.dimension() < 2 {
             return Ok(());
         }
 
-        for f in self.graph.face_index_iter() {
-            if self.graph.is_infinite_face(f) {
+        for f in self.face_index_iter() {
+            if self.is_infinite_face(f) {
                 continue;
             }
 
-            let v0 = self.graph[f].vertex(rot3(0));
-            let v1 = self.graph[f].vertex(rot3(1));
-            let v2 = self.graph[f].vertex(rot3(2));
+            let v0 = self[f].vertex(rot3(0));
+            let v1 = self[f].vertex(rot3(1));
+            let v2 = self[f].vertex(rot3(2));
 
             if !self.get_vertices_orientation(v0, v1, v2).is_ccw() {
                 return Err(format!("Count-clockwise property is violated for {:?}", f));
@@ -44,20 +42,20 @@ where
     }
 
     fn check_area(&self, eps: Option<f64>) -> Result<(), String> {
-        if self.graph.dimension() != 2 {
+        if self.dimension() != 2 {
             return Ok(());
         }
 
         // calculate the area of the triangles
         let mut tri_area = 0.;
-        for f in self.graph.face_index_iter() {
-            if self.graph.is_infinite_face(f) {
+        for f in self.face_index_iter() {
+            if self.is_infinite_face(f) {
                 continue;
             }
 
-            let a = self.graph.pos(FaceVertex::from(f, rot3(0)));
-            let b = self.graph.pos(FaceVertex::from(f, rot3(1)));
-            let c = self.graph.pos(FaceVertex::from(f, rot3(2)));
+            let a = self.p(FaceVertex::from(f, rot3(0)));
+            let b = self.p(FaceVertex::from(f, rot3(1)));
+            let c = self.p(FaceVertex::from(f, rot3(2)));
 
             let ax: f64 = a.x().approximate();
             let ay: f64 = a.y().approximate();
@@ -74,21 +72,21 @@ where
 
         // calculate the area of the convex hull
         let mut convex_area = 0.;
-        let end = self.graph.infinite_face();
+        let end = self.infinite_face();
         let mut cur = end;
         loop {
-            let iid = self.graph[cur].get_vertex_index(self.graph.infinite_vertex()).unwrap(); // index of infinite vertex
+            let iid = self[cur].get_vertex_index(self.infinite_vertex()).unwrap(); // index of infinite vertex
             let aid = iid.decrement();
             let bid = iid.increment();
-            let a = self.graph.pos(FaceVertex::from(cur, aid));
-            let b = self.graph.pos(FaceVertex::from(cur, bid));
+            let a = self.p(FaceVertex::from(cur, aid));
+            let b = self.p(FaceVertex::from(cur, bid));
             let ax: f64 = a.x().approximate();
             let ay: f64 = a.y().approximate();
             let bx: f64 = b.x().approximate();
             let by: f64 = b.y().approximate();
 
             convex_area += ax * by - bx * ay;
-            cur = self.graph[cur].neighbor(aid);
+            cur = self[cur].neighbor(aid);
             if cur == end {
                 break;
             }

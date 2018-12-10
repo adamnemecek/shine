@@ -1,6 +1,5 @@
 use geometry::Position;
-use graph::{Constraint, Face, FaceExt, Vertex};
-use triangulation::Triangulation;
+use graph::{Constraint, Face, FaceExt, Vertex, Triangulation};
 use types::{FaceIndex, Rot3, VertexIndex};
 
 pub trait Factory {
@@ -18,7 +17,6 @@ pub trait Factory {
     /// Sets the constraint of the edge and update both adjacent faces.
     fn set_constraint(&mut self, face: FaceIndex, edge: Rot3, c: Self::Constraint);
 
-
     /// Adds constraint to the edge and update both adjacent faces.
     fn merge_constraint(&mut self, face: FaceIndex, edge: Rot3, c: Self::Constraint);
 }
@@ -33,45 +31,45 @@ where
     type Constraint = F::Constraint;
 
     fn create_infinite_vertex(&mut self) -> VertexIndex {
-        let v = self.graph.store_vertex(Default::default());
-        self.graph.set_infinite_vertex(v);
+        let v = self.store_vertex(Default::default());
+        self.set_infinite_vertex(v);
         v
     }
 
     fn create_vertex_with_position(&mut self, p: Self::Position) -> VertexIndex {
         let mut v: V = Default::default();
         v.set_position(p);
-        self.graph.store_vertex(v)
+        self.store_vertex(v)
     }
 
     fn create_face(&mut self) -> FaceIndex {
-        self.graph.store_face(Default::default())
+        self.store_face(Default::default())
     }
 
     fn create_face_with_vertices(&mut self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) -> FaceIndex {
         let mut f: F = Default::default();
         f.set_vertices(v0, v1, v2);
-        self.graph.store_face(f)
+        self.store_face(f)
     }
 
     fn clear_constraint(&mut self, face: FaceIndex, edge: Rot3) {
-        let nf = self.graph[face].neighbor(edge);
-        let ni = self.graph[nf].get_neighbor_index(face).unwrap();
-        self.graph[face].clear_constraint(edge);
-        self.graph[nf].clear_constraint(ni);
+        let nf = self[face].neighbor(edge);
+        let ni = self[nf].get_neighbor_index(face).unwrap();
+        self[face].clear_constraint(edge);
+        self[nf].clear_constraint(ni);
     }
 
     fn set_constraint(&mut self, face: FaceIndex, edge: Rot3, c: Self::Constraint) {
-        let nf = self.graph[face].neighbor(edge);
-        let ni = self.graph[nf].get_neighbor_index(face).unwrap();
-        self.graph[face].set_constraint(edge, c.clone());
-        self.graph[nf].set_constraint(ni, c);
+        let nf = self[face].neighbor(edge);
+        let ni = self[nf].get_neighbor_index(face).unwrap();
+        self[face].set_constraint(edge, c.clone());
+        self[nf].set_constraint(ni, c);
     }
 
     fn merge_constraint(&mut self, face: FaceIndex, edge: Rot3, c: Self::Constraint) {
-        let nf = self.graph[face].neighbor(edge);
-        let ni = self.graph[nf].get_neighbor_index(face).unwrap();
-        self.graph[face].merge_constraint(edge, c.clone());
-        self.graph[nf].merge_constraint(ni, c);
+        let nf = self[face].neighbor(edge);
+        let ni = self[nf].get_neighbor_index(face).unwrap();
+        self[face].merge_constraint(edge, c.clone());
+        self[nf].merge_constraint(ni, c);
     }
 }

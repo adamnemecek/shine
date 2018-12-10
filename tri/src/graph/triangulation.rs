@@ -1,12 +1,10 @@
 use geometry::{Position, Real};
-use std::fmt;
-use std::ops::{Index, IndexMut};
-use graph::{Vertex, Face};
+use graph::{Face, Vertex};
+use std::{fmt, ops};
 use types::{face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
 
-
 // Store the topology graph of the triangualtion
-pub struct Graph<P, V, F>
+struct Graph<P, V, F>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -18,94 +16,111 @@ where
     infinite_vertex: VertexIndex,
 }
 
-impl<P, V, F> Graph<P, V, F>
+/// Triangulation.
+pub struct Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
     F: Face,
 {
-    pub fn new() -> Graph<P, V, F> {
-        Graph {
-            dimension: -1,
-            vertices: Default::default(),
-            faces: Default::default(),
-            infinite_vertex: invalid_vertex_index(),
+    graph: Graph<P, V, F>,
+    pub context: C,
+}
+
+impl<P, V, F, C> Triangulation<P, V, F, C>
+where
+    P: Position,
+    V: Vertex<Position = P>,
+    F: Face,
+{
+    crate fn new(context: C) -> Triangulation<P, V, F, C> {
+        Triangulation {
+            graph: Graph {
+                dimension: -1,
+                vertices: Default::default(),
+                faces: Default::default(),
+                infinite_vertex: invalid_vertex_index(),
+            },
+            context,
         }
     }
 
     pub fn dimension(&self) -> i8 {
-        self.dimension
+        self.graph.dimension
     }
 
     pub fn set_dimension(&mut self, dim: i8) {
         assert!(dim >= -1 && dim < 3);
-        self.dimension = dim
+        self.graph.dimension = dim
     }
 
     pub fn is_empty(&self) -> bool {
-        self.dimension == -1
+        self.graph.dimension == -1
     }
 
     pub fn clear(&mut self) {
-        self.dimension = -1;
-        self.faces.clear();
-        self.vertices.clear();
-        self.infinite_vertex = invalid_vertex_index();
+        self.graph.dimension = -1;
+        self.graph.faces.clear();
+        self.graph.vertices.clear();
+        self.graph.infinite_vertex = invalid_vertex_index();
+        //self.context.clear();
     }
 
     pub fn vertex_count(&self) -> usize {
-        self.vertices.len()
+        self.graph.vertices.len()
     }
 
     pub fn store_vertex(&mut self, vert: V) -> VertexIndex {
-        self.vertices.push(vert);
-        vertex_index(self.vertices.len() - 1)
+        let id = self.graph.vertices.len();
+        self.graph.vertices.push(vert);
+        vertex_index(id)
     }
 
     pub fn vertex(&self, v: VertexIndex) -> &V {
-        &self.vertices[v.id()]
+        &self.graph.vertices[v.id()]
     }
 
     pub fn vertex_mut(&mut self, v: VertexIndex) -> &mut V {
-        &mut self.vertices[v.id()]
+        &mut self.graph.vertices[v.id()]
     }
 
     pub fn vertex_index_iter(&self) -> VertexRange {
-        vertex_index(0)..vertex_index(self.vertices.len())
+        vertex_index(0)..vertex_index(self.graph.vertices.len())
     }
 
     pub fn infinite_vertex(&self) -> VertexIndex {
-        self.infinite_vertex
+        self.graph.infinite_vertex
     }
 
     pub fn set_infinite_vertex(&mut self, v: VertexIndex) {
-        self.infinite_vertex = v;
+        self.graph.infinite_vertex = v;
     }
 
     pub fn is_infinite_vertex(&self, v: VertexIndex) -> bool {
         assert!(!self.is_empty());
-        v == self.infinite_vertex
+        v == self.graph.infinite_vertex
     }
 
     pub fn face_count(&self) -> usize {
-        self.faces.len()
+        self.graph.faces.len()
     }
 
     pub fn store_face(&mut self, face: F) -> FaceIndex {
-        self.faces.push(face);
-        face_index(self.faces.len() - 1)
+        let id = self.graph.faces.len();
+        self.graph.faces.push(face);
+        face_index(id)
     }
 
     pub fn face(&self, f: FaceIndex) -> &F {
-        &self.faces[f.id()]
+        &self.graph.faces[f.id()]
     }
 
     pub fn face_mut(&mut self, f: FaceIndex) -> &mut F {
-        &mut self.faces[f.id()]
+        &mut self.graph.faces[f.id()]
     }
 
     pub fn face_index_iter(&self) -> FaceRange {
-        face_index(0)..face_index(self.faces.len())
+        face_index(0)..face_index(self.graph.faces.len())
     }
 
     pub fn is_finite_vertex(&self, v: VertexIndex) -> bool {
@@ -118,7 +133,7 @@ where
 
     pub fn is_infinite_face(&self, f: FaceIndex) -> bool {
         assert!(!self.is_empty());
-        self[f].get_vertex_index(self.infinite_vertex).is_some()
+        self[f].get_vertex_index(self.graph.infinite_vertex).is_some()
     }
 
     pub fn is_finite_face(&self, f: FaceIndex) -> bool {
@@ -133,18 +148,7 @@ where
     }
 }
 
-impl<P, V, F> Default for Graph<P, V, F>
-where
-    P: Position,
-    V: Vertex<Position = P>,
-    F: Face,
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<P, V, F> Index<VertexIndex> for Graph<P, V, F>
+impl<P, V, F, C> ops::Index<VertexIndex> for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -157,7 +161,7 @@ where
     }
 }
 
-impl<P, V, F> IndexMut<VertexIndex> for Graph<P, V, F>
+impl<P, V, F, C> ops::IndexMut<VertexIndex> for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -168,7 +172,7 @@ where
     }
 }
 
-impl<P, V, F> Index<FaceIndex> for Graph<P, V, F>
+impl<P, V, F, C> ops::Index<FaceIndex> for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -181,7 +185,7 @@ where
     }
 }
 
-impl<P, V, F> IndexMut<FaceIndex> for Graph<P, V, F>
+impl<P, V, F, C> ops::IndexMut<FaceIndex> for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -192,7 +196,7 @@ where
     }
 }
 
-impl<P, V, F> fmt::Debug for Graph<P, V, F>
+impl<P, V, F, C> fmt::Debug for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,

@@ -11,7 +11,7 @@ use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64};
 use shine_tri::geometry::{Position, Predicates, Real};
-use shine_tri::{Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, Triangulation, VertexQuery};
+use shine_tri::{Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, TopologyQuery, Triangulation};
 use std::fmt::Debug;
 
 #[test]
@@ -27,8 +27,8 @@ fn simple_points() {
     {
         info!("{}", desc);
 
-        assert!(tri.graph.is_empty());
-        assert_eq!(tri.graph.dimension(), -1);
+        assert!(tri.is_empty());
+        assert_eq!(tri.dimension(), -1);
         assert_eq!(tri.check(None), Ok(()));
     }
 
@@ -53,19 +53,19 @@ fn simple_points_dim0() {
 
         trace!("add a point");
         let vi = { tri.add_vertex(Sample(1., 2.).into(), None) };
-        assert!(!tri.graph.is_empty());
-        assert_eq!(tri.graph.dimension(), 0);
+        assert!(!tri.is_empty());
+        assert_eq!(tri.dimension(), 0);
         assert_eq!(tri.check(None), Ok(()));
 
         trace!("add same point twice");
         let vi2 = { tri.add_vertex(Sample(1., 2.).into(), None) };
-        assert_eq!(tri.graph.dimension(), 0);
+        assert_eq!(tri.dimension(), 0);
         assert_eq!(vi, vi2);
 
         trace!("clear");
-        tri.graph.clear();
-        assert!(tri.graph.is_empty());
-        assert_eq!(tri.graph.dimension(), -1);
+        tri.clear();
+        assert!(tri.is_empty());
+        assert_eq!(tri.dimension(), -1);
         assert_eq!(tri.check(None), Ok(()));
     }
 
@@ -112,20 +112,20 @@ fn simple_points_dim1() {
                 let pos = map(p);
                 trace!("add {:?}", pos);
                 let vi = tri.add_vertex(pos, None);
-                assert_eq!(tri.graph.dimension(), expected_dim);
+                assert_eq!(tri.dimension(), expected_dim);
                 assert_eq!(tri.check(None), Ok(()));
 
                 let pos = map(p);
                 trace!("add duplicate {:?}", pos);
                 let vi_dup = tri.add_vertex(pos, None);
-                assert_eq!(tri.graph.dimension(), expected_dim);
+                assert_eq!(tri.dimension(), expected_dim);
                 assert_eq!(tri.check(None), Ok(()));
                 assert_eq!(vi, vi_dup);
             }
 
             trace!("clear");
-            tri.graph.clear();
-            assert!(tri.graph.is_empty());
+            tri.clear();
+            assert!(tri.is_empty());
             assert_eq!(tri.check(None), Ok(()));
         }
     }
@@ -188,22 +188,22 @@ fn simple_points_dim2() {
                         let pos = map(x, y);
                         trace!("add {:?}", pos);
                         let vi = tri.add_vertex(pos, None);
-                        trace!("{:?} = {:?}", vi, tri.graph.pos(vi));
-                        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+                        trace!("{:?} = {:?}", vi, tri.p(vi));
+                        assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
 
                         let pos = map(x, y);
                         trace!("add duplicate {:?}", pos);
                         let vi_dup = tri.add_vertex(pos, None);
-                        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+                        assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
                         assert_eq!(vi, vi_dup);
                     }
                 }
 
-                assert_eq!(tri.graph.dimension(), 2);
+                assert_eq!(tri.dimension(), 2);
 
                 trace!("clear");
-                tri.graph.clear();
-                assert!(tri.graph.is_empty());
+                tri.clear();
+                assert!(tri.is_empty());
                 assert_eq!(tri.check(None), Ok(()));
             }
         }

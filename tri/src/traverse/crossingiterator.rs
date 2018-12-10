@@ -1,11 +1,9 @@
-use context::PredicatesContext;
 use geometry::{CollinearTest, CollinearTestType, Orientation, OrientationType, Predicates};
-use graph::{Face, Vertex};
-use query::TopologyQuery;
+use graph::{Face, PredicatesContext, Triangulation, Vertex};
+use query::{TopologyQuery, VertexClue};
 use std::mem;
 use traverse::EdgeCirculator;
-use triangulation::Triangulation;
-use types::{FaceIndex, FaceVertex, Rot3, VertexClue, VertexIndex};
+use types::{FaceIndex, FaceVertex, Rot3, VertexIndex};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Crossing {
@@ -37,10 +35,10 @@ where
     C: 'a + PredicatesContext<Predicates = PR>,
 {
     pub fn new(tri: &Triangulation<PR::Position, V, F, C>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<PR, V, F, C> {
-        assert_eq!(tri.graph.dimension(), 2);
+        assert_eq!(tri.dimension(), 2);
         assert_ne!(v0, v1);
-        assert!(tri.graph.is_finite_vertex(v0));
-        assert!(tri.graph.is_finite_vertex(v1));
+        assert!(tri.is_finite_vertex(v0));
+        assert!(tri.is_finite_vertex(v1));
 
         let mut iter = CrossingIterator {
             tri,
@@ -57,10 +55,10 @@ where
         let next = match self.current {
             None => None,
             Some(Crossing::Start { face, vertex }) => self.search_edge(face, vertex),
-            Some(Crossing::End { face, vertex }) => self.search_vertex(self.tri.graph.vi(FaceVertex { face, vertex }), self.v0),
+            Some(Crossing::End { face, vertex }) => self.search_vertex(self.tri.vi(FaceVertex { face, vertex }), self.v0),
             Some(Crossing::CoincidentEdge { face, edge }) => self.search_vertex(
-                self.tri.graph.vi(VertexClue::edge_end(face, edge)),
-                self.tri.graph.vi(VertexClue::edge_start(face, edge)),
+                self.tri.vi(VertexClue::edge_end(face, edge)),
+                self.tri.vi(VertexClue::edge_start(face, edge)),
             ),
             Some(Crossing::PositiveEdge { face, edge }) => self.search_edge(face, edge),
             Some(Crossing::NegativeEdge { face, edge }) => self.search_edge(face, edge),
@@ -89,7 +87,7 @@ where
         loop {
             //println!("current edge: {:?}, {:?}", circulator.current(), circulator.end_vertex());
             let vertex = circulator.end_vertex();
-            if self.tri.graph.is_infinite_vertex(vertex) || vertex == self.v0 {
+            if self.tri.is_infinite_vertex(vertex) || vertex == self.v0 {
                 // skip infinite edges
                 circulator.advance_cw();
                 continue;
@@ -108,9 +106,9 @@ where
                 //println!("backward edge {:?},{:?}", base_vertex, vertex);
                 OrientationType::CCW
             } else {
-                let p0 = &self.tri.graph.pos(self.v0);
-                let p1 = &self.tri.graph.pos(self.v1);
-                let pos = &self.tri.graph.pos(vertex);
+                let p0 = &self.tri.p(self.v0);
+                let p1 = &self.tri.p(self.v1);
+                let pos = &self.tri.p(vertex);
 
                 let orient = pr.orientation_triangle(p0, p1, pos);
                 /*println!(
@@ -183,9 +181,9 @@ where
 
     /// Find next crossing edge by checking the opposite face.
     fn search_edge(&self, start_face: FaceIndex, start_edge: Rot3) -> Option<Crossing> {
-        let face = self.tri.graph[start_face].neighbor(start_edge);
-        let vertex_index = self.tri.graph[face].get_neighbor_index(start_face).unwrap();
-        let vertex = self.tri.graph[face].vertex(vertex_index);
+        let face = self.tri[start_face].neighbor(start_edge);
+        let vertex_index = self.tri[face].get_neighbor_index(start_face).unwrap();
+        let vertex = self.tri[face].vertex(vertex_index);
 
         if vertex == self.v1 {
             return Some(Crossing::End {
@@ -194,9 +192,9 @@ where
             });
         };
 
-        let p0 = &self.tri.graph.pos(self.v0);
-        let p1 = &self.tri.graph.pos(self.v1);
-        let pn = &self.tri.graph.pos(vertex);
+        let p0 = &self.tri.p(self.v0);
+        let p1 = &self.tri.p(self.v1);
+        let pn = &self.tri.p(vertex);
         let pr = self.tri.context.predicates();
 
         let orientation = pr.orientation_triangle(p0, p1, pn);

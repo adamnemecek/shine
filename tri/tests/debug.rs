@@ -72,7 +72,7 @@ fn quick_debug() {
         tri.trace_begin();
         tri.trace();
         tri.trace_end();
-        
+
         tri.add_constraint_edge(v8, v5, SimpleConstraint(2));
 
         tri.trace_begin();
@@ -103,10 +103,9 @@ fn quick_debug() {
         tri.trace_begin();
         tri.trace();
         tri.trace_end();
-        assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+        assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
 
         tri.add_constraint_edge(p0, p1, SimpleConstraint(1));*/
-
     }
 
     tri.trace_begin();
@@ -114,6 +113,6 @@ fn quick_debug() {
     tri.trace_end();
     webctrl.wait_user();
 
-    assert_eq!(tri.graph.dimension(), 2);
-    assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+    assert_eq!(tri.dimension(), 2);
+    assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
 }

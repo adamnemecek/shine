@@ -7,7 +7,7 @@ extern crate shine_testutils;
 
 use log::{debug, trace};
 use permutohedron::Heap;
-use rand::Rng;
+use rand::seq::SliceRandom;
 use std::cell::Cell;
 use std::mem;
 
@@ -101,7 +101,7 @@ fn stress() {
                 assert_eq!(arena.len(), cnt);
                 assert_eq!(drop_counter.get(), drop_count);
 
-                rand::thread_rng().shuffle(&mut ids);
+                ids.shuffle(&mut rand::thread_rng());
 
                 trace!("check");
                 for v in ids.iter() {

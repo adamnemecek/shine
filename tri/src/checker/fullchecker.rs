@@ -1,8 +1,6 @@
 use checker::{GeometryChecker, TopologyChecker};
-use context::PredicatesContext;
 use geometry::Predicates;
-use graph::{Face, Vertex};
-use triangulation::Triangulation;
+use graph::{Face, Vertex, Triangulation, PredicatesContext};
 
 pub trait FullChecker {
     fn check(&self, area_eps: Option<f64>) -> Result<(), String>;

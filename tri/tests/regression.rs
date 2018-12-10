@@ -28,8 +28,8 @@ fn issue39_1() {
         }
     }
 
-    assert_eq!(tri.graph.dimension(), 2);
-    assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+    assert_eq!(tri.dimension(), 2);
+    assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
 }
 
 #[test]
@@ -50,6 +50,6 @@ fn issue39_2() {
             tri.add_vertex(Posf32 { x, y }, None);
         }
     }
-    assert_eq!(tri.graph.dimension(), 2);
-    assert_eq!(tri.check(None), Ok(()), "{:?}", tri.graph);
+    assert_eq!(tri.dimension(), 2);
+    assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
 }

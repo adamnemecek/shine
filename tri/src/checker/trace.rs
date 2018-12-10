@@ -1,11 +1,9 @@
 use checker::TracePosition;
-use context::TraceContext;
 use geometry::{InexactPredicates, Posf64};
 use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
-use graph::{Constraint, Face, Vertex};
-use query::TopologyQuery;
-use triangulation::Triangulation;
-use types::{rot3, FaceIndex, Rot3, VertexClue, VertexIndex};
+use graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
+use query::{TopologyQuery, VertexClue};
+use types::{rot3, FaceIndex, Rot3, VertexIndex};
 
 pub trait TraceRender {
     fn begin(&mut self);
@@ -50,8 +48,8 @@ where
         let mapping = self.context.trace_mapping();
         let approximate_predicates = InexactPredicates::<Posf64>::new();
 
-        if self.graph.is_finite_vertex(v) {
-            let p = Posf64::from(self.graph.pos(v));
+        if self.is_finite_vertex(v) {
+            let p = Posf64::from(self.p(v));
             return TracePosition::Real(p);
         }
 
@@ -60,9 +58,9 @@ where
         }
 
         // find virtual point best fitting the convex hull in 2d
-        if vcw.is_valid() && self.graph.is_finite_vertex(vcw) && vccw.is_valid() && self.graph.is_finite_vertex(vccw) {
-            let pcw = Posf64::from(self.graph.pos(vcw));
-            let pccw = Posf64::from(self.graph.pos(vccw));
+        if vcw.is_valid() && self.is_finite_vertex(vcw) && vccw.is_valid() && self.is_finite_vertex(vccw) {
+            let pcw = Posf64::from(self.p(vcw));
+            let pccw = Posf64::from(self.p(vccw));
 
             let mut best_value = 0.;
             let mut best = None;
@@ -82,8 +80,8 @@ where
 
         // find virtual point best fitting the convex hull in 1d
         for &candidate in [vcw, vccw].iter() {
-            if candidate.is_valid() && self.graph.is_finite_vertex(candidate) {
-                let p = Posf64::from(self.graph.pos(candidate));
+            if candidate.is_valid() && self.is_finite_vertex(candidate) {
+                let p = Posf64::from(self.p(candidate));
                 let mut search = approximate_predicates.nearest_point_search(&p);
 
                 for virt_pos in mapping.virtual_positions.iter() {
@@ -115,8 +113,8 @@ where
 
         let msg = msg.map(|m| format!("V: {}", m)).unwrap_or_else(|| format!("V: {}", v.id()));
 
-        if self.graph.is_finite_vertex(v) {
-            let p = Posf64::from(self.graph.pos(v));
+        if self.is_finite_vertex(v) {
+            let p = Posf64::from(self.p(v));
             tr.add_point(&(p.x, p.y), coloring.vertex.clone());
             tr.add_text(&(p.x, p.y), msg, coloring.vertex_text.0.clone(), coloring.vertex_text.1);
         } else {
@@ -138,7 +136,7 @@ where
         V: Vertex<Position = P>,
         F: Face,
     {
-        if self.graph.is_infinite_vertex(a) || self.graph.is_infinite_vertex(b) {
+        if self.is_infinite_vertex(a) || self.is_infinite_vertex(b) {
             return;
         }
 
@@ -149,8 +147,8 @@ where
             .map(|m| format!("E: {}", m))
             .unwrap_or_else(|| format!("E: ({},{})", a.id(), b.id()));
 
-        let pa = Posf64::from(self.graph.pos(a));
-        let pb = Posf64::from(self.graph.pos(b));
+        let pa = Posf64::from(self.p(a));
+        let pb = Posf64::from(self.p(b));
         tr.add_line(&(pa.x, pa.y), &(pb.x, pb.y), coloring.edge.clone());
         let x = (pa.x + pb.x) * 0.5;
         let y = (pa.y + pb.y) * 0.5;
@@ -159,8 +157,8 @@ where
 
     fn trace_face_edge(&self, f: FaceIndex, i: Rot3, msg: Option<&str>) {
         self.trace_edge(
-            self.graph.vi(VertexClue::edge_start(f, i)),
-            self.graph.vi(VertexClue::edge_end(f, i)),
+            self.vi(VertexClue::edge_start(f, i)),
+            self.vi(VertexClue::edge_end(f, i)),
             msg,
         );
     }
@@ -173,11 +171,7 @@ where
         let mut tr = self.context.trace_render();
         let coloring = self.context.trace_coloring();
 
-        let verts = [
-            self.graph[f].vertex(rot3(0)),
-            self.graph[f].vertex(rot3(1)),
-            self.graph[f].vertex(rot3(2)),
-        ];
+        let verts = [self[f].vertex(rot3(0)), self[f].vertex(rot3(1)), self[f].vertex(rot3(2))];
         let positions = [
             self.trace_map_vertex(verts[0], verts[1], verts[2]),
             self.trace_map_vertex(verts[1], verts[2], verts[0]),
@@ -210,7 +204,7 @@ where
             }
 
             let is_virtual = positions[edge_start].is_virtual() || positions[edge_end].is_virtual();
-            let constraint = self.graph[f].constraint(rot3(edge as u8));
+            let constraint = self[f].constraint(rot3(edge as u8));
             let (color, text_style) = match (is_virtual, constraint.is_constraint()) {
                 (true, true) => (coloring.error.clone(), &coloring.error_text),
                 (true, false) => (coloring.infinite_edge.clone(), &coloring.infinite_edge_text),
@@ -218,7 +212,7 @@ where
                 (false, false) => (coloring.edge.clone(), &coloring.edge_text),
             };
 
-            let n = self.graph[f].neighbor(rot3(edge as u8));
+            let n = self[f].neighbor(rot3(edge as u8));
             let a = positions[edge_start].position();
             let b = positions[edge_end].position();
             tr.add_line(&(a.x, a.y), &(b.x, b.y), color);
@@ -246,7 +240,7 @@ where
         }
 
         if cnt > 0. {
-            let text_style = if self.graph.is_finite_face(f) {
+            let text_style = if self.is_finite_face(f) {
                 &coloring.face_text
             } else {
                 &coloring.infinite_face_text
@@ -256,10 +250,10 @@ where
     }
 
     fn trace(&self) {
-        for v in self.graph.vertex_index_iter() {
+        for v in self.vertex_index_iter() {
             self.trace_vertex(v, None);
         }
-        for f in self.graph.face_index_iter() {
+        for f in self.face_index_iter() {
             self.trace_face(f, None);
             //trace_circum_circle( f, None );
         }
@@ -273,8 +267,8 @@ where
         let (mut minx, mut miny) = (f64::MAX, f64::MAX);
         let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
 
-        for v in self.graph.vertex_index_iter() {
-            let p = Posf64::from(self.graph.pos(v));
+        for v in self.vertex_index_iter() {
+            let p = Posf64::from(self.p(v));
             minx = if p.x < minx { p.x } else { minx };
             maxx = if p.x > maxx { p.x } else { maxx };
             miny = if p.y < minx { p.y } else { minx };

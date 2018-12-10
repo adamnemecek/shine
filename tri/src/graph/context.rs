@@ -1,12 +1,11 @@
 use checker::{Coloring, TraceMapping, TraceRender};
 use geometry::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
-use graph::{Face, Vertex};
+use graph::{Face, Vertex, Triangulation};
 use types::{FaceVertex, FaceEdge};
 use std::rc::Rc;
 use std::cell::{Ref, RefCell, RefMut};
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use triangulation::Triangulation;
 
 /// Context the enables/disables triangulation features and also stores the required datas
 pub struct Context<P, V, F, Predicates = (), Tag = (), Builder = (), Trace = ()>
