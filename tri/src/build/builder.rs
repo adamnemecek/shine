@@ -1,4 +1,4 @@
-use construct::{Factory, Updater};
+use build::{Factory, Updater};
 use geometry::{CollinearTest, Position, Predicates};
 use graph::{BuilderContext, Constraint, Face, PredicatesContext, TagContext, Triangulation, Vertex};
 use query::{TopologyQuery, VertexClue};

@@ -11,7 +11,7 @@ use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
 use shine_tri::traverse::CrossingIterator;
-use shine_tri::{Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, Triangulation};
+use shine_tri::{Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, Trace, Triangulation};
 use std::fmt::Debug;
 
 #[test]
@@ -131,14 +131,19 @@ fn t1_constraint_no_fill1() {
 
 #[test]
 fn t2_constraint_no_fill2() {
-    init_test(module_path!());
+    //init_test(module_path!());
+
+    use common::D2TriTrace;
+    use shine_testutils::init_webcontroll_test;
+    use shine_tri::TraceContext;
+    let webctrl = init_webcontroll_test(module_path!());
 
     fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
     where
         P: Default + Position + From<Sample> + Debug,
         P::Real: Real,
         PR: Default + Predicates<Position = P>,
-        C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
+        C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext + TraceContext,
     {
         info!("{}", desc);
 
@@ -188,6 +193,9 @@ fn t2_constraint_no_fill2() {
             tri.add_vertex(map(0.5, 0.5), None);
             assert_eq!(tri.check(None), Ok(()));
 
+            tri.trace();
+            tri.trace_pause();
+
             trace!("clear");
             tri.clear();
             assert!(tri.is_empty());
@@ -195,10 +203,30 @@ fn t2_constraint_no_fill2() {
         }
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(
+        SimpleContext::<Posf32>::new_inexact_common()
+            .with_trace(D2TriTrace::new(webctrl.clone()))
+            .create(),
+        "inexact f32",
+    );
+    test(
+        SimpleContext::<Posf64>::new_inexact_common()
+            .with_trace(D2TriTrace::new(webctrl.clone()))
+            .create(),
+        "inexact f64",
+    );
+    test(
+        SimpleContext::<Posi32>::new_exact_common()
+            .with_trace(D2TriTrace::new(webctrl.clone()))
+            .create(),
+        "exact i32",
+    );
+    test(
+        SimpleContext::<Posi64>::new_exact_common()
+            .with_trace(D2TriTrace::new(webctrl.clone()))
+            .create(),
+        "exact i64",
+    );
 }
 
 #[test]

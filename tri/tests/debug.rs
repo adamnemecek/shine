@@ -9,8 +9,7 @@ mod common;
 use common::{D2TriTrace, Sample, SimpleConstraint, SimpleContext};
 use shine_testutils::init_webcontroll_test;
 use shine_tri::geometry::Posf32;
-use shine_tri::traverse::CrossingIterator;
-use shine_tri::{Builder, FullChecker, Trace};
+use shine_tri::{Builder, FullChecker, Trace, TraceContext};
 use std::panic;
 
 #[test]
@@ -42,8 +41,9 @@ fn quick_debug() {
     let map = |x: f32, y: f32| Posf32::from(Sample(x, y));
 
     {
-        use shine_tri::TraceContext;
-        tri.context.trace_mapping_mut().set_virtual_positions(vec![
+        let control = tri.context.trace_control();
+        let mut control = control.borrow_mut();
+        control.mapping_mut().set_virtual_positions(vec![
             (&map(-2., 2.)).into(),
             (&map(5., 2.)).into(),
             (&map(2., 5.)).into(),
@@ -62,34 +62,19 @@ fn quick_debug() {
         let _10 = tri.add_vertex(map(0.5, 0.8), None);
         let v11 = tri.add_vertex(map(0.8, 1.0), None);
         let v12 = tri.add_vertex(map(3.0, 1.0), None);
-
-        tri.trace_begin();
         tri.trace();
-        tri.trace_end();
 
         tri.add_constraint_edge(v5, v7, SimpleConstraint(1));
-
-        tri.trace_begin();
         tri.trace();
-        tri.trace_end();
 
         tri.add_constraint_edge(v8, v5, SimpleConstraint(2));
-
-        tri.trace_begin();
         tri.trace();
-        tri.trace_end();
 
         tri.add_constraint_edge(v5, v8, SimpleConstraint(4));
-
-        tri.trace_begin();
         tri.trace();
-        tri.trace_end();
 
         tri.add_constraint_edge(v11, v2, SimpleConstraint(8));
-
-        tri.trace_begin();
         tri.trace();
-        tri.trace_end();
 
         /*let _e = tri.add_vertex(map(2.0, 2.5), None);
         let _d = tri.add_vertex(map(3.5, 2.5), None);
@@ -100,17 +85,13 @@ fn quick_debug() {
         let _f = tri.add_vertex(map(1.0, 1.5), None);
         let p1 = tri.add_vertex(map(4.0, 1.0), None);
 
-        tri.trace_begin();
         tri.trace();
-        tri.trace_end();
         assert_eq!(tri.check(None), Ok(()), "{:?}", tri);
 
         tri.add_constraint_edge(p0, p1, SimpleConstraint(1));*/
     }
 
-    tri.trace_begin();
     tri.trace();
-    tri.trace_end();
     webctrl.wait_user();
 
     assert_eq!(tri.dimension(), 2);

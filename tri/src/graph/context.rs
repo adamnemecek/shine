@@ -1,11 +1,11 @@
-use checker::{Coloring, TraceMapping, TraceRender};
+use checker::{TraceControl, TraceRender};
 use geometry::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
-use graph::{Face, Vertex, Triangulation};
-use types::{FaceVertex, FaceEdge};
-use std::rc::Rc;
-use std::cell::{Ref, RefCell, RefMut};
+use graph::{Face, Triangulation, Vertex};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::rc::Rc;
+use types::{FaceEdge, FaceVertex};
 
 /// Context the enables/disables triangulation features and also stores the required datas
 pub struct Context<P, V, F, Predicates = (), Tag = (), Builder = (), Trace = ()>
@@ -14,11 +14,11 @@ where
     V: Vertex<Position = P>,
     F: Face,
 {
-    predicates: Predicates,
-    tag: Tag,
-    builder: Builder,
-    trace: Trace,
-    phantom: PhantomData<(P, V, F)>,
+    pub predicates: Predicates,
+    pub tag: Tag,
+    pub builder: Builder,
+    pub trace: Trace,
+    pub phantom: PhantomData<(P, V, F)>,
 }
 
 impl<P, V, F> Context<P, V, F, (), (), (), ()>
@@ -168,7 +168,7 @@ pub trait TagContext {
 /// Store taging information
 #[derive(Default)]
 pub struct TagCtx {
-    tag_value: Rc<RefCell<usize>>,
+    pub value: Rc<RefCell<usize>>,
 }
 
 impl<P, V, F, Predicates, Builder, Trace> Context<P, V, F, Predicates, (), Builder, Trace>
@@ -195,7 +195,7 @@ where
     F: Face,
 {
     fn tag(&self) -> Rc<RefCell<usize>> {
-        self.tag.tag_value.clone()
+        self.tag.value.clone()
     }
 }
 
@@ -204,7 +204,6 @@ pub trait BuilderContext {
     fn get_face_vertex_vector(&self, name: &str) -> Rc<RefCell<Vec<FaceVertex>>>;
     fn get_face_edge_vector(&self, name: &str) -> Rc<RefCell<Vec<FaceEdge>>>;
 }
-
 
 #[derive(Default)]
 pub struct BuilderCache {
@@ -215,7 +214,7 @@ pub struct BuilderCache {
 /// Store temporaries for build
 #[derive(Default)]
 pub struct BuilderCtx {
-    cache: RefCell<BuilderCache>,
+    pub cache: RefCell<BuilderCache>,
 }
 
 impl<P, V, F, Predicates, Tag, Trace> Context<P, V, F, Predicates, Tag, (), Trace>
@@ -247,7 +246,7 @@ where
         if let Some(entry) = cache.get(name) {
             return entry.clone();
         }
-         
+
         let entry = Rc::new(RefCell::new(Vec::new()));
         cache.insert(name.to_string(), entry.clone());
         entry
@@ -262,21 +261,21 @@ where
 
         let entry = Rc::new(RefCell::new(Vec::new()));
         cache.insert(name.to_string(), entry.clone());
-        entry        
+        entry
     }
 }
 
 /// Trait to provide tracing capabilities
 pub trait TraceContext {
-    fn trace_render(&self) -> RefMut<TraceRender>;
-    fn trace_coloring(&self) -> Ref<Coloring>;
-    fn trace_coloring_mut(&self) -> RefMut<Coloring>;
-    fn trace_mapping(&self) -> Ref<TraceMapping>;
-    fn trace_mapping_mut(&self) -> RefMut<TraceMapping>;
+    fn trace_render(&self) -> Rc<RefCell<TraceRender>>;
+    fn trace_control(&self) -> Rc<RefCell<TraceControl>>;
 }
 
 /// Store tracing helpers
-pub struct TraceCtx<TP: TraceRender>(RefCell<TP>, RefCell<Coloring>, RefCell<TraceMapping>);
+pub struct TraceCtx<TC: TraceControl, TR: TraceRender> {
+    pub control: Rc<RefCell<TC>>,
+    pub render: Rc<RefCell<TR>>,
+}
 
 impl<P, V, F, Predicates, Tag, Builder> Context<P, V, F, Predicates, Tag, Builder, ()>
 where
@@ -284,45 +283,35 @@ where
     V: Vertex<Position = P>,
     F: Face,
 {
-    pub fn with_trace<TP: TraceRender>(self, tracer: TP) -> Context<P, V, F, Predicates, Tag, Builder, TraceCtx<TP>> {
+    pub fn with_trace<TC, TR, T>(self, trace: T) -> Context<P, V, F, Predicates, Tag, Builder, TraceCtx<TC, TR>>
+    where
+        TC: TraceControl,
+        TR: TraceRender,
+        T: Into<TraceCtx<TC, TR>>,
+    {
         Context {
             predicates: self.predicates,
             tag: self.tag,
             builder: self.builder,
-            trace: TraceCtx(
-                RefCell::new(tracer),
-                RefCell::new(Coloring::new()),
-                RefCell::new(TraceMapping::new()),
-            ),
+            trace: trace.into(),
             phantom: self.phantom,
         }
     }
 }
 
-impl<P, V, F, Predicates, Tag, Builder, TP> TraceContext for Context<P, V, F, Predicates, Tag, Builder, TraceCtx<TP>>
+impl<P, V, F, Predicates, Tag, Builder, TC, TR> TraceContext for Context<P, V, F, Predicates, Tag, Builder, TraceCtx<TC, TR>>
 where
     P: Position,
     V: Vertex<Position = P>,
     F: Face,
-    TP: TraceRender,
+    TC: 'static + TraceControl,
+    TR: 'static + TraceRender,
 {
-    fn trace_render(&self) -> RefMut<TraceRender> {
-        self.trace.0.borrow_mut()
+    fn trace_render(&self) -> Rc<RefCell<TraceRender>> {
+        self.trace.render.clone()
     }
 
-    fn trace_coloring(&self) -> Ref<Coloring> {
-        self.trace.1.borrow()
-    }
-
-    fn trace_coloring_mut(&self) -> RefMut<Coloring> {
-        self.trace.1.borrow_mut()
-    }
-
-    fn trace_mapping(&self) -> Ref<TraceMapping> {
-        self.trace.2.borrow()
-    }
-
-    fn trace_mapping_mut(&self) -> RefMut<TraceMapping> {
-        self.trace.2.borrow_mut()
+    fn trace_control(&self) -> Rc<RefCell<TraceControl>> {
+        self.trace.control.clone()
     }
 }

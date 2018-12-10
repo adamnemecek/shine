@@ -11,7 +11,7 @@ extern crate rand;
 extern crate shine_testutils;
 
 mod checker;
-mod construct;
+mod build;
 mod graph;
 mod query;
 
@@ -20,6 +20,6 @@ pub mod traverse;
 pub mod types;
 
 pub use self::checker::*;
-pub use self::construct::*;
+pub use self::build::*;
 pub use self::graph::*;
 pub use self::query::*;

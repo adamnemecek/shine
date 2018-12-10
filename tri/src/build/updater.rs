@@ -1,4 +1,4 @@
-use construct::factory::Factory;
+use build::factory::Factory;
 use geometry::{Orientation, Predicates};
 use graph::{Face, FaceExt, PredicatesContext, Triangulation, Vertex};
 use query::{GeometryQuery, TopologyQuery, VertexClue};

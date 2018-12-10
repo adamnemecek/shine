@@ -1,4 +1,4 @@
-use checker::TracePosition;
+use checker::{Coloring, TraceMapping, TracePosition};
 use geometry::{InexactPredicates, Posf64};
 use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
 use graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
@@ -19,6 +19,15 @@ pub trait TraceRender {
     fn add_text(&mut self, p: &(f64, f64), msg: String, color: String, size: f32);
 }
 
+pub trait TraceControl {
+    fn coloring(&self) -> &Coloring;
+    fn coloring_mut(&mut self) -> &mut Coloring;
+    fn mapping(&self) -> &TraceMapping;
+    fn mapping_mut(&mut self) -> &mut TraceMapping;
+
+    fn pause(&mut self);
+}
+
 pub trait Trace {
     fn trace_map_vertex(&self, v: VertexIndex, vcw: VertexIndex, vccw: VertexIndex) -> TracePosition;
 
@@ -26,11 +35,17 @@ pub trait Trace {
     fn trace_edge(&self, a: VertexIndex, b: VertexIndex, msg: Option<&str>);
     fn trace_face(&self, f: FaceIndex, msg: Option<&str>);
     fn trace_face_edge(&self, f: FaceIndex, i: Rot3, msg: Option<&str>);
-
-    fn trace(&self);
+    fn trace_tri(&self);
 
     fn trace_begin(&self);
     fn trace_end(&self);
+    fn trace_pause(&self);
+
+    fn trace(&self) {
+        self.trace_begin();
+        self.trace_tri();
+        self.trace_end();
+    }
 }
 
 impl<P, V, F, C> Trace for Triangulation<P, V, F, C>
@@ -45,7 +60,10 @@ where
             return TracePosition::Invisible;
         }
 
-        let mapping = self.context.trace_mapping();
+        let control = self.context.trace_control();
+        let control = control.borrow();
+        let mapping = control.mapping();
+
         let approximate_predicates = InexactPredicates::<Posf64>::new();
 
         if self.is_finite_vertex(v) {
@@ -107,20 +125,24 @@ where
             return;
         }
 
-        let mut tr = self.context.trace_render();
-        let mapping = self.context.trace_mapping();
-        let coloring = self.context.trace_coloring();
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+
+        let control = self.context.trace_control();
+        let control = control.borrow();
+        let mapping = control.mapping();
+        let coloring = control.coloring();
 
         let msg = msg.map(|m| format!("V: {}", m)).unwrap_or_else(|| format!("V: {}", v.id()));
 
         if self.is_finite_vertex(v) {
             let p = Posf64::from(self.p(v));
-            tr.add_point(&(p.x, p.y), coloring.vertex.clone());
-            tr.add_text(&(p.x, p.y), msg, coloring.vertex_text.0.clone(), coloring.vertex_text.1);
+            render.add_point(&(p.x, p.y), coloring.vertex.clone());
+            render.add_text(&(p.x, p.y), msg, coloring.vertex_text.0.clone(), coloring.vertex_text.1);
         } else {
             for p in mapping.virtual_positions.iter() {
-                tr.add_point(&(p.x, p.y), coloring.infinite_vertex.clone());
-                tr.add_text(
+                render.add_point(&(p.x, p.y), coloring.infinite_vertex.clone());
+                render.add_text(
                     &(p.x, p.y),
                     msg.clone(),
                     coloring.infinite_vertex_text.0.clone(),
@@ -140,8 +162,12 @@ where
             return;
         }
 
-        let mut tr = self.context.trace_render();
-        let coloring = self.context.trace_coloring();
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+
+        let control = self.context.trace_control();
+        let control = control.borrow();
+        let coloring = control.coloring();
 
         let msg = msg
             .map(|m| format!("E: {}", m))
@@ -149,10 +175,10 @@ where
 
         let pa = Posf64::from(self.p(a));
         let pb = Posf64::from(self.p(b));
-        tr.add_line(&(pa.x, pa.y), &(pb.x, pb.y), coloring.edge.clone());
+        render.add_line(&(pa.x, pa.y), &(pb.x, pb.y), coloring.edge.clone());
         let x = (pa.x + pb.x) * 0.5;
         let y = (pa.y + pb.y) * 0.5;
-        tr.add_text(&(x, y), msg, coloring.edge_text.0.clone(), coloring.edge_text.1);
+        render.add_text(&(x, y), msg, coloring.edge_text.0.clone(), coloring.edge_text.1);
     }
 
     fn trace_face_edge(&self, f: FaceIndex, i: Rot3, msg: Option<&str>) {
@@ -168,15 +194,19 @@ where
             return;
         }
 
-        let mut tr = self.context.trace_render();
-        let coloring = self.context.trace_coloring();
-
         let verts = [self[f].vertex(rot3(0)), self[f].vertex(rot3(1)), self[f].vertex(rot3(2))];
         let positions = [
             self.trace_map_vertex(verts[0], verts[1], verts[2]),
             self.trace_map_vertex(verts[1], verts[2], verts[0]),
             self.trace_map_vertex(verts[2], verts[0], verts[1]),
         ];
+
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+
+        let control = self.context.trace_control();
+        let control = control.borrow();
+        let coloring = control.coloring();
 
         for edge in 0..3 {
             // vertex
@@ -187,7 +217,7 @@ where
                     &coloring.infinite_vertex_text
                 };
                 let p = positions[edge].position();
-                tr.add_text(
+                render.add_text(
                     &(p.x, p.y),
                     format!("{}.{} = {}", f.id(), edge, verts[edge].id()),
                     text_style.0.clone(),
@@ -215,10 +245,10 @@ where
             let n = self[f].neighbor(rot3(edge as u8));
             let a = positions[edge_start].position();
             let b = positions[edge_end].position();
-            tr.add_line(&(a.x, a.y), &(b.x, b.y), color);
+            render.add_line(&(a.x, a.y), &(b.x, b.y), color);
 
             let center = ((a.x + b.x) * 0.5, (a.y + b.y) * 0.5);
-            tr.add_text(
+            render.add_text(
                 &center,
                 format!("{}.{}={}\n   c:{:?}", f.id(), edge, n.id(), constraint),
                 text_style.0.clone(),
@@ -245,11 +275,11 @@ where
             } else {
                 &coloring.infinite_face_text
             };
-            tr.add_text(&(center.x / cnt, center.y / cnt), msg, text_style.0.clone(), text_style.1);
+            render.add_text(&(center.x / cnt, center.y / cnt), msg, text_style.0.clone(), text_style.1);
         }
     }
 
-    fn trace(&self) {
+    fn trace_tri(&self) {
         for v in self.vertex_index_iter() {
             self.trace_vertex(v, None);
         }
@@ -260,8 +290,14 @@ where
     }
 
     fn trace_begin(&self) {
-        let mut tr = self.context.trace_render();
-        tr.begin();
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+
+        let control = self.context.trace_control();
+        let mut control = control.borrow_mut();
+        let mapping = control.mapping_mut();
+
+        render.begin();
 
         use std::f64;
         let (mut minx, mut miny) = (f64::MAX, f64::MAX);
@@ -276,7 +312,8 @@ where
         }
 
         {
-            let mapping = self.context.trace_mapping();
+            //todo: add some default virtual positions if virtual_positions is empty
+
             for p in mapping.virtual_positions.iter() {
                 minx = if p.x < minx { p.x } else { minx };
                 maxx = if p.x > maxx { p.x } else { maxx };
@@ -292,11 +329,18 @@ where
         maxx = maxx + w * 0.02;
         maxy = maxy + h * 0.02;
 
-        tr.set_viewport(minx, miny, maxx, maxy);
+        render.set_viewport(minx, miny, maxx, maxy);
     }
 
     fn trace_end(&self) {
-        let mut tr = self.context.trace_render();
-        tr.end();
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+        render.end();
+    }
+
+    fn trace_pause(&self) {
+        let control = self.context.trace_control();
+        let mut control = control.borrow_mut();
+        control.pause();
     }
 }
