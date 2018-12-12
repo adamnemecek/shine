@@ -1,5 +1,5 @@
 use geometry::Position;
-use graph::{Constraint, Face, FaceExt, Vertex, Triangulation};
+use graph::{Constraint, Face, Triangulation, Vertex};
 use types::{FaceIndex, Rot3, VertexIndex};
 
 pub trait Factory {
@@ -38,7 +38,7 @@ where
 
     fn create_vertex_with_position(&mut self, p: Self::Position) -> VertexIndex {
         let mut v: V = Default::default();
-        v.set_position(p);
+        *v.position_mut() = p;
         self.store_vertex(v)
     }
 

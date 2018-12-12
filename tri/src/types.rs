@@ -98,6 +98,12 @@ impl FaceVertex {
     }
 }
 
+impl From<(FaceIndex, Rot3)> for FaceVertex {
+    fn from((face, vertex): (FaceIndex, Rot3)) -> Self {
+        FaceVertex { face, vertex }
+    }
+}
+
 /// Selection of an edge by a face and an index
 #[derive(Clone, Copy, Debug)]
 pub struct FaceEdge {
@@ -111,6 +117,12 @@ impl FaceEdge {
     }
 }
 
+impl From<(FaceIndex, Rot3)> for FaceEdge {
+    fn from((face, edge): (FaceIndex, Rot3)) -> Self {
+        FaceEdge { face, edge }
+    }
+}
+
 /// Selection of a face as a neighbor of another face
 #[derive(Clone, Copy, Debug)]
 pub struct FaceNeighbor {
@@ -120,6 +132,12 @@ pub struct FaceNeighbor {
 
 impl FaceNeighbor {
     pub fn from(face: FaceIndex, neighbor: Rot3) -> Self {
+        FaceNeighbor { face, neighbor }
+    }
+}
+
+impl From<(FaceIndex, Rot3)> for FaceNeighbor {
+    fn from((face, neighbor): (FaceIndex, Rot3)) -> Self {
         FaceNeighbor { face, neighbor }
     }
 }

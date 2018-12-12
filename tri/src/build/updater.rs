@@ -1,6 +1,6 @@
 use build::factory::Factory;
 use geometry::{Orientation, Predicates};
-use graph::{Face, FaceExt, PredicatesContext, Triangulation, Vertex};
+use graph::{Face, PredicatesContext, Triangulation, Vertex};
 use query::{GeometryQuery, TopologyQuery, VertexClue};
 use types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
 

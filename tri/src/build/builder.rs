@@ -1,7 +1,8 @@
 use build::{Factory, Updater};
-use geometry::{CollinearTest, Position, Predicates};
+use check::Trace;
+use geometry::{CollinearTest, Orientation, Position, Predicates};
 use graph::{BuilderContext, Constraint, Face, PredicatesContext, TagContext, Triangulation, Vertex};
-use query::{TopologyQuery, VertexClue};
+use query::{GeometryQuery, TopologyQuery, VertexClue};
 use traverse::{Crossing, CrossingIterator, TaggingLocator};
 use types::{rot3, FaceEdge, FaceIndex, Location, VertexIndex};
 
@@ -184,7 +185,6 @@ where
 
             if !edge_chain.is_empty() {
                 v0 = self.vi(VertexClue::end_of(*edge_chain.last().unwrap()));
-                println!("edge constraint {:?}->{:?}\n{:?}", start, v0, edge_chain);
                 for edge in edge_chain.iter() {
                     self.merge_constraint(edge.face, edge.edge, c.clone());
                 }
@@ -193,11 +193,7 @@ where
             if !top_chain.is_empty() {
                 v0 = self.vi(VertexClue::end_of(*bottom_chain.last().unwrap()));
                 top_chain.reverse();
-                println!(
-                    "fill hole {:?}->{:?}\ntop:{:?}\nbottom:{:?}",
-                    start, v0, top_chain, bottom_chain
-                );
-                //self.triangulate_hole(&mut top_chain, &mut bottom_chain);
+                self.triangulate_hole(&mut top_chain, &mut bottom_chain);
             }
             edge_chain.clear();
             top_chain.clear();
@@ -206,16 +202,23 @@ where
     }
 
     fn triangulate_half_hole(&mut self, chain: &mut Vec<FaceEdge>) -> FaceEdge {
-        /*assert!(chain.len() > 0);
+        assert!(chain.len() > 0);
         let mut cur = 0;
         while chain.len() > 1 {
+            {
+                let doc = self.trace_document();
+                doc.trace_layer(Some("tri")).trace();
+                doc.trace_layer(Some("chain")).trace_face_edges(chain.iter());
+            }
+            self.trace_pause();
+
             let next = cur + 1;
             let cur_edge = chain[cur];
             let next_edge = chain[next];
 
             let p0 = self.vi(VertexClue::start_of(cur_edge));
             let p1 = self.vi(VertexClue::end_of(cur_edge));
-            assert_eq!(p1 == self.vi(VertexClue::start_of(next_edge)), "Edges are not continouous");
+            assert_eq!(p1, self.vi(VertexClue::start_of(next_edge)), "Edges are not continouous");
             let p2 = self.vi(VertexClue::end_of(next_edge));
 
             if !self.get_vertices_orientation(p0, p1, p2).is_ccw() {
@@ -238,43 +241,42 @@ where
                 /*let ne = tri_.getOppositeEdge( curCI.edge_ );
                 tri_.setAdjacent( ne, nextCI.edge_.getCW() );
                 tri_.setAdjacent( curCI.edge_, nextCI.edge_.getCCW() );*/
-        self[p0].set_face(next_edge.face);
-        self[p1].set_face(next_edge.face);
-        self[p2].set_face(next_edge.face);
+                self[p0].set_face(next_edge.face);
+                self[p1].set_face(next_edge.face);
+                self[p2].set_face(next_edge.face);
 
-        //self[ next_edge.face ].setConstraint( nextCI.edge_.index_.decremented(), tri_[ curCI.edge_.face_ ].getConstraint( curCI.edge_.index_ ) );
-        self[cur_edge.face].clear_constraint(cur_edge.edge);
-        self[next_edge.face].clear_constraint(next_edge.edge.incremented());
+                //self[ next_edge.face ].setConstraint( nextCI.edge_.index_.decremented(), tri_[ curCI.edge_.face_ ].getConstraint( curCI.edge_.index_ ) );
+                self[cur_edge.face].clear_constraint(cur_edge.edge);
+                self[next_edge.face].clear_constraint(next_edge.edge.increment());
 
-        if cur > 0 {
-        // step back
-        cur -= 1;
+                if cur > 0 {
+                    // step back
+                    cur -= 1;
+                }
+            } else {
+                // remove cur from the list and make it the clipped ear
+                assert!(cur > 0);
+                chain.remove(cur);
+
+                self[cur_edge.face].set_vertex(cur_edge.edge, p2);
+                self[next_edge.face].set_vertex(next_edge.edge.increment(), p0);
+
+                /*Edge ne = tri_.getOppositeEdge( nextCI.edge_ );
+                tri_.setAdjacent( ne, curCI.edge_.getCCW() );
+                tri_.setAdjacent( nextCI.edge_, curCI.edge_.getCW() );*/
+                self[p0].set_face(cur_edge.face);
+                self[p1].set_face(cur_edge.face);
+                self[p2].set_face(cur_edge.face);
+
+                /*tri_[ curCI.edge_.face_ ].setConstraint( curCI.edge_.index_.incremented(), tri_[ nextCI.edge_.face_ ].getConstraint( nextCI.edge_.index_ ) );
+                tri_[ curCI.edge_.face_ ].clearConstraint( curCI.edge_.index_.decremented() );
+                tri_[ nextCI.edge_.face_ ].clearConstraint( nextCI.edge_.index_ );*/
+                // step back
+                cur -= 1;
+            }
         }
-        } else {
-        // remove cur from the list and make it the clipped ear
-        assert!(cur > 0);
-        chain.remove(cur);
 
-        self[cur_edge.face].set_vertex(cur_edge.edge, p2);
-        self[next_edge.face].set_vertex(next_edge.edge.increment(), p0);
-
-        /*Edge ne = tri_.getOppositeEdge( nextCI.edge_ );
-        tri_.setAdjacent( ne, curCI.edge_.getCCW() );
-        tri_.setAdjacent( nextCI.edge_, curCI.edge_.getCW() );*/
-        self[p0].set_face(cur_edge.face);
-        self[p1].set_face(cur_edge.face);
-        self[p2].set_face(cur_edge.face);
-
-        /*tri_[ curCI.edge_.face_ ].setConstraint( curCI.edge_.index_.incremented(), tri_[ nextCI.edge_.face_ ].getConstraint( nextCI.edge_.index_ ) );
-        tri_[ curCI.edge_.face_ ].clearConstraint( curCI.edge_.index_.decremented() );
-        tri_[ nextCI.edge_.face_ ].clearConstraint( nextCI.edge_.index_ );*/
-        // step back
-        cur -= 1;
-        }
-        }
-
-        chain.pop.unwrap()*/
-        unimplemented!()
+        chain.pop().unwrap()
     }
 
     /// Triangulates an edge-visible hole given by the edge chain of the upper(lower) polygon.

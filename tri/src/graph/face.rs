@@ -24,10 +24,7 @@ pub trait Face: Default {
 
     fn tag(&self) -> usize;
     fn set_tag(&mut self, tag: usize);
-}
 
-/// Extension methods for the Face trait
-pub trait FaceExt: Face {
     /// Set all the vertices
     fn set_vertices(&mut self, v0: VertexIndex, v1: VertexIndex, v2: VertexIndex) {
         self.set_vertex(rot3(0), v0);
@@ -61,4 +58,3 @@ pub trait FaceExt: Face {
         self.set_constraint(i, Default::default());
     }
 }
-impl<T> FaceExt for T where T: Face {}

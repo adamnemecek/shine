@@ -3,7 +3,8 @@ use geometry::{InexactPredicates, Posf64};
 use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
 use graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
 use query::{TopologyQuery, VertexClue};
-use types::{rot3, FaceIndex, Rot3, VertexIndex};
+use std::ops;
+use types::{rot3, FaceEdge, FaceIndex, VertexIndex};
 
 pub trait TraceRender {
     fn begin(&mut self);
@@ -28,14 +29,68 @@ pub trait TraceControl {
     fn pause(&mut self);
 }
 
+pub struct TraceDocument<'a, T>
+where
+    T: 'a + Trace,
+{
+    trace: &'a T,
+}
+
+impl<'a, T> ops::Deref for TraceDocument<'a, T>
+where
+    T: 'a + Trace,
+{
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        self.trace
+    }
+}
+
+impl<'a, T> Drop for TraceDocument<'a, T>
+where
+    T: 'a + Trace,
+{
+    fn drop(&mut self) {
+        self.trace.trace_end();
+    }
+}
+
+pub struct TraceLayer<'a, T>
+where
+    T: 'a + Trace,
+{
+    trace: &'a T,
+}
+
+impl<'a, T> ops::Deref for TraceLayer<'a, T>
+where
+    T: 'a + Trace,
+{
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        self.trace
+    }
+}
+
+impl<'a, T> Drop for TraceLayer<'a, T>
+where
+    T: 'a + Trace,
+{
+    fn drop(&mut self) {
+        self.trace.trace_pop_layer();
+    }
+}
+
 pub trait Trace {
     fn trace_map_vertex(&self, v: VertexIndex, vcw: VertexIndex, vccw: VertexIndex) -> TracePosition;
 
     fn trace_vertex(&self, v: VertexIndex, msg: Option<&str>);
     fn trace_edge(&self, a: VertexIndex, b: VertexIndex, msg: Option<&str>);
     fn trace_face(&self, f: FaceIndex, msg: Option<&str>);
-    fn trace_face_edge(&self, f: FaceIndex, i: Rot3, msg: Option<&str>);
-    fn trace_tri(&self);
+    fn trace_face_edge<E: Into<FaceEdge>>(&self, edge: E, msg: Option<&str>);
+    fn trace(&self);
 
     fn trace_begin(&self);
     fn trace_end(&self);
@@ -43,11 +98,34 @@ pub trait Trace {
     fn trace_pop_layer(&self);
     fn trace_pause(&self);
 
-    fn trace(&self) {
+    fn trace_document(&self) -> TraceDocument<Self>
+    where
+        Self: Sized,
+    {
         self.trace_begin();
-        self.trace_push_layer(Some("hi".to_string()));
-        self.trace_tri();
-        self.trace_pop_layer();
+        TraceDocument { trace: self }
+    }
+
+    fn trace_layer<S: Into<String>>(&self, name: Option<S>) -> TraceLayer<Self>
+    where
+        Self: Sized,
+    {
+        self.trace_push_layer(name);
+        TraceLayer { trace: self }
+    }
+
+    fn trace_face_edges<'a, I>(&self, iter: I)
+    where
+        I: 'a + Iterator<Item = &'a FaceEdge>,
+    {
+        for edge in iter {
+            self.trace_face_edge(edge.clone(), None);
+        }
+    }
+
+    fn scoped_trace(&self) {
+        self.trace_begin();
+        self.trace();
         self.trace_end();
     }
 }
@@ -70,8 +148,8 @@ where
     default fn trace_vertex(&self, _v: VertexIndex, _msg: Option<&str>) {}
     default fn trace_edge(&self, _a: VertexIndex, _b: VertexIndex, _msg: Option<&str>) {}
     default fn trace_face(&self, _f: FaceIndex, _msg: Option<&str>) {}
-    default fn trace_face_edge(&self, _f: FaceIndex, _i: Rot3, _msg: Option<&str>) {}
-    default fn trace_tri(&self) {}
+    default fn trace_face_edge<E: Into<FaceEdge>>(&self, _edge: E, _msg: Option<&str>) {}
+    default fn trace(&self) {}
 
     default fn trace_begin(&self) {}
     default fn trace_end(&self) {}
@@ -213,10 +291,11 @@ where
         render.add_text(&(x, y), msg, coloring.edge_text.0.clone(), coloring.edge_text.1);
     }
 
-    fn trace_face_edge(&self, f: FaceIndex, i: Rot3, msg: Option<&str>) {
+    fn trace_face_edge<E: Into<FaceEdge>>(&self, edge: E, msg: Option<&str>) {
+        let edge: FaceEdge = edge.into();
         self.trace_edge(
-            self.vi(VertexClue::edge_start(f, i)),
-            self.vi(VertexClue::edge_end(f, i)),
+            self.vi(VertexClue::start_of(edge.into())),
+            self.vi(VertexClue::end_of(edge.into())),
             msg,
         );
     }
@@ -311,7 +390,7 @@ where
         }
     }
 
-    fn trace_tri(&self) {
+    fn trace(&self) {
         for v in self.vertex_index_iter() {
             self.trace_vertex(v, None);
         }
