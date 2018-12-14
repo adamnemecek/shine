@@ -274,6 +274,7 @@ fn t3_crossing_iterator() {
 }
 
 #[test]
+#[ignore]
 fn t4_constraint_concave() {
     init_test(module_path!());
 

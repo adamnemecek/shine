@@ -1,7 +1,7 @@
 use geometry::{Position, Real};
 use graph::{Face, Vertex};
 use std::{fmt, ops};
-use types::{face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, FaceRange, Rot3, VertexIndex, VertexRange};
+use types::{face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, FaceRange, VertexIndex, VertexRange};
 
 // Store the topology graph of the triangualtion
 struct Graph<P, V, F>
@@ -138,13 +138,6 @@ where
 
     pub fn is_finite_face(&self, f: FaceIndex) -> bool {
         !self.is_infinite_face(f)
-    }
-
-    /// Return the opposite (twin) representation of an edge.
-    pub fn opposite_edge(&self, face: FaceIndex, index: Rot3) -> (FaceIndex, Rot3) {
-        let nf = self[face].neighbor(index);
-        let i = self[nf].get_neighbor_index(face).unwrap();
-        (nf, i)
     }
 }
 

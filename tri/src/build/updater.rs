@@ -25,27 +25,6 @@ where
     F: Face,
     C: PredicatesContext<Predicates = PR>,
 {
-    /// Copy constraint from one face into another
-    fn copy_constraint(&mut self, f_from: FaceIndex, i_from: Rot3, f_to: FaceIndex, i_to: Rot3) {
-        let c = self[f_from].constraint(i_from);
-        self[f_to].set_constraint(i_to, c);
-    }
-
-    /// Set adjacent face information for two neighboring faces.
-    fn set_adjacent(&mut self, f0: FaceIndex, i0: Rot3, f1: FaceIndex, i1: Rot3) {
-        assert!(i0.is_valid() && i1.is_valid());
-        assert!(i0.id() <= self.dimension() as u8 && i1.id() <= self.dimension() as u8);
-        self[f0].set_neighbor(i0, f1);
-        self[f1].set_neighbor(i1, f0);
-    }
-
-    /// Move adjacent face information from one face into another.
-    fn move_adjacent(&mut self, f_target: FaceIndex, i_target: Rot3, f_source: FaceIndex, i_source: Rot3) {
-        let n = self[f_source].neighbor(i_source);
-        let i = self[n].get_neighbor_index(f_source).unwrap();
-        self.set_adjacent(f_target, i_target, n, i);
-    }
-
     fn split_edge_dim1(&mut self, f: FaceIndex, edge: Rot3, vert: VertexIndex) {
         assert!(self.dimension() == 1);
         assert!(edge == rot3(2));
@@ -91,19 +70,19 @@ where
         self[v0].set_face(n0);
         self[v3].set_face(n1);
 
-        self.move_adjacent(n0, rot3(0), f0, i00);
-        self.set_adjacent(n0, rot3(1), f0, i00);
-        self.set_adjacent(n0, rot3(2), n1, rot3(1));
+        self.move_adjacent((n0, rot3(0)), (f0, i00));
+        self.set_adjacent((n0, rot3(1)), (f0, i00));
+        self.set_adjacent((n0, rot3(2)), (n1, rot3(1)));
 
-        self.move_adjacent(n1, rot3(0), f1, i11);
-        self.set_adjacent(n1, rot3(2), f1, i11);
+        self.move_adjacent((n1, rot3(0)), (f1, i11));
+        self.set_adjacent((n1, rot3(2)), (f1, i11));
 
-        self.copy_constraint(f0, i00, n0, rot3(0));
-        self.copy_constraint(f0, i02, n0, rot3(2));
+        self.copy_constraint_partial(f0, i00, n0, rot3(0));
+        self.copy_constraint_partial(f0, i02, n0, rot3(2));
         self[f0].clear_constraint(i00);
 
-        self.copy_constraint(f1, i11, n1, rot3(0));
-        self.copy_constraint(f1, i12, n1, rot3(1));
+        self.copy_constraint_partial(f1, i11, n1, rot3(0));
+        self.copy_constraint_partial(f1, i12, n1, rot3(1));
         self[f1].clear_constraint(i11);
     }
 
@@ -132,10 +111,10 @@ where
         self[v2].set_face(f2);
         self[f0].set_vertex(rot3(1), v2);
         self[f2].set_vertices(v2, v1, invalid_vertex_index());
-        self.set_adjacent(f2, rot3(1), f0, rot3(0));
-        self.set_adjacent(f2, rot3(0), f1, i);
+        self.set_adjacent((f2, rot3(1)), (f0, rot3(0)));
+        self.set_adjacent((f2, rot3(0)), (f1, i));
 
-        self.copy_constraint(f0, rot3(2), f2, rot3(2));
+        self.copy_constraint_partial(f0, rot3(2), f2, rot3(2));
     }
 
     fn split_finite_face_dim2(&mut self, face: FaceIndex, vert: VertexIndex) {
@@ -166,14 +145,14 @@ where
         self[vp].set_face(f0);
         self[v2].set_face(n0);
 
-        self.set_adjacent(n0, rot3(0), n1, rot3(1));
-        self.move_adjacent(n0, rot3(1), f0, rot3(1));
-        self.move_adjacent(n1, rot3(0), f0, rot3(0));
-        self.set_adjacent(n0, rot3(2), f0, rot3(1));
-        self.set_adjacent(n1, rot3(2), f0, rot3(0));
+        self.set_adjacent((n0, rot3(0)), (n1, rot3(1)));
+        self.move_adjacent((n0, rot3(1)), (f0, rot3(1)));
+        self.move_adjacent((n1, rot3(0)), (f0, rot3(0)));
+        self.set_adjacent((n0, rot3(2)), (f0, rot3(1)));
+        self.set_adjacent((n1, rot3(2)), (f0, rot3(0)));
 
-        self.copy_constraint(f0, rot3(1), n0, rot3(1));
-        self.copy_constraint(f0, rot3(0), n1, rot3(0));
+        self.copy_constraint_partial(f0, rot3(1), n0, rot3(1));
+        self.copy_constraint_partial(f0, rot3(0), n1, rot3(0));
         self[f0].clear_constraint(rot3(0));
         self[f0].clear_constraint(rot3(1));
     }
@@ -232,7 +211,7 @@ where
 
         self[v0].set_face(f0);
         self[v1].set_face(f1);
-        self.set_adjacent(f0, rot3(0), f1, rot3(0));
+        self.set_adjacent((f0, rot3(0)), (f1, rot3(0)));
     }
 
     /// Extends dimension from 0D to 1D by creating a segment (face) out of the (two) finite points.
@@ -266,9 +245,9 @@ where
         self[f1].set_vertex(rot3(1), v2);
         self[v2].set_face(f2);
 
-        self.set_adjacent(f0, rot3(0), f1, rot3(1));
-        self.set_adjacent(f1, rot3(0), f2, rot3(1));
-        self.set_adjacent(f2, rot3(0), f0, rot3(1));
+        self.set_adjacent((f0, rot3(0)), (f1, rot3(1)));
+        self.set_adjacent((f1, rot3(0)), (f2, rot3(1)));
+        self.set_adjacent((f2, rot3(0)), (f0, rot3(1)));
     }
 
     /// Extends dimension from 1D to 2D by creating triangles (2d fac0es) out of the segments (1D faces).
@@ -345,12 +324,12 @@ where
                 self[vert].set_face(cur);
             }
 
-            self.set_adjacent(cur, rot3(2), new_face, rot3(2));
+            self.set_adjacent((cur, rot3(2)), (new_face, rot3(2)));
             if prev_new_face.is_valid() {
-                self.set_adjacent(prev_new_face, im, new_face, i0);
+                self.set_adjacent((prev_new_face, im), (new_face, i0));
             }
 
-            self.copy_constraint(cur, rot3(2), new_face, rot3(2));
+            self.copy_constraint_partial(cur, rot3(2), new_face, rot3(2));
 
             cur = self[cur].neighbor(i0);
         }
@@ -365,13 +344,13 @@ where
         if i0 == rot3(1) {
             self[f0].swap_vertices(rot3(2), rot3(1));
             self[fm].swap_vertices(rot3(0), rot3(2));
-            self.set_adjacent(f0, rot3(1), c0, rot3(0));
-            self.set_adjacent(fm, rot3(0), cm, rot3(1));
-            self.set_adjacent(f0, rot3(2), n0, rot3(1));
-            self.set_adjacent(fm, rot3(2), nm, rot3(0));
+            self.set_adjacent((f0, rot3(1)), (c0, rot3(0)));
+            self.set_adjacent((fm, rot3(0)), (cm, rot3(1)));
+            self.set_adjacent((f0, rot3(2)), (n0, rot3(1)));
+            self.set_adjacent((fm, rot3(2)), (nm, rot3(0)));
         } else {
-            self.set_adjacent(f0, rot3(2), n0, rot3(0));
-            self.set_adjacent(fm, rot3(2), nm, rot3(1));
+            self.set_adjacent((f0, rot3(2)), (n0, rot3(0)));
+            self.set_adjacent((fm, rot3(2)), (nm, rot3(1)));
         }
     }
 
@@ -413,14 +392,14 @@ where
         self[v2].set_face(f0);
         self[v3].set_face(f1);
 
-        self.move_adjacent(f0, i00, f1, i11);
-        self.move_adjacent(f1, i10, f0, i01);
-        self.set_adjacent(f0, i01, f1, i11);
+        self.move_adjacent((f0, i00), (f1, i11));
+        self.move_adjacent((f1, i10), (f0, i01));
+        self.set_adjacent((f0, i01), (f1, i11));
 
-        self.copy_constraint(f1, i11, f0, i00);
-        self.copy_constraint(f0, i01, f1, i10);
-        self.clear_constraint(f0, i01);
-        self.clear_constraint(f1, i11);
+        self.copy_constraint_partial(f1, i11, f0, i00);
+        self.copy_constraint_partial(f0, i01, f1, i10);
+        self.clear_constraint((f0, i01));
+        self.clear_constraint((f1, i11));
     }
 }
 

@@ -186,7 +186,7 @@ where
             if !edge_chain.is_empty() {
                 v0 = self.vi(VertexClue::end_of(*edge_chain.last().unwrap()));
                 for edge in edge_chain.iter() {
-                    self.merge_constraint(edge.face, edge.edge, c.clone());
+                    self.merge_constraint(*edge, c.clone());
                 }
             }
 
@@ -238,14 +238,15 @@ where
                 self[cur_edge.face].set_vertex(cur_edge.edge.decrement(), p2);
                 self[next_edge.face].set_vertex(next_edge.edge, p0);
 
-                /*let ne = tri_.getOppositeEdge( curCI.edge_ );
-                tri_.setAdjacent( ne, nextCI.edge_.getCW() );
-                tri_.setAdjacent( curCI.edge_, nextCI.edge_.getCCW() );*/
+                let ne = self.opposite_edge(cur_edge);
+                self.set_adjacent((ne.face, ne.edge), (next_edge.face, next_edge.edge.decrement()));
+                self.set_adjacent((cur_edge.face, cur_edge.edge), (next_edge.face, next_edge.edge.increment()));
                 self[p0].set_face(next_edge.face);
                 self[p1].set_face(next_edge.face);
                 self[p2].set_face(next_edge.face);
 
-                //self[ next_edge.face ].setConstraint( nextCI.edge_.index_.decremented(), tri_[ curCI.edge_.face_ ].getConstraint( curCI.edge_.index_ ) );
+                let c = self[cur_edge.face].constraint(cur_edge.edge);
+                self[next_edge.face].set_constraint(next_edge.edge.decrement(), c);
                 self[cur_edge.face].clear_constraint(cur_edge.edge);
                 self[next_edge.face].clear_constraint(next_edge.edge.increment());
 
@@ -261,16 +262,17 @@ where
                 self[cur_edge.face].set_vertex(cur_edge.edge, p2);
                 self[next_edge.face].set_vertex(next_edge.edge.increment(), p0);
 
-                /*Edge ne = tri_.getOppositeEdge( nextCI.edge_ );
-                tri_.setAdjacent( ne, curCI.edge_.getCCW() );
-                tri_.setAdjacent( nextCI.edge_, curCI.edge_.getCW() );*/
+                let ne = self.opposite_edge(next_edge);
+                self.set_adjacent((ne.face, ne.edge), (cur_edge.face, cur_edge.edge.increment()));
+                self.set_adjacent((next_edge.face, next_edge.edge), (cur_edge.face, cur_edge.edge.decrement()));
                 self[p0].set_face(cur_edge.face);
                 self[p1].set_face(cur_edge.face);
                 self[p2].set_face(cur_edge.face);
 
-                /*tri_[ curCI.edge_.face_ ].setConstraint( curCI.edge_.index_.incremented(), tri_[ nextCI.edge_.face_ ].getConstraint( nextCI.edge_.index_ ) );
-                tri_[ curCI.edge_.face_ ].clearConstraint( curCI.edge_.index_.decremented() );
-                tri_[ nextCI.edge_.face_ ].clearConstraint( nextCI.edge_.index_ );*/
+                let c = self[next_edge.face].constraint(next_edge.edge);
+                self[cur_edge.face].set_constraint(cur_edge.edge.increment(), c);
+                self[cur_edge.face].clear_constraint(cur_edge.edge.decrement());
+                self[next_edge.face].clear_constraint(next_edge.edge);
                 // step back
                 cur -= 1;
             }
