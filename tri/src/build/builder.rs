@@ -302,9 +302,9 @@ where
             layer.trace_face_edge(top, None, Some(&color));
         }
 
-        let top_edge = FaceEdge::from(top.face, top.edge.decrement());
-        let bottom_edge = FaceEdge::from(bottom.face, bottom.edge.decrement());
-        self.set_adjacent(top_edge, bottom_edge);
+        let top = FaceEdge::from(top.face, top.edge.decrement());
+        let bottom = FaceEdge::from(bottom.face, bottom.edge.decrement());
+        self.set_adjacent(top, bottom);
 
         {
             let doc = self.trace_document();
@@ -312,12 +312,12 @@ where
             let layer = doc.trace_layer(Some("chain"));
 
             let color = EdgeColoring::default().with_color("white").with_text("white", 0.03);
-            layer.trace_face_edge(bottom_edge, Some(&format!("bottom")), Some(&color));
-            layer.trace_face_edge(top_edge, Some(&format!("top")), Some(&color));
+            layer.trace_face_edge(bottom, Some(&format!("bottom")), Some(&color));
+            layer.trace_face_edge(top, Some(&format!("top")), Some(&color));
         }
         self.trace_pause();
-        self.flip(top_edge.face, top_edge.edge);
-        top_edge
+        self.flip(top.face, top.edge);
+        FaceEdge::from(top.face, top.edge.increment())
     }
 }
 
