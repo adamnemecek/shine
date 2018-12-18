@@ -105,7 +105,7 @@ impl From<(FaceIndex, Rot3)> for FaceVertex {
 }
 
 /// Selection of an edge by a face and an index
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct FaceEdge {
     pub face: FaceIndex,
     pub edge: Rot3,

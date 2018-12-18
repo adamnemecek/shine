@@ -11,7 +11,7 @@ use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
 use shine_tri::traverse::CrossingIterator;
-use shine_tri::{Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, Triangulation};
+use shine_tri::{Face, Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, TopologyQuery, Triangulation};
 use std::fmt::Debug;
 
 #[test]
@@ -39,7 +39,7 @@ fn t0_constraint_segment() {
         ];
 
         for (info, map) in transforms.iter() {
-            debug!("transformation: {}", info);
+            debug!("{} transformation: {}", desc, info);
 
             //fTriTrace.setVirtualPositions( { glm::vec2( -1.5f, 0.0f ), glm::vec2( 1.5f, 0.0f ), glm::vec2( 0.0f, 1.5f ), glm::vec2( 0.0f, -1.5f ) } );
 
@@ -93,7 +93,7 @@ fn t1_constraint_no_fill1() {
         ];
 
         for (info, map) in transforms.iter() {
-            debug!("transformation: {}", info);
+            debug!("{} transformation: {}", desc, info);
 
             tri.add_vertex(map(0., 0.), None);
             assert_eq!(tri.check(None), Ok(()));
@@ -154,7 +154,7 @@ fn t2_constraint_no_fill2() {
         ];
 
         for (info, map) in transforms.iter() {
-            debug!("transformation: {}", info);
+            debug!("{} transformation: {}", desc, info);
 
             //fTriTrace.setVirtualPositions( { glm::vec2( -1.5f, 0.0f ), glm::vec2( 1.5f, 0.0f ), glm::vec2( 0.0f, 1.5f ), glm::vec2( 0.0f, -1.5f ) } );
 
@@ -226,7 +226,7 @@ fn t3_crossing_iterator() {
         ];
 
         for (info, map) in transforms.iter() {
-            debug!("transformation: {}", info);
+            debug!("{} transformation: {}", desc, info);
 
             let v1 = tri.add_vertex(map(2.0, 1.0), None);
             let v2 = tri.add_vertex(map(4.0, 1.0), None);
@@ -298,7 +298,7 @@ fn t4_constraint_concave() {
         ];
 
         for (info, map) in transforms.iter() {
-            debug!("transformation: {}", info);
+            debug!("{} transformation: {}", desc, info);
 
             let _e = tri.add_vertex(map(2.0, 2.5), None);
             let _d = tri.add_vertex(map(3.5, 2.5), None);
@@ -312,11 +312,79 @@ fn t4_constraint_concave() {
 
             tri.add_constraint_edge(p0, p1, SimpleConstraint(1));
             assert_eq!(tri.check(None), Ok(()));
+            let edge = tri.find_edge_by_vertex(p0, p1).expect(&format!("Missing edge between {:?} and {:?}", p0, p1));
+            assert_eq!(tri.c(edge), SimpleConstraint(1));
 
             trace!("clear");
             tri.clear();
             assert!(tri.is_empty());
             assert_eq!(tri.check(None), Ok(()));
+        }
+    }
+
+    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+}
+
+#[test]
+#[ignore]
+fn t5_constraint() {
+    init_test(module_path!());
+
+    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    where
+        P: Default + Position + From<Sample> + Debug,
+        P::Real: Real,
+        PR: Default + Predicates<Position = P>,
+        C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
+    {
+        info!("{}", desc);
+
+        let cases = vec![
+            (vec![(0.,0.), (0., 1.), (1.,0.)], 
+                vec![(0,1), (0,2), (1,2)]),
+            (vec![(0.,0.), (0., 1.), (1.,0.), (1.,1.)], 
+                vec![(0,1), (0,2), (1,2)])
+        ];        
+
+        let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
+            ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
+            ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
+            ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
+            ("(x, -y)", Box::new(|x, y| Sample(x, -y).into())),
+            ("(y, x)", Box::new(|x, y| Sample(y, x).into())),
+            ("(-y, x)", Box::new(|x, y| Sample(-y, x).into())),
+            ("(-y, -x)", Box::new(|x, y| Sample(-y, -x).into())),
+            ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
+        ];
+
+        for (id,case) in cases.iter().enumerate() {
+            for (info, map) in transforms.iter() {
+                debug!("{} {}. transformation: {}", desc, id, info);
+
+                let mut vertices = Vec::new();
+                for v in case.0.iter() {
+                    vertices.push(tri.add_vertex(map(v.0, v.1), None));
+                }                
+                assert_eq!(tri.check(None), Ok(()));
+
+                for e in case.1.iter() {
+                    tri.add_constraint_edge(vertices[e.0], vertices[e.1], SimpleConstraint(1));
+                }                
+                assert_eq!(tri.check(None), Ok(()));
+
+                for e in case.1.iter() {
+                    let edge = tri.find_edge_by_vertex(vertices[e.0], vertices[e.1]).expect(&format!("Missing edge between {:?} and {:?}", vertices[e.0], vertices[e.1]));
+                    assert_eq!(tri.c(edge), SimpleConstraint(1));
+                }
+
+                trace!("clear");
+                tri.clear();
+                assert!(tri.is_empty());
+                assert_eq!(tri.check(None), Ok(()));
+            }
         }
     }
 

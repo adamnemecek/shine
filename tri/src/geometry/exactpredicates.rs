@@ -39,7 +39,6 @@ where
         self.0 > R::from_i32(0) && self.0 < R::from_i32(2)
     }
 
-    #[allow(clippy::int_cmp)]
     fn is_second(&self) -> bool {
         self.0 == R::from_i32(2)
     }
@@ -145,7 +144,7 @@ where
     fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool {
         let (ax, ay) = (a.x(), a.y());
         let (bx, by) = (b.x(), b.y());
-        return ax == bx && ay == by;
+        ax == bx && ay == by
     }
 
     fn test_collinear_points(&self, a: &Self::Position, b: &Self::Position, p: &Self::Position) -> Self::CollinearTest {
@@ -174,14 +173,12 @@ where
                     } else {
                         P::Real::from_i32(1)
                     }
+                } else if apx < P::Real::from_i32(0) {
+                    P::Real::from_i32(-1)
+                } else if bpx > P::Real::from_i32(0) {
+                    P::Real::from_i32(3)
                 } else {
-                    if apx < P::Real::from_i32(0) {
-                        P::Real::from_i32(-1)
-                    } else if bpx > P::Real::from_i32(0) {
-                        P::Real::from_i32(3)
-                    } else {
-                        P::Real::from_i32(1)
-                    }
+                    P::Real::from_i32(1)
                 }
             }
         } else {
@@ -201,14 +198,12 @@ where
                     } else {
                         P::Real::from_i32(1)
                     }
+                } else if apy < P::Real::from_i32(0) {
+                    P::Real::from_i32(-1)
+                } else if bpy > P::Real::from_i32(0) {
+                    P::Real::from_i32(3)
                 } else {
-                    if apy < P::Real::from_i32(0) {
-                        P::Real::from_i32(-1)
-                    } else if bpy > P::Real::from_i32(0) {
-                        P::Real::from_i32(3)
-                    } else {
-                        P::Real::from_i32(1)
-                    }
+                    P::Real::from_i32(1)
                 }
             }
         };

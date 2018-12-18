@@ -51,7 +51,6 @@ where
     }
 
     fn advance(&mut self) -> Option<Crossing> {
-        //println!("advance from: {:?}", self.current);
         let next = match self.current {
             None => None,
             Some(Crossing::Start { face, vertex }) => self.search_edge(face, vertex),
@@ -64,7 +63,6 @@ where
             Some(Crossing::NegativeEdge { face, edge }) => self.search_edge(face, edge),
         };
 
-        //println!("advance next: {:?}", next);
         mem::replace(&mut self.current, next)
     }
 
@@ -74,10 +72,6 @@ where
         let mut start_orientation = OrientationType::Collinear;
         let mut circulator = EdgeCirculator::new(self.tri, base_vertex);
 
-        /*println!(
-            "search_vertex ({:?},{:?}): {:?},{:?}",
-            self.v0, self.v1, start_vertex, base_vertex
-        );*/
         if base_vertex == self.v1 {
             return None;
         }
@@ -85,7 +79,6 @@ where
         let pr = self.tri.context.predicates();
 
         loop {
-            //println!("current edge: {:?}, {:?}", circulator.current(), circulator.end_vertex());
             let vertex = circulator.end_vertex();
             if self.tri.is_infinite_vertex(vertex) || vertex == self.v0 {
                 // skip infinite edges
@@ -103,7 +96,6 @@ where
             let orientation = if vertex == start_vertex {
                 // we are on the edge (base_vertex, start_vertex) edge which is just the opposite
                 // direction of the crosiing edge, thus any orientation can be picked for the rotate
-                //println!("backward edge {:?},{:?}", base_vertex, vertex);
                 OrientationType::CCW
             } else {
                 let p0 = &self.tri.p(self.v0);
@@ -111,17 +103,8 @@ where
                 let pos = &self.tri.p(vertex);
 
                 let orient = pr.orientation_triangle(p0, p1, pos);
-                /*println!(
-                    "orient: {:?},{:?},{:?}: {:?}({:?})",
-                    self.v0,
-                    self.v1,
-                    vertex,
-                    orient,
-                    orient.into_type()
-                );*/
                 if orient.is_collinear() {
                     let collinear_test = pr.test_collinear_points(p0, p1, pos).into_type();
-                    //println!("collinear test: {:?}", collinear_test);
                     match collinear_test {
                         CollinearTestType::Before => {
                             // it's an edge just in the other direction on collinear to the v0-v1 segment, select some "random" orientation
@@ -169,11 +152,9 @@ where
                     vertex: circulator.edge().increment(),
                 });
             } else if start_orientation == OrientationType::CCW {
-                //println!("advance cw");
                 circulator.advance_cw();
             } else {
                 assert_eq!(start_orientation, OrientationType::CW);
-                //println!("advance ccw");
                 circulator.advance_ccw();
             }
         }

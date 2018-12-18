@@ -38,6 +38,17 @@ where
     }
 }
 
+impl<P, V, F> Default for Context<P, V, F, (), (), (), ()>
+where
+    P: Position,
+    V: Vertex<Position = P>,
+    F: Face,
+{
+    fn default() -> Context<P, V, F> {
+        Context::new()
+    }
+}
+
 impl<P, V, F> Context<P, V, F, (), (), (), ()>
 where
     P: Position,

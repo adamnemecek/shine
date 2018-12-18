@@ -14,6 +14,9 @@ pub trait Factory {
     /// Clear the constraint of an edge and update both adjacent faces.
     fn clear_constraint<E: Into<FaceEdge>>(&mut self, edge: E);
 
+    /// Get the constraint of an edge.
+    fn get_constraint<E: Into<FaceEdge>>(&self, edge: E) -> Self::Constraint;
+
     /// Set the constraint of an edge and update both adjacent faces.
     fn set_constraint<E: Into<FaceEdge>>(&mut self, edge: E, c: Self::Constraint);
 
@@ -69,6 +72,11 @@ where
         let ni = self[nf].get_neighbor_index(edge.face).unwrap();
         self[edge.face].clear_constraint(edge.edge);
         self[nf].clear_constraint(ni);
+    }
+
+    fn get_constraint<E: Into<FaceEdge>>(&self, edge: E) -> Self::Constraint {
+        let edge: FaceEdge = edge.into();
+        self[edge.face].constraint(edge.edge)
     }
 
     fn set_constraint<E: Into<FaceEdge>>(&mut self, edge: E, c: Self::Constraint) {

@@ -139,7 +139,7 @@ where
     default fn trace_map_vertex(&self, v: VertexIndex, _vcw: VertexIndex, _vccw: VertexIndex) -> TracePosition {
         if self.is_finite_vertex(v) {
             let p = Posf64::from(self.p(v));
-            return TracePosition::Real(p);
+            TracePosition::Real(p)
         } else {
             TracePosition::Invisible
         }
@@ -297,8 +297,8 @@ where
             .map(|m| m.to_string())
             .unwrap_or_else(|| format!("({}.{})", edge.face.id(), edge.edge.id()));
         self.trace_edge(
-            self.vi(VertexClue::start_of(edge.into())),
-            self.vi(VertexClue::end_of(edge.into())),
+            self.vi(VertexClue::start_of(edge)),
+            self.vi(VertexClue::end_of(edge)),
             Some(&msg),
             color,
         );
@@ -439,10 +439,10 @@ where
 
         let w = maxx - minx;
         let h = maxy - miny;
-        minx = minx - w * 0.02;
-        miny = miny - h * 0.02;
-        maxx = maxx + w * 0.02;
-        maxy = maxy + h * 0.02;
+        minx -= w * 0.02;
+        miny -= h * 0.02;
+        maxx += w * 0.02;
+        maxy += h * 0.02;
 
         render.set_viewport(minx, miny, maxx, maxy);
     }

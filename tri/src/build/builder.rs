@@ -35,10 +35,7 @@ where
                 self.extend_dimension(vert);
                 vert
             }
-            Location::Vertex(f, v) => {
-                let vert = self[f].vertex(v);
-                vert
-            }
+            Location::Vertex(f, v) => self[f].vertex(v),
             Location::Edge(f, e) => {
                 let vert = self.create_vertex_with_position(p);
                 self.split_edge(f, e, vert);
@@ -201,7 +198,7 @@ where
     }
 
     fn triangulate_half_hole(&mut self, chain: &mut Vec<FaceEdge>) -> FaceEdge {
-        assert!(chain.len() > 0);
+        assert!(chain.len() >= 2);
         let mut cur = 0;
         while chain.len() > 2 {
             /* {
@@ -312,8 +309,8 @@ where
             let layer = doc.trace_layer(Some("chain"));
 
             let color = EdgeColoring::default().with_color("white").with_text("white", 0.03);
-            layer.trace_face_edge(bottom, Some(&format!("bottom")), Some(&color));
-            layer.trace_face_edge(top, Some(&format!("top")), Some(&color));
+            layer.trace_face_edge(bottom, Some("bottom"), Some(&color));
+            layer.trace_face_edge(top, Some("top"), Some(&color));
         }
         self.trace_pause();
         self.flip(top.face, top.edge);

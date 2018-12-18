@@ -1,29 +1,27 @@
-use geometry::Predicates;
-use graph::{Face, PredicatesContext, Triangulation, Vertex};
+use geometry::Position;
+use graph::{Face, Triangulation, Vertex};
 use query::{TopologyQuery, VertexClue};
 use types::{FaceEdge, FaceIndex, Rot3, VertexIndex};
 
-pub struct EdgeCirculator<'a, PR, V, F, C>
+pub struct EdgeCirculator<'a, P, V, F, C>
 where
-    PR: 'a + Predicates,
-    V: 'a + Vertex<Position = PR::Position>,
+    P: 'a + Position,
+    V: 'a + Vertex<Position = P>,
     F: 'a + Face,
-    C: 'a + PredicatesContext<Predicates = PR>,
 {
-    tri: &'a Triangulation<PR::Position, V, F, C>,
+    tri: &'a Triangulation<P, V, F, C>,
     vertex: VertexIndex,
 
     current: FaceEdge,
 }
 
-impl<'a, PR, V, F, C> EdgeCirculator<'a, PR, V, F, C>
+impl<'a, P, V, F, C> EdgeCirculator<'a, P, V, F, C>
 where
-    PR: 'a + Predicates,
-    V: 'a + Vertex<Position = PR::Position>,
+    P: 'a + Position,
+    V: 'a + Vertex<Position = P>,
     F: 'a + Face,
-    C: 'a + PredicatesContext<Predicates = PR>,
 {
-    pub fn new<'b>(tri: &'b Triangulation<PR::Position, V, F, C>, start: VertexIndex) -> EdgeCirculator<'b, PR, V, F, C> {
+    pub fn new<'b>(tri: &'b Triangulation<P, V, F, C>, start: VertexIndex) -> EdgeCirculator<'b, P, V, F, C> {
         assert_eq!(tri.dimension(), 2);
         let face = tri[start].face();
         let edge = tri[face].get_vertex_index(start).unwrap().decrement();
@@ -64,6 +62,12 @@ where
         self.current.edge = self.tri[self.current.face].get_vertex_index(self.vertex).unwrap().decrement();
     }
 
+    pub fn next_ccw(&mut self) -> FaceEdge {
+        let edge = *self.current();
+        self.advance_ccw();
+        edge
+    }
+
     pub fn advance_cw(&mut self) {
         assert_eq!(self.tri.dimension(), 2);
         assert!(self.current.face.is_valid());
@@ -71,5 +75,11 @@ where
 
         self.current.face = self.tri[self.current.face].neighbor(self.current.edge);
         self.current.edge = self.tri[self.current.face].get_vertex_index(self.vertex).unwrap().decrement();
+    }
+
+    pub fn next_cw(&mut self) -> FaceEdge {
+        let edge = *self.current();
+        self.advance_cw();
+        edge
     }
 }
