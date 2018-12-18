@@ -127,8 +127,6 @@ where
         let mut bottom_chain = bottom_chain.borrow_mut();
 
         while v0 != v1 {
-            let start = v0;
-            println!("add constrainat: {:?}->{:?}", v0, v1);
             // collect intersecting faces and generate the two (top/bottom) chains
             // The edge-chain is not a whole polygon the new constraining edge is the missing closing edge
 
@@ -193,7 +191,8 @@ where
             if !top_chain.is_empty() {
                 v0 = self.vi(VertexClue::end_of(*bottom_chain.last().unwrap()));
                 top_chain.reverse();
-                self.triangulate_hole(&mut top_chain, &mut bottom_chain);
+                let edge = self.triangulate_hole(&mut top_chain, &mut bottom_chain);
+                self.merge_constraint(edge, c.clone());
             }
             edge_chain.clear();
             top_chain.clear();
@@ -204,8 +203,8 @@ where
     fn triangulate_half_hole(&mut self, chain: &mut Vec<FaceEdge>) -> FaceEdge {
         assert!(chain.len() > 0);
         let mut cur = 0;
-        while chain.len() > 1 {
-            {
+        while chain.len() > 2 {
+            /* {
                 let doc = self.trace_document();
                 doc.trace_layer(Some("tri")).trace_graph(None);
                 let layer = doc.trace_layer(Some("chain"));
@@ -215,7 +214,7 @@ where
                 let color = EdgeColoring::default().with_color("white").with_text("white", 0.03);
                 layer.trace_face_edge(chain[cur], Some(&format!("{}", cur)), Some(&color));
             }
-            self.trace_pause();
+            self.trace_pause();*/
 
             let next = cur + 1;
             let cur_edge = chain[cur];
@@ -288,15 +287,37 @@ where
 
     /// Triangulates an edge-visible hole given by the edge chain of the upper(lower) polygon.
     /// On completion it returns the edge that separates the upper and lower half of the polygon.
-    fn triangulate_hole(&mut self, top: &mut Vec<FaceEdge>, bottom: &mut Vec<FaceEdge>) {
+    fn triangulate_hole(&mut self, top: &mut Vec<FaceEdge>, bottom: &mut Vec<FaceEdge>) -> FaceEdge {
         assert!(top.len() >= 2 && bottom.len() >= 2);
-        let top = self.triangulate_half_hole(top);
         let bottom = self.triangulate_half_hole(bottom);
-        /*let top = top.getCCW();
-        let bottom =  bottom.getCCW();
-        self.setAdjacent( top, bottom );
-        self.flip( top );
-        top.getCCW(); // abuse the implementation of flip*/
+        let top = self.triangulate_half_hole(top);
+
+        {
+            let doc = self.trace_document();
+            doc.trace_layer(Some("tri")).trace_graph(None);
+            let layer = doc.trace_layer(Some("chain"));
+
+            let color = EdgeColoring::default().with_color("white").with_text("white", 0.03);
+            layer.trace_face_edge(bottom, None, Some(&color));
+            layer.trace_face_edge(top, None, Some(&color));
+        }
+
+        let top_edge = FaceEdge::from(top.face, top.edge.decrement());
+        let bottom_edge = FaceEdge::from(bottom.face, bottom.edge.decrement());
+        self.set_adjacent(top_edge, bottom_edge);
+
+        {
+            let doc = self.trace_document();
+            doc.trace_layer(Some("tri")).trace_graph(None);
+            let layer = doc.trace_layer(Some("chain"));
+
+            let color = EdgeColoring::default().with_color("white").with_text("white", 0.03);
+            layer.trace_face_edge(bottom_edge, Some(&format!("bottom")), Some(&color));
+            layer.trace_face_edge(top_edge, Some(&format!("top")), Some(&color));
+        }
+        self.trace_pause();
+        self.flip(top_edge.face, top_edge.edge);
+        top_edge
     }
 }
 

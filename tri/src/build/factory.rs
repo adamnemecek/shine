@@ -1,6 +1,6 @@
 use geometry::Position;
 use graph::{Constraint, Face, Triangulation, Vertex};
-use types::{FaceEdge, FaceIndex, FaceNeighbor, Rot3, VertexIndex};
+use types::{FaceEdge, FaceIndex, Rot3, VertexIndex};
 
 pub trait Factory {
     type Position: Position;
@@ -24,12 +24,12 @@ pub trait Factory {
     /// might get in an incosisten state.
     fn copy_constraint_partial(&mut self, f_from: FaceIndex, i_from: Rot3, f_to: FaceIndex, i_to: Rot3);
 
-    /// Set adjacent face information for two neighboring faces.
-    fn set_adjacent<A: Into<FaceNeighbor>, B: Into<FaceNeighbor>>(&mut self, a: A, b: B);
+    /// Set adjacent face information for two neighboring faces along the given edges
+    fn set_adjacent<A: Into<FaceEdge>, B: Into<FaceEdge>>(&mut self, a: A, b: B);
 
-    /// Move adjacent face information from one face into another. The new adjacent face pairs are updated but the
+    /// Move adjacent face information from one face into another along the given edges. The new adjacent face pairs are updated but the
     /// old (source) face is not modified.
-    fn move_adjacent<T: Into<FaceNeighbor>, S: Into<FaceNeighbor>>(&mut self, target: T, source: S);
+    fn move_adjacent<T: Into<FaceEdge>, S: Into<FaceEdge>>(&mut self, target: T, source: S);
 }
 
 impl<P, V, F, C> Factory for Triangulation<P, V, F, C>
@@ -92,18 +92,18 @@ where
         self[f_to].set_constraint(i_to, c);
     }
 
-    fn set_adjacent<A: Into<FaceNeighbor>, B: Into<FaceNeighbor>>(&mut self, a: A, b: B) {
-        let FaceNeighbor { face: f0, neighbor: i0 } = a.into();
-        let FaceNeighbor { face: f1, neighbor: i1 } = b.into();
+    fn set_adjacent<A: Into<FaceEdge>, B: Into<FaceEdge>>(&mut self, a: A, b: B) {
+        let FaceEdge { face: f0, edge: i0 } = a.into();
+        let FaceEdge { face: f1, edge: i1 } = b.into();
         assert!(i0.is_valid() && i1.is_valid());
         assert!(i0.id() <= self.dimension() as u8 && i1.id() <= self.dimension() as u8);
         self[f0].set_neighbor(i0, f1);
         self[f1].set_neighbor(i1, f0);
     }
 
-    fn move_adjacent<T: Into<FaceNeighbor>, S: Into<FaceNeighbor>>(&mut self, target: T, source: S) {
-        let FaceNeighbor { face, neighbor } = source.into();
-        let n = self[face].neighbor(neighbor);
+    fn move_adjacent<T: Into<FaceEdge>, S: Into<FaceEdge>>(&mut self, target: T, source: S) {
+        let FaceEdge { face, edge } = source.into();
+        let n = self[face].neighbor(edge);
         let i = self[n].get_neighbor_index(face).unwrap();
         self.set_adjacent(target, (n, i));
     }

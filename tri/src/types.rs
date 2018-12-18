@@ -123,25 +123,6 @@ impl From<(FaceIndex, Rot3)> for FaceEdge {
     }
 }
 
-/// Selection of a face as a neighbor of another face
-#[derive(Clone, Copy, Debug)]
-pub struct FaceNeighbor {
-    pub face: FaceIndex,
-    pub neighbor: Rot3,
-}
-
-impl FaceNeighbor {
-    pub fn from(face: FaceIndex, neighbor: Rot3) -> Self {
-        FaceNeighbor { face, neighbor }
-    }
-}
-
-impl From<(FaceIndex, Rot3)> for FaceNeighbor {
-    fn from((face, neighbor): (FaceIndex, Rot3)) -> Self {
-        FaceNeighbor { face, neighbor }
-    }
-}
-
 /// Implement Step required for Range<...>
 macro_rules! step_impl {
     ($t:ident) => {
