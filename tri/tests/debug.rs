@@ -46,10 +46,10 @@ fn quick_debug() {
     let _10 = tri.add_vertex(map(0.5, 0.8), None);
     let v11 = tri.add_vertex(map(0.8, 1.0), None);
     let v12 = tri.add_vertex(map(3.0, 1.0), None);
-    tri.scoped_trace();
+    tri.trace();
 
     tri.add_constraint_edge(v5, v7, SimpleConstraint(1));
-    tri.scoped_trace();
+    tri.trace();
     webctrl.wait_user();
 
     /*tri.add_constraint_edge(v8, v5, SimpleConstraint(2));
@@ -78,7 +78,7 @@ fn quick_debug() {
 
     tri.add_constraint_edge(p0, p1, SimpleConstraint(1));*/
 
-    tri.scoped_trace();
+    tri.trace();
     webctrl.wait_user();
 
     assert_eq!(tri.dimension(), 2);

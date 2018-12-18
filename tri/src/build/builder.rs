@@ -1,5 +1,5 @@
 use build::{Factory, Updater};
-use check::Trace;
+use check::{EdgeColoring, Trace};
 use geometry::{CollinearTest, Orientation, Position, Predicates};
 use graph::{BuilderContext, Constraint, Face, PredicatesContext, TagContext, Triangulation, Vertex};
 use query::{GeometryQuery, TopologyQuery, VertexClue};
@@ -207,8 +207,13 @@ where
         while chain.len() > 1 {
             {
                 let doc = self.trace_document();
-                doc.trace_layer(Some("tri")).trace();
-                doc.trace_layer(Some("chain")).trace_face_edges(chain.iter());
+                doc.trace_layer(Some("tri")).trace_graph(None);
+                let layer = doc.trace_layer(Some("chain"));
+
+                let color = EdgeColoring::default().with_color("red").with_text("red", 0.03);
+                layer.trace_face_edges(chain.iter(), Some(&color));
+                let color = EdgeColoring::default().with_color("white").with_text("white", 0.03);
+                layer.trace_face_edge(chain[cur], Some(&format!("{}", cur)), Some(&color));
             }
             self.trace_pause();
 

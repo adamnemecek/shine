@@ -5,13 +5,15 @@
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
+            "preLaunchTask": "build test",
             //"program": "${workspaceRoot}/target/debug/${workspaceRootFolderName}",
-            "program": "${workspaceRoot}/target/debug/deps/bitset-c3dc8ee09697867d.exe",
+            "program": "${workspaceRoot}/target/debug/deps/debug-694056cc46709778.exe",
             "args": [
-                "--nocapture"
+                "--nocapture",
+                "--ignored",
             ],
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
+            "cwd": "${workspaceRoot}/testutils",
             "externalConsole": true
         }
     ]

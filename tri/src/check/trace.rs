@@ -1,4 +1,4 @@
-use check::{Coloring, TraceMapping, TracePosition};
+use check::{Coloring, EdgeColoring, TraceMapping, TracePosition, VertexColoring};
 use geometry::{InexactPredicates, Posf64};
 use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
 use graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
@@ -86,11 +86,11 @@ where
 pub trait Trace {
     fn trace_map_vertex(&self, v: VertexIndex, vcw: VertexIndex, vccw: VertexIndex) -> TracePosition;
 
-    fn trace_vertex(&self, v: VertexIndex, msg: Option<&str>);
-    fn trace_edge(&self, a: VertexIndex, b: VertexIndex, msg: Option<&str>);
-    fn trace_face(&self, f: FaceIndex, msg: Option<&str>);
-    fn trace_face_edge<E: Into<FaceEdge>>(&self, edge: E, msg: Option<&str>);
-    fn trace(&self);
+    fn trace_vertex(&self, v: VertexIndex, msg: Option<&str>, color: Option<&VertexColoring>);
+    fn trace_edge(&self, a: VertexIndex, b: VertexIndex, msg: Option<&str>, color: Option<&EdgeColoring>);
+    fn trace_face_edge<E: Into<FaceEdge>>(&self, edge: E, msg: Option<&str>, color: Option<&EdgeColoring>);
+    fn trace_face(&self, f: FaceIndex, msg: Option<&str>, color: Option<&Coloring>);
+    fn trace_graph(&self, color: Option<&Coloring>);
 
     fn trace_begin(&self);
     fn trace_end(&self);
@@ -114,18 +114,18 @@ pub trait Trace {
         TraceLayer { trace: self }
     }
 
-    fn trace_face_edges<'a, I>(&self, iter: I)
+    fn trace_face_edges<'a, I>(&self, iter: I, color: Option<&EdgeColoring>)
     where
         I: 'a + Iterator<Item = &'a FaceEdge>,
     {
         for edge in iter {
-            self.trace_face_edge(edge.clone(), None);
+            self.trace_face_edge(edge.clone(), None, color);
         }
     }
 
-    fn scoped_trace(&self) {
+    fn trace(&self) {
         self.trace_begin();
-        self.trace();
+        self.trace_graph(None);
         self.trace_end();
     }
 }
@@ -145,11 +145,11 @@ where
         }
     }
 
-    default fn trace_vertex(&self, _v: VertexIndex, _msg: Option<&str>) {}
-    default fn trace_edge(&self, _a: VertexIndex, _b: VertexIndex, _msg: Option<&str>) {}
-    default fn trace_face(&self, _f: FaceIndex, _msg: Option<&str>) {}
-    default fn trace_face_edge<E: Into<FaceEdge>>(&self, _edge: E, _msg: Option<&str>) {}
-    default fn trace(&self) {}
+    default fn trace_vertex(&self, _v: VertexIndex, _msg: Option<&str>, _color: Option<&VertexColoring>) {}
+    default fn trace_edge(&self, _a: VertexIndex, _b: VertexIndex, _msg: Option<&str>, _color: Option<&EdgeColoring>) {}
+    default fn trace_face_edge<E: Into<FaceEdge>>(&self, _edge: E, _msg: Option<&str>, _color: Option<&EdgeColoring>) {}
+    default fn trace_face(&self, _f: FaceIndex, _msg: Option<&str>, _color: Option<&Coloring>) {}
+    default fn trace_graph(&self, _color: Option<&Coloring>) {}
 
     default fn trace_begin(&self) {}
     default fn trace_end(&self) {}
@@ -225,7 +225,7 @@ where
         TracePosition::Invisible
     }
 
-    fn trace_vertex(&self, v: VertexIndex, msg: Option<&str>)
+    fn trace_vertex(&self, v: VertexIndex, msg: Option<&str>, color: Option<&VertexColoring>)
     where
         P: Position,
         V: Vertex<Position = P>,
@@ -241,28 +241,28 @@ where
         let control = self.context.trace_control();
         let control = control.borrow();
         let mapping = control.mapping();
-        let coloring = control.coloring();
+        let coloring = color.unwrap_or(&control.coloring().vertex);
 
         let msg = msg.map(|m| format!("V: {}", m)).unwrap_or_else(|| format!("V: {}", v.id()));
 
         if self.is_finite_vertex(v) {
             let p = Posf64::from(self.p(v));
-            render.add_point(&(p.x, p.y), coloring.vertex.clone());
-            render.add_text(&(p.x, p.y), msg, coloring.vertex_text.0.clone(), coloring.vertex_text.1);
+            render.add_point(&(p.x, p.y), coloring.color.clone());
+            render.add_text(&(p.x, p.y), msg, coloring.text.0.clone(), coloring.text.1);
         } else {
             for p in mapping.virtual_positions.iter() {
-                render.add_point(&(p.x, p.y), coloring.infinite_vertex.clone());
+                render.add_point(&(p.x, p.y), coloring.infinite.clone());
                 render.add_text(
                     &(p.x, p.y),
                     msg.clone(),
-                    coloring.infinite_vertex_text.0.clone(),
-                    coloring.infinite_vertex_text.1,
+                    coloring.infinite_text.0.clone(),
+                    coloring.infinite_text.1,
                 );
             }
         }
     }
 
-    fn trace_edge(&self, a: VertexIndex, b: VertexIndex, msg: Option<&str>)
+    fn trace_edge(&self, a: VertexIndex, b: VertexIndex, msg: Option<&str>, color: Option<&EdgeColoring>)
     where
         P: Position,
         V: Vertex<Position = P>,
@@ -277,30 +277,34 @@ where
 
         let control = self.context.trace_control();
         let control = control.borrow();
-        let coloring = control.coloring();
+        let coloring = color.unwrap_or(&control.coloring().edge);
 
         let msg = msg
             .map(|m| format!("E: {}", m))
-            .unwrap_or_else(|| format!("E: ({},{})", a.id(), b.id()));
+            .unwrap_or_else(|| format!("E: ({}-{})", a.id(), b.id()));
 
         let pa = Posf64::from(self.p(a));
         let pb = Posf64::from(self.p(b));
-        render.add_line(&(pa.x, pa.y), &(pb.x, pb.y), coloring.edge.clone());
+        render.add_line(&(pa.x, pa.y), &(pb.x, pb.y), coloring.color.clone());
         let x = (pa.x + pb.x) * 0.5;
         let y = (pa.y + pb.y) * 0.5;
-        render.add_text(&(x, y), msg, coloring.edge_text.0.clone(), coloring.edge_text.1);
+        render.add_text(&(x, y), msg, coloring.text.0.clone(), coloring.text.1);
     }
 
-    fn trace_face_edge<E: Into<FaceEdge>>(&self, edge: E, msg: Option<&str>) {
+    fn trace_face_edge<E: Into<FaceEdge>>(&self, edge: E, msg: Option<&str>, color: Option<&EdgeColoring>) {
         let edge: FaceEdge = edge.into();
+        let msg = msg
+            .map(|m| m.to_string())
+            .unwrap_or_else(|| format!("({}.{})", edge.face.id(), edge.edge.id()));
         self.trace_edge(
             self.vi(VertexClue::start_of(edge.into())),
             self.vi(VertexClue::end_of(edge.into())),
-            msg,
+            Some(&msg),
+            color,
         );
     }
 
-    fn trace_face(&self, f: FaceIndex, msg: Option<&str>) {
+    fn trace_face(&self, f: FaceIndex, msg: Option<&str>, color: Option<&Coloring>) {
         if !f.is_valid() {
             return;
         }
@@ -317,15 +321,15 @@ where
 
         let control = self.context.trace_control();
         let control = control.borrow();
-        let coloring = control.coloring();
+        let coloring = color.unwrap_or(&control.coloring());
 
         for edge in 0..3 {
             // vertex
             if positions[edge].is_visible() {
                 let text_style = if positions[edge].is_virtual() {
-                    &coloring.vertex_text
+                    &coloring.vertex.text
                 } else {
-                    &coloring.infinite_vertex_text
+                    &coloring.vertex.infinite_text
                 };
                 let p = positions[edge].position();
                 render.add_text(
@@ -348,9 +352,9 @@ where
             let constraint = self[f].constraint(rot3(edge as u8));
             let (color, text_style) = match (is_virtual, constraint.is_constraint()) {
                 (true, true) => (coloring.error.clone(), &coloring.error_text),
-                (true, false) => (coloring.infinite_edge.clone(), &coloring.infinite_edge_text),
-                (false, true) => (coloring.constraint_edge.clone(), &coloring.constraint_edge_text),
-                (false, false) => (coloring.edge.clone(), &coloring.edge_text),
+                (true, false) => (coloring.edge.infinite.clone(), &coloring.edge.infinite_text),
+                (false, true) => (coloring.edge.constraint.clone(), &coloring.edge.constraint_text),
+                (false, false) => (coloring.edge.color.clone(), &coloring.edge.text),
             };
 
             let n = self[f].neighbor(rot3(edge as u8));
@@ -382,20 +386,20 @@ where
 
         if cnt > 0. {
             let text_style = if self.is_finite_face(f) {
-                &coloring.face_text
+                &coloring.face.text
             } else {
-                &coloring.infinite_face_text
+                &coloring.face.infinite_text
             };
             render.add_text(&(center.x / cnt, center.y / cnt), msg, text_style.0.clone(), text_style.1);
         }
     }
 
-    fn trace(&self) {
+    fn trace_graph(&self, color: Option<&Coloring>) {
         for v in self.vertex_index_iter() {
-            self.trace_vertex(v, None);
+            self.trace_vertex(v, None, color.map(|v| &v.vertex));
         }
         for f in self.face_index_iter() {
-            self.trace_face(f, None);
+            self.trace_face(f, None, color);
             //trace_circum_circle( f, None );
         }
     }

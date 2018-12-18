@@ -12,11 +12,12 @@
                 "echo": true,
                 "reveal": "always",
                 "focus": false,
-                "panel": "new"
+                "clear": true,
             },
             "problemMatcher": [
                 "$rustc"
-            ]
+            ],
+            "group": "build"
         },
         {
             "type": "shell",
@@ -29,53 +30,70 @@
                 "echo": true,
                 "reveal": "always",
                 "focus": false,
-                "panel": "new"
+                "clear": true,
             },
             "problemMatcher": [
                 "$rustc"
-            ]
+            ],
+            "group": "build"
         },
         {
             "type": "shell",
-            "label": "run current test",
-            "command": "cargo",
-            "args": [
-                "test",
-                "-p",
-                "shine-tri",
-                "--test",
-                "debug",
-                "--",
-                "--nocapture",
-                "--ignored"
-            ],
+            "label": "build test",
+            "command": "cargo build -p shine-${input:findSubProject} --test \"${fileBasenameNoExtension}\"",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
                 "focus": false,
-                "panel": "new"
+                "clear": true,
             },
             "problemMatcher": [
                 "$rustc"
-            ]
+            ],
+            "group": "build"
         },
         {
             "type": "shell",
-            "label": "clippy current",
-            "command": "cargo",
-            "args": [
-                "clippy",
-                "-p",
-                "shine-tri",
-            ],
+            "label": "run test",
+            "command": "cargo test -p shine-${input:findSubProject} --test \"${fileBasenameNoExtension}\"",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
                 "focus": false,
-                "panel": "new"
+                "clear": true,
             },
             "problemMatcher": [
                 "$rustc"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "run all tests",
+            "command": "cargo test -p shine-${input:findSubProject} -- --test-threads=1",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "clear": true,
+            },
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": "build"
+        },
+    ],
+    "inputs": [
+        {
+            "id": "findSubProject",
+            "description": "The subproject",
+            "type": "pickString",
+            "default": "tri",
+            "options": [
+                "tri",
+                "ecs",
+                "graph",
+                "store"
             ]
         },
     ]
