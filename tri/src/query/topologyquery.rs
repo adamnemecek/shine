@@ -79,14 +79,16 @@ where
     fn find_edge_by_vertex(&self, a: VertexIndex, b: VertexIndex) -> Option<FaceEdge> {
         let mut iter = EdgeCirculator::new(self, a);
         let start = iter.next_ccw();
+        //println!("start: {:?}", start);
         loop {
             let edge = iter.next_ccw();
-            if edge == start {
-                break None;
-            }
-
-            if self.vi(VertexClue::end_of(edge)) == b {
+            let end_vertex = self.vi(VertexClue::end_of(edge));
+            //println!("edge: {:?}", start);
+            //println!("end_vertex: {:?}", end_vertex);
+            if end_vertex == b {
                 break Some(edge);
+            } else if edge == start {
+                break None;
             }
         }
     }

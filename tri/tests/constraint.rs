@@ -11,7 +11,7 @@ use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
 use shine_tri::traverse::CrossingIterator;
-use shine_tri::{Face, Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, TopologyQuery, Triangulation};
+use shine_tri::{Builder, BuilderContext, Face, FullChecker, PredicatesContext, TagContext, TopologyQuery, Triangulation};
 use std::fmt::Debug;
 
 #[test]
@@ -312,7 +312,9 @@ fn t4_constraint_concave() {
 
             tri.add_constraint_edge(p0, p1, SimpleConstraint(1));
             assert_eq!(tri.check(None), Ok(()));
-            let edge = tri.find_edge_by_vertex(p0, p1).expect(&format!("Missing edge between {:?} and {:?}", p0, p1));
+            let edge = tri
+                .find_edge_by_vertex(p0, p1)
+                .expect(&format!("Missing edge between {:?} and {:?}", p0, p1));
             assert_eq!(tri.c(edge), SimpleConstraint(1));
 
             trace!("clear");
@@ -329,7 +331,6 @@ fn t4_constraint_concave() {
 }
 
 #[test]
-#[ignore]
 fn t5_constraint() {
     init_test(module_path!());
 
@@ -343,11 +344,36 @@ fn t5_constraint() {
         info!("{}", desc);
 
         let cases = vec![
-            (vec![(0.,0.), (0., 1.), (1.,0.)], 
-                vec![(0,1), (0,2), (1,2)]),
-            (vec![(0.,0.), (0., 1.), (1.,0.), (1.,1.)], 
-                vec![(0,1), (0,2), (1,2)])
-        ];        
+            (
+                vec![(0., 0.), (0., 1.), (1., 0.)],
+                vec![
+                    vec![(0, 1), (0, 2), (1, 2)],
+                    vec![(0, 2), (0, 1), (1, 2)],
+                    vec![(1, 2), (0, 1), (0, 2)],
+                ],
+            ),
+            (
+                vec![(-1., 0.), (1., 0.), (0., 3.), (0., 2.), (-2., 1.), (2., 1.)],
+                vec![vec![(4, 5)], vec![(5, 4)]],
+            ),
+            /*(
+                vec![
+                    (2., 1.),
+                    (4., 1.),
+                    (1., 2.),
+                    (1., 0.),
+                    (0., 1.),
+                    (5., 2.),
+                    (5., 0.),
+                    (6., 1.),
+                    (0.5, 1.2),
+                    (0.5, 0.8),
+                    (0.8, 1.),
+                    (3., 1.),
+                ],
+                vec![vec![(5, 7)]],
+            ),*/
+        ];
 
         let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
             ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
@@ -360,30 +386,36 @@ fn t5_constraint() {
             ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
         ];
 
-        for (id,case) in cases.iter().enumerate() {
-            for (info, map) in transforms.iter() {
-                debug!("{} {}. transformation: {}", desc, id, info);
+        for (id_points, (points, edges)) in cases.iter().enumerate() {
+            for (id_edges, edges) in edges.iter().enumerate() {
+                for (info, map) in transforms.iter() {
+                    debug!("{} {}/{}- transformation: {}", desc, id_points, id_edges, info);
 
-                let mut vertices = Vec::new();
-                for v in case.0.iter() {
-                    vertices.push(tri.add_vertex(map(v.0, v.1), None));
-                }                
-                assert_eq!(tri.check(None), Ok(()));
+                    let mut vertices = Vec::new();
+                    for v in points.iter() {
+                        vertices.push(tri.add_vertex(map(v.0, v.1), None));
+                    }
+                    assert_eq!(tri.check(None), Ok(()));
 
-                for e in case.1.iter() {
-                    tri.add_constraint_edge(vertices[e.0], vertices[e.1], SimpleConstraint(1));
-                }                
-                assert_eq!(tri.check(None), Ok(()));
+                    for e in edges.iter() {
+                        tri.add_constraint_edge(vertices[e.0], vertices[e.1], SimpleConstraint(1));
+                    }
+                    println!("{:?}", tri);
+                    println!("{:?}", vertices);
+                    assert_eq!(tri.check(None), Ok(()));
 
-                for e in case.1.iter() {
-                    let edge = tri.find_edge_by_vertex(vertices[e.0], vertices[e.1]).expect(&format!("Missing edge between {:?} and {:?}", vertices[e.0], vertices[e.1]));
-                    assert_eq!(tri.c(edge), SimpleConstraint(1));
+                    for e in edges.iter() {
+                        let edge = tri
+                            .find_edge_by_vertex(vertices[e.0], vertices[e.1])
+                            .expect(&format!("Missing edge between {:?} and {:?}", vertices[e.0], vertices[e.1]));
+                        assert_eq!(tri.c(edge), SimpleConstraint(1));
+                    }
+
+                    trace!("clear");
+                    tri.clear();
+                    assert!(tri.is_empty());
+                    assert_eq!(tri.check(None), Ok(()));
                 }
-
-                trace!("clear");
-                tri.clear();
-                assert!(tri.is_empty());
-                assert_eq!(tri.check(None), Ok(()));
             }
         }
     }
