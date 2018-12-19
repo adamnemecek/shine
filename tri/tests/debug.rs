@@ -39,6 +39,7 @@ fn quick_debug() {
         (3., 1.),
     ];
     let edges = vec![(4, 7)];
+
     let map = |x: f32, y: f32| Posf32::from(Sample(x, y));
 
     let mut vertices = Vec::new();
@@ -52,10 +53,8 @@ fn quick_debug() {
     for e in edges.iter() {
         tri.add_constraint_edge(vertices[e.0], vertices[e.1], SimpleConstraint(1));
         tri.trace();
-        webctrl.wait_user();
+        assert_eq!(tri.check(None), Ok(()));
     }
-    tri.trace();
-    assert_eq!(tri.check(None), Ok(()));
 
     for e in edges.iter() {
         let edge = tri

@@ -347,16 +347,47 @@ fn t5_constraint() {
             (
                 vec![(0., 0.), (0., 1.), (1., 0.)],
                 vec![
-                    vec![(0, 1), (0, 2), (1, 2)],
-                    vec![(0, 2), (0, 1), (1, 2)],
-                    vec![(1, 2), (0, 1), (0, 2)],
+                    (vec![(0, 1), (0, 2), (1, 2)], None),
+                    (vec![(0, 2), (0, 1), (1, 2)], None),
+                    (vec![(1, 2), (0, 1), (0, 2)], None),
                 ],
             ),
             (
                 vec![(-1., 0.), (1., 0.), (0., 3.), (0., 2.), (-2., 1.), (2., 1.)],
-                vec![vec![(4, 5)], vec![(5, 4)]],
+                vec![(vec![(4, 5)], None), (vec![(5, 4)], None)],
             ),
-            /*(
+            (
+                vec![
+                    (-10., 1.5),
+                    (-9., 2.5),
+                    (-8., 3.7),
+                    (-7., 2.),
+                    (-6., 4.),
+                    (-5., 7.),
+                    (-4., 6.),
+                    (-3., 8.),
+                    (0., 3.),
+                    (1., 5.),
+                    (2., 1.),
+                    (3., 9.),
+                    (4., 4.),
+                    (5., 6.),
+                    (6., 2.),
+                    (7., 8.),
+                    (8., 9.),
+                    (9., 5.),
+                    (10., 7.),
+                ],
+                vec![(vec![(3, 14), (12, 4), (6, 13), (18, 5), (15, 7), (9, 17), (11, 16)], None)],
+            ),
+            (
+                vec![(1.0, 2.0), (2.0, 1.0), (1.1, 1.), (3.2, 5.), (23., 3.), (3., 10.)],
+                vec![(
+                    vec![(1, 2), (2, 0), (0, 1), (1, 4), (3, 4), (5, 0), (4, 5), (5, 1), (3, 5)],
+                    None,
+                )],
+            ),
+            (
                 vec![
                     (2., 1.),
                     (4., 1.),
@@ -371,8 +402,8 @@ fn t5_constraint() {
                     (0.8, 1.),
                     (3., 1.),
                 ],
-                vec![vec![(5, 7)]],
-            ),*/
+                vec![(vec![(5, 7)], Some(vec![(1, 2)]))],
+            ),
         ];
 
         let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
@@ -387,7 +418,7 @@ fn t5_constraint() {
         ];
 
         for (id_points, (points, edges)) in cases.iter().enumerate() {
-            for (id_edges, edges) in edges.iter().enumerate() {
+            for (id_edges, (edges, edges_check)) in edges.iter().enumerate() {
                 for (info, map) in transforms.iter() {
                     debug!("{} {}/{}- transformation: {}", desc, id_points, id_edges, info);
 
@@ -404,7 +435,8 @@ fn t5_constraint() {
                     println!("{:?}", vertices);
                     assert_eq!(tri.check(None), Ok(()));
 
-                    for e in edges.iter() {
+                    let edges_check = edges_check.as_ref().unwrap_or(&edges);
+                    for e in edges_check.iter() {
                         let edge = tri
                             .find_edge_by_vertex(vertices[e.0], vertices[e.1])
                             .expect(&format!("Missing edge between {:?} and {:?}", vertices[e.0], vertices[e.1]));
