@@ -3,8 +3,8 @@
   script:
     - cargo test --verbose --jobs 1 -p shine-store -- --test-threads=1
     - cargo test --verbose --jobs 1 -p shine-graph
+    - cargo test --verbose --jobs 1 -p shine-math
     - cargo test --verbose --jobs 1 -p shine-ecs
-    - cargo test --verbose --jobs 1 -p shine-tri
 
 nightly:cargo:
   image: rustdocker/rust:nightly

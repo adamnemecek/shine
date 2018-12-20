@@ -103,9 +103,9 @@
             "id": "findSubProject",
             "description": "The subproject",
             "type": "pickString",
-            "default": "tri",
+            "default": "math",
             "options": [
-                "tri",
+                "math",
                 "ecs",
                 "graph",
                 "store"
