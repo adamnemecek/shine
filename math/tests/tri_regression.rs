@@ -13,6 +13,8 @@ use shine_testutils::init_test;
 
 #[test]
 fn issue39_1() {
+    init_test(module_path!());
+
     let mut tri = SimpleContext::<Posf32>::new()
         .with_inexact_predicates()
         .with_tag()

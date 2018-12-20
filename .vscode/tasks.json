@@ -103,12 +103,13 @@
             "id": "findSubProject",
             "description": "The subproject",
             "type": "pickString",
-            "default": "math",
+            "default": "render",
             "options": [
                 "math",
                 "ecs",
                 "graph",
                 "store"
+                "render"
             ]
         },
     ]

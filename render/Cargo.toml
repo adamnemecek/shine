@@ -1,0 +1,27 @@
+[package]
+name = "shine-render"
+version = "0.1.0"
+authors = ["gzp <z.p.gaal.devel@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "SHINE. Render module for the shine engine."
+repository = "https://github.com/zpgaal/shine"
+keywords = ["shine", "render"]
+
+[features]
+default = ["dx12"]
+metal = ["gfx-backend-metal"]
+dx12 = ["gfx-backend-dx12"]
+vulkan = ["gfx-backend-vulkan"]
+
+[dependencies]
+log = "*"
+winit = "*"
+gfx-hal = {git = "https://github.com/gfx-rs/gfx"}
+gfx-backend-vulkan = {git = "https://github.com/gfx-rs/gfx", optional = true}
+gfx-backend-metal = {git = "https://github.com/gfx-rs/gfx", optional = true}
+gfx-backend-dx12 = {git = "https://github.com/gfx-rs/gfx", optional = true}
+glsl-to-spirv = "*"
+
+[dev-dependencies]
+env_logger = "*"
+shine-testutils = {path = "../testutils"}
