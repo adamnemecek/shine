@@ -1,5 +1,4 @@
 use build::{Factory, Updater};
-use check::{EdgeColoring, Trace};
 use geometry::{CollinearTest, Orientation, Position, Predicates};
 use graph::{BuilderContext, Constraint, Face, PredicatesContext, TagContext, Triangulation, Vertex};
 use query::{GeometryQuery, TopologyQuery, VertexClue};
@@ -201,18 +200,6 @@ where
         assert!(chain.len() >= 2);
         let mut cur = 0;
         while chain.len() > 2 {
-            /* {
-                let doc = self.trace_document();
-                doc.trace_layer(Some("tri")).trace_graph(None);
-                let layer = doc.trace_layer(Some("chain"));
-
-                let color = EdgeColoring::default().with_color("red").with_text("red", 0.03);
-                layer.trace_face_edges(chain.iter(), Some(&color));
-                let color = EdgeColoring::default().with_color("white").with_text("white", 0.03);
-                layer.trace_face_edge(chain[cur], Some(&format!("{}", cur)), Some(&color));
-            }
-            self.trace_pause();*/
-
             let next = cur + 1;
             let cur_edge = chain[cur];
             let next_edge = chain[next];
@@ -286,33 +273,11 @@ where
     /// On completion it returns the edge that separates the upper and lower half of the polygon.
     fn triangulate_hole(&mut self, top: &mut Vec<FaceEdge>, bottom: &mut Vec<FaceEdge>) -> FaceEdge {
         assert!(top.len() >= 2 && bottom.len() >= 2);
-        let bottom = self.triangulate_half_hole(bottom);
         let top = self.triangulate_half_hole(top);
-
-        {
-            let doc = self.trace_document();
-            doc.trace_layer(Some("tri")).trace_graph(None);
-            let layer = doc.trace_layer(Some("chain"));
-
-            let color = EdgeColoring::default().with_color("white").with_text("white", 0.03);
-            layer.trace_face_edge(bottom, None, Some(&color));
-            layer.trace_face_edge(top, None, Some(&color));
-        }
-
+        let bottom = self.triangulate_half_hole(bottom);
         let top = FaceEdge::from(top.face, top.edge.decrement());
         let bottom = FaceEdge::from(bottom.face, bottom.edge.decrement());
         self.set_adjacent(top, bottom);
-
-        {
-            let doc = self.trace_document();
-            doc.trace_layer(Some("tri")).trace_graph(None);
-            let layer = doc.trace_layer(Some("chain"));
-
-            let color = EdgeColoring::default().with_color("white").with_text("white", 0.03);
-            layer.trace_face_edge(bottom, Some("bottom"), Some(&color));
-            layer.trace_face_edge(top, Some("top"), Some(&color));
-        }
-        self.trace_pause();
         self.flip(top.face, top.edge);
         FaceEdge::from(top.face, top.edge.increment())
     }

@@ -6,7 +6,7 @@ extern crate shine_tri;
 
 mod common;
 
-use common::{Sample, SimpleContext, SimpleFace, SimpleVertex};
+use common::simple_prelude::*;
 use log::{debug, info, trace};
 use shine_testutils::init_test;
 use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64};

@@ -7,7 +7,7 @@
             "request": "launch",
             "preLaunchTask": "build test",
             //"program": "${workspaceRoot}/target/debug/${workspaceRootFolderName}",
-            "program": "${workspaceRoot}/target/debug/deps/debug-694056cc46709778.exe",
+            "program": "${workspaceRoot}/target/debug/deps/debug-e44fa3b3710b0301.exe",
             "args": [
                 "--nocapture",
                 "--ignored",

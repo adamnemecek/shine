@@ -6,12 +6,12 @@ extern crate shine_tri;
 
 mod common;
 
-use common::{Sample, SimpleConstraint, SimpleContext, SimpleFace, SimpleVertex, D2TriTrace};
+use common::simple_prelude::*;
 use log::{debug, info, trace};
-use shine_testutils::{init_test, init_webcontroll_test};
+use shine_testutils::init_test;
 use shine_tri::geometry::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
 use shine_tri::traverse::CrossingIterator;
-use shine_tri::{Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, TopologyQuery, Triangulation, Trace};
+use shine_tri::{Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, TopologyQuery, Triangulation};
 use std::fmt::Debug;
 
 #[test]
@@ -163,41 +163,29 @@ fn t2_constraint_no_fill2() {
             tri.add_vertex(map(1., 1.), None);
 
             let c0 = tri.add_constraint_segment(map(1., 0.), map(1., 1.), SimpleConstraint(1));
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
             let c1 = tri.add_constraint_segment(map(0.2, 0.), map(0.5, 0.), SimpleConstraint(2));
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
             let c2 = tri.add_constraint_segment(map(0.3, 0.), map(0.7, 0.), SimpleConstraint(4));
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
             let c3 = tri.add_constraint_segment(map(0., 0.), map(1., 0.), SimpleConstraint(8));
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
             let c4 = tri.add_constraint_segment(map(1., 0.), map(0., 0.), SimpleConstraint(16));
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
             let c5 = tri.add_constraint_segment(map(1., 1.), map(0., 0.), SimpleConstraint(32));
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
             let c6 = tri.add_constraint_segment(map(0.1, 0.1), map(0.9, 0.9), SimpleConstraint(64));
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
             let c7 = tri.add_constraint_segment(map(0.9, 0.9), map(0.1, 0.1), SimpleConstraint(128));
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
             let c8 = tri.add_constraint_segment(map(0.8, 0.8), map(0.2, 0.2), SimpleConstraint(256));
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
 
-            let v0 = tri.add_vertex(map(0.2, 0.5), None);
-            tri.trace();
+            let _v0 = tri.add_vertex(map(0.2, 0.5), None);
             assert_eq!(tri.check(None), Ok(()));
-            let v1 = tri.add_vertex(map(0.5, 0.2), None);
-            tri.trace();
+            let _v1 = tri.add_vertex(map(0.5, 0.2), None);
             assert_eq!(tri.check(None), Ok(()));
             let v2 = tri.add_vertex(map(0.5, 0.5), None);
-            tri.trace();
             assert_eq!(tri.check(None), Ok(()));
 
             assert_eq!(c0.1, c5.0);
@@ -360,7 +348,6 @@ fn t4_constraint_concave() {
 }
 
 #[test]
-#[ignore]
 fn t5_constraint() {
     init_test(module_path!());
 
@@ -374,11 +361,67 @@ fn t5_constraint() {
         info!("{}", desc);
 
         let cases = vec![
-            (vec![(0.,0.), (0., 1.), (1.,0.)], 
-                vec![(0,1), (0,2), (1,2)]),
-            (vec![(0.,0.), (0., 1.), (1.,0.), (1.,1.)], 
-                vec![(0,1), (0,2), (1,2)])
-        ];        
+            (
+                vec![(0., 0.), (0., 1.), (1., 0.)],
+                vec![
+                    (vec![(0, 1), (0, 2), (1, 2)], None),
+                    (vec![(0, 2), (0, 1), (1, 2)], None),
+                    (vec![(1, 2), (0, 1), (0, 2)], None),
+                ],
+            ),
+            (
+                vec![(-1., 0.), (1., 0.), (0., 3.), (0., 2.), (-2., 1.), (2., 1.)],
+                vec![(vec![(4, 5)], None), (vec![(5, 4)], None)],
+            ),
+            (
+                vec![
+                    (-10., 1.5),
+                    (-9., 2.5),
+                    (-8., 3.7),
+                    (-7., 2.),
+                    (-6., 4.),
+                    (-5., 7.),
+                    (-4., 6.),
+                    (-3., 8.),
+                    (0., 3.),
+                    (1., 5.),
+                    (2., 1.),
+                    (3., 9.),
+                    (4., 4.),
+                    (5., 6.),
+                    (6., 2.),
+                    (7., 8.),
+                    (8., 9.),
+                    (9., 5.),
+                    (10., 7.),
+                ],
+                vec![(vec![(3, 14), (12, 4), (6, 13), (18, 5), (15, 7), (9, 17), (11, 16)], None)],
+            ),
+            (
+                vec![(1.0, 2.0), (2.0, 1.0), (1.1, 1.), (3.2, 5.), (23., 3.), (3., 10.)],
+                vec![(
+                    vec![(1, 2), (2, 0), (0, 1), (1, 4), (3, 4), (5, 0), (4, 5), (5, 1), (3, 5)],
+                    None,
+                )],
+            ),
+            (
+                vec![
+                    (2., 1.),
+                    (4., 1.),
+                    (1., 2.),
+                    (1., 0.),
+                    (0., 1.),
+                    (5., 2.),
+                    (5., 0.),
+                    (6., 1.),
+                    (0.5, 1.2),
+                    (0.5, 0.8),
+                    (0.8, 1.),
+                    (3., 1.),
+                ],
+                vec![(vec![(4, 7)], Some(vec![(4, 10), (10, 0), (0,11), (11,1), (1,7)]))],
+            ),
+        ];
 
         let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
             ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
@@ -391,30 +434,35 @@ fn t5_constraint() {
             ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
         ];
 
-        for (id,case) in cases.iter().enumerate() {
-            for (info, map) in transforms.iter() {
-                debug!("{} {}. transformation: {}", desc, id, info);
+        for (id_points, (points, edges)) in cases.iter().enumerate() {
+            for (id_edges, (edges, edges_check)) in edges.iter().enumerate() {
+                for (info, map) in transforms.iter() {
+                    debug!("{} {}/{}- transformation: {}", desc, id_points, id_edges, info);
 
-                let mut vertices = Vec::new();
-                for v in case.0.iter() {
-                    vertices.push(tri.add_vertex(map(v.0, v.1), None));
-                }                
-                assert_eq!(tri.check(None), Ok(()));
+                    let mut vertices = Vec::new();
+                    for v in points.iter() {
+                        vertices.push(tri.add_vertex(map(v.0, v.1), None));
+                    }
+                    assert_eq!(tri.check(None), Ok(()));
 
-                for e in case.1.iter() {
-                    tri.add_constraint_edge(vertices[e.0], vertices[e.1], SimpleConstraint(1));
-                }                
-                assert_eq!(tri.check(None), Ok(()));
+                    for e in edges.iter() {
+                        tri.add_constraint_edge(vertices[e.0], vertices[e.1], SimpleConstraint(1));
+                    }
+                    assert_eq!(tri.check(None), Ok(()));
 
-                for e in case.1.iter() {
-                    let edge = tri.find_edge_by_vertex(vertices[e.0], vertices[e.1]).expect(&format!("Missing edge between {:?} and {:?}", vertices[e.0], vertices[e.1]));
-                    assert_eq!(tri.c(edge), SimpleConstraint(1));
+                    let edges_check = edges_check.as_ref().unwrap_or(&edges);
+                    for e in edges_check.iter() {
+                        let edge = tri
+                            .find_edge_by_vertex(vertices[e.0], vertices[e.1])
+                            .expect(&format!("Missing edge between {:?} and {:?}", vertices[e.0], vertices[e.1]));
+                        assert_eq!(tri.c(edge), SimpleConstraint(1));
+                    }
+
+                    trace!("clear");
+                    tri.clear();
+                    assert!(tri.is_empty());
+                    assert_eq!(tri.check(None), Ok(()));
                 }
-
-                trace!("clear");
-                tri.clear();
-                assert!(tri.is_empty());
-                assert_eq!(tri.check(None), Ok(()));
             }
         }
     }

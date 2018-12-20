@@ -83,7 +83,7 @@ where
         loop {
             if self.vi(VertexClue::end_of(edge)) == b {
                 break Some(edge);
-            }
+            } 
 
             edge = iter.next_ccw();
             if edge == start {
