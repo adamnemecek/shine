@@ -14,7 +14,7 @@ use shine_tri::{Builder, FullChecker};
 use std::panic;
 
 #[test]
-//#[ignore]
+#[ignore]
 fn quick_debug() {
     let webctrl = init_webcontroll_test(module_path!());
 
