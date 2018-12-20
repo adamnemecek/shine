@@ -1,16 +1,16 @@
 #![feature(custom_attribute)]
 
 extern crate log;
-extern crate shine_testutils;
 extern crate shine_math;
+extern crate shine_testutils;
 
 mod common;
 
 use common::simple_prelude::*;
 use common::trace_prelude::*;
-use shine_testutils::init_webcontroll_test;
 use shine_math::geometry::Posf32;
 use shine_math::triangulation::{Builder, FullChecker};
+use shine_testutils::init_webcontroll_test;
 use std::panic;
 
 #[test]
@@ -35,10 +35,10 @@ fn quick_debug() {
     {
         let doc = tri.trace_document();
         doc.trace_graph(None);
-        for (id,&v) in vertices.iter().enumerate() {
-            doc.trace_vertex(v, Some(&format!("{}", id)),None);
+        for (id, &v) in vertices.iter().enumerate() {
+            doc.trace_vertex(v, Some(&format!("{}", id)), None);
         }
-    }    
+    }
     assert_eq!(tri.check(None), Ok(()));
 
     for e in edges.iter() {

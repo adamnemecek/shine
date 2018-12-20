@@ -1,15 +1,15 @@
 #![feature(custom_attribute)]
 
 extern crate log;
-extern crate shine_testutils;
 extern crate shine_math;
+extern crate shine_testutils;
 
 mod common;
 
 use common::SimpleContext;
-use shine_testutils::init_test;
 use shine_math::geometry::Posf32;
 use shine_math::triangulation::{Builder, FullChecker};
+use shine_testutils::init_test;
 
 #[test]
 fn issue39_1() {

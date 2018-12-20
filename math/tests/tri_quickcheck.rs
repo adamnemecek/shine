@@ -2,16 +2,16 @@
 
 extern crate log;
 extern crate quickcheck;
-extern crate shine_testutils;
 extern crate shine_math;
+extern crate shine_testutils;
 
 mod common;
 
 use common::SimpleContext;
 use quickcheck::quickcheck;
-use shine_testutils::init_quickcheck_test;
 use shine_math::geometry::{Posf32, Posi64};
 use shine_math::triangulation::{Builder, FullChecker};
+use shine_testutils::init_quickcheck_test;
 
 #[test]
 fn stress_exact_i64() {

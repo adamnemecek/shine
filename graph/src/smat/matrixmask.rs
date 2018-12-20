@@ -78,11 +78,13 @@ pub trait MatrixMaskExt: MatrixMask {
     /// Find the position of a column index in the given range
     fn find_column_position(&self, column: usize, range: DataRange) -> Option<DataPosition> {
         match self.lower_bound_column_position(column, range) {
-            Some((index, pos)) => if index == column {
-                Some(pos)
-            } else {
-                None
-            },
+            Some((index, pos)) => {
+                if index == column {
+                    Some(pos)
+                } else {
+                    None
+                }
+            }
             None => None,
         }
     }

@@ -1,14 +1,14 @@
 extern crate log;
-extern crate shine_testutils;
 extern crate shine_math;
+extern crate shine_testutils;
 
 mod common;
 
 use common::Sample;
 use log::info;
-use shine_testutils::init_test;
 use shine_math::geometry::{CollinearTest, Orientation, Position, Predicates, Real};
 use shine_math::geometry::{ExactPredicates, InexactPredicates, Posf32, Posf64, Posi32, Posi64};
+use shine_testutils::init_test;
 
 #[test]
 fn orientation_triangle() {

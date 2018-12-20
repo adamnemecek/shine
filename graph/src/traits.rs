@@ -7,7 +7,7 @@ pub trait IndexExcl<I> {
 }
 
 use shine_graph_macro::impl_indexexcl_for_indexexcl_tuple;
-impl_indexexcl_for_indexexcl_tuple!{2,3,4,5,6,7,8,9,10}
+impl_indexexcl_for_indexexcl_tuple! {2,3,4,5,6,7,8,9,10}
 
 /// Used to jump to the next valid index from any (usually invalid) starting point.
 pub trait IndexLowerBound<I>: IndexExcl<I> {
@@ -15,4 +15,4 @@ pub trait IndexLowerBound<I>: IndexExcl<I> {
 }
 
 use shine_graph_macro::impl_indexlowerbound_for_indexlowerbound_tuple;
-impl_indexlowerbound_for_indexlowerbound_tuple!{2,3,4,5,6,7,8,9,10}
+impl_indexlowerbound_for_indexlowerbound_tuple! {2,3,4,5,6,7,8,9,10}

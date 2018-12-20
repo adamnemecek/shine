@@ -1,7 +1,7 @@
 use bits::BitSetViewExt;
 use smat::{
-    DataIter, DataIterMut, DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, RowRead, RowUpdate, RowWrite,
-    Store, WrapRowRead, WrapRowUpdate, WrapRowWrite,
+    DataIter, DataIterMut, DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, RowRead, RowUpdate, RowWrite, Store,
+    WrapRowRead, WrapRowUpdate, WrapRowWrite,
 };
 use svec::VectorMask;
 

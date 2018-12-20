@@ -26,7 +26,7 @@ fn impl_intojoin_for_tuple(count: usize) -> TokenStream {
         .collect();
     let index = &index;
 
-    let type_impl = quote!{
+    let type_impl = quote! {
         /// Implement IntoJoin for tuple of IntoJoin
         /// The Item is a tuple of the Items made of the Items of the underlying IntoJoin
         impl<#(#generics),*> IntoJoin for (#(#generics,)*)
@@ -59,5 +59,5 @@ pub fn impl_intojoin_for_intojoin_tuple(input: proc_macro::TokenStream) -> Resul
         gen.push(tuple_impl);
     }
 
-    Ok(quote!{#(#gen)*})
+    Ok(quote! {#(#gen)*})
 }
