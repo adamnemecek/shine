@@ -16,7 +16,7 @@ use std::env;
 pub fn init_test(module: &str) {
     ::std::env::set_var("RUST_BACKTRACE", "1");
     if ::std::env::var("RUST_LOG").is_err() {
-        ::std::env::set_var("RUST_LOG", format!("debug,{}=debug", module));
+        ::std::env::set_var("RUST_LOG", format!("info,{}=debug", module));
     }
 
     let _ = env_logger::try_init();
