@@ -15,7 +15,7 @@ pub trait Builder {
     fn add_vertex(&mut self, p: Self::Position, hint: Option<FaceIndex>) -> VertexIndex;
 
     /// Add the two (new) vertices and a constraining edge between them.
-    fn add_constraint_segment(&mut self, p0: Self::Position, p1: Self::Position, c: Self::Constraint);
+    fn add_constraint_segment(&mut self, p0: Self::Position, p1: Self::Position, c: Self::Constraint) -> (VertexIndex, VertexIndex);
 
     /// Add a constraining edge between the given vertices.
     fn add_constraint_edge(&mut self, v0: VertexIndex, v1: VertexIndex, c: Self::Constraint);
@@ -333,12 +333,13 @@ where
         self.add_vertex_at(p, location)
     }
 
-    fn add_constraint_segment(&mut self, p0: PR::Position, p1: PR::Position, c: F::Constraint) {
+    fn add_constraint_segment(&mut self, p0: PR::Position, p1: PR::Position, c: F::Constraint) -> (VertexIndex,VertexIndex){
         assert!(c.is_constraint());
         let v0 = self.add_vertex(p0, None);
         let start_face = self[v0].face();
         let v1 = self.add_vertex(p1, Some(start_face));
         self.add_constraint_edge(v0, v1, c);
+        (v0,v1)
     }
 
     fn add_constraint_edge(&mut self, v0: VertexIndex, v1: VertexIndex, c: F::Constraint) {
