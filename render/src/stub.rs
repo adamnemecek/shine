@@ -24,7 +24,7 @@ where
     color_format: Format,
     swapchain: B::Swapchain,
     extent: Extent,
-    render_pass: B::RenderPass,
+    render_pass: Option<B::RenderPass>,
     frameviews: Vec<B::ImageView>,
     framebuffers: Vec<B::Framebuffer>,
 }
@@ -33,7 +33,7 @@ impl<B> RenderTree<B>
 where
     B: gfx_hal::Backend,
 {
-    fn new(physical_device: &B::PhysicalDevice, surface: &mut B::Surface, device: &B::Device) -> RenderTree<B> {
+    fn new(physical_device: &B::PhysicalDevice, surface: &mut B::Surface, device: &B::Device, old_swapchain: Option<B::Swapchain>) -> RenderTree<B> {
         info!("Creating rendertree");
 
         let (caps, formats, _) = surface.compatibility(physical_device);
@@ -54,48 +54,21 @@ where
         let swap_config = SwapchainConfig::from_caps(&caps, color_format, caps.extents.start);
         let extent = swap_config.extent.to_extent();
         debug!("extent: {:?}", extent);
-        let (swapchain, backbuffer) = device.create_swapchain(surface, swap_config, None).unwrap();
+        let (swapchain, backbuffer) = device.create_swapchain(surface, swap_config, old_swapchain).unwrap();
 
-        let render_pass = Self::create_render_pass(device, color_format);
-
-        let (frameviews, framebuffers) = match backbuffer {
-            Backbuffer::Images(images) => {
-                let color_range = SubresourceRange {
-                    aspects: Aspects::COLOR,
-                    levels: 0..1,
-                    layers: 0..1,
-                };
-
-                let image_views = images
-                    .iter()
-                    .map(|image| {
-                        device
-                            .create_image_view(image, ViewKind::D2, color_format, Swizzle::NO, color_range.clone())
-                            .unwrap()
-                    })
-                    .collect::<Vec<_>>();
-
-                let framebuffers = image_views
-                    .iter()
-                    .map(|image_view| device.create_framebuffer(&render_pass, vec![image_view], extent).unwrap())
-                    .collect();
-
-                (image_views, framebuffers)
-            }
-            Backbuffer::Framebuffer(framebuffer) => (Vec::new(), vec![framebuffer]),
-        };
+        let (render_pass, frameviews, framebuffers) = Self::create_render_pass(device, color_format);
 
         RenderTree {
             color_format,
             extent,
             swapchain,
-            render_pass,
-            frameviews: Vec::new(),
-            framebuffers: Vec::new(),
+            Some(render_pass),
+            frameviews,
+            framebuffers,
         }
     }
 
-    fn create_render_pass(device: &B::Device, surface_color_format: Format) -> B::RenderPass {
+    fn create_render_pass(device: &B::Device, surface_color_format: Format) -> (B::RenderPass, Vec<B::ImageView>, Vec<B::Framebuffer>) {
         let color_attachment = Attachment {
             format: Some(surface_color_format),
             samples: 1,
@@ -118,20 +91,49 @@ where
             accesses: Access::empty()..(Access::COLOR_ATTACHMENT_READ | Access::COLOR_ATTACHMENT_WRITE),
         };
 
-        device
+        let pass = device
             .create_render_pass(&[color_attachment], &[subpass], &[dependency])
-            .unwrap()
+            .unwrap();
+
+        let (frameviews, framebuffers) = match backbuffer {
+            Backbuffer::Images(images) => {
+                let color_range = SubresourceRange {
+                    aspects: Aspects::COLOR,
+                    levels: 0..1,
+                    layers: 0..1,
+                };
+
+                let image_views = images
+                    .iter()
+                    .map(|image| {
+                        device
+                            .create_image_view(image, ViewKind::D2, color_format, Swizzle::NO, color_range.clone())
+                            .unwrap()
+                    })
+                    .collect::<Vec<_>>();
+
+                let framebuffers = image_views
+                    .iter()
+                    .map(|image_view| device.create_framebuffer(&pass, vec![image_view], extent).unwrap())
+                    .collect();
+
+                (image_views, framebuffers)
+            }
+            Backbuffer::Framebuffer(framebuffer) => (Vec::new(), vec![framebuffer]),
+        };
+
+        (pass, framebuffers, frameviews)
     }
 
-    fn release(self, device: &B::Device) {
+    fn release(self, device: &B::Device) -> B::Swapchain {
         for framebuffer in self.framebuffers {
             device.destroy_framebuffer(framebuffer);
         }
         for view in self.frameviews {
             device.destroy_image_view(view);
         }
-        device.destroy_swapchain(self.swapchain);
-        device.destroy_render_pass(self.render_pass);
+        device.destroy_render_pass(self.render_pass);        
+        self.swapchain
     }
 
     fn swap(&mut self, semaphore: &B::Semaphore) -> Result<SwapImageIndex, ()> {
@@ -185,23 +187,27 @@ impl<B> Stub<B>
 where
     B: gfx_hal::Backend,
 {
-    fn release_render_tree(&mut self) {
+    fn release_render_tree(&mut self) -> Option<B::Swapchain> {
         self.device.wait_idle().unwrap();
         let pools = self.pools.as_mut().unwrap();
         pools.command_pool.reset();
         if let Some(render_tree) = self.render_tree.take() {
-            render_tree.release(&self.device);
+            Some(render_tree.release(&self.device))
+        } else {
+            None
         }
     }
 
     fn prepare(&mut self) -> Result<(), ()> {
-        if self.rebuild_render_tree {
+        let old_swapchain = if self.rebuild_render_tree {
             self.rebuild_render_tree = false;
-            self.release_render_tree();
-        }
+            self.release_render_tree()
+        } else {
+            None
+        };
 
         if self.render_tree.is_none() {
-            let render_tree = RenderTree::new(&self.adapter.physical_device, &mut self.surface, &self.device);
+            let render_tree = RenderTree::new(&self.adapter.physical_device, &mut self.surface, &self.device, old_swapchain);
             self.render_tree = Some(render_tree);
         }
 
@@ -260,11 +266,14 @@ where
     B: gfx_hal::Backend,
 {
     fn drop(&mut self) {
-        self.release_render_tree();
+        let swap_chain = self.release_render_tree();
         let pools = self.pools.take().unwrap();
         self.device.destroy_command_pool(pools.command_pool.into_raw());
         self.device.destroy_semaphore(pools.frame_semaphore);
         self.device.destroy_semaphore(pools.present_semaphore);
+        if let Some(swap_chain) = swap_chain {
+            self.device.destroy_swapchain(swap_chain);
+        }
     }
 }
 

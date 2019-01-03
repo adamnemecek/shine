@@ -1,13 +1,13 @@
 use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
 use log::info;
+use serde_json;
 use std::collections::HashMap;
 use svg::node::{self, element};
 use svg::{Document, Node};
 use tera;
 use webserver::appcontext::AppContext;
-use serde_json;
 
-pub trait IntoD2Image {
+pub trait IntoD2Data {
     fn trace(&self, tr: &mut D2Trace);
 }
 
@@ -132,7 +132,7 @@ impl D2Trace {
         }
     }
 
-    pub fn document(mut self) -> Document {
+    pub fn to_data(mut self) -> String {
         self.pop_all_layers();
 
         let layer = self.layers.pop().unwrap();
@@ -140,7 +140,7 @@ impl D2Trace {
             Container::Root(mut document) => {
                 //document.assign("width", "640");
                 document.assign("viewbox", "-1 -1 2 2");
-                document
+                document.to_string()
             }
 
             _ => panic!("Poping root layer"),
@@ -211,7 +211,7 @@ impl Default for D2Trace {
     }
 }
 
-pub fn handle_d2image_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+pub fn handle_d2data_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     let state = req.state();
 
     // input is 1 based
@@ -225,31 +225,28 @@ pub fn handle_d2image_request(req: &HttpRequest<AppContext>) -> Result<HttpRespo
     // convert to 0 based
     let id = if id == 0 { usize::max_value() } else { id - 1 };
     let image = {
-        info!("Getting d2image for {}", id);
-        let mut img = state.d2_images.lock().unwrap();
+        info!("Getting d2data for {}", id);
+        let mut img = state.d2datas.lock().unwrap();
         if id >= img.len() {
             "<svg xmlns=\"http://www.w3.org/2000/svg\" layer-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into()
         } else {
             img[id].clone()
-        } 
+        }
     };
 
     Ok(HttpResponse::Ok().content_type("image/svg+xml").body(image))
 }
 
-pub fn handle_d2images_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+pub fn handle_d2datas_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     let state = req.state();
 
-    info!("Getting all d2images");
+    info!("Getting all d2datas");
     let data = {
-        let img = state.d2_images.lock().unwrap();
-        serde_json::to_string(&*img)
+        let img = state.d2datas.lock().unwrap();
+        serde_json::to_string(&*img).unwrap()
     };
 
-    match data {
-        Err(err) => Ok(HttpResponse::InternalServerError().content_type("application/json").body(format!("{{error: {}}}", err))),
-        Ok(data) => Ok(HttpResponse::Ok().content_type("application/json").body(data)),
-    }
+    Ok(HttpResponse::Ok().content_type("application/json").body(data))
 }
 
 pub fn handle_d2view_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
@@ -267,9 +264,13 @@ pub fn handle_d2view_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
     let id = if id == 0 { 0 } else { id - 1 };
     let (image, id, image_count) = {
         info!("Getting d2view for {}", id);
-        let mut img = state.d2_images.lock().unwrap();
+        let mut img = state.d2datas.lock().unwrap();
         if img.is_empty() {
-            ("<svg xmlns=\"http://www.w3.org/2000/svg\" layer-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into(), 0, 1)
+            (
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" layer-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into(),
+                0,
+                1,
+            )
         } else if id < img.len() {
             (img[id].clone(), id, img.len())
         } else {

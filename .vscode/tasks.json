@@ -103,13 +103,13 @@
             "id": "findSubProject",
             "description": "The subproject",
             "type": "pickString",
-            "default": "render",
+            "default": "testutils",
             "options": [
                 "math",
                 "ecs",
                 "graph",
                 "store"
-                "render"
+                "testutils"
             ]
         },
     ]

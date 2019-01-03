@@ -4,11 +4,12 @@ extern crate actix;
 extern crate actix_web;
 extern crate env_logger;
 extern crate futures;
+extern crate gltf_json;
 extern crate log;
-extern crate svg;
-extern crate tera;
 extern crate serde;
 extern crate serde_json;
+extern crate svg;
+extern crate tera;
 
 pub mod webserver;
 
