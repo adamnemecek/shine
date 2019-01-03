@@ -7,7 +7,7 @@ use std::thread;
 use tera::compile_templates;
 use webserver::appcontext::AppContext;
 use webserver::control::{handle_notify_user, Control};
-use webserver::d2trace::{handle_d2_image_request, D2Trace, IntoD2Image};
+use webserver::d2trace::{handle_d2image_request, handle_d2images_request, handle_d2view_request, D2Trace, IntoD2Image};
 
 #[derive(Clone)]
 pub struct Service {
@@ -46,8 +46,10 @@ impl Service {
                         }
                     })
                     .middleware(middleware::Logger::default())
-                    .resource("/d2.html", |r| r.method(http::Method::GET).f(handle_d2_image_request))
-                    .resource("/control/notify", |r| r.method(http::Method::POST).f(handle_notify_user))
+                    .resource("/d2view.html", |r| r.method(http::Method::GET).f(handle_d2view_request))
+                    .resource("/rest/v1/d2image", |r| r.method(http::Method::GET).f(handle_d2image_request))
+                    .resource("/rest/v1/d2images", |r| r.method(http::Method::GET).f(handle_d2images_request))
+                    .resource("/rest/v1/control/notify", |r| r.method(http::Method::POST).f(handle_notify_user))
                     .handler("/", static_content)
                 })
                 .workers(1)

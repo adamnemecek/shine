@@ -1,7 +1,7 @@
 <script type="text/javascript">
     function notifyUser() {
         var xhr = new XMLHttpRequest();
-        xhr.open("POST", "control/notify", true);
+        xhr.open("POST", "rest/v1/control/notify", true);
         xhr.setRequestHeader('Content-Type', 'application/json');
         xhr.send(JSON.stringify({}));
     }

@@ -7,6 +7,8 @@ extern crate futures;
 extern crate log;
 extern crate svg;
 extern crate tera;
+extern crate serde;
+extern crate serde_json;
 
 pub mod webserver;
 

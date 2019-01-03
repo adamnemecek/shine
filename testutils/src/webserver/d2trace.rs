@@ -5,6 +5,7 @@ use svg::node::{self, element};
 use svg::{Document, Node};
 use tera;
 use webserver::appcontext::AppContext;
+use serde_json;
 
 pub trait IntoD2Image {
     fn trace(&self, tr: &mut D2Trace);
@@ -137,7 +138,7 @@ impl D2Trace {
         let layer = self.layers.pop().unwrap();
         match layer.finalize() {
             Container::Root(mut document) => {
-                document.assign("width", "640");
+                //document.assign("width", "640");
                 document.assign("viewbox", "-1 -1 2 2");
                 document
             }
@@ -210,7 +211,7 @@ impl Default for D2Trace {
     }
 }
 
-pub fn handle_d2_image_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+pub fn handle_d2image_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     let state = req.state();
 
     // input is 1 based
@@ -222,12 +223,53 @@ pub fn handle_d2_image_request(req: &HttpRequest<AppContext>) -> Result<HttpResp
     };
 
     // convert to 0 based
-    let id = if id == 0 { 1 } else { id - 1 };
+    let id = if id == 0 { usize::max_value() } else { id - 1 };
+    let image = {
+        info!("Getting d2image for {}", id);
+        let mut img = state.d2_images.lock().unwrap();
+        if id >= img.len() {
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" layer-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into()
+        } else {
+            img[id].clone()
+        } 
+    };
+
+    Ok(HttpResponse::Ok().content_type("image/svg+xml").body(image))
+}
+
+pub fn handle_d2images_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+    let state = req.state();
+
+    info!("Getting all d2images");
+    let data = {
+        let img = state.d2_images.lock().unwrap();
+        serde_json::to_string(&*img)
+    };
+
+    match data {
+        Err(err) => Ok(HttpResponse::InternalServerError().content_type("application/json").body(format!("{{error: {}}}", err))),
+        Ok(data) => Ok(HttpResponse::Ok().content_type("application/json").body(data)),
+    }
+}
+
+pub fn handle_d2view_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+    let state = req.state();
+
+    // input is 1 based
+    let id: usize = match req.query().get("id") {
+        Some(id) => id
+            .parse()
+            .map_err(|_| error::ErrorBadRequest(format!("Invalid id: {}", id)))?,
+        None => 1,
+    };
+
+    // convert to 0 based
+    let id = if id == 0 { 0 } else { id - 1 };
     let (image, id, image_count) = {
-        info!("Getting image for {}", id);
+        info!("Getting d2view for {}", id);
         let mut img = state.d2_images.lock().unwrap();
         if img.is_empty() {
-            ("<svg></svg>".into(), 0, 1)
+            ("<svg xmlns=\"http://www.w3.org/2000/svg\" layer-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into(), 0, 1)
         } else if id < img.len() {
             (img[id].clone(), id, img.len())
         } else {
@@ -253,7 +295,7 @@ pub fn handle_d2_image_request(req: &HttpRequest<AppContext>) -> Result<HttpResp
     ctx.insert("last_image_id", &last_id);
     ctx.insert("svg", &image);
 
-    let body = state.template.render("d2.html", &ctx).map_err(|e| {
+    let body = state.template.render("d2view.html", &ctx).map_err(|e| {
         println!("Template error: {}", e);
         error::ErrorInternalServerError(format!("Template error: {}", e))
     })?;

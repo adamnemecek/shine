@@ -11,6 +11,8 @@ keywords = ["shine", "render", "opengl", "game"]
 log = "*"
 env_logger = "*"
 
+serde = "*"
+serde_json = "*"
 tera =  "*"
 futures = "*"
 actix =  "*"
