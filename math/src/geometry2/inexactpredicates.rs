@@ -1,4 +1,4 @@
-use geometry::{
+use geometry2::{
     CollinearTest, InexactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
 };
 

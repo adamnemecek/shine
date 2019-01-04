@@ -1,4 +1,4 @@
-use geometry::Predicates;
+use geometry2::Predicates;
 use triangulation::check::{GeometryChecker, TopologyChecker};
 use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
 

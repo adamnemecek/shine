@@ -7,7 +7,7 @@ extern crate shine_testutils;
 mod common;
 
 use common::SimpleContext;
-use shine_math::geometry::Posf32;
+use shine_math::geometry2::Posf32;
 use shine_math::triangulation::{Builder, FullChecker};
 use shine_testutils::init_test;
 

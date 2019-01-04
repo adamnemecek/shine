@@ -6,8 +6,8 @@ mod common;
 
 use common::Sample;
 use log::info;
-use shine_math::geometry::{CollinearTest, Orientation, Position, Predicates, Real};
-use shine_math::geometry::{ExactPredicates, InexactPredicates, Posf32, Posf64, Posi32, Posi64};
+use shine_math::geometry2::{CollinearTest, Orientation, Position, Predicates, Real};
+use shine_math::geometry2::{ExactPredicates, InexactPredicates, Posf32, Posf64, Posi32, Posi64};
 use shine_testutils::init_test;
 
 #[test]

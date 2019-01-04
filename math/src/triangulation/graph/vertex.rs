@@ -1,4 +1,4 @@
-use geometry::Position;
+use geometry2::Position;
 use triangulation::types::FaceIndex;
 
 /// A vertex of the triangulation

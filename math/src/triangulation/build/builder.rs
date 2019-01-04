@@ -1,4 +1,4 @@
-use geometry::{CollinearTest, Orientation, Position, Predicates};
+use geometry2::{CollinearTest, Orientation, Position, Predicates};
 use triangulation::build::{Factory, Updater};
 use triangulation::graph::{BuilderContext, Constraint, Face, PredicatesContext, TagContext, Triangulation, Vertex};
 use triangulation::query::{GeometryQuery, TopologyQuery, VertexClue};

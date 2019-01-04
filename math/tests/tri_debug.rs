@@ -8,13 +8,13 @@ mod common;
 
 use common::simple_prelude::*;
 use common::trace_prelude::*;
-use shine_math::geometry::Posf32;
+use shine_math::geometry2::Posf32;
 use shine_math::triangulation::{Builder, FullChecker};
 use shine_testutils::init_webcontroll_test;
 use std::panic;
 
 #[test]
-//#[ignore]
+#[ignore]
 fn quick_debug() {
     let webctrl = init_webcontroll_test(module_path!());
 

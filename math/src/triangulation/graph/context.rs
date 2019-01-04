@@ -1,4 +1,4 @@
-use geometry::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
+use geometry2::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;

@@ -1,4 +1,4 @@
-use geometry::{Position, Real};
+use geometry2::{Position, Real};
 use std::{fmt, ops};
 use triangulation::graph::{Face, Vertex};
 use triangulation::types::{

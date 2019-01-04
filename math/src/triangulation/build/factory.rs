@@ -1,4 +1,4 @@
-use geometry::Position;
+use geometry2::Position;
 use triangulation::graph::{Constraint, Face, Triangulation, Vertex};
 use triangulation::types::{FaceEdge, FaceIndex, Rot3, VertexIndex};
 

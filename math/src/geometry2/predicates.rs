@@ -1,4 +1,4 @@
-use geometry::Position;
+use geometry2::Position;
 use std::fmt;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

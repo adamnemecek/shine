@@ -9,7 +9,7 @@ mod common;
 
 use common::SimpleContext;
 use quickcheck::quickcheck;
-use shine_math::geometry::{Posf32, Posi64};
+use shine_math::geometry2::{Posf32, Posi64};
 use shine_math::triangulation::{Builder, FullChecker};
 use shine_testutils::init_quickcheck_test;
 

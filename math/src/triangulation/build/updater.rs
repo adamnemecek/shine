@@ -1,4 +1,4 @@
-use geometry::{Orientation, Predicates};
+use geometry2::{Orientation, Predicates};
 use triangulation::build::factory::Factory;
 use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
 use triangulation::query::{GeometryQuery, TopologyQuery, VertexClue};

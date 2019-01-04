@@ -1,4 +1,4 @@
-use geometry::Position;
+use geometry2::Position;
 use triangulation::graph::{Face, Triangulation, Vertex};
 use triangulation::query::VertexClue;
 use triangulation::traverse::EdgeCirculator;

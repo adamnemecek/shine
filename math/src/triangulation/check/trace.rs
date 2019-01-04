@@ -1,5 +1,5 @@
-use geometry::{InexactPredicates, Posf64};
-use geometry::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
+use geometry2::{InexactPredicates, Posf64};
+use geometry2::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
 use std::ops;
 use triangulation::check::{Coloring, EdgeColoring, TraceMapping, TracePosition, VertexColoring};
 use triangulation::graph::{Constraint, Face, TraceContext, Triangulation, Vertex};

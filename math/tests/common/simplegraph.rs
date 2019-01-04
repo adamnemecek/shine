@@ -1,6 +1,6 @@
 //#![allow(dead_code)]
 
-use shine_math::geometry::Position;
+use shine_math::geometry2::Position;
 use shine_math::triangulation::types::{invalid_face_index, invalid_vertex_index, rot3, FaceIndex, Rot3, VertexIndex};
 use shine_math::triangulation::{Constraint, Context, Face, Vertex};
 

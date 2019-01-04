@@ -1,4 +1,4 @@
-use geometry::{CollinearTest, CollinearTestType, Orientation, OrientationType, Predicates};
+use geometry2::{CollinearTest, CollinearTestType, Orientation, OrientationType, Predicates};
 use std::mem;
 use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
 use triangulation::query::{TopologyQuery, VertexClue};

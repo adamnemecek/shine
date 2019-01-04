@@ -8,8 +8,8 @@ mod common;
 
 use common::simple_prelude::*;
 use log::{debug, info, trace};
-use shine_math::geometry::{Posf32, Posf64, Posi32, Posi64};
-use shine_math::geometry::{Position, Predicates, Real};
+use shine_math::geometry2::{Posf32, Posf64, Posi32, Posi64};
+use shine_math::geometry2::{Position, Predicates, Real};
 use shine_math::triangulation::{
     Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, TopologyQuery, Triangulation,
 };

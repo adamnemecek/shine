@@ -1,4 +1,4 @@
-use geometry::{Orientation, Position, Predicates, Real};
+use geometry2::{Orientation, Position, Predicates, Real};
 use log::trace;
 use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
 use triangulation::query::{GeometryQuery, TopologyQuery};

@@ -1,4 +1,4 @@
-use geometry::{
+use geometry2::{
     CollinearTest, ExactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
 };
 use std::marker::PhantomData;

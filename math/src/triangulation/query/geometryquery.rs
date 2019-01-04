@@ -1,4 +1,4 @@
-use geometry::{Orientation, Predicates};
+use geometry2::{Orientation, Predicates};
 use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
 use triangulation::query::TopologyQuery;
 use triangulation::types::{FaceIndex, FaceVertex, Rot3, VertexIndex};
