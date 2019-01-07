@@ -58,6 +58,7 @@ impl Layer {
 
     fn add_text(&mut self, p: (f64, f64), text: String, color: String, size: f32) {
         let key = ((p.0 * 65536.) as i32, (p.1 * 65546.) as i32);
+        let size = size * 0.05;
         self.texts.entry(key).or_insert(Vec::new()).push(Text { text, color, size });
     }
 
@@ -106,7 +107,7 @@ impl D2Trace {
     pub fn new() -> D2Trace {
         D2Trace {
             layers: vec![Layer::new_root()],
-            scale: (1., 1., 0., 0.),
+            scale: (1., -1., 0., 0.),
         }
     }
 
@@ -192,11 +193,11 @@ impl D2Trace {
         self.add_node(node);
     }
 
-    pub fn add_text(&mut self, p: &(f64, f64), msg: String, color: String, size: f32) {
+    pub fn add_text<S: Into<String>>(&mut self, p: &(f64, f64), msg: S, color: String, size: f32) {
         let p = self.scale_position(p);
 
         let layer = self.layers.last_mut().unwrap();
-        layer.add_text(p, msg, color, size);
+        layer.add_text(p, msg.into(), color, size);
     }
 
     fn add_node<N: Node>(&mut self, node: N) {
@@ -252,6 +253,11 @@ pub fn handle_d2datas_request(req: &HttpRequest<AppContext>) -> Result<HttpRespo
 pub fn handle_d2view_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     let state = req.state();
 
+    let all_data = {
+        let img = state.d2datas.lock().unwrap();
+        serde_json::to_string(&*img).unwrap()
+    };
+
     // input is 1 based
     let id: usize = match req.query().get("id") {
         Some(id) => id
@@ -295,6 +301,7 @@ pub fn handle_d2view_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
     ctx.insert("prev_prev_image_id", &prev_prev_id);
     ctx.insert("last_image_id", &last_id);
     ctx.insert("svg", &image);
+    ctx.insert("svg_list", &all_data);
 
     let body = state.template.render("d2view.html", &ctx).map_err(|e| {
         println!("Template error: {}", e);
