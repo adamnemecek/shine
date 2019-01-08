@@ -13,5 +13,6 @@ extern crate rand;
 extern crate shine_testutils;
 
 pub mod geometry2;
+pub mod trace;
 pub mod triangulation;
 pub mod voxel;

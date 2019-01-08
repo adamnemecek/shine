@@ -1,89 +1,21 @@
 use geometry2::{InexactPredicates, Posf64};
 use geometry2::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
-use std::ops;
-use triangulation::check::{Coloring, EdgeColoring, TraceMapping, TracePosition, VertexColoring};
+use trace::Trace2;
+use triangulation::check::{Coloring, EdgeColoring, TracePosition, TriTraceMapping, VertexColoring};
 use triangulation::graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
 use triangulation::query::{TopologyQuery, VertexClue};
 use triangulation::types::{rot3, FaceEdge, FaceIndex, VertexIndex};
 
-pub trait TraceRender {
-    fn begin(&mut self);
-    fn end(&mut self);
-
-    fn set_viewport(&mut self, minx: f64, miny: f64, maxx: f64, maxy: f64);
-
-    fn push_layer(&mut self, name: Option<String>);
-    fn pop_layer(&mut self);
-
-    fn add_point(&mut self, p: &(f64, f64), color: String);
-    fn add_line(&mut self, a: &(f64, f64), b: &(f64, f64), color: String);
-    fn add_text(&mut self, p: &(f64, f64), msg: String, color: String, size: f32);
-}
-
-pub trait TraceControl {
+pub trait TriTraceControl {
     fn coloring(&self) -> &Coloring;
     fn coloring_mut(&mut self) -> &mut Coloring;
-    fn mapping(&self) -> &TraceMapping;
-    fn mapping_mut(&mut self) -> &mut TraceMapping;
+    fn mapping(&self) -> &TriTraceMapping;
+    fn mapping_mut(&mut self) -> &mut TriTraceMapping;
 
     fn pause(&mut self);
 }
 
-pub struct TraceDocument<'a, T>
-where
-    T: 'a + Trace,
-{
-    trace: &'a T,
-}
-
-impl<'a, T> ops::Deref for TraceDocument<'a, T>
-where
-    T: 'a + Trace,
-{
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        self.trace
-    }
-}
-
-impl<'a, T> Drop for TraceDocument<'a, T>
-where
-    T: 'a + Trace,
-{
-    fn drop(&mut self) {
-        self.trace.trace_end();
-    }
-}
-
-pub struct TraceLayer<'a, T>
-where
-    T: 'a + Trace,
-{
-    trace: &'a T,
-}
-
-impl<'a, T> ops::Deref for TraceLayer<'a, T>
-where
-    T: 'a + Trace,
-{
-    type Target = T;
-
-    fn deref(&self) -> &T {
-        self.trace
-    }
-}
-
-impl<'a, T> Drop for TraceLayer<'a, T>
-where
-    T: 'a + Trace,
-{
-    fn drop(&mut self) {
-        self.trace.trace_pop_layer();
-    }
-}
-
-pub trait Trace {
+pub trait TriTrace2: Trace2 {
     fn trace_map_vertex(&self, v: VertexIndex, vcw: VertexIndex, vccw: VertexIndex) -> TracePosition;
 
     fn trace_vertex(&self, v: VertexIndex, msg: Option<&str>, color: Option<&VertexColoring>);
@@ -91,28 +23,6 @@ pub trait Trace {
     fn trace_face_edge<E: Into<FaceEdge>>(&self, edge: E, msg: Option<&str>, color: Option<&EdgeColoring>);
     fn trace_face(&self, f: FaceIndex, msg: Option<&str>, color: Option<&Coloring>);
     fn trace_graph(&self, color: Option<&Coloring>);
-
-    fn trace_begin(&self);
-    fn trace_end(&self);
-    fn trace_push_layer<S: Into<String>>(&self, name: Option<S>);
-    fn trace_pop_layer(&self);
-    fn trace_pause(&self);
-
-    fn trace_document(&self) -> TraceDocument<Self>
-    where
-        Self: Sized,
-    {
-        self.trace_begin();
-        TraceDocument { trace: self }
-    }
-
-    fn trace_layer<S: Into<String>>(&self, name: Option<S>) -> TraceLayer<Self>
-    where
-        Self: Sized,
-    {
-        self.trace_push_layer(name);
-        TraceLayer { trace: self }
-    }
 
     fn trace_face_edges<'a, I>(&self, iter: I, color: Option<&EdgeColoring>)
     where
@@ -130,7 +40,20 @@ pub trait Trace {
     }
 }
 
-impl<P, V, F, C> Trace for Triangulation<P, V, F, C>
+impl<P, V, F, C> Trace2 for Triangulation<P, V, F, C>
+where
+    P: Position,
+    V: Vertex<Position = P>,
+    F: Face,
+{
+    default fn trace_begin(&self) {}
+    default fn trace_end(&self) {}
+    default fn trace_push_group<S: Into<String>>(&self, _name: Option<S>) {}
+    default fn trace_pop_group(&self) {}
+    default fn trace_pause(&self) {}
+}
+
+impl<P, V, F, C> TriTrace2 for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -150,15 +73,84 @@ where
     default fn trace_face_edge<E: Into<FaceEdge>>(&self, _edge: E, _msg: Option<&str>, _color: Option<&EdgeColoring>) {}
     default fn trace_face(&self, _f: FaceIndex, _msg: Option<&str>, _color: Option<&Coloring>) {}
     default fn trace_graph(&self, _color: Option<&Coloring>) {}
-
-    default fn trace_begin(&self) {}
-    default fn trace_end(&self) {}
-    default fn trace_push_layer<S: Into<String>>(&self, _name: Option<S>) {}
-    default fn trace_pop_layer(&self) {}
-    default fn trace_pause(&self) {}
 }
 
-impl<P, V, F, C> Trace for Triangulation<P, V, F, C>
+impl<P, V, F, C> Trace2 for Triangulation<P, V, F, C>
+where
+    P: Position,
+    V: Vertex<Position = P>,
+    F: Face,
+    C: TraceContext,
+{
+    fn trace_begin(&self) {
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+
+        let control = self.context.trace_control();
+        let mut control = control.borrow_mut();
+        let mapping = control.mapping_mut();
+
+        render.begin();
+
+        use std::f64;
+        let (mut minx, mut miny) = (f64::MAX, f64::MAX);
+        let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
+
+        for v in self.vertex_index_iter() {
+            let p = Posf64::from(self.p(v));
+            minx = if p.x < minx { p.x } else { minx };
+            maxx = if p.x > maxx { p.x } else { maxx };
+            miny = if p.y < minx { p.y } else { minx };
+            maxy = if p.y > maxx { p.y } else { maxx };
+        }
+
+        {
+            //todo: add some default virtual positions if virtual_positions is empty
+
+            for p in mapping.virtual_positions.iter() {
+                minx = if p.x < minx { p.x } else { minx };
+                maxx = if p.x > maxx { p.x } else { maxx };
+                miny = if p.y < minx { p.y } else { minx };
+                maxy = if p.y > maxx { p.y } else { maxx };
+            }
+        }
+
+        let w = maxx - minx;
+        let h = maxy - miny;
+        minx -= w * 0.02;
+        miny -= h * 0.02;
+        maxx += w * 0.02;
+        maxy += h * 0.02;
+
+        render.set_viewport(minx, miny, maxx, maxy);
+    }
+
+    fn trace_end(&self) {
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+        render.end();
+    }
+
+    fn trace_push_group<S: Into<String>>(&self, name: Option<S>) {
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+        render.push_group(name.map(|n| n.into()));
+    }
+
+    fn trace_pop_group(&self) {
+        let render = self.context.trace_render();
+        let mut render = render.borrow_mut();
+        render.pop_group();
+    }
+
+    fn trace_pause(&self) {
+        let control = self.context.trace_control();
+        let mut control = control.borrow_mut();
+        control.pause();
+    }
+}
+
+impl<P, V, F, C> TriTrace2 for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -402,72 +394,5 @@ where
             self.trace_face(f, None, color);
             //trace_circum_circle( f, None );
         }
-    }
-
-    fn trace_begin(&self) {
-        let render = self.context.trace_render();
-        let mut render = render.borrow_mut();
-
-        let control = self.context.trace_control();
-        let mut control = control.borrow_mut();
-        let mapping = control.mapping_mut();
-
-        render.begin();
-
-        use std::f64;
-        let (mut minx, mut miny) = (f64::MAX, f64::MAX);
-        let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
-
-        for v in self.vertex_index_iter() {
-            let p = Posf64::from(self.p(v));
-            minx = if p.x < minx { p.x } else { minx };
-            maxx = if p.x > maxx { p.x } else { maxx };
-            miny = if p.y < minx { p.y } else { minx };
-            maxy = if p.y > maxx { p.y } else { maxx };
-        }
-
-        {
-            //todo: add some default virtual positions if virtual_positions is empty
-
-            for p in mapping.virtual_positions.iter() {
-                minx = if p.x < minx { p.x } else { minx };
-                maxx = if p.x > maxx { p.x } else { maxx };
-                miny = if p.y < minx { p.y } else { minx };
-                maxy = if p.y > maxx { p.y } else { maxx };
-            }
-        }
-
-        let w = maxx - minx;
-        let h = maxy - miny;
-        minx -= w * 0.02;
-        miny -= h * 0.02;
-        maxx += w * 0.02;
-        maxy += h * 0.02;
-
-        render.set_viewport(minx, miny, maxx, maxy);
-    }
-
-    fn trace_end(&self) {
-        let render = self.context.trace_render();
-        let mut render = render.borrow_mut();
-        render.end();
-    }
-
-    fn trace_push_layer<S: Into<String>>(&self, name: Option<S>) {
-        let render = self.context.trace_render();
-        let mut render = render.borrow_mut();
-        render.push_layer(name.map(|n| n.into()));
-    }
-
-    fn trace_pop_layer(&self) {
-        let render = self.context.trace_render();
-        let mut render = render.borrow_mut();
-        render.pop_layer();
-    }
-
-    fn trace_pause(&self) {
-        let control = self.context.trace_control();
-        let mut control = control.borrow_mut();
-        control.pause();
     }
 }

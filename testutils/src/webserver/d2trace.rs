@@ -13,13 +13,13 @@ pub trait IntoD2Data {
 
 enum Container {
     Root(Document),
-    Layer(element::Group),
+    Group(element::Group),
 }
 
 impl Container {
     fn add_node<N: Node>(&mut self, node: N) {
         match *self {
-            Container::Layer(ref mut group) => group.append(node),
+            Container::Group(ref mut group) => group.append(node),
             Container::Root(ref mut doc) => doc.append(node),
         }
     }
@@ -31,27 +31,27 @@ struct Text {
     size: f32,
 }
 
-struct Layer {
+struct Group {
     container: Container,
     texts: HashMap<(i32, i32), Vec<Text>>,
 }
 
-impl Layer {
-    fn new_root() -> Layer {
-        let doc = Document::new().set("layer-name", "root");
-        Layer {
+impl Group {
+    fn new_root() -> Group {
+        let doc = Document::new().set("group-name", "root");
+        Group {
             container: Container::Root(doc),
             texts: HashMap::new(),
         }
     }
 
-    fn new_layer(name: Option<String>) -> Layer {
+    fn new_group(name: Option<String>) -> Group {
         let mut group = element::Group::new();
         if let Some(name) = name {
-            group = group.set("layer-name", name);
+            group = group.set("group-name", name);
         }
-        Layer {
-            container: Container::Layer(group),
+        Group {
+            container: Container::Group(group),
             texts: HashMap::new(),
         }
     }
@@ -72,7 +72,7 @@ impl Layer {
                 let p = (pos.0 as f32 / 65536., pos.1 as f32 / 65536.);
                 let mut group = element::Group::new()
                     .set("preserve-size", "true")
-                    .set("layer-name", "*")
+                    .set("group-name", "*")
                     .set("transform", format!("translate({},{}) scale(1)", p.0, p.1));
 
                 let mut y = 0.;
@@ -99,52 +99,52 @@ impl Layer {
 
 /// Trace 2D geometry object through the web service
 pub struct D2Trace {
-    layers: Vec<Layer>,
+    groups: Vec<Group>,
     scale: (f64, f64, f64, f64),
 }
 
 impl D2Trace {
     pub fn new() -> D2Trace {
         D2Trace {
-            layers: vec![Layer::new_root()],
+            groups: vec![Group::new_root()],
             scale: (1., -1., 0., 0.),
         }
     }
 
-    pub fn push_layer(&mut self) {
-        self.layers.push(Layer::new_layer(None));
+    pub fn push_group(&mut self) {
+        self.groups.push(Group::new_group(None));
     }
 
-    pub fn push_layer_with_name<S: Into<String>>(&mut self, name: S) {
-        self.layers.push(Layer::new_layer(Some(name.into())));
+    pub fn push_group_with_name<S: Into<String>>(&mut self, name: S) {
+        self.groups.push(Group::new_group(Some(name.into())));
     }
 
-    pub fn pop_layer(&mut self) {
-        let layer = self.layers.pop().unwrap();
-        match layer.finalize() {
-            Container::Layer(group) => self.add_node(group),
-            _ => panic!("Poping root layer"),
+    pub fn pop_group(&mut self) {
+        let group = self.groups.pop().unwrap();
+        match group.finalize() {
+            Container::Group(group) => self.add_node(group),
+            _ => panic!("Poping root group"),
         }
     }
 
-    pub fn pop_all_layers(&mut self) {
-        while self.layers.len() > 1 {
-            self.pop_layer();
+    pub fn pop_all_groups(&mut self) {
+        while self.groups.len() > 1 {
+            self.pop_group();
         }
     }
 
     pub fn to_data(mut self) -> String {
-        self.pop_all_layers();
+        self.pop_all_groups();
 
-        let layer = self.layers.pop().unwrap();
-        match layer.finalize() {
+        let group = self.groups.pop().unwrap();
+        match group.finalize() {
             Container::Root(mut document) => {
                 //document.assign("width", "640");
                 document.assign("viewbox", "-1 -1 2 2");
                 document.to_string()
             }
 
-            _ => panic!("Poping root layer"),
+            _ => panic!("Poping root group"),
         }
     }
 
@@ -196,13 +196,13 @@ impl D2Trace {
     pub fn add_text<S: Into<String>>(&mut self, p: &(f64, f64), msg: S, color: String, size: f32) {
         let p = self.scale_position(p);
 
-        let layer = self.layers.last_mut().unwrap();
-        layer.add_text(p, msg.into(), color, size);
+        let group = self.groups.last_mut().unwrap();
+        group.add_text(p, msg.into(), color, size);
     }
 
     fn add_node<N: Node>(&mut self, node: N) {
-        let layer = self.layers.last_mut().unwrap();
-        layer.add_node(node);
+        let group = self.groups.last_mut().unwrap();
+        group.add_node(node);
     }
 }
 
@@ -229,7 +229,7 @@ pub fn handle_d2data_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
         info!("Getting d2data for {}", id);
         let mut img = state.d2datas.lock().unwrap();
         if id >= img.len() {
-            "<svg xmlns=\"http://www.w3.org/2000/svg\" layer-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into()
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" group-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into()
         } else {
             img[id].clone()
         }
@@ -273,7 +273,7 @@ pub fn handle_d2view_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
         let mut img = state.d2datas.lock().unwrap();
         if img.is_empty() {
             (
-                "<svg xmlns=\"http://www.w3.org/2000/svg\" layer-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into(),
+                "<svg xmlns=\"http://www.w3.org/2000/svg\" group-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into(),
                 0,
                 1,
             )

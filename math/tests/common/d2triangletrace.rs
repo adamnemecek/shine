@@ -1,17 +1,18 @@
 #![allow(dead_code)]
 
-use shine_math::triangulation::{Coloring, TraceControl, TraceCtx, TraceMapping, TraceRender};
+use shine_math::trace::Trace2Render;
+use shine_math::triangulation::{Coloring, TraceCtx, TriTraceControl, TriTraceMapping};
 use shine_testutils::webserver::{D2Trace, Service};
 use std::cell::RefCell;
 use std::mem;
 use std::rc::Rc;
 
-pub struct D2TriTraceRender {
+pub struct D2TraceRender {
     service: Service,
     render: Option<D2Trace>,
 }
 
-impl TraceRender for D2TriTraceRender {
+impl Trace2Render for D2TraceRender {
     fn begin(&mut self) {
         self.end();
         self.render = Some(D2Trace::new());
@@ -20,7 +21,7 @@ impl TraceRender for D2TriTraceRender {
     fn end(&mut self) {
         let tr = mem::replace(&mut self.render, None);
         if let Some(mut tr) = tr {
-            tr.pop_all_layers();
+            tr.pop_all_groups();
             self.service.add_d2(tr);
         }
     }
@@ -31,19 +32,19 @@ impl TraceRender for D2TriTraceRender {
         }
     }
 
-    fn push_layer(&mut self, name: Option<String>) {
+    fn push_group(&mut self, name: Option<String>) {
         if let Some(ref mut tr) = self.render.as_mut() {
             if let Some(name) = name {
-                tr.push_layer_with_name(name);
+                tr.push_group_with_name(name);
             } else {
-                tr.push_layer();
+                tr.push_group();
             }
         }
     }
 
-    fn pop_layer(&mut self) {
+    fn pop_group(&mut self) {
         if let Some(ref mut tr) = self.render.as_mut() {
-            tr.pop_layer();
+            tr.pop_group();
         }
     }
 
@@ -69,10 +70,10 @@ impl TraceRender for D2TriTraceRender {
 pub struct D2TriTraceControl {
     service: Service,
     coloring: Coloring,
-    mapping: TraceMapping,
+    mapping: TriTraceMapping,
 }
 
-impl TraceControl for D2TriTraceControl {
+impl TriTraceControl for D2TriTraceControl {
     fn coloring(&self) -> &Coloring {
         &self.coloring
     }
@@ -81,11 +82,11 @@ impl TraceControl for D2TriTraceControl {
         &mut self.coloring
     }
 
-    fn mapping(&self) -> &TraceMapping {
+    fn mapping(&self) -> &TriTraceMapping {
         &self.mapping
     }
 
-    fn mapping_mut(&mut self) -> &mut TraceMapping {
+    fn mapping_mut(&mut self) -> &mut TriTraceMapping {
         &mut self.mapping
     }
 
@@ -104,16 +105,16 @@ impl D2TriTrace {
     }
 }
 
-impl From<D2TriTrace> for TraceCtx<D2TriTraceControl, D2TriTraceRender> {
+impl From<D2TriTrace> for TraceCtx<D2TriTraceControl, D2TraceRender> {
     fn from(trace: D2TriTrace) -> Self {
         let service = trace.service;
         TraceCtx {
             control: Rc::new(RefCell::new(D2TriTraceControl {
                 service: service.clone(),
                 coloring: Coloring::default(),
-                mapping: TraceMapping::default(),
+                mapping: TriTraceMapping::default(),
             })),
-            render: Rc::new(RefCell::new(D2TriTraceRender {
+            render: Rc::new(RefCell::new(D2TraceRender {
                 service: service,
                 render: None,
             })),

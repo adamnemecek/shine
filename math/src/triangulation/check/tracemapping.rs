@@ -34,13 +34,13 @@ impl TracePosition {
 }
 
 /// Trace helper to map vertices into virtual positions
-pub struct TraceMapping {
+pub struct TriTraceMapping {
     pub virtual_positions: Vec<Posf64>,
 }
 
-impl TraceMapping {
-    pub fn new() -> TraceMapping {
-        TraceMapping {
+impl TriTraceMapping {
+    pub fn new() -> TriTraceMapping {
+        TriTraceMapping {
             virtual_positions: Default::default(),
         }
     }
@@ -58,8 +58,8 @@ impl TraceMapping {
     }
 }
 
-impl Default for TraceMapping {
-    fn default() -> TraceMapping {
-        TraceMapping::new()
+impl Default for TriTraceMapping {
+    fn default() -> TriTraceMapping {
+        TriTraceMapping::new()
     }
 }

@@ -13,6 +13,8 @@ env_logger = "*"
 
 serde = "*"
 serde_json = "*"
+bytes = "*"
+base64 = "*"
 tera =  "*"
 futures = "*"
 actix =  "*"

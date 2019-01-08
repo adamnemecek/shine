@@ -2,11 +2,11 @@
 <html>
 
 <head>
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
 
-    <style tyle="text/css">
+    <style style="text/css">
         body {
             margin: 0;  
             max-height: 100vh;
@@ -70,12 +70,12 @@
             color: black;
         }              
 
-        .layers ul { 
+        .groups ul { 
             padding: 0 0 0 0;
             list-style: none;
             text-align: left;
         }
-        .layers li { 
+        .groups li { 
             padding: 2px 0 2px 32px;
         }
     </style>
@@ -92,9 +92,9 @@
     var panZoom = null;
 
     function releaseSVG() {
-        let layerContent = document.getElementById('layers');
-        while (layerContent.firstChild) {
-            layerContent.removeChild(layerContent.firstChild);
+        let groupContent = document.getElementById('groups');
+        while (groupContent.firstChild) {
+            groupContent.removeChild(groupContent.firstChild);
         }
 
         let svgContent = document.getElementById('svgContainer');
@@ -111,7 +111,7 @@
         svgPreserveSize.length = 0;
     }
 
-    function createLayerItem(layerContent, node, name) {
+    function createGroupItem(groupContent, node, name) {
         let checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = true;
@@ -127,7 +127,7 @@
         li.appendChild(checkbox);
         li.appendChild(label);
 
-        layerContent.appendChild(li);
+        groupContent.appendChild(li);
         return li;
     }
 
@@ -136,7 +136,7 @@
 
         let titleContent = document.getElementById('title');
         let svgContent = document.getElementById('svgContainer');
-        let layerContent = document.getElementById('layers');
+        let groupContent = document.getElementById('groups');
 
         //console.log("selecting data: ", image_id)
         if (image_id < 0 || image_id >= images.length) {
@@ -160,7 +160,7 @@
         svg.setAttribute('style', 'display: inline; min-width: 100%; min-height: 100%; max-width: 100%; max-height: 100%')
 
         //parse svg
-        let openNodes = [[svg, layerContent]];
+        let openNodes = [[svg, groupContent]];
         let auto_id = 0;
         while (openNodes.length > 0) {
             let current = openNodes.pop();
@@ -170,9 +170,9 @@
             for (let i = 0; i < children.length; i++) {
                 let node = children[i];
                 if (node.tagName == 'g') {
-                    let name = node.getAttribute('layer-name');
+                    let name = node.getAttribute('group-name');
                     auto_id += 1;
-                    if (!name) { 'layer_' + auto_id; }
+                    if (!name) { 'group_' + auto_id; }
 
                     // groups to preserve size
                     if (node.getAttribute('preserve-size')) {
@@ -182,11 +182,11 @@
 
                     let childNode;
                     if (name != '*') {
-                        //layers
+                        //groups
                         if (!listParent) {
                             listParent = docParent.appendChild(document.createElement('ul'));
                         }
-                        childNode = createLayerItem(listParent, node, name);
+                        childNode = createGroupItem(listParent, node, name);
                     }
                     else {
                         childNode = docParent;
@@ -233,6 +233,10 @@
         }
     }
 
+    function step(delta) {
+        console.log(delta)
+        selectImage(image_id + delta, true, true)
+    }
 
     window.onload = function () {
         selectImage(0, false, false)
@@ -249,20 +253,20 @@
 <body>
     <header>
         <h1 id="title">Image</h1>
-        <div>
-            <button onclick="selectImage(0, true, true)">First</button>
-            <button onclick="selectImage(image_id-10, true, true)">&laquo; &laquo; Previous</button>
-            <button onclick="selectImage(image_id-1, true, true)">&laquo; Previous</button>
-            <button onclick="selectImage(image_id+1, true, true)">Next &raquo;</button>
-            <button onclick="selectImage(image_id+10, true, true)">Next &raquo; &raquo;</button>
-            <button onclick="selectImage(Number.MAX_SAFE_INTEGER, true, true)">Last</button>
+        <div class="controls">
+            <button onclick="step(Number.MIN_SAFE_INTEGER)">First</button>
+            <button onclick="step(-10)">&laquo; &laquo; Previous</button>
+            <button onclick="step(-1)">&laquo; Previous</button>
+            <button onclick="step(1)">Next &raquo;</button>
+            <button onclick="step(10)">Next &raquo; &raquo;</button>
+            <button onclick="step(Number.MAX_SAFE_INTEGER)">Last</button>
         </div>
         <div class="controls">
             {% include "controls.html" %}
         </div>
     </header>
     <nav>
-        <div id="layers" class="layers" />
+        <div id="groups" class="groups" />
     </nav>
     <main>
         <div id="svgContainer" style="height: 100%;">{{ svg | safe }}</div>

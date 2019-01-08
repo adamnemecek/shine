@@ -3,7 +3,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::rc::Rc;
-use triangulation::check::{TraceControl, TraceRender};
+use trace::Trace2Render;
+use triangulation::check::TriTraceControl;
 use triangulation::graph::{Face, Triangulation, Vertex};
 use triangulation::types::{FaceEdge, FaceVertex};
 
@@ -278,12 +279,12 @@ where
 
 /// Trait to provide tracing capabilities
 pub trait TraceContext {
-    fn trace_render(&self) -> Rc<RefCell<TraceRender>>;
-    fn trace_control(&self) -> Rc<RefCell<TraceControl>>;
+    fn trace_render(&self) -> Rc<RefCell<Trace2Render>>;
+    fn trace_control(&self) -> Rc<RefCell<TriTraceControl>>;
 }
 
 /// Store tracing helpers
-pub struct TraceCtx<TC: TraceControl, TR: TraceRender> {
+pub struct TraceCtx<TC: TriTraceControl, TR: Trace2Render> {
     pub control: Rc<RefCell<TC>>,
     pub render: Rc<RefCell<TR>>,
 }
@@ -296,8 +297,8 @@ where
 {
     pub fn with_trace<TC, TR, T>(self, trace: T) -> Context<P, V, F, Predicates, Tag, Builder, TraceCtx<TC, TR>>
     where
-        TC: TraceControl,
-        TR: TraceRender,
+        TC: TriTraceControl,
+        TR: Trace2Render,
         T: Into<TraceCtx<TC, TR>>,
     {
         Context {
@@ -315,14 +316,14 @@ where
     P: Position,
     V: Vertex<Position = P>,
     F: Face,
-    TC: 'static + TraceControl,
-    TR: 'static + TraceRender,
+    TC: 'static + TriTraceControl,
+    TR: 'static + Trace2Render,
 {
-    fn trace_render(&self) -> Rc<RefCell<TraceRender>> {
+    fn trace_render(&self) -> Rc<RefCell<Trace2Render>> {
         self.trace.render.clone()
     }
 
-    fn trace_control(&self) -> Rc<RefCell<TraceControl>> {
+    fn trace_control(&self) -> Rc<RefCell<TriTraceControl>> {
         self.trace.control.clone()
     }
 }
