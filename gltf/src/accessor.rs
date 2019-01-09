@@ -1,8 +1,8 @@
-use {buffer, extensions, Extras, Index};
 use serde::{de, ser};
 use serde_json::Value;
 use std::fmt;
 use validation::Checked;
+use {buffer, extensions, Index};
 
 /// The component data type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize)]
@@ -43,7 +43,7 @@ pub enum Type {
 
     /// 2x2 matrix.
     Mat2,
-    
+
     /// 3x3 matrix.
     Mat3,
 
@@ -70,37 +70,18 @@ pub const UNSIGNED_INT: u32 = 5125;
 pub const FLOAT: u32 = 5126;
 
 /// All valid generic vertex attribute component types.
-pub const VALID_COMPONENT_TYPES: &'static [u32] = &[
-    BYTE,
-    UNSIGNED_BYTE,
-    SHORT,
-    UNSIGNED_SHORT,
-    UNSIGNED_INT,
-    FLOAT,
-];
+pub const VALID_COMPONENT_TYPES: &'static [u32] = &[BYTE, UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, UNSIGNED_INT, FLOAT];
 
 /// All valid index component types.
-pub const VALID_INDEX_TYPES: &'static [u32] = &[
-    UNSIGNED_BYTE,
-    UNSIGNED_SHORT,
-    UNSIGNED_INT,
-];
+pub const VALID_INDEX_TYPES: &'static [u32] = &[UNSIGNED_BYTE, UNSIGNED_SHORT, UNSIGNED_INT];
 
 /// All valid accessor types.
-pub const VALID_ACCESSOR_TYPES: &'static [&'static str] = &[
-    "SCALAR",
-    "VEC2",
-    "VEC3",
-    "VEC4",
-    "MAT2",
-    "MAT3",
-    "MAT4",
-];
+pub const VALID_ACCESSOR_TYPES: &'static [&'static str] = &["SCALAR", "VEC2", "VEC3", "VEC4", "MAT2", "MAT3", "MAT4"];
 
 /// Contains data structures for sparse storage.
 pub mod sparse {
     use super::*;
-    use ::extensions;
+    use extensions;
 
     /// Indices of those attributes that deviate from their initialization value.
     #[derive(Clone, Debug, Deserialize, Serialize, Validate)]
@@ -123,11 +104,6 @@ pub mod sparse {
         /// Extension specific data.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub extensions: Option<extensions::accessor::sparse::Indices>,
-
-        /// Optional application specific data.
-        #[serde(default)]
-        #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-        pub extras: Extras,
     }
 
     /// Sparse storage of attributes that deviate from their initialization value.
@@ -152,11 +128,6 @@ pub mod sparse {
         /// Extension specific data.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub extensions: Option<extensions::accessor::sparse::Sparse>,
-
-        /// Optional application specific data.
-        #[serde(default)]
-        #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-        pub extras: Extras,
     }
 
     /// Array of size `count * number_of_components` storing the displaced
@@ -177,11 +148,6 @@ pub mod sparse {
         /// Extension specific data.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         pub extensions: Option<extensions::accessor::sparse::Values>,
-
-        /// Optional application specific data.
-        #[serde(default)]
-        #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-        pub extras: Extras,
     }
 }
 
@@ -208,11 +174,6 @@ pub struct Accessor {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extensions: Option<extensions::accessor::Accessor>,
 
-    /// Optional application specific data.
-    #[serde(default)]
-    #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-    pub extras: Extras,
-
     /// Specifies if the attribute is a scalar, vector, or matrix.
     #[serde(rename = "type")]
     pub type_: Checked<Type>,
@@ -226,15 +187,10 @@ pub struct Accessor {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub max: Option<Value>,
 
-    /// Optional user-defined name for this object.
-    #[cfg(feature = "names")]
-    #[cfg_attr(feature = "names", serde(skip_serializing_if = "Option::is_none"))]
-    pub name: Option<String>,
-
     /// Specifies whether integer data values should be normalized.
     #[serde(default, skip_serializing_if = "is_normalized_default")]
     pub normalized: bool,
-    
+
     /// Sparse storage of attributes that deviate from their initialization
     /// value.
     #[serde(default)]
@@ -257,7 +213,8 @@ pub struct GenericComponentType(pub ComponentType);
 
 impl<'de> de::Deserialize<'de> for Checked<GenericComponentType> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer<'de>
+    where
+        D: de::Deserializer<'de>,
     {
         struct Visitor;
         impl<'de> de::Visitor<'de> for Visitor {
@@ -268,7 +225,8 @@ impl<'de> de::Deserialize<'de> for Checked<GenericComponentType> {
             }
 
             fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
-                where E: de::Error
+            where
+                E: de::Error,
             {
                 use self::ComponentType::*;
                 use validation::Checked::*;
@@ -289,7 +247,8 @@ impl<'de> de::Deserialize<'de> for Checked<GenericComponentType> {
 
 impl<'de> de::Deserialize<'de> for Checked<IndexComponentType> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer<'de>
+    where
+        D: de::Deserializer<'de>,
     {
         struct Visitor;
         impl<'de> de::Visitor<'de> for Visitor {
@@ -300,7 +259,8 @@ impl<'de> de::Deserialize<'de> for Checked<IndexComponentType> {
             }
 
             fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
-                where E: de::Error
+            where
+                E: de::Error,
             {
                 use self::ComponentType::*;
                 use validation::Checked::*;
@@ -318,7 +278,8 @@ impl<'de> de::Deserialize<'de> for Checked<IndexComponentType> {
 
 impl<'de> de::Deserialize<'de> for Checked<Type> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer<'de>
+    where
+        D: de::Deserializer<'de>,
     {
         struct Visitor;
         impl<'de> de::Visitor<'de> for Visitor {
@@ -329,7 +290,8 @@ impl<'de> de::Deserialize<'de> for Checked<Type> {
             }
 
             fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-                where E: de::Error
+            where
+                E: de::Error,
             {
                 use self::Type::*;
                 use validation::Checked::*;
@@ -352,7 +314,7 @@ impl<'de> de::Deserialize<'de> for Checked<Type> {
 impl ser::Serialize for Type {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: ser::Serializer
+        S: ser::Serializer,
     {
         serializer.serialize_str(match *self {
             Type::Scalar => "SCALAR",
@@ -393,7 +355,7 @@ impl ComponentType {
 impl ser::Serialize for ComponentType {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: ser::Serializer
+        S: ser::Serializer,
     {
         serializer.serialize_u32(self.as_gl_enum())
     }

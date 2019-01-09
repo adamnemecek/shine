@@ -1,12 +1,16 @@
-use validation::{Error, Validate};
 use material::StrengthFactor;
-use {texture, Extras, Root, Path};
+use validation::{Error, Validate};
+use {texture, Path, Root};
 
 /// The material appearance of a primitive.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]
 pub struct Material {
     #[cfg(feature = "KHR_materials_pbrSpecularGlossiness")]
-    #[serde(default, rename = "KHR_materials_pbrSpecularGlossiness", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "KHR_materials_pbrSpecularGlossiness",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub pbr_specular_glossiness: Option<PbrSpecularGlossiness>,
 }
 
@@ -60,12 +64,7 @@ pub struct PbrSpecularGlossiness {
     /// space.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub specular_glossiness_texture: Option<texture::Info>,
-
-    /// Optional application specific data.
-    #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-    pub extras: Extras,
 }
-
 
 /// Defines the normal texture of a material.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]
@@ -90,7 +89,9 @@ impl Default for PbrDiffuseFactor {
 #[cfg(feature = "KHR_materials_pbrSpecularGlossiness")]
 impl Validate for PbrDiffuseFactor {
     fn validate_completely<P, R>(&self, _: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         for x in &self.0 {
             if *x < 0.0 || *x > 1.0 {
@@ -117,7 +118,9 @@ impl Default for PbrSpecularFactor {
 #[cfg(feature = "KHR_materials_pbrSpecularGlossiness")]
 impl Validate for PbrSpecularFactor {
     fn validate_completely<P, R>(&self, _: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         for x in &self.0 {
             if *x < 0.0 || *x > 1.0 {

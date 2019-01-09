@@ -80,7 +80,8 @@ impl<T> Checked<T> {
 
 impl<T: Serialize> Serialize for Checked<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: Serializer
+    where
+        S: Serializer,
     {
         match *self {
             Checked::Valid(ref item) => item.serialize(serializer),
@@ -108,10 +109,12 @@ impl<T: Default> Default for Checked<T> {
 
 impl<T> Validate for Checked<T> {
     fn validate_minimally<P, R>(&self, _root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         match *self {
-            Checked::Valid(_) => {},
+            Checked::Valid(_) => {}
             Checked::Invalid => report(&path, Error::Invalid),
         }
     }
@@ -119,7 +122,9 @@ impl<T> Validate for Checked<T> {
 
 impl<K: Eq + Hash + ToString + Validate, V: Validate> Validate for HashMap<K, V> {
     fn validate_minimally<P, R>(&self, root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         for (key, value) in self.iter() {
             key.validate_minimally(root, || path().key(&key.to_string()), report);
@@ -128,7 +133,9 @@ impl<K: Eq + Hash + ToString + Validate, V: Validate> Validate for HashMap<K, V>
     }
 
     fn validate_completely<P, R>(&self, root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         for (key, value) in self.iter() {
             key.validate_completely(root, || path().key(&key.to_string()), report);
@@ -139,7 +146,9 @@ impl<K: Eq + Hash + ToString + Validate, V: Validate> Validate for HashMap<K, V>
 
 impl<T: Validate> Validate for Option<T> {
     fn validate_minimally<P, R>(&self, root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         if let Some(value) = self.as_ref() {
             value.validate_minimally(root, path, report);
@@ -147,7 +156,9 @@ impl<T: Validate> Validate for Option<T> {
     }
 
     fn validate_completely<P, R>(&self, root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         if let Some(value) = self.as_ref() {
             value.validate_completely(root, path, report);
@@ -157,7 +168,9 @@ impl<T: Validate> Validate for Option<T> {
 
 impl<T: Validate> Validate for Vec<T> {
     fn validate_minimally<P, R>(&self, root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         for (index, value) in self.iter().enumerate() {
             value.validate_minimally(root, || path().index(index), report);
@@ -165,7 +178,9 @@ impl<T: Validate> Validate for Vec<T> {
     }
 
     fn validate_completely<P, R>(&self, root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         for (index, value) in self.iter().enumerate() {
             value.validate_completely(root, || path().index(index), report);

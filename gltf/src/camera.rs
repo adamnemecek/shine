@@ -1,13 +1,10 @@
 use serde::{de, ser};
 use std::fmt;
 use validation::{Checked, Error, Validate};
-use {extensions, Extras, Root, Path};
+use {extensions, Path, Root};
 
 /// All valid camera types.
-pub const VALID_CAMERA_TYPES: &'static [&'static str] = &[
-    "perspective",
-    "orthographic",
-];
+pub const VALID_CAMERA_TYPES: &'static [&'static str] = &["perspective", "orthographic"];
 
 /// Specifies the camera type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -25,11 +22,6 @@ pub enum Type {
 /// scene.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Camera {
-    /// Optional user-defined name for this object.
-    #[cfg(feature = "names")]
-    #[cfg_attr(feature = "names", serde(skip_serializing_if = "Option::is_none"))]
-    pub name: Option<String>,
-
     /// An orthographic camera containing properties to create an orthographic
     /// projection matrix.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -47,11 +39,6 @@ pub struct Camera {
     /// Extension specific data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extensions: Option<extensions::camera::Camera>,
-
-    /// Optional application specific data.
-    #[serde(default)]
-    #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-    pub extras: Extras,
 }
 
 /// Values for an orthographic camera.
@@ -72,11 +59,6 @@ pub struct Orthographic {
     /// Extension specific data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extensions: Option<extensions::camera::Orthographic>,
-
-    /// Optional application specific data.
-    #[serde(default)]
-    #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-    pub extras: Extras,
 }
 
 /// Values for a perspective camera.
@@ -100,16 +82,13 @@ pub struct Perspective {
     /// Extension specific data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extensions: Option<extensions::camera::Perspective>,
-
-    /// Optional application specific data.
-    #[serde(default)]
-    #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-    pub extras: Extras,
 }
 
 impl Validate for Camera {
     fn validate_minimally<P, R>(&self, root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         if self.orthographic.is_none() && self.perspective.is_none() {
             report(&path, Error::Missing);
@@ -119,37 +98,36 @@ impl Validate for Camera {
             .validate_minimally(root, || path().field("orthographic"), report);
         self.perspective
             .validate_minimally(root, || path().field("perspective"), report);
-        self.type_
-            .validate_minimally(root, || path().field("type"), report);
+        self.type_.validate_minimally(root, || path().field("type"), report);
         self.extensions
             .validate_minimally(root, || path().field("extensions"), report);
-        self.extras
-            .validate_minimally(root, || path().field("extras"), report);
     }
 }
 
 impl Validate for Orthographic {
     fn validate_completely<P, R>(&self, root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         if self.znear < 0.0 {
             report(&path, Error::Invalid);
         }
- 
-        if self.zfar < 0.0  || self.zfar < self.znear {
+
+        if self.zfar < 0.0 || self.zfar < self.znear {
             report(&path, Error::Invalid);
         }
 
         self.extensions
             .validate_completely(root, || path().field("extensions"), report);
-        self.extras
-            .validate_completely(root, || path().field("extras"), report);
     }
 }
 
 impl Validate for Perspective {
     fn validate_completely<P, R>(&self, root: &Root, path: P, report: &mut R)
-        where P: Fn() -> Path, R: FnMut(&Fn() -> Path, Error)
+    where
+        P: Fn() -> Path,
+        R: FnMut(&Fn() -> Path, Error),
     {
         self.aspect_ratio.map(|aspect_ratio| {
             if aspect_ratio < 0.0 {
@@ -173,14 +151,13 @@ impl Validate for Perspective {
 
         self.extensions
             .validate_completely(root, || path().field("extensions"), report);
-        self.extras
-            .validate_completely(root, || path().field("extras"), report);
     }
 }
 
 impl<'de> de::Deserialize<'de> for Checked<Type> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer<'de>
+    where
+        D: de::Deserializer<'de>,
     {
         struct Visitor;
         impl<'de> de::Visitor<'de> for Visitor {
@@ -191,7 +168,8 @@ impl<'de> de::Deserialize<'de> for Checked<Type> {
             }
 
             fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-                where E: de::Error
+            where
+                E: de::Error,
             {
                 use self::Type::*;
                 use validation::Checked::*;
@@ -208,7 +186,8 @@ impl<'de> de::Deserialize<'de> for Checked<Type> {
 
 impl ser::Serialize for Type {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer
+    where
+        S: ser::Serializer,
     {
         match *self {
             Type::Perspective => serializer.serialize_str("perspective"),

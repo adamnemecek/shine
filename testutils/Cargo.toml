@@ -22,4 +22,4 @@ actix =  "*"
 actix-web = {git = "https://github.com/zpgaal/actix-web", branch = "issue_586"}
 
 svg =  "*"
-gltf-json = {version = "*", features = ["extras", "names"]}
+shine-gltf = {path = "../gltf"}

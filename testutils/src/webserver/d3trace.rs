@@ -1,9 +1,9 @@
 use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
 use base64;
 use bytes::{BufMut, BytesMut};
-use shine_gltf;
 use log::info;
 use serde_json;
+use shine_gltf;
 use webserver::appcontext::AppContext;
 
 pub trait IntoD3Data {
@@ -45,9 +45,9 @@ impl D3Trace {
         let mut data = BytesMut::new();
 
         for (x, y, z) in positions.into_iter() {
-            if data.remaining_mut() < 3*8  {
+            if data.remaining_mut() < 3 * 8 {
                 // reserve more
-                data.reserve(3*8*1024);
+                data.reserve(3 * 8 * 1024);
             }
 
             data.put_f64_be(x);
@@ -56,9 +56,9 @@ impl D3Trace {
         }
 
         for i in indices.into_iter() {
-            if data.remaining_mut() < 4  {
+            if data.remaining_mut() < 4 {
                 // reserve more
-                data.reserve(4*1024);
+                data.reserve(4 * 1024);
             }
 
             data.put_u32_be(i as u32);
@@ -67,12 +67,11 @@ impl D3Trace {
         let encoded_data = base64::encode(&data);
 
         let buffer_id = {
-            let buffer = shine_gltf::Buffer {   
+            let buffer = shine_gltf::Buffer {
                 byte_length: data.len() as u32,
                 uri: Some(format!("data:{}", encoded_data)),
-                name: Default::default(),        
+                name: Default::default(),
                 extensions: Default::default(),
-                extras: Default::default(),
             };
             let id = self.gltf.buffers.len();
             self.gltf.buffers.push(buffer);
@@ -80,7 +79,7 @@ impl D3Trace {
         };
 
         /*let vertexView = shine_gltf::BufferView {
-            buffer: 
+            buffer:
         }*/
 
         info!("{:?}", buffer);

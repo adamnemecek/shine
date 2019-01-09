@@ -1,7 +1,7 @@
 use serde::{de, ser};
 use std::fmt;
 use validation::{Checked, Error, Validate};
-use {extensions, Extras, Index, Root, Path};
+use {extensions, Index, Path, Root};
 
 /// Corresponds to `GL_ARRAY_BUFFER`.
 pub const ARRAY_BUFFER: u32 = 34_962;
@@ -16,10 +16,7 @@ pub const MIN_BYTE_STRIDE: u32 = 4;
 pub const MAX_BYTE_STRIDE: u32 = 252;
 
 /// All valid GPU buffer targets.
-pub const VALID_TARGETS: &'static [u32] = &[
-    ARRAY_BUFFER,
-    ELEMENT_ARRAY_BUFFER,
-];
+pub const VALID_TARGETS: &'static [u32] = &[ARRAY_BUFFER, ELEMENT_ARRAY_BUFFER];
 
 /// Specifies the target a GPU buffer should be bound to.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -33,7 +30,8 @@ pub enum Target {
 
 impl ser::Serialize for Target {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where S: ser::Serializer
+    where
+        S: ser::Serializer,
     {
         match *self {
             Target::ArrayBuffer => serializer.serialize_u32(ARRAY_BUFFER),
@@ -49,11 +47,6 @@ pub struct Buffer {
     #[serde(default, rename = "byteLength")]
     pub byte_length: u32,
 
-    /// Optional user-defined name for this object.
-    #[cfg(feature = "names")]
-    #[cfg_attr(feature = "names", serde(skip_serializing_if = "Option::is_none"))]
-    pub name: Option<String>,
-
     /// The uri of the buffer.  Relative paths are relative to the .gltf file.
     /// Instead of referencing an external file, the uri can also be a data-uri.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -62,11 +55,6 @@ pub struct Buffer {
     /// Extension specific data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extensions: Option<extensions::buffer::Buffer>,
-
-    /// Optional application specific data.
-    #[serde(default)]
-    #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-    pub extras: Extras,
 }
 
 /// A view into a buffer generally representing a subset of the buffer.
@@ -93,11 +81,6 @@ pub struct View {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub byte_stride: Option<ByteStride>,
 
-    /// Optional user-defined name for this object.
-    #[cfg(feature = "names")]
-    #[cfg_attr(feature = "names", serde(skip_serializing_if = "Option::is_none"))]
-    pub name: Option<String>,
-
     /// Optional target the buffer should be bound to.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub target: Option<Checked<Target>>,
@@ -105,11 +88,6 @@ pub struct View {
     /// Extension specific data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extensions: Option<extensions::buffer::View>,
-
-    /// Optional application specific data.
-    #[serde(default)]
-    #[cfg_attr(feature = "extras", serde(skip_serializing_if = "Option::is_none"))]
-    pub extras: Extras,
 }
 
 /// The stride, in bytes, between vertex attributes.
@@ -135,7 +113,8 @@ impl Validate for ByteStride {
 
 impl<'de> de::Deserialize<'de> for Checked<Target> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-        where D: de::Deserializer<'de>
+    where
+        D: de::Deserializer<'de>,
     {
         struct Visitor;
         impl<'de> de::Visitor<'de> for Visitor {
@@ -146,7 +125,8 @@ impl<'de> de::Deserialize<'de> for Checked<Target> {
             }
 
             fn visit_u64<E>(self, value: u64) -> Result<Self::Value, E>
-                where E: de::Error
+            where
+                E: de::Error,
             {
                 use self::Target::*;
                 use validation::Checked::*;
@@ -160,4 +140,3 @@ impl<'de> de::Deserialize<'de> for Checked<Target> {
         deserializer.deserialize_u64(Visitor)
     }
 }
-

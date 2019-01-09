@@ -24,9 +24,6 @@ pub mod camera;
 /// 2.0 extensions supported by the library.
 pub mod extensions;
 
-/// Contains `Extras`.
-pub mod extras;
-
 /// Contains `Image` and other related data structures.
 pub mod image;
 
@@ -79,8 +76,6 @@ pub use skin::Skin;
 #[doc(inline)]
 pub use texture::Texture;
 
-#[doc(inline)]
-pub use self::extras::Extras;
 #[doc(inline)]
 pub use self::path::Path;
 #[doc(inline)]

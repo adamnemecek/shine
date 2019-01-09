@@ -20,11 +20,12 @@ pub fn main(input: TokenStream) -> TokenStream {
 
 fn expand(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
     let fields = match ast.data {
-        syn::Data::Struct(syn::DataStruct { ref fields, .. }) => fields,  
+        syn::Data::Struct(syn::DataStruct { ref fields, .. }) => fields,
         _ => panic!("#[derive(Validate)] only works on `struct`s"),
     };
     let ident = &ast.ident;
-    let minimal_validations: Vec<_> = fields.iter()
+    let minimal_validations: Vec<_> = fields
+        .iter()
         .map(|f| f.ident.as_ref().unwrap())
         .map(|ident| {
             use inflections::Inflect;
@@ -38,7 +39,8 @@ fn expand(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
             )
         })
         .collect();
-    let complete_validations: Vec<_> = fields.iter()
+    let complete_validations: Vec<_> = fields
+        .iter()
         .map(|f| f.ident.as_ref().unwrap())
         .map(|ident| {
             use inflections::Inflect;
