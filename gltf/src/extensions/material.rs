@@ -1,6 +1,8 @@
-use material::StrengthFactor;
-use validation::{Error, Validate};
-use {texture, Path, Root};
+#[cfg(feature = "KHR_materials_pbrSpecularGlossiness")]
+use {
+    material::StrengthFactor,
+    texture, Path, Root, {Error, Validate},
+};
 
 /// The material appearance of a primitive.
 #[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]

@@ -61,7 +61,7 @@ pub enum Mode {
 ///
 /// A node can contain one or more meshes and its transform places the meshes in
 /// the scene.
-#[derive(Clone, Debug, Deserialize, Serialize, Validate)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]
 pub struct Mesh {
     /// Extension specific data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -77,7 +77,7 @@ pub struct Mesh {
 }
 
 /// Geometry to be rendered with the given material.
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Primitive {
     /// Maps attribute semantic names to the `Accessor`s containing the
     /// corresponding attribute data.
@@ -272,7 +272,7 @@ impl Semantic {
         match s {
             "NORMAL" => Valid(Normals),
             "POSITION" => Valid(Positions),
-            "TANGENT" => Valid(Tangents),            
+            "TANGENT" => Valid(Tangents),
             _ if s.starts_with("COLOR_") => match s["COLOR_".len()..].parse() {
                 Ok(set) => Valid(Colors(set)),
                 Err(_) => Invalid,

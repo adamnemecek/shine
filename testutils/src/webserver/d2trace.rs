@@ -258,49 +258,7 @@ pub fn handle_d2view_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
         serde_json::to_string(&*img).unwrap()
     };
 
-    // input is 1 based
-    let id: usize = match req.query().get("id") {
-        Some(id) => id
-            .parse()
-            .map_err(|_| error::ErrorBadRequest(format!("Invalid id: {}", id)))?,
-        None => 1,
-    };
-
-    // convert to 0 based
-    let id = if id == 0 { 0 } else { id - 1 };
-    let (image, id, image_count) = {
-        info!("Getting d2view for {}", id);
-        let mut img = state.d2datas.lock().unwrap();
-        if img.is_empty() {
-            (
-                "<svg xmlns=\"http://www.w3.org/2000/svg\" group-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into(),
-                0,
-                1,
-            )
-        } else if id < img.len() {
-            (img[id].clone(), id, img.len())
-        } else {
-            (img.last().unwrap().clone(), img.len() - 1, img.len())
-        }
-    };
-
-    // convert to 1 based
-    let id = id + 1;
-    let last_id = image_count;
-    let next_id = if id + 1 <= last_id { id + 1 } else { last_id };
-    let next_next_id = if id + 10 <= last_id { id + 10 } else { last_id };
-    let prev_id = if id > 2 { id - 1 } else { 1 };
-    let prev_prev_id = if id > 11 { id - 10 } else { 1 };
-
     let mut ctx = tera::Context::new();
-    ctx.insert("image_id", &id);
-    ctx.insert("image_count", &image_count);
-    ctx.insert("next_image_id", &next_id);
-    ctx.insert("next_next_image_id", &next_next_id);
-    ctx.insert("prev_image_id", &prev_id);
-    ctx.insert("prev_prev_image_id", &prev_prev_id);
-    ctx.insert("last_image_id", &last_id);
-    ctx.insert("svg", &image);
     ctx.insert("svg_list", &all_data);
 
     let body = state.template.render("d2view.html", &ctx).map_err(|e| {

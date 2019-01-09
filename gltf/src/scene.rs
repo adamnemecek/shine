@@ -11,7 +11,7 @@ use {camera, extensions, mesh, scene, skin, Index, Path, Root};
 /// identity. When a node is targeted for animation (referenced by an
 /// animation.channel.target), only TRS properties may be present; `matrix` will not
 /// be present.
-#[derive(Clone, Debug, Deserialize, Serialize, Validate)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]
 pub struct Node {
     /// The index of the camera referenced by this node.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -66,7 +66,7 @@ pub struct Node {
 }
 
 /// The root `Node`s of a scene.
-#[derive(Clone, Debug, Deserialize, Serialize, Validate)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]
 pub struct Scene {
     /// Extension specific data.
     #[serde(default, skip_serializing_if = "Option::is_none")]

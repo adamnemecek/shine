@@ -84,7 +84,7 @@
 <script src="jscript/svg-pan-zoom/svg-pan-zoom.min.js" type="text/javascript"></script>
 
 <script type="text/javascript">
-    var images = {{ svg_list | safe }};
+    var images = [];//{{ svg_list | safe }};
     var image_id = 0;
 
     var svg = null;
@@ -212,7 +212,7 @@
         });
     }
 
-    function selectImage(id, preserveZoom, preserveVisibility) {
+    function selectSVG(id, preserveZoom, preserveVisibility) {
         image_id = id
         if (image_id < 0) image_id = 0;
         if (image_id >= images.length) image_id = images.length - 1;
@@ -235,11 +235,11 @@
 
     function step(delta) {
         console.log(delta)
-        selectImage(image_id + delta, true, true)
+        selectSVG(image_id + delta, true, true)
     }
 
     window.onload = function () {
-        selectImage(0, false, false)
+        selectSVG(0, false, false)
     }
     window.onresize = function () {
         if (panZoom) {
@@ -269,7 +269,7 @@
         <div id="groups" class="groups" />
     </nav>
     <main>
-        <div id="svgContainer" style="height: 100%;">{{ svg | safe }}</div>
+        <div id="svgContainer" style="height: 100%;" />
     </main>
 </body>
 

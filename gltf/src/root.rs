@@ -274,3 +274,21 @@ impl_get!(texture::Sampler, samplers);
 impl_get!(Scene, scenes);
 impl_get!(Skin, skins);
 impl_get!(Texture, textures);
+
+macro_rules! impl_add_vec {
+    ($ty:ty, $fn:ident, $field:ident) => {
+        impl Root {
+            pub fn $fn(&mut self, data: $ty) -> Index<$ty> {
+                let id = self.$field.len() as u32;
+                self.$field.push(data);
+                Index::new(id)
+            }
+        }
+    };
+}
+
+impl_add_vec!(Accessor, add_accessor, accessors);
+impl_add_vec!(Buffer, add_buffer, buffers);
+impl_add_vec!(buffer::View, add_buffer_view, buffer_views);
+impl_add_vec!(Node, add_node, nodes);
+impl_add_vec!(Scene, add_scene, scenes);

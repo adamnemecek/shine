@@ -8,7 +8,7 @@ use tera::compile_templates;
 use webserver::appcontext::AppContext;
 use webserver::control::{handle_notify_user, Control};
 use webserver::d2trace::{handle_d2data_request, handle_d2datas_request, handle_d2view_request, D2Trace, IntoD2Data};
-use webserver::d3trace::{handle_d3data_request, handle_d3datas_request, D3Trace, IntoD3Data};
+use webserver::d3trace::{handle_d3data_request, handle_d3datas_request, handle_d3view_request, D3Trace, IntoD3Data};
 
 #[derive(Clone)]
 pub struct Service {
@@ -53,6 +53,7 @@ impl Service {
                     })
                     .middleware(middleware::Logger::default())
                     .resource("/d2view.html", |r| r.method(http::Method::GET).f(handle_d2view_request))
+                    .resource("/d3view.html", |r| r.method(http::Method::GET).f(handle_d3view_request))
                     .resource("/rest/v1/d2data", |r| r.method(http::Method::GET).f(handle_d2data_request))
                     .resource("/rest/v1/d2datas", |r| r.method(http::Method::GET).f(handle_d2datas_request))
                     .resource("/rest/v1/d3data", |r| r.method(http::Method::GET).f(handle_d3data_request))

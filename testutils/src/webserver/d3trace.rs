@@ -3,7 +3,7 @@ use base64;
 use bytes::{BufMut, BytesMut};
 use log::info;
 use serde_json;
-use shine_gltf;
+use shine_gltf::{buffer, Buffer, Root};
 use webserver::appcontext::AppContext;
 
 pub trait IntoD3Data {
@@ -27,7 +27,7 @@ pub enum D3Location {
 
 /// Trace 3D geometry object through the web service
 pub struct D3Trace {
-    gltf: shine_gltf::Root,
+    gltf: Root,
 }
 
 impl D3Trace {
@@ -54,6 +54,9 @@ impl D3Trace {
             data.put_f64_be(y);
             data.put_f64_be(z);
         }
+        let position_byte_count = data.len();
+        let position_byte_offset = 0;
+        let position_byte_stride = 3 * 8;
 
         for i in indices.into_iter() {
             if data.remaining_mut() < 4 {
@@ -63,26 +66,42 @@ impl D3Trace {
 
             data.put_u32_be(i as u32);
         }
+        let index_byte_count = data.len() - position_byte_count;
+        let index_byte_offset = position_byte_count;
+        let index_byte_stride = 4;
 
         let encoded_data = base64::encode(&data);
 
         let buffer_id = {
-            let buffer = shine_gltf::Buffer {
+            let buffer = Buffer {
                 byte_length: data.len() as u32,
                 uri: Some(format!("data:{}", encoded_data)),
-                name: Default::default(),
-                extensions: Default::default(),
+                ..Default::default()
             };
-            let id = self.gltf.buffers.len();
-            self.gltf.buffers.push(buffer);
-            id
+            self.gltf.add_buffer(buffer)
         };
 
-        /*let vertexView = shine_gltf::BufferView {
-            buffer:
-        }*/
+        let position_view_id = {
+            let buffer_view = buffer::View {
+                byte_length: position_byte_count as u32,
+                byte_offset: Some(position_byte_offset as u32),
+                byte_stride: Some(buffer::ByteStride(position_byte_stride as u32)),
+                ..buffer::View::with_buffer(buffer_id.clone())
+            };
+            self.gltf.add_buffer_view(buffer_view)
+        };
 
-        info!("{:?}", buffer);
+        let index_view_id = {
+            let buffer_view = buffer::View {
+                byte_length: index_byte_count as u32,
+                byte_offset: Some(index_byte_offset as u32),
+                byte_stride: Some(buffer::ByteStride(index_byte_stride as u32)),
+                ..buffer::View::with_buffer(buffer_id.clone())
+            };
+            self.gltf.add_buffer_view(buffer_view)
+        };
+
+        info!("{:?}", self.gltf.to_string_pretty());
 
         MeshId(0)
     }
@@ -138,11 +157,30 @@ pub fn handle_d3data_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
 pub fn handle_d3datas_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     let state = req.state();
 
-    info!("Getting all d2datas");
+    info!("Getting all d3datas");
     let data = {
         let d3datas = state.d3datas.lock().unwrap();
         d3datas.join(",")
     };
     let data = format!("[{}]", data);
     Ok(HttpResponse::Ok().content_type("application/json").body(data))
+}
+
+pub fn handle_d3view_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+    let state = req.state();
+
+    let all_data = {
+        let img = state.d3datas.lock().unwrap();
+        serde_json::to_string(&*img).unwrap()
+    };
+
+    let mut ctx = tera::Context::new();
+    ctx.insert("model_list", &all_data);
+
+    let body = state.template.render("d3view.html", &ctx).map_err(|e| {
+        println!("Template error: {}", e);
+        error::ErrorInternalServerError(format!("Template error: {}", e))
+    })?;
+
+    Ok(HttpResponse::Ok().content_type("text/html").body(body))
 }

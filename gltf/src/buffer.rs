@@ -41,7 +41,7 @@ impl ser::Serialize for Target {
 }
 
 /// A buffer points to binary data representing geometry, animations, or skins.
-#[derive(Clone, Debug, Deserialize, Serialize, Validate)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize, Validate)]
 pub struct Buffer {
     /// The length of the buffer in bytes.
     #[serde(default, rename = "byteLength")]
@@ -88,6 +88,19 @@ pub struct View {
     /// Extension specific data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extensions: Option<extensions::buffer::View>,
+}
+
+impl View {
+    pub fn with_buffer(buffer: Index<Buffer>) -> View {
+        View {
+            buffer,
+            byte_length: 0,
+            byte_offset: None,
+            byte_stride: None,
+            target: None,
+            extensions: None,
+        }
+    }
 }
 
 /// The stride, in bytes, between vertex attributes.
