@@ -1,7 +1,7 @@
 use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
 use base64;
 use bytes::{BufMut, BytesMut};
-use gltf_json;
+use shine_gltf;
 use log::info;
 use serde_json;
 use webserver::appcontext::AppContext;
@@ -27,7 +27,7 @@ pub enum D3Location {
 
 /// Trace 3D geometry object through the web service
 pub struct D3Trace {
-    gltf: gltf_json::Root,
+    gltf: shine_gltf::Root,
 }
 
 impl D3Trace {
@@ -66,13 +66,22 @@ impl D3Trace {
 
         let encoded_data = base64::encode(&data);
 
-        let buffer = gltf_json::Buffer {   
-            byte_length: data.len() as u32,
-            uri: Some(format!("data:{}", encoded_data)),
-            name: Default::default(),        
-            extensions: Default::default(),
-            extras: Default::default(),
+        let buffer_id = {
+            let buffer = shine_gltf::Buffer {   
+                byte_length: data.len() as u32,
+                uri: Some(format!("data:{}", encoded_data)),
+                name: Default::default(),        
+                extensions: Default::default(),
+                extras: Default::default(),
+            };
+            let id = self.gltf.buffers.len();
+            self.gltf.buffers.push(buffer);
+            id
         };
+
+        /*let vertexView = shine_gltf::BufferView {
+            buffer: 
+        }*/
 
         info!("{:?}", buffer);
 

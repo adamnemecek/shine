@@ -103,10 +103,11 @@
             "id": "findSubProject",
             "description": "The subproject",
             "type": "pickString",
-            "default": "testutils",
+            "default": "gltf",
             "options": [
                 "math",
                 "ecs",
+                "gltf",
                 "graph",
                 "store"
                 "testutils"

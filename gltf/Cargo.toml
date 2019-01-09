@@ -1,0 +1,19 @@
+[package]
+name = "shine-gltf"
+version = "0.1.0"
+authors = ["gzp <z.p.gaal.devel@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "JSON parsing for the gltf crate based https://github.com/gltf-rs/gltf"
+repository = "https://github.com/gzp/shine"
+keywords = ["gltf", "mesh", "exporter", "importer"]
+
+[dependencies]
+serde = "*"
+serde_derive = "*"
+serde_json = "*"
+
+shine-gltf-macro = {path = "../gltf-macro"}
+
+[features]
+default = []
+KHR_materials_pbrSpecularGlossiness = []
