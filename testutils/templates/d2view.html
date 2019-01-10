@@ -238,9 +238,6 @@
         selectSVG(image_id + delta, true, true)
     }
 
-    window.onload = function () {
-        selectSVG(0, false, false)
-    }
     window.onresize = function () {
         if (panZoom) {
             panZoom.resize();
@@ -248,6 +245,8 @@
             panZoom.center();
         };
     }
+
+    selectSVG(0, false, false);
 </script>
 
 <body>

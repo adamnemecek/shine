@@ -169,10 +169,13 @@ pub fn handle_d3datas_request(req: &HttpRequest<AppContext>) -> Result<HttpRespo
 pub fn handle_d3view_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
     let state = req.state();
 
-    let all_data = {
+    /*let all_data = {
         let img = state.d3datas.lock().unwrap();
         serde_json::to_string(&*img).unwrap()
-    };
+    };*/
+
+    let img = vec![include_str!("BoxAnimated.gltf"),include_str!("SimpleMeshes.gltf")];
+    let all_data = serde_json::to_string(&img).unwrap();
 
     let mut ctx = tera::Context::new();
     ctx.insert("model_list", &all_data);
