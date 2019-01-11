@@ -20,7 +20,7 @@
 
             display: grid;
             grid-template-rows: 1fr 5fr;
-            grid-template-columns: 1fr 5fr;
+            grid-template-columns: 1fr 4fr;
             grid-template-areas: 
                 "header header"
                 "nav main";
@@ -57,19 +57,6 @@
             color: black;
         }  
 
-        .navigate a {
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            display: inline-block;
-            padding: 8px 16px;
-            margin: 3px;
-        }        
-        .navigate a:hover {
-            background-color: #ddd;
-            color: black;
-        }              
-
         .groups ul { 
             padding: 0 0 0 0;
             list-style: none;
@@ -81,21 +68,26 @@
     </style>
 </head>
 
+<script src="jscript/shine/shine.js"></script>
 <script src="jscript/three/three.min.js" type="text/javascript"></script>
+<script src="jscript/three/TrackballControls.js" type="text/javascript"></script>
 <script src="jscript/three/OrbitControls.js" type="text/javascript"></script>
 <script src="jscript/three/GLTFLoader.js" type="text/javascript"></script>
+<script src="jscript/stats/stats.min.js"></script>
 
 <script type="text/javascript">
     var models = {{ model_list | safe }};
     var model_id = 0;
-
-    var container;
+    var container, stats, shine;
     var renderer, scene, lights;
-    var camera, orbitControls;
-    var sceneCenter, sceneRadius;
+    var camera, cameraControl;
 
     function init() {
         container = document.getElementById('modelContainer');
+        shine = new Shine();
+
+        stats = new Stats();
+        document.body.appendChild(stats.dom);
 
         // LOADER
         loader = new THREE.GLTFLoader();
@@ -114,8 +106,18 @@
 
         // CAMERA
         camera = new THREE.PerspectiveCamera(45, container.offsetWidth / container.offsetHeight, 0.001, 1000);
-        camera.position.y = 10;
-        orbitControls = new THREE.OrbitControls(camera, renderer.domElement);
+        camera.position.z = 500;
+
+        cameraControl = new THREE.TrackballControls(camera);
+        cameraControl.rotateSpeed = 1.0;
+        cameraControl.zoomSpeed = 1.2;
+        cameraControl.panSpeed = 0.8;
+        cameraControl.noZoom = false;
+        cameraControl.noPan = false;
+        cameraControl.staticMoving = false;
+        cameraControl.dynamicDampingFactor = 0.3;
+        cameraControl.keys = [65, 83, 68];
+        cameraControl.addEventListener('change', render);
 
         // LIGHTS
         lights = {}
@@ -137,13 +139,46 @@
         lights.spot.shadow.mapSize.height = 2048;
     }
 
+    function zoomToBBox(bbox) {
+        if (bbox == null || bbox.isEmpty()) {
+            return;
+        }
+
+        camera.rotation.set(0, 0, 0); // reset rotation
+
+        var boxCenter = new THREE.Vector3();
+        bbox.getCenter(boxCenter);
+        var boxSize = new THREE.Vector3();
+        bbox.getSize(boxSize);
+        var sphereSize = boxSize.length() * 0.5;
+        var distToCenter = sphereSize / Math.sin(Math.PI / 180.0 * camera.fov * 0.5);
+
+        var eye = new THREE.Vector3(0, 0, 1);
+        eye.setLength(distToCenter);
+        eye.addVectors(boxCenter, eye);
+        var target = boxCenter;
+
+        //console.log("box:", bbox);
+        //console.log("eye:", eye);
+        //console.log("target:", target);
+        cameraControl.position0.set(eye.x, eye.y, eye.z);
+        cameraControl.target0.set(target.x, target.y, target.z);
+        cameraControl.up0.set(0, 1, 0);
+        cameraControl.reset();
+
+        render();
+    };
+
+    function zoomToObject(object) {
+        var bbox = new THREE.Box3().setFromObject(object);
+        zoomToBBox(bbox);
+    }
+
     function releaseModel() {
     }
 
-    function createModel() {
-        releaseModel();
-
-        let titleContent = document.getElementById('title');
+    function createModel(preserveCamera) {
+        var titleContent = document.getElementById('title');
 
         scene = new THREE.Scene();
         scene.background = new THREE.Color(0x222222);
@@ -152,10 +187,8 @@
         scene.add(lights.directional);
         scene.add(lights.spot);
 
-        //console.log("selecting data: ", model_id)
         if (model_id < 0 || model_id >= models.length) {
             // no model
-            //console.log("empty data");
             titleContent.innerHTML = "Model - None" + "/" + (models.length).toString()
             return;
         }
@@ -163,48 +196,64 @@
         titleContent.innerHTML = "Model - " + (model_id + 1).toString() + "/" + (models.length).toString()
 
         loader.parse(models[model_id], "",
-            function (data) {
-                gltf = data;
+            function (gltf) {
                 var object = gltf.scene;
-                var center = new THREE.Vector3();
-                var nCenter = 0;
-                object.traverse(function (node) {
-                    if (node.isMesh || node.isLight) node.castShadow = true;
-                    if (node.geometry) {
-                        node.geometry.computeBoundingBox();
-                        center.add(node.geometry.boundingBox.center);
-                        nCenter += 1;
+                if (object) {
+                    object.traverse(function (node) {
+                        if (node.isMesh || node.isLight) node.castShadow = true;
+                    });
+
+                    if (!preserveCamera) {
+                        zoomToObject(object);
                     }
-                });
-
-                center.divideScalar(nCenter);
-                object.position.set(-center.x, -center.y, -center.z);
-
-                scene.add(object);
+                    scene.add(object);
+                }
                 onWindowResize();
             }, undefined, function (error) {
                 console.error(error);
             });
     }
 
-    function selectModel(id) {
+    function selectModel(id, preserveCamera) {
         model_id = id
         if (model_id < 0) model_id = 0;
         if (model_id >= models.length) model_id = models.length - 1;
 
         releaseModel();
-        createModel();
+        createModel(preserveCamera);
+    }
+
+    function exportModel() {
+        if (model_id < 0 || model_id >= models.length) {
+            return;
+        }
+
+        var pom = document.createElement('a');
+        pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(models[model_id]));
+        pom.setAttribute('download', "model.gltf");
+
+        if (document.createEvent) {
+            var event = document.createEvent('MouseEvents');
+            event.initEvent('click', true, true);
+            pom.dispatchEvent(event);
+        }
+        else {
+            pom.click();
+        }
     }
 
     function step(delta) {
-        console.log(delta)
-        selectModel(model_id + delta, true, true)
+        let preserveCamera = document.getElementById("preserveCamera").checked;
+        selectModel(model_id + delta, preserveCamera)
     }
 
     function onWindowResize() {
         camera.aspect = container.offsetWidth / container.offsetHeight;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+
+        renderer.setSize(container.offsetWidth, container.offsetHeight);
+        cameraControl.handleResize();
+        render();
     }
 
     function render() {
@@ -213,13 +262,14 @@
 
     function animate() {
         requestAnimationFrame(animate);
-        orbitControls.update();
-        render();
+        cameraControl.update();
+        //render();
+        stats.update();
     }
 
     window.onload = function () {
         init();
-        selectModel(0)
+        selectModel(0, false)
         animate();
     }
     window.onresize = function () {
@@ -239,10 +289,25 @@
             <button onclick="step(Number.MAX_SAFE_INTEGER)">Last</button>
         </div>
         <div class="controls">
-            {% include "controls.html" %}
+            <button onclick="location.reload(true)">Refresh</button>
+            <button onclick="shine.notifyUser();location.reload(true)">Continue</button>
+            <button onclick="exportModel()">Export</button>
         </div>
     </header>
     <nav>
+        <div id="groups" class="groups">
+            <ul>
+                <li><label>Control</label></li>
+                <ul>
+                    <li><input id="preserveCamera" type="checkbox"><label>Preserve camera</label></li>
+                </ul>
+                <li><label>Render</label></li>
+                <ul>
+                    <li><input id="render_wireframe" type="checkbox"><label>Wireframe</label></li>
+                    <li><input id="render_normals" type="checkbox"><label>Normals</label></li>
+                </ul>
+            </ul>
+        </div>
         <div id="groups" class="groups" />
     </nav>
     <main>

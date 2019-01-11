@@ -86,11 +86,14 @@ impl Service {
         let _ = self.service_addr.send(server::StopServer { graceful: true }).wait();
     }
 
-    pub fn add_d2(&self, tr: D2Trace) {
-        let data = tr.to_data();
+    pub fn add_d2_raw(&self, image: String) {
         let mut d2datas = self.d2datas.lock().unwrap();
-        d2datas.push(data);
+        d2datas.push(image);
         info!("New d2 data added: id={}", d2datas.len());
+    }
+
+    pub fn add_d2(&self, tr: D2Trace) {
+        self.add_d2_raw(tr.to_data());
     }
 
     pub fn add_d2_data<T: IntoD2Data>(&self, t: &T) {
@@ -99,11 +102,14 @@ impl Service {
         self.add_d2(tr);
     }
 
-    pub fn add_d3(&self, tr: D3Trace) {
-        let data = tr.to_data();
+    pub fn add_d3_raw(&self, model: String) {
         let mut d3datas = self.d3datas.lock().unwrap();
-        d3datas.push(data);
+        d3datas.push(model);
         info!("New d3 data added: id={}", d3datas.len());
+    }
+
+    pub fn add_d3(&self, tr: D3Trace) {
+        self.add_d3_raw(tr.to_data());
     }
 
     pub fn add_d3_data<T: IntoD3Data>(&self, t: &T) {
