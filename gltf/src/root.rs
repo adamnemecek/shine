@@ -2,7 +2,7 @@ use buffer;
 use extensions;
 use serde;
 use serde_json;
-use std::{self, fmt, io, marker};
+use std::{self, fmt, io, marker, cmp};
 use texture;
 use validation;
 
@@ -16,8 +16,14 @@ pub trait Get<T> {
     fn get(&self, id: &Index<T>) -> Option<&T>;
 }
 
+/// Helper trait for retrieving top-level objects by a universal identifier.
+pub trait GetMut<T> {
+    /// Retrieves a single value at the given index.
+    fn get_mut(&mut self, id: &Index<T>) -> Option<&mut T>;
+}
+
 /// Represents an offset into an array of type `T` owned by the root glTF object.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialOrd)]
 pub struct Index<T>(u32, marker::PhantomData<T>);
 
 /// The root object of a glTF 2.0 asset.
@@ -230,6 +236,12 @@ impl<T> fmt::Debug for Index<T> {
     }
 }
 
+impl<T> cmp::PartialEq for Index<T> {
+    fn eq(&self, other: &Index<T>) -> bool {
+        self.value() == other.value()
+    }
+}
+
 impl<T> fmt::Display for Index<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -274,6 +286,30 @@ impl_get!(texture::Sampler, samplers);
 impl_get!(Scene, scenes);
 impl_get!(Skin, skins);
 impl_get!(Texture, textures);
+
+macro_rules! impl_get_mut {
+    ($ty:ty, $field:ident) => {
+        impl<'a> GetMut<$ty> for Root {
+            fn get_mut(&mut self, index: &Index<$ty>) -> Option<&mut $ty> {
+                self.$field.get_mut(index.value())
+            }
+        }
+    };
+}
+
+impl_get_mut!(Accessor, accessors);
+impl_get_mut!(Animation, animations);
+impl_get_mut!(Buffer, buffers);
+impl_get_mut!(buffer::View, buffer_views);
+impl_get_mut!(Camera, cameras);
+impl_get_mut!(Image, images);
+impl_get_mut!(Material, materials);
+impl_get_mut!(Mesh, meshes);
+impl_get_mut!(Node, nodes);
+impl_get_mut!(texture::Sampler, samplers);
+impl_get_mut!(Scene, scenes);
+impl_get_mut!(Skin, skins);
+impl_get_mut!(Texture, textures);
 
 macro_rules! impl_add_vec {
     ($ty:ty, $fn:ident, $field:ident) => {

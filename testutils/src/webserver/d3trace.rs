@@ -3,7 +3,7 @@ use base64;
 use bytes::{BufMut, BytesMut};
 use log::info;
 use serde_json;
-use shine_gltf::{buffer, Buffer, Root};
+use shine_gltf::{buffer, Buffer, Root, Mesh, Node, Scene, Index};
 use webserver::appcontext::AppContext;
 
 pub trait IntoD3Data {
@@ -11,8 +11,8 @@ pub trait IntoD3Data {
 }
 
 /// Index of an added mesh to instantiate
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub struct MeshId(usize);
+#[derive(Clone, Debug, PartialEq)]
+pub struct MeshId(Index<Mesh>);
 
 /// Location of a mesh instance
 pub enum D3Location {
@@ -27,14 +27,16 @@ pub enum D3Location {
 
 /// Trace 3D geometry object through the web service
 pub struct D3Trace {
-    gltf: Root,
+    root: Root,
 }
 
 impl D3Trace {
-    pub fn new() -> D3Trace {
-        D3Trace {
-            gltf: Default::default(),
-        }
+    pub fn new() -> D3Trace {        
+        let root = Root::default();
+        let scene_id = root.add_scene(Scene::default());
+        root.scene = Some(scene_id);
+        
+        D3Trace { root }
     }
 
     pub fn add_indexed_mesh<V, I>(&mut self, positions: V, indices: I) -> MeshId
@@ -78,7 +80,7 @@ impl D3Trace {
                 uri: Some(format!("data:{}", encoded_data)),
                 ..Default::default()
             };
-            self.gltf.add_buffer(buffer)
+            self.root.add_buffer(buffer)
         };
 
         let position_view_id = {
@@ -88,7 +90,7 @@ impl D3Trace {
                 byte_stride: Some(buffer::ByteStride(position_byte_stride as u32)),
                 ..buffer::View::with_buffer(buffer_id.clone())
             };
-            self.gltf.add_buffer_view(buffer_view)
+            self.root.add_buffer_view(buffer_view)
         };
 
         let index_view_id = {
@@ -98,16 +100,33 @@ impl D3Trace {
                 byte_stride: Some(buffer::ByteStride(index_byte_stride as u32)),
                 ..buffer::View::with_buffer(buffer_id.clone())
             };
-            self.gltf.add_buffer_view(buffer_view)
+            self.root.add_buffer_view(buffer_view)
         };
 
-        info!("{:?}", self.gltf.to_string_pretty());
+        let mesh_id = {
+            let mesh = Mesh {
+                ..Default::default()
+            };
+            self.root.add_mesh(mesh)
+        };
 
-        MeshId(0)
+        info!("{:?}", self.root.to_string_pretty());
+
+        MeshId(mesh_id)
     }
 
     pub fn add_instance(&mut self, mesh: MeshId, location: D3Location) {
-        //unimplemented!()
+        let node_id = {
+            let node = Node {
+                mesh: Some(mesh.0)
+                ..Default::default()
+            };
+            self.root.add_node(node)
+        };
+
+        let scene = self.root.scene.unwrap();
+        let &mut scene = self.root.get_mut(scene);
+        scene.add_node(node_id);
     }
 
     pub fn add_indexed_mesh_instance<V, I>(&mut self, positions: V, indices: I, location: D3Location) -> MeshId
@@ -121,7 +140,7 @@ impl D3Trace {
     }
 
     pub fn to_data(self) -> String {
-        serde_json::to_string(&self.gltf).unwrap()
+        serde_json::to_string(&self.root).unwrap()
     }
 }
 
