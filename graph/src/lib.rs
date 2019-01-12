@@ -1,5 +1,4 @@
 #![feature(const_int_ops)]
-#![feature(vec_resize_with)]
 #![feature(log_syntax, trace_macros)]
 #![feature(crate_visibility_modifier)]
 #![feature(range_is_empty)]

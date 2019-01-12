@@ -3,7 +3,7 @@ use base64;
 use bytes::{BufMut, BytesMut};
 use log::info;
 use serde_json;
-use shine_gltf::{buffer, Buffer, Root, Mesh, Node, Scene, Index};
+use shine_gltf::{buffer, Get, GetMut, Buffer, Root, Mesh, Node, Scene, Index};
 use webserver::appcontext::AppContext;
 
 pub trait IntoD3Data {
@@ -32,7 +32,7 @@ pub struct D3Trace {
 
 impl D3Trace {
     pub fn new() -> D3Trace {        
-        let root = Root::default();
+        let mut root = Root::default();
         let scene_id = root.add_scene(Scene::default());
         root.scene = Some(scene_id);
         
@@ -118,15 +118,15 @@ impl D3Trace {
     pub fn add_instance(&mut self, mesh: MeshId, location: D3Location) {
         let node_id = {
             let node = Node {
-                mesh: Some(mesh.0)
+                mesh: Some(mesh.0),
                 ..Default::default()
             };
             self.root.add_node(node)
         };
 
-        let scene = self.root.scene.unwrap();
-        let &mut scene = self.root.get_mut(scene);
-        scene.add_node(node_id);
+        let scene = self.root.scene.as_ref().unwrap().clone();
+        let scene = self.root.get_mut(&scene).unwrap();
+        scene.nodes.push(node_id);
     }
 
     pub fn add_indexed_mesh_instance<V, I>(&mut self, positions: V, indices: I, location: D3Location) -> MeshId
@@ -135,7 +135,7 @@ impl D3Trace {
         I: IntoIterator<Item = usize>,
     {
         let id = self.add_indexed_mesh(positions, indices);
-        self.add_instance(id, location);
+        self.add_instance(id.clone(), location);
         id
     }
 

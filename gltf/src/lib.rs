@@ -79,6 +79,10 @@ pub use texture::Texture;
 #[doc(inline)]
 pub use self::path::Path;
 #[doc(inline)]
+pub use self::root::Get;
+#[doc(inline)]
+pub use self::root::GetMut;
+#[doc(inline)]
 pub use self::root::Index;
 #[doc(inline)]
 pub use self::root::Root;

@@ -327,4 +327,5 @@ impl_add_vec!(Accessor, add_accessor, accessors);
 impl_add_vec!(Buffer, add_buffer, buffers);
 impl_add_vec!(buffer::View, add_buffer_view, buffer_views);
 impl_add_vec!(Node, add_node, nodes);
+impl_add_vec!(Mesh, add_mesh, meshes);
 impl_add_vec!(Scene, add_scene, scenes);
