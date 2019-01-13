@@ -2,7 +2,7 @@ use buffer;
 use extensions;
 use serde;
 use serde_json;
-use std::{self, fmt, io, marker, cmp};
+use std::{self, cmp, fmt, io, marker};
 use texture;
 use validation;
 

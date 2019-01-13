@@ -6,6 +6,7 @@ license = "MIT/Apache-2.0"
 description = "JSON parsing for the gltf crate based https://github.com/gltf-rs/gltf"
 repository = "https://github.com/gzp/shine"
 keywords = ["gltf", "mesh", "exporter", "importer"]
+#edition = "2018"
 
 [dependencies]
 serde = "*"

@@ -1,8 +1,8 @@
+use crate::validation::Checked;
+use crate::{buffer, extensions, Index};
 use serde::{de, ser};
 use serde_json::Value;
 use std::fmt;
-use validation::Checked;
-use {buffer, extensions, Index};
 
 /// The component data type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize)]
@@ -170,16 +170,13 @@ pub struct Accessor {
     #[serde(rename = "componentType")]
     pub component_type: Checked<GenericComponentType>,
 
-    /// Extension specific data.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub extensions: Option<extensions::accessor::Accessor>,
-
     /// Specifies if the attribute is a scalar, vector, or matrix.
     #[serde(rename = "type")]
     pub type_: Checked<Type>,
 
     /// Minimum value of each component in this attribute.
     #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub min: Option<Value>,
 
     /// Maximum value of each component in this attribute.
@@ -196,6 +193,34 @@ pub struct Accessor {
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sparse: Option<sparse::Sparse>,
+
+    /// Extension specific data.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub extensions: Option<extensions::accessor::Accessor>,
+}
+
+impl Accessor {
+    pub fn with_view(buffer_view: Index<buffer::View>, type_: Type, component_type: ComponentType, normalized: bool) -> Accessor {
+        let component_type: Checked<GenericComponentType> = component_type.into();
+        assert!(
+            component_type.is_valid(),
+            "invalid component type for accessor: {:?}",
+            component_type
+        );
+
+        Accessor {
+            buffer_view,
+            type_: Checked::Valid(type_),
+            component_type,
+            normalized,
+            byte_offset: 0,
+            count: 0,
+            min: None,
+            max: None,
+            sparse: None,
+            extensions: None,
+        }
+    }
 }
 
 // Help serde avoid serializing this glTF 2.0 default value.
@@ -210,6 +235,21 @@ pub struct IndexComponentType(pub ComponentType);
 /// The data type of a generic vertex attribute.
 #[derive(Clone, Copy, Debug, Deserialize, Serialize)]
 pub struct GenericComponentType(pub ComponentType);
+
+impl From<ComponentType> for Checked<GenericComponentType> {
+    fn from(type_: ComponentType) -> Checked<GenericComponentType> {
+        use validation::Checked::*;
+        match type_ {
+            t @ ComponentType::I8
+            | t @ ComponentType::U8
+            | t @ ComponentType::I16
+            | t @ ComponentType::U16
+            | t @ ComponentType::U32
+            | t @ ComponentType::F32 => Valid(GenericComponentType(t)),
+            //_ => Invalid,
+        }
+    }
+}
 
 impl<'de> de::Deserialize<'de> for Checked<GenericComponentType> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -242,6 +282,16 @@ impl<'de> de::Deserialize<'de> for Checked<GenericComponentType> {
             }
         }
         deserializer.deserialize_u64(Visitor)
+    }
+}
+
+impl From<ComponentType> for Checked<IndexComponentType> {
+    fn from(type_: ComponentType) -> Checked<IndexComponentType> {
+        use validation::Checked::*;
+        match type_ {
+            t @ ComponentType::U8 | t @ ComponentType::U16 | t @ ComponentType::U32 => Valid(IndexComponentType(t)),
+            _ => Invalid,
+        }
     }
 }
 

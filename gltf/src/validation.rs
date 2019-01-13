@@ -76,6 +76,14 @@ impl<T> Checked<T> {
             Checked::Invalid => panic!("attempted to unwrap an invalid item"),
         }
     }
+
+    /// Tests if item is valid    
+    pub fn is_valid(&self) -> bool {
+        match *self {
+            Checked::Valid(..) => true,
+            Checked::Invalid => false,
+        }
+    }
 }
 
 impl<T: Serialize> Serialize for Checked<T> {

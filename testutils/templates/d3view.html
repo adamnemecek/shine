@@ -79,7 +79,7 @@
     var models = {{ model_list | safe }};
     var model_id = 0;
     var container, stats, shine;
-    var renderer, scene, lights;
+    var renderer, scene, lights, model;
     var camera, cameraControl;
 
     function init() {
@@ -174,10 +174,34 @@
         zoomToBBox(bbox);
     }
 
-    function releaseModel() {
+    function updateMaterials(object, twoSided, wireframe) {
+        if (!object) {
+            return;
+        }
+
+        object.traverse(function (node) {
+            if (node.material) {
+                if (twoSided) {
+                    node.material.side = THREE.DoubleSide;
+                }
+                else {
+                    node.material.side = node.material.originial_side;
+                }
+
+                if (wireframe) {
+                    node.material.wireframe = true
+                }
+                else {
+                    node.material.wireframe = node.material.originial_wireframe;
+                }
+            }
+        });
     }
 
-    function createModel(preserveCamera) {
+    function releaseModel(model) {
+    }
+
+    function createModel() {
         var titleContent = document.getElementById('title');
 
         scene = new THREE.Scene();
@@ -197,30 +221,46 @@
 
         loader.parse(models[model_id], "",
             function (gltf) {
-                var object = gltf.scene;
-                if (object) {
-                    object.traverse(function (node) {
+                var isFirst = (model === undefined);
+                model = gltf.scene;
+                if (model) {
+                    model.traverse(function (node) {
                         if (node.isMesh || node.isLight) node.castShadow = true;
+                        if (node.material) {
+                            node.material.originial_side = node.material.side;
+                            node.material.originial_wireframe = !!node.material.wireframe;
+                        }
                     });
-
-                    if (!preserveCamera) {
-                        zoomToObject(object);
-                    }
-                    scene.add(object);
+                    scene.add(model);
                 }
+
+                let preserveCamera = document.getElementById("preserveCamera").checked;
+                if (isFirst || !preserveCamera) {
+                    zoomToObject(model);
+                }
+                updateModelMaterials();
+
                 onWindowResize();
             }, undefined, function (error) {
                 console.error(error);
             });
     }
 
-    function selectModel(id, preserveCamera) {
+    function selectModel(id) {
         model_id = id
         if (model_id < 0) model_id = 0;
         if (model_id >= models.length) model_id = models.length - 1;
 
-        releaseModel();
-        createModel(preserveCamera);
+        releaseModel(model);
+        createModel();
+    }
+
+    function updateModelMaterials() {
+        let twoSided = document.getElementById("render_twoSided").checked;
+        let wrieframe = document.getElementById("render_wireframe").checked;
+
+        updateMaterials(model, twoSided, wrieframe);
+        render();
     }
 
     function exportModel() {
@@ -240,11 +280,6 @@
         else {
             pom.click();
         }
-    }
-
-    function step(delta) {
-        let preserveCamera = document.getElementById("preserveCamera").checked;
-        selectModel(model_id + delta, preserveCamera)
     }
 
     function onWindowResize() {
@@ -269,7 +304,7 @@
 
     window.onload = function () {
         init();
-        selectModel(0, false)
+        selectModel(0);
         animate();
     }
     window.onresize = function () {
@@ -281,12 +316,12 @@
     <header>
         <h1 id="title">Model</h1>
         <div class="controls">
-            <button onclick="step(Number.MIN_SAFE_INTEGER)">First</button>
-            <button onclick="step(-10)">&laquo; &laquo; Previous</button>
-            <button onclick="step(-1)">&laquo; Previous</button>
-            <button onclick="step(1)">Next &raquo;</button>
-            <button onclick="step(10)">Next &raquo; &raquo;</button>
-            <button onclick="step(Number.MAX_SAFE_INTEGER)">Last</button>
+            <button onclick="selectModel(0)">First</button>
+            <button onclick="selectModel(model_id - 10)">&laquo; &laquo; Previous</button>
+            <button onclick="selectModel(model_id - 1)">&laquo; Previous</button>
+            <button onclick="selectModel(model_id + 1)">Next &raquo;</button>
+            <button onclick="selectModel(model_id + 10)">Next &raquo; &raquo;</button>
+            <button onclick="selectModel(model_id + Number.MAX_SAFE_INTEGER)">Last</button>
         </div>
         <div class="controls">
             <button onclick="location.reload(true)">Refresh</button>
@@ -299,12 +334,19 @@
             <ul>
                 <li><label>Control</label></li>
                 <ul>
-                    <li><input id="preserveCamera" type="checkbox"><label>Preserve camera</label></li>
+                    <li><input id="preserveCamera" type="checkbox" checked><label>Preserve camera</label></li>
                 </ul>
                 <li><label>Render</label></li>
                 <ul>
-                    <li><input id="render_wireframe" type="checkbox"><label>Wireframe</label></li>
-                    <li><input id="render_normals" type="checkbox"><label>Normals</label></li>
+                    <li><input id="render_twoSided" type="checkbox" checked onchange="updateModelMaterials()">
+                        <label>Two Sided</label>
+                    </li>
+                    <li><input id="render_wireframe" type="checkbox" onchange="updateModelMaterials()">
+                        <label>Wireframe</label>
+                    </li>
+                    <li><input id="render_normals" type="checkbox" onchange="updateModelMaterials()">
+                        <label>Normals</label>
+                    </li>
                 </ul>
             </ul>
         </div>

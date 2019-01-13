@@ -1,3 +1,5 @@
+#![feature(try_from)]
+
 #[macro_use]
 extern crate shine_gltf_macro;
 extern crate serde;
@@ -31,6 +33,7 @@ pub mod image;
 pub mod material;
 
 /// Contains `Mesh` and other related data structures.
+#[macro_use]
 pub mod mesh;
 
 /// Contains `Path`.
@@ -67,6 +70,10 @@ pub use image::Image;
 pub use material::Material;
 #[doc(inline)]
 pub use mesh::Mesh;
+#[doc(inline)]
+pub use mesh::Primitive;
+//#[doc(inline)]
+//pub use mesh::attribute_map;
 #[doc(inline)]
 pub use scene::Node;
 #[doc(inline)]

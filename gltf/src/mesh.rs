@@ -350,3 +350,14 @@ impl<'de> de::Deserialize<'de> for Checked<Semantic> {
         deserializer.deserialize_str(Visitor)
     }
 }
+
+#[macro_export]
+macro_rules! attribute_map {
+    ($( $key: ident => $val: expr ),*) => {{
+        use $crate::validation::Checked;
+        use $crate::mesh::Semantic;
+        let mut map = ::std::collections::HashMap::new();
+        $( map.insert(Checked::Valid(Semantic::$key), $val); )*
+        map
+    }}
+}
