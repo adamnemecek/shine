@@ -351,6 +351,7 @@ impl<'de> de::Deserialize<'de> for Checked<Semantic> {
     }
 }
 
+/// Helper to initialize an attribute map in the  [ Att1 => value1, Attr2 => val2 ] form.
 #[macro_export]
 macro_rules! attribute_map {
     ($( $key: ident => $val: expr ),*) => {{
@@ -358,6 +359,23 @@ macro_rules! attribute_map {
         use $crate::mesh::Semantic;
         let mut map = ::std::collections::HashMap::new();
         $( map.insert(Checked::Valid(Semantic::$key), $val); )*
+        map
+    }}
+}
+
+/// Helper to initialize an attribute map in the [ Att1 => value1, Attr2 => val2 ] form where value is an Option
+#[macro_export]
+macro_rules! optional_attribute_map {
+    ($( $key: ident => $val: expr ),*) => {{
+        use $crate::validation::Checked;
+        use $crate::mesh::Semantic;
+        let mut map = ::std::collections::HashMap::new();
+        $(
+            match($val) {
+                Some(val) => {map.insert(Checked::Valid(Semantic::$key), val);}
+                None => {}
+            };
+        )*
         map
     }}
 }

@@ -2,11 +2,9 @@ use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
 use base64;
 use bytes::{BufMut, BytesMut};
 use log::info;
-use std::mem;
 use serde_json;
-use shine_gltf::{
-    accessor, attribute_map, buffer, Accessor, Buffer, GetMut, Index, Mesh, Node, Primitive, Root, Scene,
-};
+use shine_gltf::{accessor, buffer, optional_attribute_map, Accessor, Buffer, GetMut, Index, Mesh, Node, Primitive, Root, Scene};
+use std::{iter, mem};
 use webserver::appcontext::AppContext;
 
 pub trait IntoD3Data {
@@ -28,6 +26,17 @@ pub enum D3Location {
     },
 }
 
+pub struct D3NoAttributes;
+
+impl IntoIterator for D3NoAttributes {
+    type Item = (f32, f32, f32);
+    type IntoIter = iter::Empty<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        iter::empty()
+    }
+}
+
 /// Trace 3D geometry object through the web service
 pub struct D3Trace {
     root: Root,
@@ -42,14 +51,16 @@ impl D3Trace {
         D3Trace { root }
     }
 
-    fn create_geometry<V, I>(&mut self, positions: V, indices: I) -> Primitive
+    fn create_geometry<V, I, N>(&mut self, positions: V, normals: N, indices: I) -> Primitive
     where
         V: IntoIterator<Item = (f32, f32, f32)>,
+        N: IntoIterator<Item = (f32, f32, f32)>,
         I: IntoIterator<Item = u32>,
     {
         let mut data = BytesMut::new();
 
         let position_byte_stride = 3 * mem::size_of::<f32>();
+        let position_byte_offset = data.len();
         for (x, y, z) in positions.into_iter() {
             if data.remaining_mut() < position_byte_stride {
                 // reserve more
@@ -60,11 +71,26 @@ impl D3Trace {
             data.put_f32_le(y);
             data.put_f32_le(z);
         }
-        let position_byte_count = data.len();
-        let position_byte_offset = 0;        
+        let position_byte_count = data.len() - position_byte_offset;
         let position_count = position_byte_count / position_byte_stride;
 
+        let normal_byte_stride = 3 * mem::size_of::<f32>();
+        let normal_byte_offset = data.len();
+        for (x, y, z) in normals.into_iter() {
+            if data.remaining_mut() < normal_byte_stride {
+                // reserve more
+                data.reserve(normal_byte_stride * 1024);
+            }
+
+            data.put_f32_le(x);
+            data.put_f32_le(y);
+            data.put_f32_le(z);
+        }
+        let normal_byte_count = data.len() - normal_byte_offset;
+        let normal_count = normal_byte_count / normal_byte_stride;
+
         let index_byte_stride = mem::size_of::<u32>();
+        let index_byte_offset = data.len();
         for i in indices.into_iter() {
             if data.remaining_mut() < index_byte_stride {
                 // reserve more
@@ -73,8 +99,7 @@ impl D3Trace {
 
             data.put_u32_le(i);
         }
-        let index_byte_count = data.len() - position_byte_count;
-        let index_byte_offset = position_byte_count;
+        let index_byte_count = data.len() - index_byte_offset;
         let index_count = index_byte_count / index_byte_stride;
 
         let encoded_data = base64::encode(&data);
@@ -88,7 +113,7 @@ impl D3Trace {
             self.root.add_buffer(buffer)
         };
 
-        let position_accessor_id = {
+        let position_accessor_id = if position_byte_count > 0 {
             let view_id = {
                 let view = buffer::View {
                     byte_length: position_byte_count as u32,
@@ -103,10 +128,32 @@ impl D3Trace {
                 count: position_count as u32,
                 ..Accessor::with_view(view_id, accessor::Type::Vec3, accessor::ComponentType::F32, false)
             };
-            self.root.add_accessor(accessor)
+            Some(self.root.add_accessor(accessor))
+        } else {
+            None
         };
 
-        let index_accessor_id = {
+        let normal_accessor_id = if normal_byte_count > 0 {
+            let view_id = {
+                let view = buffer::View {
+                    byte_length: normal_byte_count as u32,
+                    byte_offset: Some(normal_byte_offset as u32),
+                    byte_stride: Some(buffer::ByteStride(normal_byte_stride as u32)),
+                    ..buffer::View::with_buffer(buffer_id.clone())
+                };
+                self.root.add_buffer_view(view)
+            };
+
+            let accessor = Accessor {
+                count: normal_count as u32,
+                ..Accessor::with_view(view_id, accessor::Type::Vec3, accessor::ComponentType::F32, false)
+            };
+            Some(self.root.add_accessor(accessor))
+        } else {
+            None
+        };
+
+        let index_accessor_id = if index_byte_count > 0 {
             let view_id = {
                 let buffer_view = buffer::View {
                     byte_length: index_byte_count as u32,
@@ -121,22 +168,25 @@ impl D3Trace {
                 count: index_count as u32,
                 ..Accessor::with_view(view_id, accessor::Type::Scalar, accessor::ComponentType::U32, false)
             };
-            self.root.add_accessor(accessor)
+            Some(self.root.add_accessor(accessor))
+        } else {
+            None
         };
 
         Primitive {
-            attributes: attribute_map![ Positions => position_accessor_id ],
-            indices: Some(index_accessor_id),
+            attributes: optional_attribute_map![ Positions => position_accessor_id, Normals => normal_accessor_id ],
+            indices: index_accessor_id,
             ..Primitive::default()
         }
     }
 
-    pub fn add_indexed_mesh<V, I>(&mut self, positions: V, indices: I) -> MeshId
+    pub fn add_indexed_mesh<V, N, I>(&mut self, positions: V, normals: N, indices: I) -> MeshId
     where
         V: IntoIterator<Item = (f32, f32, f32)>,
+        N: IntoIterator<Item = (f32, f32, f32)>,
         I: IntoIterator<Item = u32>,
     {
-        let geometry = self.create_geometry(positions, indices);
+        let geometry = self.create_geometry(positions, normals, indices);
 
         let mesh_id = {
             let mesh = Mesh {
@@ -167,12 +217,13 @@ impl D3Trace {
         info!("{}", self.root.to_string_pretty().unwrap());
     }
 
-    pub fn add_indexed_mesh_instance<V, I>(&mut self, positions: V, indices: I, location: D3Location) -> MeshId
+    pub fn add_indexed_mesh_instance<V, N, I>(&mut self, positions: V, normals: N, indices: I, location: D3Location) -> MeshId
     where
         V: IntoIterator<Item = (f32, f32, f32)>,
+        N: IntoIterator<Item = (f32, f32, f32)>,
         I: IntoIterator<Item = u32>,
     {
-        let id = self.add_indexed_mesh(positions, indices);
+        let id = self.add_indexed_mesh(positions, normals, indices);
         self.add_instance(id.clone(), location);
         id
     }

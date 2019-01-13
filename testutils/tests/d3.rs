@@ -2,7 +2,7 @@ extern crate log;
 extern crate shine_testutils;
 
 use shine_testutils::init_webcontroll_test;
-use shine_testutils::webserver::{D3Location, D3Trace};
+use shine_testutils::webserver::{D3Location, D3NoAttributes, D3Trace};
 
 #[test]
 fn test_d3() {
@@ -17,6 +17,7 @@ fn test_d3() {
     let mut tr = D3Trace::new();
     tr.add_indexed_mesh_instance(
         vec![(0., 0., 0.), (0., 1., 0.), (1., 0., 0.), (1., 1., 0.)],
+        D3NoAttributes,
         vec![0, 1, 2],
         D3Location::Identity,
     );
