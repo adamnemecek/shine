@@ -34,7 +34,11 @@ where
     F: Face,
     C: PredicatesContext<Predicates = PR>,
 {
-    pub fn new(tri: &Triangulation<PR::Position, V, F, C>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<'_, PR, V, F, C> {
+    pub fn new(
+        tri: &Triangulation<PR::Position, V, F, C>,
+        v0: VertexIndex,
+        v1: VertexIndex,
+    ) -> CrossingIterator<'_, PR, V, F, C> {
         assert_eq!(tri.dimension(), 2);
         assert_ne!(v0, v1);
         assert!(tri.is_finite_vertex(v0));

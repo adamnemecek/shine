@@ -6,7 +6,7 @@ use serde;
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
 use shine_gltf_macro::Validate;
-use std::{self, cmp, fmt, io, marker};
+use std::{self, cmp, fmt, io, marker, str};
 
 use crate::path::Path;
 use crate::validation::Validate;
@@ -127,11 +127,6 @@ impl Root {
         (self as &dyn Get<T>).get(index)
     }
 
-    /// Deserialize from a JSON string slice.
-    pub fn from_str(str_: &str) -> Result<Self, Error> {
-        serde_json::from_str(str_)
-    }
-
     /// Deserialize from a JSON byte slice.
     pub fn from_slice(slice: &[u8]) -> Result<Self, Error> {
         serde_json::from_slice(slice)
@@ -184,6 +179,15 @@ impl Root {
         W: io::Write,
     {
         serde_json::to_writer_pretty(writer, self)
+    }
+}
+
+impl str::FromStr for Root {
+    type Err = Error;
+
+    /// Deserialize from a JSON string slice.
+    fn from_str(str_: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(str_)
     }
 }
 

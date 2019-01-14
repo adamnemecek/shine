@@ -10,9 +10,9 @@ where
     S: Store,
 {
     //crate row_index: usize,
-    crate mask: &'a M,
-    crate store: &'a S,
-    crate data_range: DataRange,
+    pub(crate) mask: &'a M,
+    pub(crate) store: &'a S,
+    pub(crate) data_range: DataRange,
 }
 
 impl<'a, M, S> IndexExcl<usize> for RowRead<'a, M, S>
@@ -59,9 +59,9 @@ where
     S: Store,
 {
     //crate row_index: usize,
-    crate mask: &'a M,
-    crate store: &'a mut S,
-    crate data_range: DataRange,
+    pub(crate) mask: &'a M,
+    pub(crate) store: &'a mut S,
+    pub(crate) data_range: DataRange,
 }
 
 impl<'a, M, S> IndexExcl<usize> for RowUpdate<'a, M, S>
@@ -108,9 +108,9 @@ where
     M: MatrixMask,
     S: Store,
 {
-    //crate row_index: usize,
-    crate row: usize,
-    crate mat: &'a mut SMatrix<M, S>,
+    //pub(crate) row_index: usize,
+    pub(crate) row: usize,
+    pub(crate) mat: &'a mut SMatrix<M, S>,
 }
 
 impl<'a, M, S> IndexExcl<usize> for RowWrite<'a, M, S>

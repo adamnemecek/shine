@@ -7,8 +7,8 @@ pub struct DataIter<'a, S>
 where
     S: Store,
 {
-    crate iterator: BitIter<&'a VectorMask>,
-    crate store: &'a S,
+    pub(crate) iterator: BitIter<&'a VectorMask>,
+    pub(crate) store: &'a S,
 }
 
 impl<'a, S> Iterator for DataIter<'a, S>
@@ -27,8 +27,8 @@ pub struct DataIterMut<'a, S>
 where
     S: Store,
 {
-    crate iterator: BitIter<&'a VectorMask>,
-    crate store: &'a mut S,
+    pub(crate) iterator: BitIter<&'a VectorMask>,
+    pub(crate) store: &'a mut S,
 }
 
 impl<'a, S> Iterator for DataIterMut<'a, S>

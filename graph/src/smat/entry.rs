@@ -17,7 +17,7 @@ where
     M: MatrixMask,
     S: Store,
 {
-    crate fn new(store: &mut SMatrix<M, S>, r: usize, c: usize) -> Entry<'_, M, S> {
+    pub(crate) fn new(store: &mut SMatrix<M, S>, r: usize, c: usize) -> Entry<'_, M, S> {
         Entry {
             idx: (r, c),
             data: store.get_mut(r, c).map(|d| d as *mut _),

@@ -59,7 +59,10 @@ impl Group {
     fn add_text(&mut self, p: (f64, f64), text: String, color: String, size: f32) {
         let key = ((p.0 * 65536.) as i32, (p.1 * 65546.) as i32);
         let size = size * 0.05;
-        self.texts.entry(key).or_insert(Vec::new()).push(Text { text, color, size });
+        self.texts
+            .entry(key)
+            .or_insert_with(Vec::new)
+            .push(Text { text, color, size });
     }
 
     fn add_node<N: Node>(&mut self, node: N) {
@@ -77,7 +80,7 @@ impl Group {
 
                 let mut y = 0.;
                 for text in texts.iter() {
-                    for line in text.text.split("\n") {
+                    for line in text.text.split('\n') {
                         y += text.size;
                         let mut node = element::Text::new()
                             .set("x", 0)
@@ -133,7 +136,7 @@ impl D2Trace {
         }
     }
 
-    pub fn to_data(mut self) -> String {
+    pub fn into_data(mut self) -> String {
         self.pop_all_groups();
 
         let group = self.groups.pop().unwrap();

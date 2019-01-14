@@ -5,7 +5,7 @@ use serde_derive::{Deserialize, Serialize};
 use std::fmt;
 
 /// All valid camera types.
-pub const VALID_CAMERA_TYPES: &'static [&'static str] = &["perspective", "orthographic"];
+pub const VALID_CAMERA_TYPES: &[&str] = &["perspective", "orthographic"];
 
 /// Specifies the camera type.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -130,11 +130,11 @@ impl Validate for Perspective {
         P: Fn() -> Path,
         R: FnMut(&dyn Fn() -> Path, Error),
     {
-        self.aspect_ratio.map(|aspect_ratio| {
+        if let Some(aspect_ratio) = self.aspect_ratio {
             if aspect_ratio < 0.0 {
                 report(&path, Error::Invalid);
             }
-        });
+        }
 
         if self.yfov < 0.0 {
             report(&path, Error::Invalid);
@@ -144,11 +144,11 @@ impl Validate for Perspective {
             report(&path, Error::Invalid);
         }
 
-        self.zfar.map(|zfar| {
+        if let Some(zfar) = self.zfar {
             if zfar < 0.0 || zfar < self.znear {
                 report(&path, Error::Invalid);
             }
-        });
+        }
 
         self.extensions
             .validate_completely(root, || path().field("extensions"), report);

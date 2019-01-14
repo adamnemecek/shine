@@ -15,7 +15,7 @@ impl<'a, S> Entry<'a, S>
 where
     S: 'a + Store,
 {
-    crate fn new<'b>(store: &'b mut SVector<S>, idx: usize) -> Entry<'b, S> {
+    pub(crate) fn new<'b>(store: &'b mut SVector<S>, idx: usize) -> Entry<'b, S> {
         Entry {
             idx,
             data: store.get_mut(idx).map(|d| d as *mut _),

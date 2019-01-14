@@ -1,9 +1,3 @@
-#![feature(try_from)]
-
-//#[macro_use]
-//extern crate shine_gltf_macro;
-//#[macro_use]
-//extern crate serde_derive;
 use serde_json;
 
 /// Contains `Accessor` and other related data structures.

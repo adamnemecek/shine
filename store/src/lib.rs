@@ -1,4 +1,3 @@
-#![feature(align_offset)]
 #![feature(drain_filter)]
 
 /// Define engine limitations

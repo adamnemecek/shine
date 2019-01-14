@@ -4,7 +4,7 @@ use serde_derive::{Deserialize, Serialize};
 use shine_gltf_macro::Validate;
 
 /// All valid MIME types.
-pub const VALID_MIME_TYPES: &'static [&'static str] = &["image/jpeg", "image/png"];
+pub const VALID_MIME_TYPES: &[&str] = &["image/jpeg", "image/png"];
 
 /// Image data used to create a texture.
 #[derive(Clone, Debug, Deserialize, Serialize, Validate)]

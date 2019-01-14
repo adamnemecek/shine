@@ -7,9 +7,9 @@ pub struct DrainIter<'a, S>
 where
     S: Store,
 {
-    crate vec_ptr: *mut SVector<S>,
-    crate iterator: BitIter<&'a VectorMask>,
-    crate store: &'a mut S,
+    pub(crate) vec_ptr: *mut SVector<S>,
+    pub(crate) iterator: BitIter<&'a VectorMask>,
+    pub(crate) store: &'a mut S,
 }
 
 impl<'a, S> Iterator for DrainIter<'a, S>

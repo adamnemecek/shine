@@ -4,7 +4,7 @@ use serde::{Serialize, Serializer};
 use serde_json;
 use std;
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::hash::{BuildHasher, Hash};
 
 /// Trait for validating glTF JSON data against the 2.0 specification.
 pub trait Validate {
@@ -126,7 +126,7 @@ impl<T> Validate for Checked<T> {
     }
 }
 
-impl<K: Eq + Hash + ToString + Validate, V: Validate> Validate for HashMap<K, V> {
+impl<K: Eq + Hash + ToString + Validate, V: Validate, H: BuildHasher> Validate for HashMap<K, V, H> {
     fn validate_minimally<P, R>(&self, root: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,

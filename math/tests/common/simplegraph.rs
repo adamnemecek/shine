@@ -134,5 +134,5 @@ impl Face for SimpleFace {
     }
 }
 
- #[allow(dead_code)]
+#[allow(dead_code)]
 pub type SimpleContext<P> = Context<P, SimpleVertex<P>, SimpleFace>;

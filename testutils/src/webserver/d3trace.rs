@@ -228,7 +228,7 @@ impl D3Trace {
         id
     }
 
-    pub fn to_data(self) -> String {
+    pub fn into_data(self) -> String {
         serde_json::to_string(&self.root).unwrap()
     }
 }

@@ -11,10 +11,10 @@ where
     M: MatrixMask,
     S: Store,
 {
-    crate nnz: usize,
-    crate row_mask: VectorMask,
-    crate mask: M,
-    crate store: S,
+    pub(crate) nnz: usize,
+    pub(crate) row_mask: VectorMask,
+    pub(crate) mask: M,
+    pub(crate) store: S,
 }
 
 impl<M, S> SMatrix<M, S>

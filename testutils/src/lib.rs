@@ -1,5 +1,3 @@
-#![feature(crate_visibility_modifier)]
-
 pub mod webserver;
 
 use std::env;
@@ -16,13 +14,8 @@ pub fn init_test(module: &str) {
 
 /// Init test environment environment and logging for single threaded environment
 pub fn init_test_no_thread(module: &str) -> Result<(), ()> {
-    let is_single_threaded = if env::args().into_iter().find(|a| a == "--test-threads=1").is_some() {
-        true
-    } else if env::var("RUST_TEST_THREADS").unwrap_or("0".to_string()) == "1" {
-        true
-    } else {
-        false
-    };
+    let is_single_threaded =
+        env::args().any(|a| a == "--test-threads=1") || env::var("RUST_TEST_THREADS").unwrap_or_else(|_| "0".to_string()) == "1";
 
     if is_single_threaded {
         init_test(module);

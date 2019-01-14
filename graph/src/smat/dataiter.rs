@@ -15,7 +15,7 @@ impl<'a, S> DataIter<'a, S>
 where
     S: 'a + Store,
 {
-    crate fn new<'b>(iterator: Range<usize>, store: &'b S) -> DataIter<'b, S> {
+    pub(crate) fn new<'b>(iterator: Range<usize>, store: &'b S) -> DataIter<'b, S> {
         DataIter { iterator, store }
     }
 }
@@ -44,7 +44,7 @@ impl<'a, S> DataIterMut<'a, S>
 where
     S: 'a + Store,
 {
-    crate fn new<'b>(iterator: Range<usize>, store: &'b mut S) -> DataIterMut<'b, S> {
+    pub(crate) fn new<'b>(iterator: Range<usize>, store: &'b mut S) -> DataIterMut<'b, S> {
         DataIterMut { iterator, store }
     }
 }

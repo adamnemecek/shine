@@ -29,10 +29,10 @@ pub const TRIANGLE_STRIP: u32 = 5;
 pub const TRIANGLE_FAN: u32 = 6;
 
 /// All valid primitive rendering modes.
-pub const VALID_MODES: &'static [u32] = &[POINTS, LINES, LINE_LOOP, LINE_STRIP, TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN];
+pub const VALID_MODES: &[u32] = &[POINTS, LINES, LINE_LOOP, LINE_STRIP, TRIANGLES, TRIANGLE_STRIP, TRIANGLE_FAN];
 
 /// All valid semantic names for Morph targets.
-pub const VALID_MORPH_TARGETS: &'static [&'static str] = &["POSITION", "NORMAL", "TANGENT"];
+pub const VALID_MORPH_TARGETS: &[&str] = &["POSITION", "NORMAL", "TANGENT"];
 
 /// The type of primitives to render.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
@@ -108,6 +108,8 @@ pub struct Primitive {
     pub targets: Option<Vec<MorphTarget>>,
 }
 
+// Help serde avoid serializing this glTF 2.0 default value.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn is_primitive_mode_default(mode: &Checked<Mode>) -> bool {
     *mode == Checked::Valid(Mode::Triangles)
 }

@@ -9,7 +9,7 @@ pub struct WrapRead<'a, S>
 where
     S: Store,
 {
-    crate vec: &'a SVector<S>,
+    pub(crate) vec: &'a SVector<S>,
 }
 
 impl<'a, S> IndexExcl<usize> for WrapRead<'a, S>
@@ -48,7 +48,7 @@ pub struct WrapUpdate<'a, S>
 where
     S: Store,
 {
-    crate vec: &'a mut SVector<S>,
+    pub(crate) vec: &'a mut SVector<S>,
 }
 
 impl<'a, S> IndexExcl<usize> for WrapUpdate<'a, S>
@@ -87,7 +87,7 @@ pub struct WrapWrite<'a, S>
 where
     S: Store,
 {
-    crate vec: &'a mut SVector<S>,
+    pub(crate) vec: &'a mut SVector<S>,
 }
 
 impl<'a, S> IndexExcl<usize> for WrapWrite<'a, S>

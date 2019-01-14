@@ -35,7 +35,7 @@ where
     V: Vertex<Position = P>,
     F: Face,
 {
-    crate fn new(context: C) -> Triangulation<P, V, F, C> {
+    pub(crate) fn new(context: C) -> Triangulation<P, V, F, C> {
         Triangulation {
             graph: Graph {
                 dimension: -1,

@@ -10,7 +10,7 @@ where
     M: MatrixMask,
     S: Store,
 {
-    crate mat: &'a SMatrix<M, S>,
+    pub(crate) mat: &'a SMatrix<M, S>,
 }
 
 impl<'a, M, S> IndexExcl<usize> for WrapRowRead<'a, M, S>
@@ -53,7 +53,7 @@ where
     M: MatrixMask,
     S: Store,
 {
-    crate mat: &'a mut SMatrix<M, S>,
+    pub(crate) mat: &'a mut SMatrix<M, S>,
 }
 
 impl<'a, M, S> IndexExcl<usize> for WrapRowUpdate<'a, M, S>
@@ -96,7 +96,7 @@ where
     M: MatrixMask,
     S: Store,
 {
-    crate mat: &'a mut SMatrix<M, S>,
+    pub(crate) mat: &'a mut SMatrix<M, S>,
 }
 
 impl<'a, M, S> IndexExcl<usize> for WrapRowWrite<'a, M, S>

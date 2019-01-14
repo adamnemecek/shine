@@ -72,13 +72,13 @@ pub const UNSIGNED_INT: u32 = 5125;
 pub const FLOAT: u32 = 5126;
 
 /// All valid generic vertex attribute component types.
-pub const VALID_COMPONENT_TYPES: &'static [u32] = &[BYTE, UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, UNSIGNED_INT, FLOAT];
+pub const VALID_COMPONENT_TYPES: &[u32] = &[BYTE, UNSIGNED_BYTE, SHORT, UNSIGNED_SHORT, UNSIGNED_INT, FLOAT];
 
 /// All valid index component types.
-pub const VALID_INDEX_TYPES: &'static [u32] = &[UNSIGNED_BYTE, UNSIGNED_SHORT, UNSIGNED_INT];
+pub const VALID_INDEX_TYPES: &[u32] = &[UNSIGNED_BYTE, UNSIGNED_SHORT, UNSIGNED_INT];
 
 /// All valid accessor types.
-pub const VALID_ACCESSOR_TYPES: &'static [&'static str] = &["SCALAR", "VEC2", "VEC3", "VEC4", "MAT2", "MAT3", "MAT4"];
+pub const VALID_ACCESSOR_TYPES: &[&str] = &["SCALAR", "VEC2", "VEC3", "VEC4", "MAT2", "MAT3", "MAT4"];
 
 /// Contains data structures for sparse storage.
 pub mod sparse {
@@ -226,6 +226,7 @@ impl Accessor {
 }
 
 // Help serde avoid serializing this glTF 2.0 default value.
+#[allow(clippy::trivially_copy_pass_by_ref)]
 fn is_normalized_default(b: &bool) -> bool {
     !*b
 }
@@ -382,9 +383,9 @@ impl ser::Serialize for Type {
 
 impl ComponentType {
     /// Returns the number of bytes this value represents.
-    pub fn size(&self) -> usize {
+    pub fn size(self) -> usize {
         use self::ComponentType::*;
-        match *self {
+        match self {
             I8 | U8 => 1,
             I16 | U16 => 2,
             F32 | U32 => 4,
@@ -415,9 +416,9 @@ impl ser::Serialize for ComponentType {
 
 impl Type {
     /// Returns the equivalent number of scalar quantities this type represents.
-    pub fn multiplicity(&self) -> usize {
+    pub fn multiplicity(self) -> usize {
         use self::Type::*;
-        match *self {
+        match self {
             Scalar => 1,
             Vec2 => 2,
             Vec3 => 3,

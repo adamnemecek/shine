@@ -65,7 +65,7 @@ impl Service {
                 })
                 .workers(1)
                 .bind(bind_address.clone())
-                .expect(&format!("Cannot bind to {}", bind_address))
+                .unwrap_or_else(|_| panic!("Cannot bind to {}", bind_address))
                 .start();
 
                 let _ = tx.send(addr);
@@ -93,7 +93,7 @@ impl Service {
     }
 
     pub fn add_d2(&self, tr: D2Trace) {
-        self.add_d2_raw(tr.to_data());
+        self.add_d2_raw(tr.into_data());
     }
 
     pub fn add_d2_data<T: IntoD2Data>(&self, t: &T) {
@@ -109,7 +109,7 @@ impl Service {
     }
 
     pub fn add_d3(&self, tr: D3Trace) {
-        self.add_d3_raw(tr.to_data());
+        self.add_d3_raw(tr.into_data());
     }
 
     pub fn add_d3_data<T: IntoD3Data>(&self, t: &T) {

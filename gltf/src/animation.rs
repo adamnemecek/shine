@@ -6,10 +6,10 @@ use shine_gltf_macro::Validate;
 use std::fmt;
 
 /// All valid animation interpolation algorithms.
-pub const VALID_INTERPOLATIONS: &'static [&'static str] = &["LINEAR", "STEP", "CATMULLROMSPLINE", "CUBICSPLINE"];
+pub const VALID_INTERPOLATIONS: &[&str] = &["LINEAR", "STEP", "CATMULLROMSPLINE", "CUBICSPLINE"];
 
 /// All valid animation property names.
-pub const VALID_PROPERTIES: &'static [&'static str] = &["translation", "rotation", "scale", "weights"];
+pub const VALID_PROPERTIES: &[&str] = &["translation", "rotation", "scale", "weights"];
 
 /// Specifies an interpolation algorithm.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Deserialize)]

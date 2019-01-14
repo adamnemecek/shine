@@ -3,23 +3,38 @@ use actix_web::{Error as ActixWebError, HttpRequest, HttpResponse};
 use log::info;
 use std::sync::{Arc, Condvar, Mutex};
 
+#[derive(Clone, Copy, Debug)]
+enum BlockingState {
+    None,
+    WaitingUser,
+}
+
+impl BlockingState {
+    fn is_blocked(self) -> bool {
+        match self {
+            BlockingState::None => false,
+            _ => true,
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct Control {
-    block: Arc<(Mutex<bool>, Condvar)>,
+    block: Arc<(Mutex<BlockingState>, Condvar)>,
 }
 
 impl Control {
     pub fn new() -> Control {
         Control {
-            block: Arc::new((Mutex::new(false), Condvar::new())),
+            block: Arc::new((Mutex::new(BlockingState::None), Condvar::new())),
         }
     }
 
     pub fn wait(&self) {
         let &(ref lock, ref cvar) = &*self.block;
         let mut blocked = lock.lock().unwrap();
-        *blocked = true;
-        while *blocked {
+        *blocked = BlockingState::WaitingUser;
+        while blocked.is_blocked() {
             info!("Waiting for user");
             blocked = cvar.wait(blocked).unwrap();
         }
@@ -29,7 +44,7 @@ impl Control {
     pub fn notify(&self) {
         let &(ref lock, ref cvar) = &*self.block;
         let mut blocked = lock.lock().unwrap();
-        *blocked = false;
+        *blocked = BlockingState::None;
         cvar.notify_all();
     }
 }

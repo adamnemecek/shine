@@ -5,9 +5,9 @@ use std::fmt::{self, Debug, Formatter};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
-    crate nnz: usize,
-    crate mask: VectorMask,
-    crate store: S,
+    pub(crate) nnz: usize,
+    pub(crate) mask: VectorMask,
+    pub(crate) store: S,
 }
 
 impl<S: Store> SVector<S> {
