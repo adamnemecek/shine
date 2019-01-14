@@ -1,8 +1,23 @@
-use crate::edgecomponent::{EdgeComponentDescriptor, EdgeComponentStore};
-use crate::entity::EntityStore;
-use crate::entitycomponent::{EntityComponentDescriptor, EntityComponentStore};
+use crate::entities::{
+    EdgeComponentDescriptor, EdgeComponentStore, EntityComponentDescriptor, EntityComponentStore, EntityStore,
+};
+use shine_store::{hashstore, store};
 use shred::{Fetch, FetchMut, Resources, SystemData};
 
+/// World is a collection of container.
+///  - entity based
+///     - entity is defined by a unique id.
+///     - store multiple type of data (components) to each id (nodes in a graph)
+///     - store multiple type of data (edge-component) to id pairs (directed edges in a graph)
+///     - read/write lock data by components to bulck process the them
+///  - resource (TODO)
+///     - mapping from a uniqe id to data
+///     - allow creating handles on demand without blocking, but actual loading is deffered
+///     - mainly used to store share resource between entites (ex textures, geometry, etc.)
+///     - reading and update resources are exclusive and update is performed in a blocking pass
+///  - octree (TODO)
+///     - id based space (node) selection
+///     - concurent hashmap based spatial space partitioning (ex voxel grids)
 pub struct World {
     pub resources: Resources,
 }
@@ -26,29 +41,41 @@ impl World {
         self.resources.fetch_mut()
     }
 
-    pub fn register_entity<C: EntityComponentDescriptor>(&mut self) {
-        self.resources.insert::<EntityComponentStore<C>>(Default::default());
+    pub fn register_entity<D: EntityComponentDescriptor>(&mut self) {
+        self.resources.insert::<EntityComponentStore<D>>(Default::default());
     }
 
-    pub fn get_entity<C: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<C>> {
+    pub fn get_entity<D: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<D>> {
         self.resources.fetch()
     }
 
-    pub fn get_entity_mut<C: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<C>> {
+    pub fn get_entity_mut<D: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<D>> {
         self.resources.fetch_mut()
     }
 
-    pub fn register_edge<C: EdgeComponentDescriptor>(&mut self) {
-        self.resources.insert::<EdgeComponentStore<C>>(Default::default());
+    pub fn register_edge<D: EdgeComponentDescriptor>(&mut self) {
+        self.resources.insert::<EdgeComponentStore<D>>(Default::default());
     }
 
-    pub fn get_edge<C: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<C>> {
+    pub fn get_edge<D: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<D>> {
         self.resources.fetch()
     }
 
-    pub fn get_edge_mut<C: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<C>> {
+    pub fn get_edge_mut<D: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<D>> {
         self.resources.fetch_mut()
     }
+/*
+    pub fn register_resource<R: ResourceDescriptor>(&mut self) {
+        self.resources.insert::<ResourceStore<C>>(Default::default());
+    }
+
+    pub fn get_resource<D: ResourceDescriptor>(&self) -> Fetch<'_, ResourceStore<D>> {
+        self.resources.fetch()
+    }
+
+    pub fn get_resource_mut<D: ResourceDescriptor>(&self) -> FetchMut<'_, ResourceStore<D>> {
+        self.resources.fetch_mut()use crate::entities::Entity;
+    }*/
 
     /// Helper to fetch components without creating some explicit System.
     /// let (a,mut b) : (Read<i8>, Write<i8>) = world.system_data();

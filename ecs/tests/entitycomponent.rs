@@ -1,5 +1,6 @@
 use log::{debug, trace};
-use shine_ecs::{DenseStorage, Entity, EntityComponent, IntoJoinExt, SparseStorage, World};
+use shine_ecs::entities::{storage, Entity, EntityComponent, IntoJoinExt};
+use shine_ecs::World;
 use shine_testutils::init_test;
 
 #[derive(Debug, PartialEq)]
@@ -9,7 +10,7 @@ struct Pos {
     z: i32,
 }
 impl EntityComponent for Pos {
-    type StorageCategory = DenseStorage;
+    type StorageCategory = storage::Dense;
 }
 
 #[derive(Debug)]
@@ -19,7 +20,7 @@ struct Velocity {
     z: i32,
 }
 impl EntityComponent for Velocity {
-    type StorageCategory = SparseStorage;
+    type StorageCategory = storage::Sparse;
 }
 
 #[test]

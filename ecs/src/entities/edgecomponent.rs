@@ -1,12 +1,11 @@
-use crate::edge::Edge;
-use crate::storagecategory::{DenseStorage, SparseStorage, StorageCategory};
+use crate::entities::{storage, Edge};
 use shine_graph::smat;
 
 pub use self::smat::Entry;
 
 /// Trait to assign storage policy to an edge data
 pub trait EdgeComponent: Sync + Send {
-    type StorageCategory: StorageCategory;
+    type StorageCategory: storage::Category;
 }
 
 /// Helper to specialize EdgeComponentStore based on the type of the edge data
@@ -17,7 +16,7 @@ pub trait EdgeComponentDescriptor: 'static + Sync + Send {
 
 impl<S, T> EdgeComponentDescriptor for T
 where
-    S: StorageCategory,
+    S: storage::Category,
     T: 'static + EdgeComponent<StorageCategory = S>,
     (S, T): EdgeComponentDescriptor,
 {
@@ -25,7 +24,7 @@ where
     type Store = <(S, T) as EdgeComponentDescriptor>::Store;
 }
 
-impl<T> EdgeComponentDescriptor for (DenseStorage, T)
+impl<T> EdgeComponentDescriptor for (storage::Dense, T)
 where
     T: 'static + Send + Sync,
 {
@@ -33,7 +32,7 @@ where
     type Store = smat::DenseStore<T>;
 }
 
-impl<T> EdgeComponentDescriptor for (SparseStorage, T)
+impl<T> EdgeComponentDescriptor for (storage::Sparse, T)
 where
     T: 'static + Send + Sync,
 {

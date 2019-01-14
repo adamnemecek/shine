@@ -1,4 +1,4 @@
-use shine_ecs::EntityStore;
+use shine_ecs::entities::EntityStore;
 use shine_testutils::init_test;
 
 #[test]

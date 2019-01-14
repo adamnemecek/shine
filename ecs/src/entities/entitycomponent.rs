@@ -1,12 +1,11 @@
-use crate::entity::Entity;
-use crate::storagecategory::{DenseStorage, SparseStorage, StorageCategory};
+use crate::entities::{storage, Entity};
 use shine_graph::svec;
 
 pub use self::svec::Entry;
 
 /// Trait to assign storage policy to an entity data
 pub trait EntityComponent: Sync + Send {
-    type StorageCategory: StorageCategory;
+    type StorageCategory: storage::Category;
 }
 
 /// Helper to specialize EntityComponentStore based on the type of the entity data
@@ -16,21 +15,21 @@ pub trait EntityComponentDescriptor: 'static + Sync + Send {
 
 impl<S, T> EntityComponentDescriptor for T
 where
-    S: StorageCategory,
+    S: storage::Category,
     T: 'static + EntityComponent<StorageCategory = S>,
     (S, T): EntityComponentDescriptor,
 {
     type Store = <(S, T) as EntityComponentDescriptor>::Store;
 }
 
-impl<T> EntityComponentDescriptor for (DenseStorage, T)
+impl<T> EntityComponentDescriptor for (storage::Dense, T)
 where
     T: 'static + Send + Sync,
 {
     type Store = svec::DenseStore<T>;
 }
 
-impl<T> EntityComponentDescriptor for (SparseStorage, T)
+impl<T> EntityComponentDescriptor for (storage::Sparse, T)
 where
     T: 'static + Send + Sync,
 {
@@ -104,86 +103,3 @@ where
         }
     }
 }
-
-/*
-/// Grant immutable access to the components of a store
-pub struct ReadComponent<'a, C: ComponentDescriptor> {
-    inner: Read<'a, C::Store>,
-}
-
-impl<'a, C: ComponentDescriptor> Deref for ReadComponent<'a, C> {
-    type Target = C::Store;
-
-    fn deref(&self) -> &C::Store {
-        self.inner.deref()
-    }
-}
-
-impl<'a, C: ComponentDescriptor> SystemData<'a> for ReadComponent<'a, C> {
-    fn setup(_: &mut Resources) {}
-
-    fn fetch(res: &'a Resources) -> Self {
-        ReadComponent {
-            inner: res.fetch::<C::Store>().into(),
-        }
-    }
-
-    fn reads() -> Vec<ResourceId> {
-        vec![ResourceId::new::<C::Store>()]
-    }
-
-    fn writes() -> Vec<ResourceId> {
-        vec![]
-    }
-}
-
-/// Grant mutable access to a component
-pub struct WriteComponent<'a, C: ComponentDescriptor> {
-    inner: Write<'a, C::Store>,
-}
-
-impl<'a, C: ComponentDescriptor> Deref for WriteComponent<'a, C> {
-    type Target = C::Store;
-
-    fn deref(&self) -> &C::Store {
-        self.inner.deref()
-    }
-}
-
-impl<'a, C: ComponentDescriptor> DerefMut for WriteComponent<'a, C> {
-    fn deref_mut(&mut self) -> &mut C::Store {
-        self.inner.deref_mut()
-    }
-}
-
-impl<'a, C: ComponentDescriptor> SystemData<'a> for WriteComponent<'a, C> {
-    fn setup(_: &mut Resources) {}
-
-    fn fetch(res: &'a Resources) -> Self {
-        WriteComponent {
-            inner: res.fetch_mut::<C::Store>().into(),
-        }
-    }
-
-    fn reads() -> Vec<ResourceId> {
-        vec![]
-    }
-
-    fn writes() -> Vec<ResourceId> {
-        vec![ResourceId::new::<C::Store>()]
-    }
-}
-
-pub struct ComponentStore<S: ComponentDescriptor> {
-    store: SVector<S::Store>,
-}
-
-impl<S> CStore<S>
-where
-    S: ComponentDescriptor,
-{
-    pub fn add(&mut self, e: Entity, c: <<S as ComponentDescriptor>::Store as SVector>::Item) {
-        self.store.add(e.id(), c);
-    }
-}
-*/

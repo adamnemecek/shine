@@ -1,4 +1,4 @@
-use crate::entity::Entity;
+use crate::entities::Entity;
 use shine_graph::join;
 use shine_graph::traits::{IndexExcl, IndexLowerBound};
 
