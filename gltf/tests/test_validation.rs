@@ -1,6 +1,6 @@
 use std::{fs, io};
 
-extern crate shine_gltf;
+use shine_gltf;
 use shine_gltf::validation::{Error, Validate};
 use shine_gltf::Path;
 

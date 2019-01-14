@@ -1,7 +1,9 @@
+use crate::validation::{Checked, Error, Validate};
+use crate::{accessor, extensions, scene, Index, Path, Root};
 use serde::{de, ser};
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
 use std::fmt;
-use validation::{Checked, Error, Validate};
-use {accessor, extensions, scene, Index, Path, Root};
 
 /// All valid animation interpolation algorithms.
 pub const VALID_INTERPOLATIONS: &'static [&'static str] = &["LINEAR", "STEP", "CATMULLROMSPLINE", "CUBICSPLINE"];
@@ -134,7 +136,7 @@ impl Validate for Animation {
     fn validate_minimally<P, R>(&self, root: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         self.samplers.validate_minimally(root, || path().field("samplers"), report);
         for (index, channel) in self.channels.iter().enumerate() {
@@ -161,7 +163,7 @@ impl<'de> de::Deserialize<'de> for Checked<Interpolation> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<Interpolation>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_INTERPOLATIONS)
             }
 
@@ -170,7 +172,7 @@ impl<'de> de::Deserialize<'de> for Checked<Interpolation> {
                 E: de::Error,
             {
                 use self::Interpolation::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value {
                     "LINEAR" => Valid(Linear),
                     "STEP" => Valid(Step),
@@ -207,7 +209,7 @@ impl<'de> de::Deserialize<'de> for Checked<Property> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<Property>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_PROPERTIES)
             }
 
@@ -216,7 +218,7 @@ impl<'de> de::Deserialize<'de> for Checked<Property> {
                 E: de::Error,
             {
                 use self::Property::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value {
                     "translation" => Valid(Translation),
                     "rotation" => Valid(Rotation),

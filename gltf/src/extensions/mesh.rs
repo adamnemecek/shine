@@ -1,3 +1,6 @@
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
+
 /// A set of primitives to be rendered.
 ///
 /// A node can contain one or more meshes and its transform places the meshes in

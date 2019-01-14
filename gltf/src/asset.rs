@@ -1,4 +1,6 @@
-use extensions;
+use crate::extensions;
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
 
 /// Metadata about the glTF asset.
 #[derive(Clone, Debug, Deserialize, Serialize, Validate)]

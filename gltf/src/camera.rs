@@ -1,7 +1,8 @@
+use crate::validation::{Checked, Error, Validate};
+use crate::{extensions, Path, Root};
 use serde::{de, ser};
+use serde_derive::{Deserialize, Serialize};
 use std::fmt;
-use validation::{Checked, Error, Validate};
-use {extensions, Path, Root};
 
 /// All valid camera types.
 pub const VALID_CAMERA_TYPES: &'static [&'static str] = &["perspective", "orthographic"];
@@ -88,7 +89,7 @@ impl Validate for Camera {
     fn validate_minimally<P, R>(&self, root: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         if self.orthographic.is_none() && self.perspective.is_none() {
             report(&path, Error::Missing);
@@ -108,7 +109,7 @@ impl Validate for Orthographic {
     fn validate_completely<P, R>(&self, root: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         if self.znear < 0.0 {
             report(&path, Error::Invalid);
@@ -127,7 +128,7 @@ impl Validate for Perspective {
     fn validate_completely<P, R>(&self, root: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         self.aspect_ratio.map(|aspect_ratio| {
             if aspect_ratio < 0.0 {
@@ -163,7 +164,7 @@ impl<'de> de::Deserialize<'de> for Checked<Type> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<Type>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_CAMERA_TYPES)
             }
 
@@ -172,7 +173,7 @@ impl<'de> de::Deserialize<'de> for Checked<Type> {
                 E: de::Error,
             {
                 use self::Type::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value {
                     "perspective" => Valid(Perspective),
                     "orthographic" => Valid(Orthographic),

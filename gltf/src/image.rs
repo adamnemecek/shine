@@ -1,5 +1,7 @@
-use validation::{Error, Validate};
-use {buffer, extensions, Index, Path, Root};
+use crate::validation::{Error, Validate};
+use crate::{buffer, extensions, Index, Path, Root};
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
 
 /// All valid MIME types.
 pub const VALID_MIME_TYPES: &'static [&'static str] = &["image/jpeg", "image/png"];
@@ -37,7 +39,7 @@ impl Validate for MimeType {
     fn validate_completely<P, R>(&self, _: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         if !VALID_MIME_TYPES.contains(&self.0.as_str()) {
             report(&path, Error::Invalid);

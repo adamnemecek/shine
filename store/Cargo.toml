@@ -6,6 +6,7 @@ license = "MIT/Apache-2.0"
 description = "SHINE. Storage and container module of a general purpose multi-threaded rendering engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["shine", "render", "opengl", "game"]
+edition = "2018"
 
 [dependencies]
 libc = "*"

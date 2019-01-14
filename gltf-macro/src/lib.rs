@@ -2,12 +2,11 @@
 
 #![recursion_limit = "128"]
 
-extern crate inflections;
-#[macro_use]
-extern crate quote;
 extern crate proc_macro;
-extern crate proc_macro2;
-extern crate syn;
+
+use proc_macro2;
+use quote::quote;
+use syn;
 
 use proc_macro::TokenStream;
 
@@ -56,17 +55,17 @@ fn expand(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
         .collect();
     let (impl_generics, ty_generics, where_clause) = ast.generics.split_for_impl();
     quote!(
-        impl #impl_generics ::validation::Validate
+        impl #impl_generics crate::validation::Validate
             for #ident #ty_generics #where_clause
         {
             fn validate_minimally<P, R>(
                 &self,
-                _root: &::Root,
+                _root: &crate::Root,
                 _path: P,
                 _report: &mut R
             ) where
-                P: Fn() -> ::Path,
-                R: FnMut(&Fn() -> ::Path, ::validation::Error),
+                P: Fn() -> crate::Path,
+                R: FnMut(&Fn() -> crate::Path, crate::validation::Error),
             {
                 #(
                     #minimal_validations;
@@ -75,12 +74,12 @@ fn expand(ast: &syn::DeriveInput) -> proc_macro2::TokenStream {
 
             fn validate_completely<P, R>(
                 &self,
-                _root: &::Root,
+                _root: &crate::Root,
                 _path: P,
                 _report: &mut R
             ) where
-                P: Fn() -> ::Path,
-                R: FnMut(&Fn() -> ::Path, ::validation::Error),
+                P: Fn() -> crate::Path,
+                R: FnMut(&Fn() -> crate::Path, crate::validation::Error),
             {
                 #(
                     #complete_validations;

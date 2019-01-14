@@ -153,7 +153,7 @@ impl<T> ops::IndexMut<usize> for IndexedArena<T> {
 }
 
 impl<T> fmt::Debug for IndexedArena<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let free = if let Entry::Vacant(id) = self.free_head {
             id
         } else {

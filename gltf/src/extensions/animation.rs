@@ -1,3 +1,6 @@
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
+
 /// A keyframe animation.
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub struct Animation {}

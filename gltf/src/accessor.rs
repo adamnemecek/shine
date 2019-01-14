@@ -1,7 +1,9 @@
 use crate::validation::Checked;
 use crate::{buffer, extensions, Index};
 use serde::{de, ser};
+use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
+use shine_gltf_macro::Validate;
 use std::fmt;
 
 /// The component data type.
@@ -81,7 +83,7 @@ pub const VALID_ACCESSOR_TYPES: &'static [&'static str] = &["SCALAR", "VEC2", "V
 /// Contains data structures for sparse storage.
 pub mod sparse {
     use super::*;
-    use extensions;
+    use crate::extensions;
 
     /// Indices of those attributes that deviate from their initialization value.
     #[derive(Clone, Debug, Deserialize, Serialize, Validate)]
@@ -238,7 +240,7 @@ pub struct GenericComponentType(pub ComponentType);
 
 impl From<ComponentType> for Checked<GenericComponentType> {
     fn from(type_: ComponentType) -> Checked<GenericComponentType> {
-        use validation::Checked::*;
+        use crate::validation::Checked::*;
         match type_ {
             t @ ComponentType::I8
             | t @ ComponentType::U8
@@ -260,7 +262,7 @@ impl<'de> de::Deserialize<'de> for Checked<GenericComponentType> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<GenericComponentType>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_COMPONENT_TYPES)
             }
 
@@ -269,7 +271,7 @@ impl<'de> de::Deserialize<'de> for Checked<GenericComponentType> {
                 E: de::Error,
             {
                 use self::ComponentType::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value as u32 {
                     BYTE => Valid(GenericComponentType(I8)),
                     UNSIGNED_BYTE => Valid(GenericComponentType(U8)),
@@ -287,7 +289,7 @@ impl<'de> de::Deserialize<'de> for Checked<GenericComponentType> {
 
 impl From<ComponentType> for Checked<IndexComponentType> {
     fn from(type_: ComponentType) -> Checked<IndexComponentType> {
-        use validation::Checked::*;
+        use crate::validation::Checked::*;
         match type_ {
             t @ ComponentType::U8 | t @ ComponentType::U16 | t @ ComponentType::U32 => Valid(IndexComponentType(t)),
             _ => Invalid,
@@ -304,7 +306,7 @@ impl<'de> de::Deserialize<'de> for Checked<IndexComponentType> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<IndexComponentType>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_INDEX_TYPES)
             }
 
@@ -313,7 +315,7 @@ impl<'de> de::Deserialize<'de> for Checked<IndexComponentType> {
                 E: de::Error,
             {
                 use self::ComponentType::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value as u32 {
                     UNSIGNED_BYTE => Valid(IndexComponentType(U8)),
                     UNSIGNED_SHORT => Valid(IndexComponentType(U16)),
@@ -335,7 +337,7 @@ impl<'de> de::Deserialize<'de> for Checked<Type> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<Type>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_ACCESSOR_TYPES)
             }
 
@@ -344,7 +346,7 @@ impl<'de> de::Deserialize<'de> for Checked<Type> {
                 E: de::Error,
             {
                 use self::Type::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value {
                     "SCALAR" => Valid(Scalar),
                     "VEC2" => Valid(Vec2),

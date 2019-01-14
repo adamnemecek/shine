@@ -1,14 +1,16 @@
-use buffer;
-use extensions;
+use crate::buffer;
+use crate::extensions;
+use crate::texture;
+use crate::validation;
 use serde;
+use serde_derive::{Deserialize, Serialize};
 use serde_json;
+use shine_gltf_macro::Validate;
 use std::{self, cmp, fmt, io, marker};
-use texture;
-use validation;
 
-use path::Path;
-use validation::Validate;
-use {Accessor, Animation, Asset, Buffer, Camera, Error, Image, Material, Mesh, Node, Scene, Skin, Texture, Value};
+use crate::path::Path;
+use crate::validation::Validate;
+use crate::{Accessor, Animation, Asset, Buffer, Camera, Error, Image, Material, Mesh, Node, Scene, Skin, Texture, Value};
 
 /// Helper trait for retrieving top-level objects by a universal identifier.
 pub trait Get<T> {
@@ -122,7 +124,7 @@ impl Root {
     where
         Self: Get<T>,
     {
-        (self as &Get<T>).get(index)
+        (self as &dyn Get<T>).get(index)
     }
 
     /// Deserialize from a JSON string slice.
@@ -215,7 +217,7 @@ impl<'de, T> serde::Deserialize<'de> for Index<T> {
         impl<'de, T> serde::de::Visitor<'de> for Visitor<T> {
             type Value = Index<T>;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("index into child of root")
             }
 
@@ -231,7 +233,7 @@ impl<'de, T> serde::Deserialize<'de> for Index<T> {
 }
 
 impl<T> fmt::Debug for Index<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
@@ -243,7 +245,7 @@ impl<T> cmp::PartialEq for Index<T> {
 }
 
 impl<T> fmt::Display for Index<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
@@ -255,7 +257,7 @@ where
     fn validate_minimally<P, R>(&self, root: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, validation::Error),
+        R: FnMut(&dyn Fn() -> Path, validation::Error),
     {
         if root.get(self).is_none() {
             report(&path, validation::Error::IndexOutOfBounds);

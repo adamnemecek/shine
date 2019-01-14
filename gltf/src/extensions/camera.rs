@@ -1,3 +1,6 @@
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
+
 /// A camera's projection.
 ///
 /// A node can reference a camera to apply a transform to place the camera in the

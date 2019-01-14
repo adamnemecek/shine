@@ -1,7 +1,9 @@
+use crate::validation::{Checked, Error, Validate};
+use crate::{extensions, Index, Path, Root};
 use serde::{de, ser};
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
 use std::fmt;
-use validation::{Checked, Error, Validate};
-use {extensions, Index, Path, Root};
 
 /// Corresponds to `GL_ARRAY_BUFFER`.
 pub const ARRAY_BUFFER: u32 = 34_962;
@@ -111,7 +113,7 @@ impl Validate for ByteStride {
     fn validate_completely<P, R>(&self, _: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         if self.0 % 4 != 0 {
             // Not a multiple of 4
@@ -133,7 +135,7 @@ impl<'de> de::Deserialize<'de> for Checked<Target> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<Target>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_TARGETS)
             }
 
@@ -142,7 +144,7 @@ impl<'de> de::Deserialize<'de> for Checked<Target> {
                 E: de::Error,
             {
                 use self::Target::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value as u32 {
                     ARRAY_BUFFER => Valid(ArrayBuffer),
                     ELEMENT_ARRAY_BUFFER => Valid(ElementArrayBuffer),

@@ -1,10 +1,6 @@
 #![feature(align_offset)]
 #![feature(drain_filter)]
 
-extern crate lazy_static;
-extern crate log;
-extern crate num_cpus;
-
 /// Define engine limitations
 pub mod libconfig {
     /// Maximum number of threads that can be used at once.

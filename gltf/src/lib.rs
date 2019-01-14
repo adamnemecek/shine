@@ -1,11 +1,10 @@
 #![feature(try_from)]
 
-#[macro_use]
-extern crate shine_gltf_macro;
-extern crate serde;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
+//#[macro_use]
+//extern crate shine_gltf_macro;
+//#[macro_use]
+//extern crate serde_derive;
+use serde_json;
 
 /// Contains `Accessor` and other related data structures.
 pub mod accessor;
@@ -55,44 +54,44 @@ pub mod texture;
 pub mod validation;
 
 #[doc(inline)]
-pub use accessor::Accessor;
+pub use crate::accessor::Accessor;
 #[doc(inline)]
-pub use animation::Animation;
+pub use crate::animation::Animation;
 #[doc(inline)]
-pub use asset::Asset;
+pub use crate::asset::Asset;
 #[doc(inline)]
-pub use buffer::Buffer;
+pub use crate::buffer::Buffer;
 #[doc(inline)]
-pub use camera::Camera;
+pub use crate::camera::Camera;
 #[doc(inline)]
-pub use image::Image;
+pub use crate::image::Image;
 #[doc(inline)]
-pub use material::Material;
+pub use crate::material::Material;
 #[doc(inline)]
-pub use mesh::Mesh;
+pub use crate::mesh::Mesh;
 #[doc(inline)]
-pub use mesh::Primitive;
+pub use crate::mesh::Primitive;
 //#[doc(inline)]
 //pub use mesh::attribute_map;
 #[doc(inline)]
-pub use scene::Node;
+pub use crate::scene::Node;
 #[doc(inline)]
-pub use scene::Scene;
+pub use crate::scene::Scene;
 #[doc(inline)]
-pub use skin::Skin;
+pub use crate::skin::Skin;
 #[doc(inline)]
-pub use texture::Texture;
+pub use crate::texture::Texture;
 
 #[doc(inline)]
-pub use self::path::Path;
+pub use crate::path::Path;
 #[doc(inline)]
-pub use self::root::Get;
+pub use crate::root::Get;
 #[doc(inline)]
-pub use self::root::GetMut;
+pub use crate::root::GetMut;
 #[doc(inline)]
-pub use self::root::Index;
+pub use crate::root::Index;
 #[doc(inline)]
-pub use self::root::Root;
+pub use crate::root::Root;
 
 #[doc(inline)]
 pub use serde_json::Error;

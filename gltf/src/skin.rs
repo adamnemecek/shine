@@ -1,4 +1,6 @@
-use {accessor, extensions, scene, Index};
+use crate::{accessor, extensions, scene, Index};
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
 
 /// Joints and matrices defining a skin.
 #[derive(Clone, Debug, Deserialize, Serialize, Validate)]

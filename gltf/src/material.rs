@@ -1,7 +1,9 @@
+use crate::validation::{Checked, Error, Validate};
+use crate::{extensions, texture, Index, Path, Root};
 use serde::{de, ser};
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
 use std::fmt;
-use validation::{Checked, Error, Validate};
-use {extensions, texture, Index, Path, Root};
 
 /// All valid alpha modes.
 pub const VALID_ALPHA_MODES: &'static [&'static str] = &["OPAQUE", "MASK", "BLEND"];
@@ -232,7 +234,7 @@ impl Validate for AlphaCutoff {
     fn validate_completely<P, R>(&self, _: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         if self.0 < 0.0 {
             report(&path, Error::Invalid);
@@ -249,7 +251,7 @@ impl<'de> de::Deserialize<'de> for Checked<AlphaMode> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<AlphaMode>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_ALPHA_MODES)
             }
 
@@ -258,7 +260,7 @@ impl<'de> de::Deserialize<'de> for Checked<AlphaMode> {
                 E: de::Error,
             {
                 use self::AlphaMode::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value {
                     "OPAQUE" => Valid(Opaque),
                     "MASK" => Valid(Mask),
@@ -275,7 +277,7 @@ impl Validate for EmissiveFactor {
     fn validate_completely<P, R>(&self, _: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         for x in &self.0 {
             if *x < 0.0 || *x > 1.0 {
@@ -297,7 +299,7 @@ impl Validate for PbrBaseColorFactor {
     fn validate_completely<P, R>(&self, _: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         for x in &self.0 {
             if *x < 0.0 || *x > 1.0 {
@@ -319,7 +321,7 @@ impl Validate for StrengthFactor {
     fn validate_completely<P, R>(&self, _: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         if self.0 < 0.0 || self.0 > 1.0 {
             report(&path, Error::Invalid);

@@ -1,7 +1,9 @@
+use crate::validation::Checked;
+use crate::{extensions, image, Index};
 use serde::{de, ser};
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
 use std::fmt;
-use validation::Checked;
-use {extensions, image, Index};
 
 /// Corresponds to `GL_NEAREST`.
 pub const NEAREST: u32 = 9728;
@@ -192,7 +194,7 @@ impl<'de> de::Deserialize<'de> for Checked<MagFilter> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<MagFilter>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_MAG_FILTERS)
             }
 
@@ -201,7 +203,7 @@ impl<'de> de::Deserialize<'de> for Checked<MagFilter> {
                 E: de::Error,
             {
                 use self::MagFilter::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value as u32 {
                     NEAREST => Valid(Nearest),
                     LINEAR => Valid(Linear),
@@ -222,7 +224,7 @@ impl<'de> de::Deserialize<'de> for Checked<MinFilter> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<MinFilter>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_MIN_FILTERS)
             }
 
@@ -231,7 +233,7 @@ impl<'de> de::Deserialize<'de> for Checked<MinFilter> {
                 E: de::Error,
             {
                 use self::MinFilter::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value as u32 {
                     NEAREST => Valid(Nearest),
                     LINEAR => Valid(Linear),
@@ -265,7 +267,7 @@ impl<'de> de::Deserialize<'de> for Checked<WrappingMode> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<WrappingMode>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_WRAPPING_MODES)
             }
 
@@ -274,7 +276,7 @@ impl<'de> de::Deserialize<'de> for Checked<WrappingMode> {
                 E: de::Error,
             {
                 use self::WrappingMode::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value as u32 {
                     CLAMP_TO_EDGE => Valid(ClampToEdge),
                     MIRRORED_REPEAT => Valid(MirroredRepeat),

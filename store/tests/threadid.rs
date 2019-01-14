@@ -31,7 +31,7 @@ fn alloc_free() {
         info!("testing thread count: {}", len);
         assert!(threadid::get() == 0);
 
-        let mut array = Arc::new(Mutex::new(Vec::new()));
+        let array = Arc::new(Mutex::new(Vec::new()));
         let mut threads = Vec::new();
         let ready = Arc::new(());
 
@@ -61,7 +61,7 @@ fn alloc_free() {
         // wait for all the threads to register its id
         loop {
             {
-                let mut array = array.lock().unwrap();
+                let array = array.lock().unwrap();
                 if array.len() == len {
                     break;
                 }
@@ -78,7 +78,7 @@ fn alloc_free() {
         }
 
         {
-            let mut raw_array = array.lock().unwrap();
+            let raw_array = array.lock().unwrap();
             let mut array = raw_array.clone();
             array.sort();
             array.dedup();

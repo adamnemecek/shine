@@ -7,7 +7,7 @@ use std::ptr;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
-use arena::PinnedArena;
+use crate::arena::PinnedArena;
 
 /// Trait for resource id
 pub trait Key: Clone + Send + Eq + Hash + fmt::Debug {}
@@ -49,7 +49,7 @@ impl<K: Key, D: From<K>> Default for Index<K, D> {
 }
 
 impl<K: Key, D: From<K>> fmt::Debug for Index<K, D> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Index({:p})", self.0)
     }
 }
@@ -103,7 +103,7 @@ impl<K: Key, D: From<K>> Default for UnsafeIndex<K, D> {
 }
 
 impl<K: Key, D: From<K>> fmt::Debug for UnsafeIndex<K, D> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "UnsafeIndex({:p})", self.0)
     }
 }
@@ -219,7 +219,7 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
     }
 
     /// Returns a read locked access
-    pub fn read(&self) -> ReadGuard<K, D> {
+    pub fn read(&self) -> ReadGuard<'_, K, D> {
         let shared = self.shared.try_read().unwrap();
 
         ReadGuard {
@@ -229,7 +229,7 @@ impl<K: Key, D: From<K>> HashStore<K, D> {
     }
 
     /// Returns a write locked access
-    pub fn write(&self) -> WriteGuard<K, D> {
+    pub fn write(&self) -> WriteGuard<'_, K, D> {
         let shared = self.shared.try_write().unwrap();
         let locked_exclusive = self.exclusive.lock().unwrap();
         WriteGuard {

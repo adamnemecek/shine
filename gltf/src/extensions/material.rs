@@ -1,3 +1,6 @@
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
+
 #[cfg(feature = "KHR_materials_pbrSpecularGlossiness")]
 use {
     material::StrengthFactor,

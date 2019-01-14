@@ -1,9 +1,11 @@
+use crate::validation::{Checked, Error, Validate};
+use crate::{accessor, extensions, material, Index};
 use serde::{de, ser};
+use serde_derive::{Deserialize, Serialize};
 use serde_json::from_value;
+use shine_gltf_macro::Validate;
 use std::collections::HashMap;
 use std::fmt;
-use validation::{Checked, Error, Validate};
-use {accessor, extensions, material, Index};
 
 /// Corresponds to `GL_POINTS`.
 pub const POINTS: u32 = 0;
@@ -111,10 +113,10 @@ fn is_primitive_mode_default(mode: &Checked<Mode>) -> bool {
 }
 
 impl Validate for Primitive {
-    fn validate_minimally<P, R>(&self, root: &::Root, path: P, report: &mut R)
+    fn validate_minimally<P, R>(&self, root: &crate::Root, path: P, report: &mut R)
     where
-        P: Fn() -> ::Path,
-        R: FnMut(&Fn() -> ::Path, ::validation::Error),
+        P: Fn() -> crate::Path,
+        R: FnMut(&dyn Fn() -> crate::Path, crate::validation::Error),
     {
         // Generated part
         self.attributes
@@ -230,7 +232,7 @@ impl<'de> de::Deserialize<'de> for Checked<Mode> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<Mode>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "any of: {:?}", VALID_MODES)
             }
 
@@ -239,7 +241,7 @@ impl<'de> de::Deserialize<'de> for Checked<Mode> {
                 E: de::Error,
             {
                 use self::Mode::*;
-                use validation::Checked::*;
+                use crate::validation::Checked::*;
                 Ok(match value as u32 {
                     POINTS => Valid(Points),
                     LINES => Valid(Lines),
@@ -268,7 +270,7 @@ impl ser::Serialize for Mode {
 impl Semantic {
     fn checked(s: &str) -> Checked<Self> {
         use self::Semantic::*;
-        use validation::Checked::*;
+        use crate::validation::Checked::*;
         match s {
             "NORMAL" => Valid(Normals),
             "POSITION" => Valid(Positions),
@@ -336,7 +338,7 @@ impl<'de> de::Deserialize<'de> for Checked<Semantic> {
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Checked<Semantic>;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "semantic name")
             }
 

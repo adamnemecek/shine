@@ -1,9 +1,7 @@
-use arena::PinnedArena;
-use std::fmt;
-use std::ops;
-use std::ptr;
+use crate::arena::PinnedArena;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
+use std::{fmt, ops, ptr};
 
 /// Reference counted indexing of the store items in O(1).
 pub struct Index<D>(*mut Entry<D>);
@@ -40,7 +38,7 @@ impl<D> Default for Index<D> {
 }
 
 impl<D> fmt::Debug for Index<D> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.is_null() {
             let rc = unsafe { &(*self.0).ref_count.load(Ordering::Relaxed) };
             write!(f, "Index({:p}, rc:{})", self.0, rc)
@@ -99,7 +97,7 @@ impl<D> Default for UnsafeIndex<D> {
 }
 
 impl<D> fmt::Debug for UnsafeIndex<D> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "UnsafeIndex({:p})", self.0)
     }
 }
@@ -186,7 +184,7 @@ impl<D> Store<D> {
     }
 
     /// Returns a read locked access
-    pub fn read(&self) -> ReadGuard<D> {
+    pub fn read(&self) -> ReadGuard<'_, D> {
         let shared = self.shared.try_read().unwrap();
 
         ReadGuard {
@@ -196,7 +194,7 @@ impl<D> Store<D> {
     }
 
     /// Returns a write locked access
-    pub fn write(&self) -> WriteGuard<D> {
+    pub fn write(&self) -> WriteGuard<'_, D> {
         let shared = self.shared.try_write().unwrap();
         let locked_exclusive = self.exclusive.lock().unwrap();
         WriteGuard {

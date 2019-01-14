@@ -5,6 +5,7 @@ authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "Internal macros for the shine-gltf crate"
 repository = "https://github.com/gzp/shine"
+edition = "2018"
 
 [lib]
 proc-macro = true

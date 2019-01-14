@@ -1,5 +1,7 @@
-use validation::{Error, Validate};
-use {camera, extensions, mesh, scene, skin, Index, Path, Root};
+use crate::validation::{Error, Validate};
+use crate::{camera, extensions, mesh, scene, skin, Index, Path, Root};
+use serde_derive::{Deserialize, Serialize};
+use shine_gltf_macro::Validate;
 
 /// A node in the node hierarchy.  When the node contains `skin`, all
 /// `mesh.primitives` must contain `JOINTS_0` and `WEIGHTS_0` attributes.
@@ -91,7 +93,7 @@ impl Validate for UnitQuaternion {
     fn validate_completely<P, R>(&self, _: &Root, path: P, report: &mut R)
     where
         P: Fn() -> Path,
-        R: FnMut(&Fn() -> Path, Error),
+        R: FnMut(&dyn Fn() -> Path, Error),
     {
         for x in &self.0 {
             if *x < -1.0 || *x > 1.0 {

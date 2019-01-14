@@ -102,7 +102,7 @@ impl<T> Sender<T> {
         Sender(owner.clone())
     }
 
-    pub fn send_buffer(&self) -> Result<RefSendBuffer<T>, ()> {
+    pub fn send_buffer(&self) -> Result<RefSendBuffer<'_, T>, ()> {
         Ok(RefSendBuffer(&self.0, self.0.get_produce_index()))
     }
 }
@@ -155,7 +155,7 @@ impl<T> Receiver<T> {
         Receiver(owner.clone())
     }
 
-    pub fn receive_buffer(&self) -> Result<RefReceiveBuffer<T>, ()> {
+    pub fn receive_buffer(&self) -> Result<RefReceiveBuffer<'_, T>, ()> {
         match self.0.try_get_consume_index() {
             Ok(idx) => Ok(RefReceiveBuffer(&self.0, idx)),
             Err(_) => Err(()),
