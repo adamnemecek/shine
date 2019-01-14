@@ -1,6 +1,5 @@
+use crate::svec::Store;
 use std::mem;
-
-use svec::Store;
 
 pub struct DenseStore<T> {
     values: Vec<Option<T>>,

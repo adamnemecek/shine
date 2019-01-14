@@ -1,8 +1,8 @@
-use geometry2::{Orientation, Predicates};
-use triangulation::build::factory::Factory;
-use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
-use triangulation::query::{GeometryQuery, TopologyQuery, VertexClue};
-use triangulation::types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
+use crate::geometry2::{Orientation, Predicates};
+use crate::triangulation::build::factory::Factory;
+use crate::triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
+use crate::triangulation::query::{GeometryQuery, TopologyQuery, VertexClue};
+use crate::triangulation::types::{invalid_face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, Rot3, VertexIndex};
 
 pub trait Updater {
     /// Split an edge by the given vertex. No geometry constraint is checked.

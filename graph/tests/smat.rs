@@ -1,8 +1,4 @@
-extern crate env_logger;
-extern crate log;
-extern crate rand;
-extern crate shine_graph;
-extern crate shine_testutils;
+use rand;
 
 use log::{debug, trace};
 use rand::Rng;

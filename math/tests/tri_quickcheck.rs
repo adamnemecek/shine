@@ -1,13 +1,8 @@
 #![feature(custom_attribute)]
 
-extern crate log;
-extern crate quickcheck;
-extern crate shine_math;
-extern crate shine_testutils;
-
 mod common;
 
-use common::SimpleContext;
+use crate::common::SimpleContext;
 use quickcheck::quickcheck;
 use shine_math::geometry2::{Posf32, Posi64};
 use shine_math::triangulation::{Builder, FullChecker};

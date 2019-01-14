@@ -1,9 +1,9 @@
-use geometry2::{Position, Real};
-use std::{fmt, ops};
-use triangulation::graph::{Face, Vertex};
-use triangulation::types::{
+use crate::geometry2::{Position, Real};
+use crate::triangulation::graph::{Face, Vertex};
+use crate::triangulation::types::{
     face_index, invalid_vertex_index, rot3, vertex_index, FaceIndex, FaceRange, VertexIndex, VertexRange,
 };
+use std::{fmt, ops};
 
 // Store the topology graph of the triangualtion
 struct Graph<P, V, F>
@@ -197,7 +197,7 @@ where
     V: Vertex<Position = P>,
     F: Face,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Tri {{ V[ ")?;
         for v in self.vertex_index_iter() {
             if self.is_infinite_vertex(v) {

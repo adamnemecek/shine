@@ -1,7 +1,8 @@
-use entity::Entity;
-use graph::svec;
-pub use graph::svec::Entry;
-use storagecategory::{DenseStorage, SparseStorage, StorageCategory};
+use crate::entity::Entity;
+use crate::storagecategory::{DenseStorage, SparseStorage, StorageCategory};
+use shine_graph::svec;
+
+pub use self::svec::Entry;
 
 /// Trait to assign storage policy to an entity data
 pub trait EntityComponent: Sync + Send {
@@ -76,19 +77,19 @@ where
         self.store.get_mut(entity.id())
     }
 
-    pub fn get_entry(&mut self, entity: Entity) -> svec::Entry<<T as EntityComponentDescriptor>::Store> {
+    pub fn get_entry(&mut self, entity: Entity) -> svec::Entry<'_, <T as EntityComponentDescriptor>::Store> {
         self.store.get_entry(entity.id())
     }
 
-    pub fn read(&self) -> svec::WrapRead<<T as EntityComponentDescriptor>::Store> {
+    pub fn read(&self) -> svec::WrapRead<'_, <T as EntityComponentDescriptor>::Store> {
         self.store.read()
     }
 
-    pub fn update(&mut self) -> svec::WrapUpdate<<T as EntityComponentDescriptor>::Store> {
+    pub fn update(&mut self) -> svec::WrapUpdate<'_, <T as EntityComponentDescriptor>::Store> {
         self.store.update()
     }
 
-    pub fn write(&mut self) -> svec::WrapWrite<<T as EntityComponentDescriptor>::Store> {
+    pub fn write(&mut self) -> svec::WrapWrite<'_, <T as EntityComponentDescriptor>::Store> {
         self.store.write()
     }
 }

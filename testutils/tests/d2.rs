@@ -1,6 +1,3 @@
-extern crate log;
-extern crate shine_testutils;
-
 use shine_testutils::init_webcontroll_test;
 use shine_testutils::webserver::D2Trace;
 

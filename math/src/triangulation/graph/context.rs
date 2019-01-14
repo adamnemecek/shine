@@ -1,12 +1,12 @@
-use geometry2::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
+use crate::geometry2::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
+use crate::trace::Trace2Render;
+use crate::triangulation::check::TriTraceControl;
+use crate::triangulation::graph::{Face, Triangulation, Vertex};
+use crate::triangulation::types::{FaceEdge, FaceVertex};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::rc::Rc;
-use trace::Trace2Render;
-use triangulation::check::TriTraceControl;
-use triangulation::graph::{Face, Triangulation, Vertex};
-use triangulation::types::{FaceEdge, FaceVertex};
 
 /// Context the enables/disables triangulation features and also stores the required datas
 pub struct Context<P, V, F, Predicates = (), Tag = (), Builder = (), Trace = ()>
@@ -279,8 +279,8 @@ where
 
 /// Trait to provide tracing capabilities
 pub trait TraceContext {
-    fn trace_render(&self) -> Rc<RefCell<Trace2Render>>;
-    fn trace_control(&self) -> Rc<RefCell<TriTraceControl>>;
+    fn trace_render(&self) -> Rc<RefCell<dyn Trace2Render>>;
+    fn trace_control(&self) -> Rc<RefCell<dyn TriTraceControl>>;
 }
 
 /// Store tracing helpers
@@ -319,11 +319,11 @@ where
     TC: 'static + TriTraceControl,
     TR: 'static + Trace2Render,
 {
-    fn trace_render(&self) -> Rc<RefCell<Trace2Render>> {
+    fn trace_render(&self) -> Rc<RefCell<dyn Trace2Render>> {
         self.trace.render.clone()
     }
 
-    fn trace_control(&self) -> Rc<RefCell<TriTraceControl>> {
+    fn trace_control(&self) -> Rc<RefCell<dyn TriTraceControl>> {
         self.trace.control.clone()
     }
 }

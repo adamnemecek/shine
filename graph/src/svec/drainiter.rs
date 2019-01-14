@@ -1,11 +1,11 @@
-use bits::BitIter;
+use crate::bits::BitIter;
+use crate::svec::{SVector, Store, VectorMask};
 use std::mem;
-use svec::{SVector, Store, VectorMask};
 
 /// Iterate over the non-zero (mutable) elements of a vector
 pub struct DrainIter<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
     crate vec_ptr: *mut SVector<S>,
     crate iterator: BitIter<&'a VectorMask>,

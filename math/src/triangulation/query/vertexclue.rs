@@ -1,4 +1,4 @@
-use triangulation::types::{FaceEdge, FaceIndex, FaceVertex, Rot3, VertexIndex};
+use crate::triangulation::types::{FaceEdge, FaceIndex, FaceVertex, Rot3, VertexIndex};
 
 /// Multiple way to reference a vertex in a triangulation
 #[derive(Clone, Debug)]

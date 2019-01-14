@@ -1,4 +1,4 @@
-use geometry2::Posf64;
+use crate::geometry2::Posf64;
 
 /// Vertex trace visualization info
 #[derive(Debug)]

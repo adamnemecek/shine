@@ -6,7 +6,7 @@ license = "MIT/Apache-2.0"
 description = "SHINE. General math and geometry module for the shine engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["shine", "geometry", "triangulation", "voxel"]
-
+edition = "2018"
 
 [dependencies]
 log = "*"

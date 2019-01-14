@@ -1,6 +1,5 @@
+use crate::smat::Store;
 use std::mem;
-
-use smat::Store;
 
 pub struct DenseStore<T> {
     values: Vec<T>,

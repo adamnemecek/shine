@@ -1,7 +1,6 @@
+use crate::bits::{BitBlock, BitPos, BitSetView, BitSetViewExt, MAX_LEVEL};
 use arrayvec::ArrayVec;
 use std::slice;
-
-use bits::{BitBlock, BitPos, BitSetView, BitSetViewExt, MAX_LEVEL};
 
 /// Hierarchical bitset.
 /// Each level indicates if any bit is set in the subtree.

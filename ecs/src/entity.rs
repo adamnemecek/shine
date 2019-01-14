@@ -1,5 +1,5 @@
-use graph::svec::{self, DrainIter, STVector, UnitStore};
 use log::{debug, trace};
+use shine_graph::svec::{self, DrainIter, STVector, UnitStore};
 use shred::{Read, ResourceId, Resources, SystemData, Write};
 use std::ops::{Deref, DerefMut};
 
@@ -108,11 +108,11 @@ impl EntityStore {
         );
     }
 
-    pub fn drain_raised(&mut self) -> DrainIter<UnitStore> {
+    pub fn drain_raised(&mut self) -> DrainIter<'_, UnitStore> {
         self.raised.drain_iter()
     }
 
-    pub fn drain_killed(&mut self) -> DrainIter<UnitStore> {
+    pub fn drain_killed(&mut self) -> DrainIter<'_, UnitStore> {
         self.killed.drain_iter()
     }
 }

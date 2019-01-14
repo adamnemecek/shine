@@ -1,22 +1,22 @@
-use bits::BitSetViewExt;
-use join::{IntoJoin, Join};
-use smat::{MatrixMask, RowRead, RowUpdate, RowWrite, SMatrix, Store};
+use crate::bits::BitSetViewExt;
+use crate::join::{IntoJoin, Join};
+use crate::smat::{MatrixMask, RowRead, RowUpdate, RowWrite, SMatrix, Store};
+use crate::traits::{IndexExcl, IndexLowerBound};
 use std::mem;
-use traits::{IndexExcl, IndexLowerBound};
 
 /// Wrapper to allow immutable access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
 pub struct WrapRowRead<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     crate mat: &'a SMatrix<M, S>,
 }
 
 impl<'a, M, S> IndexExcl<usize> for WrapRowRead<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     type Item = RowRead<'a, M, S>;
 
@@ -27,8 +27,8 @@ where
 
 impl<'a, M, S> IndexLowerBound<usize> for WrapRowRead<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         self.mat.row_mask.lower_bound(idx)
@@ -37,8 +37,8 @@ where
 
 impl<'a, M, S> IntoJoin for WrapRowRead<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     type Store = Self;
 
@@ -50,16 +50,16 @@ where
 /// Wrapper to allow mutable access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
 pub struct WrapRowUpdate<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     crate mat: &'a mut SMatrix<M, S>,
 }
 
 impl<'a, M, S> IndexExcl<usize> for WrapRowUpdate<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     type Item = RowUpdate<'a, M, S>;
 
@@ -70,8 +70,8 @@ where
 
 impl<'a, M, S> IndexLowerBound<usize> for WrapRowUpdate<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         self.mat.row_mask.lower_bound(idx)
@@ -80,8 +80,8 @@ where
 
 impl<'a, M, S> IntoJoin for WrapRowUpdate<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     type Store = Self;
 
@@ -93,16 +93,16 @@ where
 /// Wrapper to allow Entry based access to the elments of an SMatrix in row-major order. Used for join and merge oprations.
 pub struct WrapRowWrite<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     crate mat: &'a mut SMatrix<M, S>,
 }
 
 impl<'a, M, S> IndexExcl<usize> for WrapRowWrite<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     type Item = RowWrite<'a, M, S>;
 
@@ -113,8 +113,8 @@ where
 
 impl<'a, M, S> IndexLowerBound<usize> for WrapRowWrite<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         Some(idx)
@@ -123,8 +123,8 @@ where
 
 impl<'a, M, S> IntoJoin for WrapRowWrite<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     type Store = Self;
 

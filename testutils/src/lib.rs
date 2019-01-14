@@ -1,18 +1,5 @@
 #![feature(crate_visibility_modifier)]
 
-extern crate actix;
-extern crate actix_web;
-extern crate base64;
-extern crate bytes;
-extern crate env_logger;
-extern crate futures;
-extern crate log;
-extern crate serde;
-extern crate serde_json;
-extern crate shine_gltf;
-extern crate svg;
-extern crate tera;
-
 pub mod webserver;
 
 use std::env;

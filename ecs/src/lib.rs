@@ -1,8 +1,3 @@
-extern crate log;
-extern crate shine_graph as graph;
-extern crate shine_store as store;
-extern crate shred;
-
 mod edge;
 mod edgecomponent;
 mod entity;

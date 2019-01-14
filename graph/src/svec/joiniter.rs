@@ -1,13 +1,13 @@
-use bits::BitSetViewExt;
-use join::{IntoJoin, Join};
+use crate::bits::BitSetViewExt;
+use crate::join::{IntoJoin, Join};
+use crate::svec::{Entry, SVector, Store};
+use crate::traits::{IndexExcl, IndexLowerBound};
 use std::mem;
-use svec::{Entry, SVector, Store};
-use traits::{IndexExcl, IndexLowerBound};
 
 /// Wrapper to allow immutable access to the elments of an SVector in join and merge oprations.
 pub struct WrapRead<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
     crate vec: &'a SVector<S>,
 }
@@ -46,7 +46,7 @@ where
 /// Wrapper to allow mutable access to the elments of an SVector in join and merge oprations.
 pub struct WrapUpdate<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
     crate vec: &'a mut SVector<S>,
 }
@@ -73,7 +73,7 @@ where
 
 impl<'a, S> IntoJoin for WrapUpdate<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
     type Store = Self;
 
@@ -85,7 +85,7 @@ where
 /// Wrapper to allow Entry based access to the elments of an SVector in join and merge oprations.
 pub struct WrapWrite<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
     crate vec: &'a mut SVector<S>,
 }

@@ -1,13 +1,13 @@
-use geometry2::Position;
-use triangulation::graph::{Face, Triangulation, Vertex};
-use triangulation::query::{TopologyQuery, VertexClue};
-use triangulation::types::{FaceEdge, FaceIndex, Rot3, VertexIndex};
+use crate::geometry2::Position;
+use crate::triangulation::graph::{Face, Triangulation, Vertex};
+use crate::triangulation::query::{TopologyQuery, VertexClue};
+use crate::triangulation::types::{FaceEdge, FaceIndex, Rot3, VertexIndex};
 
 pub struct EdgeCirculator<'a, P, V, F, C>
 where
-    P: 'a + Position,
-    V: 'a + Vertex<Position = P>,
-    F: 'a + Face,
+    P: Position,
+    V: Vertex<Position = P>,
+    F: Face,
 {
     tri: &'a Triangulation<P, V, F, C>,
     vertex: VertexIndex,
@@ -17,9 +17,9 @@ where
 
 impl<'a, P, V, F, C> EdgeCirculator<'a, P, V, F, C>
 where
-    P: 'a + Position,
-    V: 'a + Vertex<Position = P>,
-    F: 'a + Face,
+    P: Position,
+    V: Vertex<Position = P>,
+    F: Face,
 {
     pub fn new<'b>(tri: &'b Triangulation<P, V, F, C>, start: VertexIndex) -> EdgeCirculator<'b, P, V, F, C> {
         assert_eq!(tri.dimension(), 2);

@@ -1,5 +1,5 @@
-use geometry::Posi32;
-use voxel::transvoxel_lut::*;
+use crate::geometry::Posi32;
+use crate::voxel::transvoxel_lut::*;
 
 pub struct Transvoxel {
     vertices: Vec<(u8, u8, u8)>,

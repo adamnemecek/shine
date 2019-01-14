@@ -1,3 +1,4 @@
+use crate::webserver::appcontext::AppContext;
 use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
 use log::info;
 use serde_json;
@@ -5,7 +6,6 @@ use std::collections::HashMap;
 use svg::node::{self, element};
 use svg::{Document, Node};
 use tera;
-use webserver::appcontext::AppContext;
 
 pub trait IntoD2Data {
     fn trace(&self, tr: &mut D2Trace);
@@ -227,7 +227,7 @@ pub fn handle_d2data_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
     let id = if id == 0 { usize::max_value() } else { id - 1 };
     let image = {
         info!("Getting d2data for {}", id);
-        let mut img = state.d2datas.lock().unwrap();
+        let img = state.d2datas.lock().unwrap();
         if id >= img.len() {
             "<svg xmlns=\"http://www.w3.org/2000/svg\" group-name=\"root\" viewbox=\"-1 -1 2 2\"></svg>".into()
         } else {

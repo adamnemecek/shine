@@ -1,10 +1,10 @@
-use geometry2::{InexactPredicates, Posf64};
-use geometry2::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
-use trace::Trace2;
-use triangulation::check::{Coloring, EdgeColoring, TracePosition, TriTraceMapping, VertexColoring};
-use triangulation::graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
-use triangulation::query::{TopologyQuery, VertexClue};
-use triangulation::types::{rot3, FaceEdge, FaceIndex, VertexIndex};
+use crate::geometry2::{InexactPredicates, Posf64};
+use crate::geometry2::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
+use crate::trace::Trace2;
+use crate::triangulation::check::{Coloring, EdgeColoring, TracePosition, TriTraceMapping, VertexColoring};
+use crate::triangulation::graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
+use crate::triangulation::query::{TopologyQuery, VertexClue};
+use crate::triangulation::types::{rot3, FaceEdge, FaceIndex, VertexIndex};
 
 pub trait TriTraceControl {
     fn coloring(&self) -> &Coloring;

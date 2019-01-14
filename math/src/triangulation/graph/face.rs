@@ -1,5 +1,5 @@
+use crate::triangulation::types::{rot3, FaceIndex, Rot3, VertexIndex};
 use std::fmt;
-use triangulation::types::{rot3, FaceIndex, Rot3, VertexIndex};
 
 /// Edge constraint
 pub trait Constraint: Default + Clone + PartialEq + fmt::Debug {

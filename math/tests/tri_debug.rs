@@ -1,13 +1,9 @@
 #![feature(custom_attribute)]
 
-extern crate log;
-extern crate shine_math;
-extern crate shine_testutils;
-
 mod common;
 
-use common::simple_prelude::*;
-use common::trace_prelude::*;
+use self::common::simple_prelude::*;
+use self::common::trace_prelude::*;
 use shine_math::geometry2::Posf32;
 use shine_math::triangulation::{Builder, FullChecker};
 use shine_testutils::init_webcontroll_test;

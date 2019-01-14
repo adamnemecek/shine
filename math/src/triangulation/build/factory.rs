@@ -1,6 +1,6 @@
-use geometry2::Position;
-use triangulation::graph::{Constraint, Face, Triangulation, Vertex};
-use triangulation::types::{FaceEdge, FaceIndex, Rot3, VertexIndex};
+use crate::geometry2::Position;
+use crate::triangulation::graph::{Constraint, Face, Triangulation, Vertex};
+use crate::triangulation::types::{FaceEdge, FaceIndex, Rot3, VertexIndex};
 
 pub trait Factory {
     type Position: Position;

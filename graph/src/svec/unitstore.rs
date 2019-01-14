@@ -1,4 +1,4 @@
-use svec::Store;
+use crate::svec::Store;
 
 pub struct UnitStore {
     unit: (),

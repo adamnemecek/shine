@@ -1,12 +1,8 @@
 #![feature(custom_attribute)]
 
-extern crate log;
-extern crate shine_math;
-extern crate shine_testutils;
-
 mod common;
 
-use common::simple_prelude::*;
+use self::common::simple_prelude::*;
 use log::{debug, info, trace};
 use shine_math::geometry2::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
 use shine_math::triangulation::traverse::CrossingIterator;
@@ -29,7 +25,7 @@ fn t0_constraint_segment() {
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<Fn(f32) -> P>)> = vec![
+        let transforms: Vec<(&str, Box<dyn Fn(f32) -> P>)> = vec![
             ("(x, 0)", Box::new(|x| Sample(x, 0.).into())),
             ("(0, x)", Box::new(|x| Sample(0., x).into())),
             ("(-x, 0)", Box::new(|x| Sample(-x, 0.).into())),
@@ -83,7 +79,7 @@ fn t1_constraint_no_fill1() {
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
             ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
             ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
             ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
@@ -144,7 +140,7 @@ fn t2_constraint_no_fill2() {
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
             ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
             ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
             ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
@@ -236,7 +232,7 @@ fn t3_crossing_iterator() {
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
             ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
             ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
             ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
@@ -308,7 +304,7 @@ fn t4_constraint_concave() {
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
             ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
             ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
             ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
@@ -425,7 +421,7 @@ fn t5_constraint() {
             ),
         ];
 
-        let transforms: Vec<(&str, Box<Fn(f32, f32) -> P>)> = vec![
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
             ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
             ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
             ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),

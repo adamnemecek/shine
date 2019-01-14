@@ -1,9 +1,9 @@
-use geometry2::{CollinearTest, CollinearTestType, Orientation, OrientationType, Predicates};
+use crate::geometry2::{CollinearTest, CollinearTestType, Orientation, OrientationType, Predicates};
+use crate::triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
+use crate::triangulation::query::{TopologyQuery, VertexClue};
+use crate::triangulation::traverse::EdgeCirculator;
+use crate::triangulation::types::{FaceIndex, FaceVertex, Rot3, VertexIndex};
 use std::mem;
-use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
-use triangulation::query::{TopologyQuery, VertexClue};
-use triangulation::traverse::EdgeCirculator;
-use triangulation::types::{FaceIndex, FaceVertex, Rot3, VertexIndex};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Crossing {
@@ -16,10 +16,10 @@ pub enum Crossing {
 
 pub struct CrossingIterator<'a, PR, V, F, C>
 where
-    PR: 'a + Predicates,
-    V: 'a + Vertex<Position = PR::Position>,
-    F: 'a + Face,
-    C: 'a + PredicatesContext<Predicates = PR>,
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
+    C: PredicatesContext<Predicates = PR>,
 {
     tri: &'a Triangulation<PR::Position, V, F, C>,
     v0: VertexIndex,
@@ -29,12 +29,12 @@ where
 
 impl<'a, PR, V, F, C> CrossingIterator<'a, PR, V, F, C>
 where
-    PR: 'a + Predicates,
-    V: 'a + Vertex<Position = PR::Position>,
-    F: 'a + Face,
-    C: 'a + PredicatesContext<Predicates = PR>,
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
+    C: PredicatesContext<Predicates = PR>,
 {
-    pub fn new(tri: &Triangulation<PR::Position, V, F, C>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<PR, V, F, C> {
+    pub fn new(tri: &Triangulation<PR::Position, V, F, C>, v0: VertexIndex, v1: VertexIndex) -> CrossingIterator<'_, PR, V, F, C> {
         assert_eq!(tri.dimension(), 2);
         assert_ne!(v0, v1);
         assert!(tri.is_finite_vertex(v0));
@@ -200,10 +200,10 @@ where
 
 impl<'a, PR, V, F, C> Iterator for CrossingIterator<'a, PR, V, F, C>
 where
-    PR: 'a + Predicates,
-    V: 'a + Vertex<Position = PR::Position>,
-    F: 'a + Face,
-    C: 'a + PredicatesContext<Predicates = PR>,
+    PR: Predicates,
+    V: Vertex<Position = PR::Position>,
+    F: Face,
+    C: PredicatesContext<Predicates = PR>,
 {
     type Item = Crossing;
 

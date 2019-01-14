@@ -21,7 +21,7 @@ pub trait Trace2 {
     fn trace_pop_group(&self);
     fn trace_pause(&self);
 
-    fn trace_document(&self) -> Trace2Document<Self>
+    fn trace_document(&self) -> Trace2Document<'_, Self>
     where
         Self: Sized,
     {
@@ -29,7 +29,7 @@ pub trait Trace2 {
         Trace2Document { trace: self }
     }
 
-    fn trace_group<S: Into<String>>(&self, name: Option<S>) -> Trace2Group<Self>
+    fn trace_group<S: Into<String>>(&self, name: Option<S>) -> Trace2Group<'_, Self>
     where
         Self: Sized,
     {
@@ -40,7 +40,7 @@ pub trait Trace2 {
 
 pub struct Trace2Document<'a, T>
 where
-    T: 'a + Trace2,
+    T: Trace2,
 {
     trace: &'a T,
 }
@@ -67,7 +67,7 @@ where
 
 pub struct Trace2Group<'a, T>
 where
-    T: 'a + Trace2,
+    T: Trace2,
 {
     trace: &'a T,
 }

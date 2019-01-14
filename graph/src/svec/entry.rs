@@ -1,10 +1,10 @@
+use crate::svec::{SVector, Store};
 use std::fmt::{self, Debug, Formatter};
-use svec::{SVector, Store};
 
 /// Entry to a slot in a sparse vector.
 pub struct Entry<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
     idx: usize,
     data: Option<*mut S::Item>,
@@ -76,7 +76,7 @@ where
     I: Debug,
     S: 'a + Store<Item = I>,
 {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.get())
     }
 }

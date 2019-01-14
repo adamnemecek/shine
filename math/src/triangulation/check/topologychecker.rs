@@ -1,6 +1,6 @@
-use geometry2::Position;
-use triangulation::graph::{Face, Triangulation, Vertex};
-use triangulation::types::rot3;
+use crate::geometry2::Position;
+use crate::triangulation::graph::{Face, Triangulation, Vertex};
+use crate::triangulation::types::rot3;
 
 pub trait TopologyChecker {
     /// Check dimension and count based invariants.

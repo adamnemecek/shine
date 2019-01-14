@@ -6,6 +6,7 @@ license = "MIT/Apache-2.0"
 description = "SHINE. Graph and sparse matrix library for the shine engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["graph", "matrix", "spares"]
+edition = "2018"
 
 [dependencies]
 libc = "*"

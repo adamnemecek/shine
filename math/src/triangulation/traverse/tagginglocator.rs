@@ -1,7 +1,7 @@
-use geometry2::{CollinearTest, Orientation, Position, Predicates};
-use triangulation::graph::{Face, PredicatesContext, TagContext, Triangulation, Vertex};
-use triangulation::query::TopologyQuery;
-use triangulation::types::{invalid_face_index, rot3, vertex_index, FaceIndex, FaceVertex, Location, Rot3};
+use crate::geometry2::{CollinearTest, Orientation, Position, Predicates};
+use crate::triangulation::graph::{Face, PredicatesContext, TagContext, Triangulation, Vertex};
+use crate::triangulation::query::TopologyQuery;
+use crate::triangulation::types::{invalid_face_index, rot3, vertex_index, FaceIndex, FaceVertex, Location, Rot3};
 
 #[derive(Debug)]
 enum ContainmentResult {

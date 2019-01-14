@@ -1,3 +1,7 @@
+use crate::webserver::appcontext::AppContext;
+use crate::webserver::control::{handle_notify_user, Control};
+use crate::webserver::d2trace::{handle_d2data_request, handle_d2datas_request, handle_d2view_request, D2Trace, IntoD2Data};
+use crate::webserver::d3trace::{handle_d3data_request, handle_d3datas_request, handle_d3view_request, D3Trace, IntoD3Data};
 use actix;
 use actix_web::{fs, http, middleware, server, App, Error as ActixWebError};
 use futures::future::Future;
@@ -5,10 +9,6 @@ use log::info;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use tera::compile_templates;
-use webserver::appcontext::AppContext;
-use webserver::control::{handle_notify_user, Control};
-use webserver::d2trace::{handle_d2data_request, handle_d2datas_request, handle_d2view_request, D2Trace, IntoD2Data};
-use webserver::d3trace::{handle_d3data_request, handle_d3datas_request, handle_d3view_request, D3Trace, IntoD3Data};
 
 #[derive(Clone)]
 pub struct Service {

@@ -1,4 +1,4 @@
-use geometry2::{
+use crate::geometry2::{
     CollinearTest, InexactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
 };
 
@@ -43,7 +43,7 @@ impl<R: InexactReal> CollinearTest for WrapInexactReal<R> {
 
 pub struct InexactNearestPointSearch<'a, P, D>
 where
-    P: 'a + Position,
+    P: Position,
     P::Real: InexactReal,
 {
     base: (P::Real, P::Real),
@@ -56,7 +56,7 @@ where
     P: 'a + Position,
     P::Real: InexactReal,
 {
-    fn new(base: &P) -> InexactNearestPointSearch<P, D> {
+    fn new(base: &P) -> InexactNearestPointSearch<'_, P, D> {
         InexactNearestPointSearch {
             base: (base.x(), base.y()),
             dist: P::Real::from_i32(0),

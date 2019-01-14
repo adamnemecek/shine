@@ -1,7 +1,7 @@
+use crate::webserver::appcontext::AppContext;
 use actix_web::{Error as ActixWebError, HttpRequest, HttpResponse};
 use log::info;
 use std::sync::{Arc, Condvar, Mutex};
-use webserver::appcontext::AppContext;
 
 #[derive(Clone)]
 pub struct Control {

@@ -1,6 +1,6 @@
+use crate::smat::{DataPosition, DataRange, MatrixMask};
 use log::{debug, trace};
-use smat::{DataPosition, DataRange, MatrixMask};
-use store::stdext::SliceOrdExt;
+use shine_store::stdext::SliceOrdExt;
 
 /// Compressed Sparse (Square) Row matrix.
 /// Its a variant of the CSR data structure where a dense vector is

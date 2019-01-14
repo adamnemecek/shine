@@ -1,11 +1,11 @@
-use smat::Store;
+use crate::smat::Store;
 use std::mem;
 use std::ops::Range;
 
 /// Immutable iterator over the non-zero items of matrix
 pub struct DataIter<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
     iterator: Range<usize>,
     store: &'a S,
@@ -34,7 +34,7 @@ where
 /// Mutable iterate over the non-zero items of matrix
 pub struct DataIterMut<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
     iterator: Range<usize>,
     store: &'a mut S,

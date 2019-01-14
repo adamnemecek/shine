@@ -1,8 +1,8 @@
-use geometry2::Position;
-use triangulation::graph::{Face, Triangulation, Vertex};
-use triangulation::query::VertexClue;
-use triangulation::traverse::EdgeCirculator;
-use triangulation::types::{FaceEdge, VertexIndex};
+use crate::geometry2::Position;
+use crate::triangulation::graph::{Face, Triangulation, Vertex};
+use crate::triangulation::query::VertexClue;
+use crate::triangulation::traverse::EdgeCirculator;
+use crate::triangulation::types::{FaceEdge, VertexIndex};
 
 /// Trait to query VertexIndex
 pub trait TopologyQuery {

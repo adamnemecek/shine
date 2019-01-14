@@ -1,12 +1,8 @@
 #![feature(custom_attribute)]
 
-extern crate log;
-extern crate shine_math;
-extern crate shine_testutils;
-
 mod common;
 
-use common::SimpleContext;
+use self::common::SimpleContext;
 use shine_math::geometry2::Posf32;
 use shine_math::triangulation::{Builder, FullChecker};
 use shine_testutils::init_test;

@@ -1,6 +1,5 @@
+use crate::svec::Store;
 use std::collections::HashMap;
-
-use svec::Store;
 
 pub struct HashStore<T> {
     values: HashMap<usize, T>,

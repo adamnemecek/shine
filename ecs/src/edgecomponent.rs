@@ -1,7 +1,8 @@
-use edge::Edge;
-use graph::smat;
-pub use graph::smat::Entry;
-use storagecategory::{DenseStorage, SparseStorage, StorageCategory};
+use crate::edge::Edge;
+use crate::storagecategory::{DenseStorage, SparseStorage, StorageCategory};
+use shine_graph::smat;
+
+pub use self::smat::Entry;
 
 /// Trait to assign storage policy to an edge data
 pub trait EdgeComponent: Sync + Send {
@@ -83,19 +84,23 @@ where
     pub fn get_entry(
         &mut self,
         edge: Edge,
-    ) -> smat::Entry<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
+    ) -> smat::Entry<'_, <T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
         self.store.get_entry(edge.from.id(), edge.to.id())
     }
 
-    pub fn read(&self) -> smat::WrapRowRead<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
+    pub fn read(&self) -> smat::WrapRowRead<'_, <T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
         self.store.read()
     }
 
-    pub fn update(&mut self) -> smat::WrapRowUpdate<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
+    pub fn update(
+        &mut self,
+    ) -> smat::WrapRowUpdate<'_, <T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
         self.store.update()
     }
 
-    pub fn write(&mut self) -> smat::WrapRowWrite<<T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
+    pub fn write(
+        &mut self,
+    ) -> smat::WrapRowWrite<'_, <T as EdgeComponentDescriptor>::Mask, <T as EdgeComponentDescriptor>::Store> {
         self.store.write()
     }
 }

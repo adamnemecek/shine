@@ -1,6 +1,6 @@
-use entity::Entity;
-use graph::join;
-use graph::traits::{IndexExcl, IndexLowerBound};
+use crate::entity::Entity;
+use shine_graph::join;
+use shine_graph::traits::{IndexExcl, IndexLowerBound};
 
 /// Iterator like trait that performs the merge.
 pub struct Join<S>

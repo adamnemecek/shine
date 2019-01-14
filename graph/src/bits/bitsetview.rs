@@ -1,4 +1,4 @@
-use bits::{BitBlock, BitIter};
+use crate::bits::{BitBlock, BitIter};
 use num_traits::{ToPrimitive, Zero};
 use std::fmt;
 use std::marker::PhantomData;

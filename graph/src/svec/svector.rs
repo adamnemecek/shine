@@ -1,7 +1,7 @@
-use bits::BitSetViewExt;
-use join::IntoJoin;
+use crate::bits::BitSetViewExt;
+use crate::join::IntoJoin;
+use crate::svec::{DataIter, DataIterMut, DrainIter, Entry, Store, VectorMask, WrapRead, WrapUpdate, WrapWrite};
 use std::fmt::{self, Debug, Formatter};
-use svec::{DataIter, DataIterMut, DrainIter, Entry, Store, VectorMask, WrapRead, WrapUpdate, WrapWrite};
 
 /// Sparse Vector
 pub struct SVector<S: Store> {
@@ -89,7 +89,7 @@ impl<S: Store> SVector<S> {
         }
     }
 
-    pub fn get_entry(&mut self, idx: usize) -> Entry<S> {
+    pub fn get_entry(&mut self, idx: usize) -> Entry<'_, S> {
         Entry::new(self, idx)
     }
 
@@ -105,28 +105,28 @@ impl<S: Store> SVector<S> {
         }
     }
 
-    pub fn first_entry(&mut self) -> Option<(usize, Entry<S>)> {
+    pub fn first_entry(&mut self) -> Option<(usize, Entry<'_, S>)> {
         match self.mask.lower_bound(0) {
             Some(id) => Some((id, self.get_entry(id))),
             None => None,
         }
     }
 
-    pub fn data_iter(&self) -> DataIter<S> {
+    pub fn data_iter(&self) -> DataIter<'_, S> {
         DataIter {
             iterator: (&self.mask).into_iter(),
             store: &self.store,
         }
     }
 
-    pub fn data_iter_mut(&mut self) -> DataIterMut<S> {
+    pub fn data_iter_mut(&mut self) -> DataIterMut<'_, S> {
         DataIterMut {
             iterator: (&self.mask).into_iter(),
             store: &mut self.store,
         }
     }
 
-    pub fn drain_iter(&mut self) -> DrainIter<S> {
+    pub fn drain_iter(&mut self) -> DrainIter<'_, S> {
         let vec_ptr = self as *mut _;
         DrainIter {
             vec_ptr,
@@ -135,15 +135,15 @@ impl<S: Store> SVector<S> {
         }
     }
 
-    pub fn read(&self) -> WrapRead<S> {
+    pub fn read(&self) -> WrapRead<'_, S> {
         WrapRead { vec: self }
     }
 
-    pub fn update(&mut self) -> WrapUpdate<S> {
+    pub fn update(&mut self) -> WrapUpdate<'_, S> {
         WrapUpdate { vec: self }
     }
 
-    pub fn write(&mut self) -> WrapWrite<S> {
+    pub fn write(&mut self) -> WrapWrite<'_, S> {
         WrapWrite { vec: self }
     }
 }
@@ -172,7 +172,7 @@ where
     T: Debug,
     S: Store<Item = T>,
 {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "[")?;
         let mut it = self.read().into_join();
         while let Some((id, e)) = it.next() {

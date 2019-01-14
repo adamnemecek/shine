@@ -1,7 +1,7 @@
-use geometry2::{Orientation, Predicates};
-use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
-use triangulation::query::TopologyQuery;
-use triangulation::types::{FaceIndex, FaceVertex, Rot3, VertexIndex};
+use crate::geometry2::{Orientation, Predicates};
+use crate::triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
+use crate::triangulation::query::TopologyQuery;
+use crate::triangulation::types::{FaceIndex, FaceVertex, Rot3, VertexIndex};
 
 pub trait GeometryQuery {
     type Orientation: Orientation;

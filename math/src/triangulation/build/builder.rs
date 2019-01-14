@@ -1,9 +1,9 @@
-use geometry2::{CollinearTest, Orientation, Position, Predicates};
-use triangulation::build::{Factory, Updater};
-use triangulation::graph::{BuilderContext, Constraint, Face, PredicatesContext, TagContext, Triangulation, Vertex};
-use triangulation::query::{GeometryQuery, TopologyQuery, VertexClue};
-use triangulation::traverse::{Crossing, CrossingIterator, TaggingLocator};
-use triangulation::types::{rot3, FaceEdge, FaceIndex, Location, VertexIndex};
+use crate::geometry2::{CollinearTest, Orientation, Position, Predicates};
+use crate::triangulation::build::{Factory, Updater};
+use crate::triangulation::graph::{BuilderContext, Constraint, Face, PredicatesContext, TagContext, Triangulation, Vertex};
+use crate::triangulation::query::{GeometryQuery, TopologyQuery, VertexClue};
+use crate::triangulation::traverse::{Crossing, CrossingIterator, TaggingLocator};
+use crate::triangulation::types::{rot3, FaceEdge, FaceIndex, Location, VertexIndex};
 
 pub trait Builder {
     type Position: Position;

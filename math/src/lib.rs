@@ -6,12 +6,6 @@
 #![feature(custom_inner_attributes)]
 #![feature(custom_attribute)]
 
-extern crate log;
-extern crate rand;
-
-#[cfg(test)]
-extern crate shine_testutils;
-
 pub mod geometry2;
 pub mod trace;
 pub mod triangulation;

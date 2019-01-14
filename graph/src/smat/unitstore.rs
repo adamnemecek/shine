@@ -1,4 +1,4 @@
-use smat::Store;
+use crate::smat::Store;
 
 pub struct UnitStore {
     unit: (),

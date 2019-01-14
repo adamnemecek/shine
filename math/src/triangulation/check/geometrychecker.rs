@@ -1,8 +1,8 @@
-use geometry2::{Orientation, Position, Predicates, Real};
+use crate::geometry2::{Orientation, Position, Predicates, Real};
+use crate::triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
+use crate::triangulation::query::{GeometryQuery, TopologyQuery};
+use crate::triangulation::types::{rot3, FaceVertex};
 use log::trace;
-use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
-use triangulation::query::{GeometryQuery, TopologyQuery};
-use triangulation::types::{rot3, FaceVertex};
 
 pub trait GeometryChecker {
     /// Check geometry predicates.

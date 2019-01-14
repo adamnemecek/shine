@@ -1,4 +1,4 @@
-use geometry2::{Position, Real};
+use crate::geometry2::{Position, Real};
 
 #[derive(Clone, Debug, Default)]
 pub struct Posf32 {

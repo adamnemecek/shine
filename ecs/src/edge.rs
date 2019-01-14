@@ -1,4 +1,4 @@
-use entity::Entity;
+use crate::entity::Entity;
 use std::mem;
 
 /// Connection between two entities

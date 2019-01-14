@@ -1,6 +1,6 @@
-use geometry2::Predicates;
-use triangulation::check::{GeometryChecker, TopologyChecker};
-use triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
+use crate::geometry2::Predicates;
+use crate::triangulation::check::{GeometryChecker, TopologyChecker};
+use crate::triangulation::graph::{Face, PredicatesContext, Triangulation, Vertex};
 
 pub trait FullChecker {
     fn check(&self, area_eps: Option<f64>) -> Result<(), String>;

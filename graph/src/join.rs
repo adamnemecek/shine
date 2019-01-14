@@ -1,5 +1,5 @@
+use crate::traits::{IndexExcl, IndexLowerBound};
 use std::ops::Range;
-use traits::{IndexExcl, IndexLowerBound};
 
 /// Iterator like trait that performs the merge.
 pub struct Join<S>

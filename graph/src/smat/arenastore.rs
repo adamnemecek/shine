@@ -1,7 +1,6 @@
+use crate::smat::Store;
+use shine_store::arena::IndexedArena;
 use std::mem;
-use store::arena::IndexedArena;
-
-use smat::Store;
 
 pub struct ArenaStore<T> {
     arena: IndexedArena<T>,

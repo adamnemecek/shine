@@ -1,6 +1,6 @@
-use edgecomponent::{EdgeComponentDescriptor, EdgeComponentStore};
-use entity::EntityStore;
-use entitycomponent::{EntityComponentDescriptor, EntityComponentStore};
+use crate::edgecomponent::{EdgeComponentDescriptor, EdgeComponentStore};
+use crate::entity::EntityStore;
+use crate::entitycomponent::{EntityComponentDescriptor, EntityComponentStore};
 use shred::{Fetch, FetchMut, Resources, SystemData};
 
 pub struct World {
@@ -18,11 +18,11 @@ impl World {
         world
     }
 
-    pub fn entities(&self) -> Fetch<EntityStore> {
+    pub fn entities(&self) -> Fetch<'_, EntityStore> {
         self.resources.fetch()
     }
 
-    pub fn entities_mut(&self) -> FetchMut<EntityStore> {
+    pub fn entities_mut(&self) -> FetchMut<'_, EntityStore> {
         self.resources.fetch_mut()
     }
 
@@ -30,11 +30,11 @@ impl World {
         self.resources.insert::<EntityComponentStore<C>>(Default::default());
     }
 
-    pub fn get_entity<C: EntityComponentDescriptor>(&self) -> Fetch<EntityComponentStore<C>> {
+    pub fn get_entity<C: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<C>> {
         self.resources.fetch()
     }
 
-    pub fn get_entity_mut<C: EntityComponentDescriptor>(&self) -> FetchMut<EntityComponentStore<C>> {
+    pub fn get_entity_mut<C: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<C>> {
         self.resources.fetch_mut()
     }
 
@@ -42,11 +42,11 @@ impl World {
         self.resources.insert::<EdgeComponentStore<C>>(Default::default());
     }
 
-    pub fn get_edge<C: EdgeComponentDescriptor>(&self) -> Fetch<EdgeComponentStore<C>> {
+    pub fn get_edge<C: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<C>> {
         self.resources.fetch()
     }
 
-    pub fn get_edge_mut<C: EdgeComponentDescriptor>(&self) -> FetchMut<EdgeComponentStore<C>> {
+    pub fn get_edge_mut<C: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<C>> {
         self.resources.fetch_mut()
     }
 

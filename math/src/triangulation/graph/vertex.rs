@@ -1,5 +1,5 @@
-use geometry2::Position;
-use triangulation::types::FaceIndex;
+use crate::geometry2::Position;
+use crate::triangulation::types::FaceIndex;
 
 /// A vertex of the triangulation
 pub trait Vertex: Default {

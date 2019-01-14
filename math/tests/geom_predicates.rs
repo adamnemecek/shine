@@ -1,10 +1,6 @@
-extern crate log;
-extern crate shine_math;
-extern crate shine_testutils;
-
 mod common;
 
-use common::Sample;
+use self::common::Sample;
 use log::info;
 use shine_math::geometry2::{CollinearTest, Orientation, Position, Predicates, Real};
 use shine_math::geometry2::{ExactPredicates, InexactPredicates, Posf32, Posf64, Posi32, Posi64};

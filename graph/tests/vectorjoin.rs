@@ -1,9 +1,3 @@
-extern crate env_logger;
-extern crate log;
-extern crate rand;
-extern crate shine_graph;
-extern crate shine_testutils;
-
 use log::debug;
 
 use shine_graph::join::IntoJoinExt;

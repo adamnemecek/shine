@@ -1,3 +1,4 @@
+use crate::webserver::appcontext::AppContext;
 use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
 use base64;
 use bytes::{BufMut, BytesMut};
@@ -5,7 +6,6 @@ use log::info;
 use serde_json;
 use shine_gltf::{accessor, buffer, optional_attribute_map, Accessor, Buffer, GetMut, Index, Mesh, Node, Primitive, Root, Scene};
 use std::{iter, mem};
-use webserver::appcontext::AppContext;
 
 pub trait IntoD3Data {
     fn trace(&self, tr: &mut D3Trace);
@@ -199,7 +199,7 @@ impl D3Trace {
         MeshId(mesh_id)
     }
 
-    pub fn add_instance(&mut self, mesh: MeshId, location: D3Location) {
+    pub fn add_instance(&mut self, mesh: MeshId, _location: D3Location) {
         let node_id = {
             let node = Node {
                 mesh: Some(mesh.0),
@@ -251,7 +251,7 @@ pub fn handle_d3data_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
 
     let data = {
         info!("Getting d3data for {}", id);
-        let mut d3datas = state.d3datas.lock().unwrap();
+        let d3datas = state.d3datas.lock().unwrap();
         if id >= d3datas.len() {
             "".into()
         } else {

@@ -1,4 +1,4 @@
-use geometry2::{
+use crate::geometry2::{
     CollinearTest, ExactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
 };
 use std::marker::PhantomData;
@@ -50,7 +50,7 @@ where
 
 pub struct ExactNearestPointSearch<'a, P, D>
 where
-    P: 'a + Position,
+    P: Position,
     P::Real: ExactReal,
 {
     base: (P::Real, P::Real),
@@ -63,7 +63,7 @@ where
     P: 'a + Position,
     P::Real: ExactReal,
 {
-    fn new(base: &P) -> ExactNearestPointSearch<P, D> {
+    fn new(base: &P) -> ExactNearestPointSearch<'_, P, D> {
         ExactNearestPointSearch {
             base: (base.x(), base.y()),
             dist: P::Real::from_i32(0),

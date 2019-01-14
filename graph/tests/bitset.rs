@@ -1,9 +1,4 @@
-extern crate env_logger;
-extern crate log;
-extern crate permutohedron;
-extern crate rand;
-extern crate shine_graph;
-extern crate shine_testutils;
+use rand;
 
 use log::{debug, trace};
 use permutohedron::Heap;
@@ -236,7 +231,7 @@ fn test_ops_<B: BitBlock>() {
     let mut b1 = BitSet::<B>::new();
     let mut b2 = BitSet::<B>::new();
 
-    use bitops::BitOp;
+    use self::bitops::BitOp;
 
     assert_eq!(b2.lower_bound(0), None);
     assert_eq!(b2.lower_bound(1), None);
