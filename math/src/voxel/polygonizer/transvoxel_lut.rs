@@ -1,5 +1,6 @@
 #![allow(unused_attributes)]
 #![rustfmt_skip]
+
 // Lengyel, Eric. “Voxel-Based Terrain for Real-Time Virtual Simulations”. PhD diss., University of California at Davis, 2010.
 // The following data originates from Eric Lengyel's Transvoxel Algorithm.
 // http://transvoxel.org/
