@@ -1,9 +1,4 @@
-extern crate env_logger;
-extern crate log;
-extern crate permutohedron;
-extern crate rand;
-extern crate shine_store;
-extern crate shine_testutils;
+use rand;
 
 use log::{debug, trace};
 use permutohedron::Heap;

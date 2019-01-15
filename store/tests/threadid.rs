@@ -1,8 +1,3 @@
-extern crate env_logger;
-extern crate log;
-extern crate shine_store;
-extern crate shine_testutils;
-
 use log::info;
 use shine_store::threadid;
 use shine_testutils::{init_test, init_test_no_thread};

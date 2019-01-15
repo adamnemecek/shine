@@ -1,7 +1,3 @@
-extern crate env_logger;
-extern crate shine_store;
-extern crate shine_testutils;
-
 use shine_store::spscstate::state_channel;
 use shine_testutils::{init_test, init_test_no_thread};
 use std::thread;

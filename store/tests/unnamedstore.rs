@@ -1,8 +1,3 @@
-extern crate env_logger;
-extern crate log;
-extern crate shine_store;
-extern crate shine_testutils;
-
 use log::{info, trace};
 use shine_store::unnamedstore::Store;
 use shine_testutils::{init_test, init_test_no_thread};
@@ -36,7 +31,7 @@ fn simple_single_threaded() {
 
     info!("request 0,1");
     {
-        let store = store.read();
+        let store = store.try_read().unwrap();
 
         r0 = store.add(TestData::new("zero"));
         assert!(store[&r0].0 == "zero");
@@ -48,13 +43,13 @@ fn simple_single_threaded() {
 
     info!("request process");
     {
-        let mut store = store.write();
+        let mut store = store.try_write().unwrap();
         store.finalize_requests();
     }
 
     info!("check 0,1, request 2");
     {
-        let store = store.read();
+        let store = store.try_read().unwrap();
         assert!(store[&r0].0 == "zero");
         assert!(store[&r1].0 == "one");
 
@@ -64,13 +59,13 @@ fn simple_single_threaded() {
 
     info!("drop 2");
     {
-        let mut store = store.write();
+        let mut store = store.try_write().unwrap();
         store.finalize_requests();
         store.drain_unused();
     }
 
     {
-        let store = store.read();
+        let store = store.try_read().unwrap();
         assert!(store[&r0].0 == "zero");
         assert!(store[&r1].0 == "one");
 
@@ -80,7 +75,7 @@ fn simple_single_threaded() {
 
     info!("drop 1");
     {
-        let mut store = store.write();
+        let mut store = store.try_write().unwrap();
         store.finalize_requests();
         store.drain_unused();
     }
@@ -88,7 +83,7 @@ fn simple_single_threaded() {
     info!("drop 0");
     {
         mem::drop(r0);
-        let mut store = store.write();
+        let mut store = store.try_write().unwrap();
         store.finalize_requests();
         store.drain_unused();
         assert!(store.is_empty());
@@ -110,7 +105,7 @@ fn simple_multi_threaded() {
         for i in 0..ITER {
             let store = store.clone();
             tp.push(thread::spawn(move || {
-                let store = store.read();
+                let store = store.try_read().unwrap();
 
                 // request 1
                 let r1 = store.add(TestData::new("one"));
@@ -133,7 +128,7 @@ fn simple_multi_threaded() {
 
     info!("request process");
     {
-        let mut store = store.write();
+        let mut store = store.try_write().unwrap();
         store.finalize_requests();
         // no drain
     }
@@ -151,8 +146,8 @@ fn check_lock() {
     {
         let store = Store::<TestData>::new();
         assert!(panic::catch_unwind(|| {
-            let w = store.write();
-            let r = store.read();
+            let w = store.try_write().unwrap();
+            let r = store.try_read().unwrap();
             drop(r);
             drop(w);
         })
@@ -163,8 +158,8 @@ fn check_lock() {
     {
         let store = Store::<TestData>::new();
         assert!(panic::catch_unwind(|| {
-            let r = store.read();
-            let w = store.write();
+            let r = store.try_read().unwrap();
+            let w = store.try_write().unwrap();
             drop(w);
             drop(r);
         })
@@ -175,8 +170,8 @@ fn check_lock() {
     {
         let store = Store::<TestData>::new();
         assert!(panic::catch_unwind(|| {
-            let w1 = store.write();
-            let w2 = store.write();
+            let w1 = store.try_write().unwrap();
+            let w2 = store.try_write().unwrap();
             drop(w2);
             drop(w1);
         })

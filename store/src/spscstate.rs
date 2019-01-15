@@ -120,7 +120,7 @@ impl<T: Copy> Sender<T> {
 }
 
 /// Reference to the buffer held by the producer
-pub struct RefSendBuffer<'a, T: 'a>(&'a TripleBuffer<T>, usize);
+pub struct RefSendBuffer<'a, T>(&'a TripleBuffer<T>, usize);
 
 impl<'a, T> Drop for RefSendBuffer<'a, T> {
     fn drop(&mut self) {
@@ -173,7 +173,7 @@ impl<T: Copy> Receiver<T> {
 }
 
 /// Reference to the buffer held by the consumer
-pub struct RefReceiveBuffer<'a, T: 'a>(&'a TripleBuffer<T>, usize);
+pub struct RefReceiveBuffer<'a, T>(&'a TripleBuffer<T>, usize);
 
 impl<'a, T> Deref for RefReceiveBuffer<'a, T> {
     type Target = T;

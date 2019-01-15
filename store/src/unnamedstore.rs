@@ -117,24 +117,23 @@ impl<D> Store<D> {
         }
     }
 
-    /// Returns a read locked access
-    pub fn read(&self) -> ReadGuard<'_, D> {
-        let shared = self.shared.try_read().unwrap();
-
-        ReadGuard {
+    /// Aquire read lock.
+    pub fn try_read(&self) -> Option<ReadGuard<'_, D>> {
+        let shared = self.shared.try_read().ok()?;
+        Some(ReadGuard {
             _shared: shared,
             exclusive: &self.exclusive,
-        }
+        })
     }
 
-    /// Returns a write locked access
-    pub fn write(&self) -> WriteGuard<'_, D> {
-        let shared = self.shared.try_write().unwrap();
-        let locked_exclusive = self.exclusive.lock().unwrap();
-        WriteGuard {
+    /// Try to aquire write lock.
+    pub fn try_write(&self) -> Option<WriteGuard<'_, D>> {
+        let shared = self.shared.try_write().ok()?;
+        let locked_exclusive = self.exclusive.lock().ok()?;
+        Some(WriteGuard {
             shared,
             locked_exclusive,
-        }
+        })
     }
 }
 
@@ -173,7 +172,7 @@ impl<D> Drop for Store<D> {
 }
 
 /// Guarded read access to a store
-pub struct ReadGuard<'a, D: 'a> {
+pub struct ReadGuard<'a, D> {
     _shared: RwLockReadGuard<'a, SharedData<D>>,
     exclusive: &'a Mutex<ExclusiveData<D>>,
 }
@@ -210,7 +209,7 @@ impl<'a, 'i, D: 'a> ops::Index<&'i Index<D>> for ReadGuard<'a, D> {
 }
 
 /// Guarded update access to a store
-pub struct WriteGuard<'a, D: 'a> {
+pub struct WriteGuard<'a, D> {
     shared: RwLockWriteGuard<'a, SharedData<D>>,
     locked_exclusive: MutexGuard<'a, ExclusiveData<D>>,
 }
