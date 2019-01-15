@@ -1,6 +1,6 @@
 use shine_store::namedstore::Store as InnerStore;
 
-pub use shine_store::namedstore::{Data, Index, ReadGuard, Store as InnerStore, WriteGuard};
+pub use shine_store::namedstore::{Data, Index, ReadGuard, WriteGuard};
 
 /// A thing wrapper around [InnerStore](InnerStore) to make it more ergonomic to the world.
 pub struct Store<D: Data> {
