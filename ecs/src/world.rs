@@ -1,25 +1,51 @@
 use crate::entities::{
     EdgeComponentDescriptor, EdgeComponentStore, EntityComponentDescriptor, EntityComponentStore, EntityStore,
 };
-use shine_store::{hashstore, store};
+use crate::resources::{named, unnamed};
 use shred::{Fetch, FetchMut, Resources, SystemData};
 
+pub trait EntityWorld {
+    fn entities(&self) -> Fetch<'_, EntityStore>;
+    fn entities_mut(&self) -> FetchMut<'_, EntityStore>;
+
+    fn register_entity<D: EntityComponentDescriptor>(&mut self);
+    fn get_entity<D: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<D>>;
+    fn get_entity_mut<D: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<D>>;
+
+    fn register_edge<D: EdgeComponentDescriptor>(&mut self);
+    fn get_edge<D: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<D>>;
+    fn get_edge_mut<D: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<D>>;
+}
+
+pub trait ResourceWorld {
+    fn register_named_resource<D: 'static + named::Data>(&mut self);
+    fn get_named_resource<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>>;
+    fn get_named_resource_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>>;
+
+    fn register_resource<D: 'static>(&mut self);
+    fn get_resource<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>>;
+    fn get_resource_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>>;
+}
+
+pub trait SpatialWorld {}
+
 /// World is a collection of container.
-///  - entity based
+///  - entity components ([EntityWorld](EntityWorld))
 ///     - entity is defined by a unique id.
 ///     - store multiple type of data (components) to each id (nodes in a graph)
 ///     - store multiple type of data (edge-component) to id pairs (directed edges in a graph)
 ///     - read/write lock data by components to bulck process the them
-///  - resource (TODO)
+///  - resources ([ResourceWorld](ResourceWorld))
 ///     - mapping from a uniqe id to data
 ///     - allow creating handles on demand without blocking, but actual loading is deffered
 ///     - mainly used to store share resource between entites (ex textures, geometry, etc.)
 ///     - reading and update resources are exclusive and update is performed in a blocking pass
-///  - octree (TODO)
+///  - spatial partitioning ([SpatialWorld](SpatialWorld)) (TODO)
+///     - octree based (?)
 ///     - id based space (node) selection
 ///     - concurent hashmap based spatial space partitioning (ex voxel grids)
 pub struct World {
-    pub resources: Resources,
+    resources: Resources,
 }
 
 impl World {
@@ -33,50 +59,6 @@ impl World {
         world
     }
 
-    pub fn entities(&self) -> Fetch<'_, EntityStore> {
-        self.resources.fetch()
-    }
-
-    pub fn entities_mut(&self) -> FetchMut<'_, EntityStore> {
-        self.resources.fetch_mut()
-    }
-
-    pub fn register_entity<D: EntityComponentDescriptor>(&mut self) {
-        self.resources.insert::<EntityComponentStore<D>>(Default::default());
-    }
-
-    pub fn get_entity<D: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<D>> {
-        self.resources.fetch()
-    }
-
-    pub fn get_entity_mut<D: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<D>> {
-        self.resources.fetch_mut()
-    }
-
-    pub fn register_edge<D: EdgeComponentDescriptor>(&mut self) {
-        self.resources.insert::<EdgeComponentStore<D>>(Default::default());
-    }
-
-    pub fn get_edge<D: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<D>> {
-        self.resources.fetch()
-    }
-
-    pub fn get_edge_mut<D: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<D>> {
-        self.resources.fetch_mut()
-    }
-/*
-    pub fn register_resource<R: ResourceDescriptor>(&mut self) {
-        self.resources.insert::<ResourceStore<C>>(Default::default());
-    }
-
-    pub fn get_resource<D: ResourceDescriptor>(&self) -> Fetch<'_, ResourceStore<D>> {
-        self.resources.fetch()
-    }
-
-    pub fn get_resource_mut<D: ResourceDescriptor>(&self) -> FetchMut<'_, ResourceStore<D>> {
-        self.resources.fetch_mut()use crate::entities::Entity;
-    }*/
-
     /// Helper to fetch components without creating some explicit System.
     /// let (a,mut b) : (Read<i8>, Write<i8>) = world.system_data();
     /// (a.read(),b.write()).join_all(...);
@@ -87,6 +69,68 @@ impl World {
         SystemData::fetch(&self.resources)
     }
 }
+
+impl EntityWorld for World {
+    fn entities(&self) -> Fetch<'_, EntityStore> {
+        self.resources.fetch()
+    }
+
+    fn entities_mut(&self) -> FetchMut<'_, EntityStore> {
+        self.resources.fetch_mut()
+    }
+
+    fn register_entity<D: EntityComponentDescriptor>(&mut self) {
+        self.resources.insert::<EntityComponentStore<D>>(Default::default());
+    }
+
+    fn get_entity<D: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<D>> {
+        self.resources.fetch()
+    }
+
+    fn get_entity_mut<D: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<D>> {
+        self.resources.fetch_mut()
+    }
+
+    fn register_edge<D: EdgeComponentDescriptor>(&mut self) {
+        self.resources.insert::<EdgeComponentStore<D>>(Default::default());
+    }
+
+    fn get_edge<D: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<D>> {
+        self.resources.fetch()
+    }
+
+    fn get_edge_mut<D: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<D>> {
+        self.resources.fetch_mut()
+    }
+}
+
+impl ResourceWorld for World {
+    fn register_named_resource<D: 'static + named::Data>(&mut self) {
+        self.resources.insert::<named::Store<D>>(Default::default());
+    }
+
+    fn get_named_resource<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>> {
+        self.resources.fetch()
+    }
+
+    fn get_named_resource_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>> {
+        self.resources.fetch_mut()
+    }
+
+    fn register_resource<D: 'static>(&mut self) {
+        self.resources.insert::<unnamed::Store<D>>(Default::default());
+    }
+
+    fn get_resource<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>> {
+        self.resources.fetch()
+    }
+
+    fn get_resource_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>> {
+        self.resources.fetch_mut()
+    }
+}
+
+impl SpatialWorld for World {}
 
 impl Default for World {
     fn default() -> World {

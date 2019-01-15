@@ -1,7 +1,7 @@
 use crate::arena::PinnedArena;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
-use std::{fmt, ops, ptr};
+use std::{fmt, ops};
 
 /// Reference counted indexing of the store items in O(1).
 pub struct Index<D>(*mut Entry<D>);
@@ -10,107 +10,41 @@ unsafe impl<D> Send for Index<D> {}
 unsafe impl<D> Sync for Index<D> {}
 
 impl<D> Index<D> {
-    pub fn null() -> Index<D> {
-        Index(ptr::null_mut())
-    }
-
     fn new(entry: *mut Entry<D>) -> Index<D> {
+        assert!(!entry.is_null());
         unsafe { &(*entry).ref_count.fetch_add(1, Ordering::Relaxed) };
         Index(entry)
-    }
-
-    pub fn is_null(&self) -> bool {
-        self.0.is_null()
-    }
-
-    pub fn reset(&mut self) {
-        if !self.is_null() {
-            unsafe { &(*self.0).ref_count.fetch_sub(1, Ordering::Relaxed) };
-        }
-        self.0 = ptr::null_mut();
-    }
-}
-
-impl<D> Default for Index<D> {
-    fn default() -> Index<D> {
-        Index::null()
     }
 }
 
 impl<D> fmt::Debug for Index<D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if !self.is_null() {
-            let rc = unsafe { &(*self.0).ref_count.load(Ordering::Relaxed) };
-            write!(f, "Index({:p}, rc:{})", self.0, rc)
-        } else {
-            write!(f, "Index({:p})", self.0)
-        }
+        assert!(!self.0.is_null());
+        let rc = unsafe { &(*self.0).ref_count.load(Ordering::Relaxed) };
+        write!(f, "Index({:p}, rc:{})", self.0, rc)
     }
 }
 
 impl<D> PartialEq for Index<D> {
     fn eq(&self, e: &Self) -> bool {
+        assert!(!self.0.is_null());
+        assert!(!e.0.is_null());
         self.0 == e.0
     }
 }
 
 impl<D> Clone for Index<D> {
     fn clone(&self) -> Index<D> {
-        if !self.is_null() {
-            unsafe { &(*self.0).ref_count.fetch_add(1, Ordering::Relaxed) };
-        }
+        assert!(!self.0.is_null());
+        unsafe { &(*self.0).ref_count.fetch_add(1, Ordering::Relaxed) };
         Index(self.0)
     }
 }
 
 impl<D> Drop for Index<D> {
     fn drop(&mut self) {
-        self.reset();
-    }
-}
-
-/// Unsafe indexing of the store items in O(1) without reference count maintenance.
-pub struct UnsafeIndex<D>(*mut Entry<D>);
-
-impl<D> UnsafeIndex<D> {
-    pub fn null() -> UnsafeIndex<D> {
-        UnsafeIndex(ptr::null_mut())
-    }
-
-    pub fn from_index(idx: &Index<D>) -> UnsafeIndex<D> {
-        UnsafeIndex(idx.0)
-    }
-
-    pub fn is_null(&self) -> bool {
-        self.0.is_null()
-    }
-
-    pub fn release(&mut self) {
-        self.0 = ptr::null_mut();
-    }
-}
-
-impl<D> Default for UnsafeIndex<D> {
-    fn default() -> UnsafeIndex<D> {
-        UnsafeIndex::null()
-    }
-}
-
-impl<D> fmt::Debug for UnsafeIndex<D> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "UnsafeIndex({:p})", self.0)
-    }
-}
-
-impl<D> PartialEq for UnsafeIndex<D> {
-    fn eq(&self, e: &Self) -> bool {
-        self.0 == e.0
-    }
-}
-
-impl<D> Clone for UnsafeIndex<D> {
-    fn clone(&self) -> UnsafeIndex<D> {
-        UnsafeIndex(self.0)
+        assert!(!self.0.is_null());
+        unsafe { &(*self.0).ref_count.fetch_sub(1, Ordering::Relaxed) };
     }
 }
 
@@ -250,7 +184,7 @@ impl<'a, D: 'a> ReadGuard<'a, D> {
         exclusive.add(data)
     }
 
-    /// Try to add the item to the store. on success the index is returned.
+    /// Try to add the item to the store. On success the index is returned.
     /// If operation cannot be carried out immediatelly, data is returned back in the Error.
     pub fn try_add(&self, data: D) -> Result<Index<D>, D> {
         if let Ok(mut exclusive) = self.exclusive.try_lock() {
@@ -261,14 +195,8 @@ impl<'a, D: 'a> ReadGuard<'a, D> {
     }
 
     pub fn at(&self, index: &Index<D>) -> &D {
-        assert!(!index.is_null(), "Indexing by a null-index is not allowed");
+        assert!(!index.0.is_null(), "Indexing is invalid");
         let entry = unsafe { &(*index.0) };
-        &entry.value
-    }
-
-    pub unsafe fn at_unsafe(&self, index: &UnsafeIndex<D>) -> &D {
-        assert!(!index.is_null(), "Indexing by a null-index is not allowed");
-        let entry = &(*index.0);
         &entry.value
     }
 }
@@ -332,26 +260,14 @@ impl<'a, D: 'a> WriteGuard<'a, D> {
     }
 
     pub fn at(&self, index: &Index<D>) -> &D {
-        assert!(!index.is_null(), "Indexing by a null-index is not allowed");
+        assert!(!index.0.is_null(), "Indexing is invalid");
         let entry = unsafe { &(*index.0) };
         &entry.value
     }
 
     pub fn at_mut(&mut self, index: &Index<D>) -> &mut D {
-        assert!(!index.is_null(), "Indexing by a null-index is not allowed");
+        assert!(!index.0.is_null(), "Indexing is invalid");
         let entry = unsafe { &mut (*index.0) };
-        &mut entry.value
-    }
-
-    pub unsafe fn at_unsafe(&self, index: &UnsafeIndex<D>) -> &D {
-        assert!(!index.is_null(), "Indexing by a null-index is not allowed");
-        let entry = &(*index.0);
-        &entry.value
-    }
-
-    pub unsafe fn at_unsafe_mut(&mut self, index: &UnsafeIndex<D>) -> &mut D {
-        assert!(!index.is_null(), "Indexing by a null-index is not allowed");
-        let entry = &mut (*index.0);
         &mut entry.value
     }
 }

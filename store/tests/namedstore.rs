@@ -5,28 +5,30 @@ extern crate shine_testutils;
 
 use log::{debug, info, trace};
 use std::sync::Arc;
-use std::thread;
+use std::{mem, thread};
 
-use shine_store::hashstore::{HashStore, Key};
+use shine_store::namedstore::{Data, Store};
 use shine_testutils::{init_test, init_test_no_thread};
 
 /// Resource id for test data
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 struct TestDataId(u32);
 
-impl Key for TestDataId {}
-
 /// Test resource data
 struct TestData(String);
+
+impl Data for TestData {
+    type Key = TestDataId;
+
+    fn from_key(k: TestDataId) -> TestData {
+        Self::new(format!("id: {}", k.0))
+    }
+}
 
 impl TestData {
     fn new(s: String) -> TestData {
         trace!("creating '{}'", s);
         TestData(s)
-    }
-
-    fn from_key(k: &TestDataId) -> TestData {
-        Self::new(format!("id: {}", k.0))
     }
 }
 
@@ -36,31 +38,25 @@ impl Drop for TestData {
     }
 }
 
-impl From<TestDataId> for TestData {
-    fn from(k: TestDataId) -> TestData {
-        TestData::from_key(&k)
-    }
-}
-
 #[test]
 fn simple_single_threaded() {
     init_test(module_path!());
 
-    let store = HashStore::<TestDataId, TestData>::new();
+    let store = Store::<TestData>::new();
     let mut r0; // = TestRef::none();
     let mut r1; // = TestRef::none();
 
     debug!("request 0,1");
     {
         let mut store = store.read();
-        assert!(store.get_blocking(&TestDataId(0)).is_null());
+        assert!(store.get_blocking(&TestDataId(0)) == None);
 
         r0 = store.get_or_add_blocking(&TestDataId(0));
         assert!(store[&r0].0 == format!("id: {}", 0));
 
         r1 = store.get_or_add_blocking(&TestDataId(1));
         assert!(store[&r1].0 == format!("id: {}", 1));
-        let r11 = store.get_blocking(&TestDataId(1));
+        let r11 = store.get_blocking(&TestDataId(1)).unwrap();
         assert!(store[&r11].0 == format!("id: {}", 1));
         assert!(r11 == r1);
         let r12 = store.get_or_add_blocking(&TestDataId(1));
@@ -78,9 +74,9 @@ fn simple_single_threaded() {
     {
         let mut store = store.read();
         assert!(store[&r0].0 == format!("id: {}", 0));
-        assert!(store.get_blocking(&TestDataId(0)) == r0);
+        assert!(store.get_blocking(&TestDataId(0)).unwrap() == r0);
         assert!(store[&r1].0 == format!("id: {}", 1));
-        assert!(store.get_blocking(&TestDataId(1)) == r1);
+        assert!(store.get_blocking(&TestDataId(1)).unwrap() == r1);
 
         let r2 = store.get_or_add_blocking(&TestDataId(2));
         assert!(store[&r2].0 == format!("id: {}", 2));
@@ -95,17 +91,17 @@ fn simple_single_threaded() {
 
     {
         let store = store.read();
-        assert!(store.get_blocking(&TestDataId(2)).is_null());
+        assert!(store.get_blocking(&TestDataId(2)) == None);
 
         assert!(store[&r0].0 == format!("id: {}", 0));
-        assert!(store.get_blocking(&TestDataId(0)) == r0);
+        assert!(store.get_blocking(&TestDataId(0)).unwrap() == r0);
         assert!(store[&r1].0 == format!("id: {}", 1));
-        assert!(store.get_blocking(&TestDataId(1)) == r1);
+        assert!(store.get_blocking(&TestDataId(1)).unwrap() == r1);
 
-        r1.reset();
-        // check that store is not modified
-        assert!(store[&store.get_blocking(&TestDataId(1))].0 == format!("id: {}", 1));
-        assert!(r1.is_null());
+        mem::drop(r1);
+        // check that store is not yet modified
+        assert!(store[&store.get_blocking(&TestDataId(1)).unwrap()].0 == format!("id: {}", 1));
+        //info!("{:?}", r1);
     }
 
     debug!("drop 1");
@@ -118,14 +114,13 @@ fn simple_single_threaded() {
     {
         let store = store.read();
         assert!(store[&r0].0 == format!("id: {}", 0));
-        assert!(store.get_blocking(&TestDataId(0)) == r0);
-        assert!(store.get_blocking(&TestDataId(1)).is_null());
-        assert!(store.get_blocking(&TestDataId(2)).is_null());
+        assert!(store.get_blocking(&TestDataId(0)).unwrap() == r0);
+        assert!(store.get_blocking(&TestDataId(1)) == None);
+        assert!(store.get_blocking(&TestDataId(2)) == None);
 
-        r0.reset();
+        mem::drop(r0);
         // check that store is not modified yet
-        assert!(store[&store.get_blocking(&TestDataId(0))].0 == format!("id: {}", 0));
-        assert!(r0.is_null());
+        assert!(store[&store.get_blocking(&TestDataId(0)).unwrap()].0 == format!("id: {}", 0));
     }
 
     debug!("drop 0");
@@ -141,7 +136,7 @@ fn simple_single_threaded() {
 fn simple_multi_threaded() {
     init_test_no_thread(module_path!()).expect("Single threaded test environment required");
 
-    let store = HashStore::<TestDataId, TestData>::new();
+    let store = Store::<TestData>::new();
     let store = Arc::new(store);
 
     const ITER: u32 = 10;
@@ -153,7 +148,7 @@ fn simple_multi_threaded() {
             let store = store.clone();
             tp.push(thread::spawn(move || {
                 let mut store = store.read();
-                assert!(store.get_blocking(&TestDataId(0)).is_null());
+                assert!(store.get_blocking(&TestDataId(0)) == None);
 
                 // request 1
                 let r1 = store.get_or_add_blocking(&TestDataId(1));
@@ -188,16 +183,14 @@ fn simple_multi_threaded() {
             let store = store.clone();
             tp.push(thread::spawn(move || {
                 let store = store.read();
-                assert!(store.get_blocking(&TestDataId(0)).is_null());
+                assert!(store.get_blocking(&TestDataId(0)) == None);
 
                 // get 1
-                let r1 = store.get_blocking(&TestDataId(1));
-                assert!(!r1.is_null());
+                let r1 = store.get_blocking(&TestDataId(1)).unwrap();
                 assert!(store[&r1].0 == format!("id: {}", 1));
 
                 // get 100 + threadId
-                let r100 = store.get_blocking(&TestDataId(100 + i));
-                assert!(!r100.is_null());
+                let r100 = store.get_blocking(&TestDataId(100 + i)).unwrap();
                 assert!(store[&r100].0 == format!("id: {}", 100 + i));
             }));
         }
@@ -221,13 +214,13 @@ fn simple_multi_threaded() {
             let store = store.clone();
             tp.push(thread::spawn(move || {
                 let store = store.read();
-                assert!(store.get_blocking(&TestDataId(0)).is_null());
+                assert!(store.get_blocking(&TestDataId(0)) == None);
 
                 // get 1
-                assert!(store.get_blocking(&TestDataId(1)).is_null());
+                assert!(store.get_blocking(&TestDataId(1)) == None);
 
                 // get 100 + threadId
-                assert!(store.get_blocking(&TestDataId(100 + i)).is_null());
+                assert!(store.get_blocking(&TestDataId(100 + i)) == None);
             }));
         }
         for t in tp.drain(..) {
@@ -246,7 +239,7 @@ fn check_lock() {
     panic::set_hook(Box::new(|_info| { /*println!("panic: {:?}", _info);*/ }));
 
     {
-        let store = HashStore::<TestDataId, TestData>::new();
+        let store = Store::<TestData>::new();
         assert!(panic::catch_unwind(|| {
             let w = store.write();
             let r = store.read();
@@ -258,7 +251,7 @@ fn check_lock() {
     }
 
     {
-        let store = HashStore::<TestDataId, TestData>::new();
+        let store = Store::<TestData>::new();
         assert!(panic::catch_unwind(|| {
             let r = store.read();
             let w = store.write();
@@ -270,7 +263,7 @@ fn check_lock() {
     }
 
     {
-        let store = HashStore::<TestDataId, TestData>::new();
+        let store = Store::<TestData>::new();
         assert!(panic::catch_unwind(|| {
             let w1 = store.write();
             let w2 = store.write();

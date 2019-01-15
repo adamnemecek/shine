@@ -13,8 +13,8 @@ pub mod libconfig {
 }
 
 pub mod arena;
-pub mod hashstore;
+pub mod namedstore;
 pub mod spscstate;
 pub mod stdext;
-pub mod store;
 pub mod threadid;
+pub mod unnamedstore;

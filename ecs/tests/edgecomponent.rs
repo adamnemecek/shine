@@ -1,6 +1,6 @@
 use log::{debug, trace};
 use shine_ecs::entities::{storage, Edge, EdgeComponent, Entity, EntityComponent, IntoJoinExt};
-use shine_ecs::World;
+use shine_ecs::{EntityWorld, World};
 use shine_testutils::init_test;
 
 #[derive(Debug, PartialEq)]

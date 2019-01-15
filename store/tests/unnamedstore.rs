@@ -4,10 +4,10 @@ extern crate shine_store;
 extern crate shine_testutils;
 
 use log::{info, trace};
-use shine_store::store::{Store, UnsafeIndex};
+use shine_store::unnamedstore::Store;
 use shine_testutils::{init_test, init_test_no_thread};
 use std::sync::Arc;
-use std::thread;
+use std::{mem, thread};
 
 /// Test resource data
 struct TestData(String);
@@ -74,11 +74,8 @@ fn simple_single_threaded() {
         assert!(store[&r0].0 == "zero");
         assert!(store[&r1].0 == "one");
 
-        let ur1 = UnsafeIndex::from_index(&r1);
-        r1.reset();
+        mem::drop(r1);
         assert!(store[&r0].0 == "zero");
-        assert!(unsafe { store.at_unsafe(&ur1).0 == "one" });
-        assert!(r1.is_null());
     }
 
     info!("drop 1");
@@ -88,17 +85,9 @@ fn simple_single_threaded() {
         store.drain_unused();
     }
 
-    {
-        let store = store.read();
-
-        let ur0 = UnsafeIndex::from_index(&r0);
-        r0.reset();
-        assert!(unsafe { store.at_unsafe(&ur0).0 == "zero" });
-        assert!(r0.is_null());
-    }
-
     info!("drop 0");
     {
+        mem::drop(r0);
         let mut store = store.write();
         store.finalize_requests();
         store.drain_unused();
