@@ -2,7 +2,7 @@
 
 mod common;
 
-use self::common::simple_prelude::*;
+use self::common::tri_prelude::*;
 use log::{debug, info, trace};
 use shine_math::geometry2::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
 use shine_math::triangulation::traverse::CrossingIterator;

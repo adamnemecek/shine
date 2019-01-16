@@ -2,8 +2,8 @@
 
 mod common;
 
-use self::common::simple_prelude::*;
-use self::common::trace_prelude::*;
+use self::common::tri_prelude::*;
+use self::common::tri_trace_prelude::*;
 use shine_math::geometry2::Posf32;
 use shine_math::triangulation::{Builder, FullChecker};
 use shine_testutils::init_webcontroll_test;

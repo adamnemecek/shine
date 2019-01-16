@@ -2,7 +2,7 @@
 
 mod common;
 
-use self::common::SimpleContext;
+use self::common::tri_prelude::*;
 use shine_math::geometry2::Posf32;
 use shine_math::triangulation::{Builder, FullChecker};
 use shine_testutils::init_test;

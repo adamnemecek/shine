@@ -2,7 +2,7 @@
 
 mod common;
 
-use crate::common::SimpleContext;
+use self::common::tri_prelude::*;
 use quickcheck::quickcheck;
 use shine_math::geometry2::{Posf32, Posi64};
 use shine_math::triangulation::{Builder, FullChecker};

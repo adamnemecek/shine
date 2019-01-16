@@ -1,6 +1,6 @@
 mod common;
 
-use self::common::Sample;
+use self::common::tri_prelude::*;
 use log::info;
 use shine_math::geometry2::{CollinearTest, Orientation, Position, Predicates, Real};
 use shine_math::geometry2::{ExactPredicates, InexactPredicates, Posf32, Posf64, Posi32, Posi64};

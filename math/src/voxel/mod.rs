@@ -1,5 +1,5 @@
-mod value;
+mod cell;
 
 pub mod polygonizer;
 
-pub use self::value::*;
+pub use self::cell::*;
