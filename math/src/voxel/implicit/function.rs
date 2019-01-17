@@ -26,7 +26,6 @@ impl Function for Cone {
     }
 }
 
-
 pub struct Cylinder;
 
 impl Function for Cylinder {
@@ -39,7 +38,7 @@ pub struct HyperboloidOneSheet;
 
 impl Function for HyperboloidOneSheet {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        x * x + y * y - z*z - 1.
+        x * x + y * y - z * z - 1.
     }
 }
 
@@ -47,7 +46,7 @@ pub struct HyperboloidTwoSheet;
 
 impl Function for HyperboloidTwoSheet {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        -x * x - y * y + z*z - 1.
+        -x * x - y * y + z * z - 1.
     }
 }
 
