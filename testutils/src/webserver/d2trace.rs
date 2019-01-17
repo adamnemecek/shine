@@ -8,7 +8,7 @@ use svg::{Document, Node};
 use tera;
 
 pub trait IntoD2Data {
-    fn trace(&self, tr: &mut D2Trace);
+    fn into_data(self) -> String;
 }
 
 enum Container {
@@ -136,21 +136,6 @@ impl D2Trace {
         }
     }
 
-    pub fn into_data(mut self) -> String {
-        self.pop_all_groups();
-
-        let group = self.groups.pop().unwrap();
-        match group.finalize() {
-            Container::Root(mut document) => {
-                //document.assign("width", "640");
-                document.assign("viewbox", "-1 -1 2 2");
-                document.to_string()
-            }
-
-            _ => panic!("Poping root group"),
-        }
-    }
-
     pub fn set_scale(&mut self, minx: f64, miny: f64, maxx: f64, maxy: f64) {
         let w = maxx - minx;
         let h = maxy - miny;
@@ -212,6 +197,23 @@ impl D2Trace {
 impl Default for D2Trace {
     fn default() -> D2Trace {
         D2Trace::new()
+    }
+}
+
+impl IntoD2Data for D2Trace {
+    fn into_data(mut self) -> String {
+        self.pop_all_groups();
+
+        let group = self.groups.pop().unwrap();
+        match group.finalize() {
+            Container::Root(mut document) => {
+                //document.assign("width", "640");
+                document.assign("viewbox", "-1 -1 2 2");
+                document.to_string()
+            }
+
+            _ => panic!("Poping root group"),
+        }
     }
 }
 

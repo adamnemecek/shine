@@ -55,7 +55,7 @@
         {
             "type": "shell",
             "label": "run test",
-            "command": "cargo test -p shine-${input:findSubProject} --test \"${fileBasenameNoExtension}\"",
+            "command": "cargo test -p shine-${input:findSubProject} --test \"${fileBasenameNoExtension}\" -- --nocapture",
             "presentation": {
                 "echo": true,
                 "reveal": "always",

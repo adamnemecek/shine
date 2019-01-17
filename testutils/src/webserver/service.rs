@@ -1,7 +1,7 @@
 use crate::webserver::appcontext::AppContext;
 use crate::webserver::control::{handle_notify_user, Control};
-use crate::webserver::d2trace::{handle_d2data_request, handle_d2datas_request, handle_d2view_request, D2Trace, IntoD2Data};
-use crate::webserver::d3trace::{handle_d3data_request, handle_d3datas_request, handle_d3view_request, D3Trace, IntoD3Data};
+use crate::webserver::d2trace::{handle_d2data_request, handle_d2datas_request, handle_d2view_request, IntoD2Data};
+use crate::webserver::d3trace::{handle_d3data_request, handle_d3datas_request, handle_d3view_request, IntoD3Data};
 use actix;
 use actix_web::{fs, http, middleware, server, App, Error as ActixWebError};
 use futures::future::Future;
@@ -92,14 +92,8 @@ impl Service {
         info!("New d2 data added: id={}", d2datas.len());
     }
 
-    pub fn add_d2(&self, tr: D2Trace) {
-        self.add_d2_raw(tr.into_data());
-    }
-
-    pub fn add_d2_data<T: IntoD2Data>(&self, t: &T) {
-        let mut tr = D2Trace::new();
-        t.trace(&mut tr);
-        self.add_d2(tr);
+    pub fn add_d2<D: IntoD2Data>(&self, data: D) {
+        self.add_d2_raw(data.into_data());
     }
 
     pub fn add_d3_raw(&self, model: String) {
@@ -108,14 +102,8 @@ impl Service {
         info!("New d3 data added: id={}", d3datas.len());
     }
 
-    pub fn add_d3(&self, tr: D3Trace) {
-        self.add_d3_raw(tr.into_data());
-    }
-
-    pub fn add_d3_data<T: IntoD3Data>(&self, t: &T) {
-        let mut tr = D3Trace::new();
-        t.trace(&mut tr);
-        self.add_d3(tr);
+    pub fn add_d3<D: IntoD3Data>(&self, data: D) {
+        self.add_d3_raw(data.into_data());
     }
 
     pub fn wait_user(&self) {

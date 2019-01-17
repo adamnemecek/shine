@@ -1,5 +1,6 @@
 mod cell;
 
-pub mod polygonizer;
+pub mod implicit;
+pub mod polygonize;
 
 pub use self::cell::*;
