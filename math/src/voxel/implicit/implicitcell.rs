@@ -1,17 +1,19 @@
 use crate::voxel::implicit::Function;
 use crate::voxel::Cell;
-use std::ops::Range;
 
 /// Generate function from implicit function.
 pub struct ImplicitCell<F>
 where
     F: Function,
 {
-    /// The range of the cell that is mapped into the [-1,1] cube before function evaluation.
-    range: (Range<isize>, Range<isize>, Range<isize>),
+    /// Lod of this cell
+    lod: usize,
 
-    /// Helper to map from the cell range into the [-1,1] cube
-    range_map: ((f32, f32), (f32, f32), (f32, f32)),
+    /// Cell resolution
+    resolution: (usize, usize, usize),
+
+    /// Tho domain of the function along th x,y,z axis
+    domain: ((f32, f32), (f32, f32), (f32, f32)),
 
     /// The function to evaluate
     function: F,
@@ -29,35 +31,33 @@ where
 {
     pub fn new(function: F) -> ImplicitCell<F> {
         ImplicitCell {
-            range: (0isize..32isize, 0isize..32isize, 0isize..32isize),
-            range_map: ((0., 1. / 31.), (0., 1. / 31.), (0., 1. / 31.)),
+            lod: 0,
+            resolution: (32, 32, 32),
+            domain: ((-1., 1.), (-1., 1.), (-1., 1.)),
             function,
             clamp: 0.,
             invert: false,
         }
     }
 
-    pub fn with_x_range(self, start: isize, end: isize) -> Self {
-        assert!(end > start);
+    pub fn with_resolution(self, x: usize, y: usize, z: usize) -> Self {
+        assert!(x > 0 && y > 0 && z > 0);
         ImplicitCell {
-            range: (start..end, self.range.1, self.range.2),
-            range_map: (((1 - start) as f32, (end - start) as f32), self.range_map.1, self.range_map.2),
+            resolution: (x, y, z),
             ..self
         }
     }
 
-    pub fn with_y_range(self, start: isize, end: isize) -> Self {
-        ImplicitCell {
-            range: (self.range.0, start..end, self.range.2),
-            range_map: (self.range_map.0, ((1 - start) as f32, (end - start) as f32), self.range_map.2),
-            ..self
-        }
+    pub fn with_lod(self, lod: usize) -> Self {
+        ImplicitCell { lod, ..self }
     }
 
-    pub fn with_z_range(self, start: isize, end: isize) -> Self {
+    pub fn with_domain(self, x: (f32, f32), y: (f32, f32), z: (f32, f32)) -> Self {
+        assert!(x.0 != x.1);
+        assert!(y.0 != y.1);
+        assert!(z.0 != z.1);
         ImplicitCell {
-            range: (self.range.0, self.range.1, start..end),
-            range_map: (self.range_map.0, self.range_map.1, ((1 - start) as f32, (end - start) as f32)),
+            domain: (x, y, z),
             ..self
         }
     }
@@ -69,31 +69,45 @@ where
     pub fn with_invert(self) -> Self {
         ImplicitCell { invert: true, ..self }
     }
+
+    pub fn x_domain(&self) -> (f32, f32) {
+        self.domain.0
+    }
+
+    pub fn y_domain(&self) -> (f32, f32) {
+        self.domain.1
+    }
+
+    pub fn z_domain(&self) -> (f32, f32) {
+        self.domain.2
+    }
 }
 
 impl<F> Cell for ImplicitCell<F>
 where
     F: Function,
 {
-    fn x_range(&self) -> Range<isize> {
-        self.range.0.clone()
+    fn lod(&self) -> usize {
+        self.lod
     }
 
-    fn y_range(&self) -> Range<isize> {
-        self.range.1.clone()
+    fn resolution(&self) -> (usize, usize, usize) {
+        self.resolution
     }
 
-    fn z_range(&self) -> Range<isize> {
-        self.range.2.clone()
-    }
-
-    fn get(&self, _lod: u32, x: isize, y: isize, z: isize) -> bool {
-        let x = ((x as f32) + (self.range_map.0).0) * (self.range_map.0).1;
-        let y = ((y as f32) + (self.range_map.1).0) * (self.range_map.1).1;
-        let z = ((z as f32) + (self.range_map.2).0) * (self.range_map.2).1;
-        let x = x * 2. - 1.;
-        let y = y * 2. - 1.;
-        let z = z * 2. - 1.;
+    fn get(&self, delta_lod: u32, x: isize, y: isize, z: isize) -> bool {
+        if delta_lod != 0 {
+            unimplemented!("only delta_lod == 0 is supported");
+        }
+        let (rx, ry, rz) = (self.resolution.0 as f32, self.resolution.1 as f32, self.resolution.2 as f32);
+        let (sx, sy, sz) = ((self.domain.0).0, (self.domain.1).0, (self.domain.2).0);
+        let (ex, ey, ez) = ((self.domain.0).1, (self.domain.1).1, (self.domain.2).1);
+        let x = (x as f32 + 0.5) as f32 / rx;
+        let y = (y as f32 + 0.5) as f32 / ry;
+        let z = (z as f32 + 0.5) as f32 / rz;
+        let x = x * (ex - sx) + sx;
+        let y = y * (ey - sy) + sy;
+        let z = z * (ez - sz) + sz;
         self.invert == (self.function.eval(x, y, z) > self.clamp)
     }
 }

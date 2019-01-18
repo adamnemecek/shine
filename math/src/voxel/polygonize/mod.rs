@@ -2,6 +2,7 @@ use crate::voxel::Cell;
 
 mod config;
 mod cubic;
+mod transvoxel;
 mod transvoxel_lut;
 
 #[repr(u8)]
@@ -20,8 +21,9 @@ pub trait Mesh {
 }
 
 pub trait Polygonizer {
-    fn polygonize<C: Cell>(&mut self, cell: &C, lod: u32);
+    fn polygonize<C: Cell>(&mut self, cell: &C);
 }
 
 pub use self::config::*;
 pub use self::cubic::*;
+pub use self::transvoxel::*;

@@ -25,7 +25,7 @@ fn test_cubic() {
 
     let cfg = Config::new();
     let mut pl = Cubic::new(&mut mesh).with_config(cfg);
-    pl.polygonize(&cell, 0);
+    pl.polygonize(&cell);
 
     webctrl.add_d3(&mesh);
 

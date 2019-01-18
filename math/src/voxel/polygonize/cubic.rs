@@ -125,33 +125,35 @@ impl<'a, M> Polygonizer for Cubic<'a, M>
 where
     M: Mesh,
 {
-    fn polygonize<C: Cell>(&mut self, cell: &C, lod: u32) {
+    fn polygonize<C: Cell>(&mut self, cell: &C) {
+        let (sx, sy, sz) = cell.resolution();
+        let lod = cell.lod();
         let step = 1 << lod;
 
-        for x in cell.x_range() {
-            for y in cell.y_range() {
-                for z in cell.z_range() {
-                    let value = cell.get(lod, x, y, z);
+        for x in 0isize..(sx as isize) {
+            for y in 0isize..(sy as isize) {
+                for z in 0isize..(sz as isize) {
+                    let value = cell.get(0, x, y, z);
                     if !value {
                         continue;
                     }
 
-                    if !cell.get(lod, x - 1, y, z) {
+                    if !cell.get(0, x - 1, y, z) {
                         self.add_face(x, y, z, Direction::XMin, step);
                     }
-                    if !cell.get(lod, x + 1, y, z) {
+                    if !cell.get(0, x + 1, y, z) {
                         self.add_face(x, y, z, Direction::XMax, step);
                     }
-                    if !cell.get(lod, x, y - 1, z) {
+                    if !cell.get(0, x, y - 1, z) {
                         self.add_face(x, y, z, Direction::YMin, step);
                     }
-                    if !cell.get(lod, x, y + 1, z) {
+                    if !cell.get(0, x, y + 1, z) {
                         self.add_face(x, y, z, Direction::YMax, step);
                     }
-                    if !cell.get(lod, x, y, z - 1) {
+                    if !cell.get(0, x, y, z - 1) {
                         self.add_face(x, y, z, Direction::ZMin, step);
                     }
-                    if !cell.get(lod, x, y, z + 1) {
+                    if !cell.get(0, x, y, z + 1) {
                         self.add_face(x, y, z, Direction::ZMax, step);
                     }
                 }

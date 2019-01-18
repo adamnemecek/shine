@@ -20,7 +20,8 @@ pub struct Service {
 
 impl Service {
     pub fn start(bind_address: Option<&str>) -> Result<Service, ActixWebError> {
-        let bind_address = bind_address.unwrap_or("0.0.0.0:80").to_owned();
+        //let bind_address = bind_address.unwrap_or("0.0.0.0:80").to_owned();
+        let bind_address = bind_address.unwrap_or("127.0.0.1:80").to_owned();
         let d2datas = Arc::new(Mutex::new(Vec::new()));
         let d3datas = Arc::new(Mutex::new(Vec::new()));
         let control = Control::new();
