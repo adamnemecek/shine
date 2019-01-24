@@ -11,6 +11,10 @@ edition = "2018"
 [dependencies]
 log = "*"
 rand = "*"
+alga = "*"
+nalgebra = "*"
+num-traits = "*"
+nalgebra-glm = "*"
 
 [dev-dependencies]
 env_logger = "*"

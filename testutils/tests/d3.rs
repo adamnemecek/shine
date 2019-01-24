@@ -13,9 +13,9 @@ fn test_d3() {
 
     let mut tr = D3Trace::new();
     tr.add_indexed_mesh_instance(
-        &[(0., 0., 0.), (0., 1., 0.), (1., 0., 0.), (1., 1., 0.)],
+        (&[(0., 0., 0.), (0., 1., 0.), (1., 0., 0.), (1., 1., 0.)]).iter().map(|&v| v),
         d3_skip_attributes(),
-        &vec![0, 1, 2],
+        [0, 1, 2].iter().map(|&v| v),
         D3Location::Identity,
     );
     webctrl.add_d3(tr);

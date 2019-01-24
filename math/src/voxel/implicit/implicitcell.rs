@@ -17,12 +17,6 @@ where
 
     /// The function to evaluate
     function: F,
-
-    /// Invert the inside/outside relation
-    invert: bool,
-
-    /// The clamp value for voxel border
-    clamp: f32,
 }
 
 impl<F> ImplicitCell<F>
@@ -35,8 +29,6 @@ where
             resolution: (32, 32, 32),
             domain: ((-1., 1.), (-1., 1.), (-1., 1.)),
             function,
-            clamp: 0.,
-            invert: false,
         }
     }
 
@@ -60,14 +52,6 @@ where
             domain: (x, y, z),
             ..self
         }
-    }
-
-    pub fn with_clamp(self, clamp: f32) -> Self {
-        ImplicitCell { clamp, ..self }
-    }
-
-    pub fn with_invert(self) -> Self {
-        ImplicitCell { invert: true, ..self }
     }
 
     pub fn x_domain(&self) -> (f32, f32) {
@@ -95,7 +79,7 @@ where
         self.resolution
     }
 
-    fn get(&self, delta_lod: u32, x: isize, y: isize, z: isize) -> bool {
+    fn get(&self, delta_lod: u32, x: isize, y: isize, z: isize) -> i16 {
         if delta_lod != 0 {
             unimplemented!("only delta_lod == 0 is supported");
         }
@@ -108,6 +92,16 @@ where
         let x = x * (ex - sx) + sx;
         let y = y * (ey - sy) + sy;
         let z = z * (ez - sz) + sz;
-        self.invert == (self.function.eval(x, y, z) > self.clamp)
+
+        let v = self.function.eval(x, y, z);        
+        let l = (1 << 14) as f32;
+        let v = v * l;
+        if v >= l {
+            1 << 14
+        } else if v <= -l {
+            -(1 << 14)
+        } else {
+            v as i16
+        }
     }
 }

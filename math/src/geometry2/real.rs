@@ -1,18 +1,14 @@
-use std::{cmp, fmt, ops};
+use std::fmt;
+use alga::general::{RingCommutative, Lattice};
 
 /// General numeric type
 pub trait Real:
     Sized
     + Copy
-    + ops::Neg<Output = Self>
-    + ops::Sub<Output = Self>
-    + ops::Add<Output = Self>
-    + ops::Mul<Output = Self>
-    + cmp::PartialEq
-    + cmp::PartialOrd
+    + RingCommutative
+    + Lattice
     + fmt::Debug
 {
-    fn from_i32(v: i32) -> Self;
     fn approximate(&self) -> f64;
     fn abs(&self) -> Self;
 }
@@ -26,10 +22,6 @@ pub trait InexactReal: Real {
 pub trait ExactReal: Real {}
 
 impl Real for f32 {
-    fn from_i32(v: i32) -> Self {
-        v as f32
-    }
-
     fn approximate(&self) -> f64 {
         f64::from(*self)
     }
@@ -46,10 +38,6 @@ impl InexactReal for f32 {
 }
 
 impl Real for f64 {
-    fn from_i32(v: i32) -> Self {
-        f64::from(v)
-    }
-
     fn approximate(&self) -> f64 {
         *self
     }
@@ -66,10 +54,6 @@ impl InexactReal for f64 {
 }
 
 impl Real for i32 {
-    fn from_i32(v: i32) -> Self {
-        v
-    }
-
     fn approximate(&self) -> f64 {
         f64::from(*self)
     }
@@ -82,10 +66,6 @@ impl Real for i32 {
 impl ExactReal for i32 {}
 
 impl Real for i64 {
-    fn from_i32(v: i32) -> Self {
-        i64::from(v)
-    }
-
     fn approximate(&self) -> f64 {
         *self as f64
     }

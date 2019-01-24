@@ -50,6 +50,45 @@ impl TransitionCellData {
     }
 }
 
+/// Vertex data on the edges of a voxel
+pub trait EdgeCode {
+    // Get the index of the start point of the edge on which the vertex lies.
+    fn get_start_index(self) -> usize;
+
+    // Get the index of the end point of the edge on which the vertex lies.
+    fn get_end_index(self) -> usize;
+
+    /// Index of the edge in the voxel in which the vertex was generated.
+    fn get_cached_index(self) -> usize;
+
+    // The cache direction to find the already generated vertices
+    //  - first bit:  x is different
+    //  - second bit: y is different
+    //  - third bit:  z is different
+    //  - fourth bit: vertex isn't cached
+    fn get_cached_direction(self) -> usize;
+}
+
+impl EdgeCode for u16 {
+    fn get_start_index(self) -> usize {
+        ((self >> 4) & 0x0F) as usize
+    }
+
+    fn get_end_index(self) -> usize {
+        (self & 0x0F) as usize
+    }
+
+    fn get_cached_index(self) -> usize {
+        let index = ((self >> 8) & 0x0F) as usize;
+        assert!(index >= 1 && index < 4); // table error
+        index
+    }
+
+    fn get_cached_direction(self) -> usize {
+        ((self >> 12) & 0x0F) as usize
+    }
+}
+
 /// The REGULAR_CELL_CLASS table maps an 8-bit regular Marching Cubes case index to
 /// an equivalence class index. Even though there are 18 equivalence classes in our
 /// modified Marching Cubes algorithm, a couple of them use the same exact triangulations,

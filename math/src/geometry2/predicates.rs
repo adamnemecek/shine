@@ -24,15 +24,6 @@ pub trait Orientation: fmt::Debug {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum CollinearTestType {
-    Before,
-    First,
-    Between,
-    Second,
-    After,
-}
-
 pub trait CollinearTest: fmt::Debug {
     fn is_before(&self) -> bool;
     fn is_first(&self) -> bool;
@@ -52,6 +43,41 @@ pub trait CollinearTest: fmt::Debug {
         } else {
             CollinearTestType::After
         }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CollinearTestType {
+    Before,
+    First,
+    Between,
+    Second,
+    After,
+}
+
+impl CollinearTest for CollinearTestType {
+    fn is_before(&self) -> bool {
+        *self == CollinearTestType::Before
+    }
+
+    fn is_first(&self) -> bool{
+        *self == CollinearTestType::First
+    }
+
+    fn is_between(&self) -> bool {
+        *self == CollinearTestType::Between
+    }
+
+    fn is_second(&self) -> bool {
+        *self == CollinearTestType::Second
+    }
+
+    fn is_after(&self) -> bool {
+        *self == CollinearTestType::After
+    }
+
+    fn into_type(&self) -> CollinearTestType {
+        *self
     }
 }
 

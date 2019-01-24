@@ -2,8 +2,14 @@ use crate::voxel::Cell;
 
 mod config;
 mod cubic;
+mod mesh;
 mod transvoxel;
 mod transvoxel_lut;
+
+pub use self::config::*;
+pub use self::cubic::*;
+pub use self::mesh::*;
+pub use self::transvoxel::*;
 
 #[repr(u8)]
 pub enum Direction {
@@ -15,15 +21,6 @@ pub enum Direction {
     ZMax = 0x20,
 }
 
-pub trait Mesh {
-    fn add_vertex(&mut self, pos: (f32, f32, f32), normal: (f32, f32, f32), tangent: (f32, f32, f32), uv: (f32, f32)) -> u32;
-    fn add_triangle(&mut self, a: u32, b: u32, c: u32);
-}
-
 pub trait Polygonizer {
-    fn polygonize<C: Cell>(&mut self, cell: &C);
+    fn polygonize<C: Cell>(&mut self, mesh: &mut Mesh, cell: &C);
 }
-
-pub use self::config::*;
-pub use self::cubic::*;
-pub use self::transvoxel::*;

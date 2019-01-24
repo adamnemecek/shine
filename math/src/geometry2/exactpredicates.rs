@@ -1,50 +1,26 @@
 use crate::geometry2::{
-    CollinearTest, ExactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
+    CollinearTestType, ExactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
 };
+use num_traits::identities::Zero;
 use std::marker::PhantomData;
 
 #[derive(Clone, Copy, Debug)]
-pub struct WrapExactReal<R: ExactReal>(pub R);
+pub struct ExactRealOrientation<R: ExactReal>(pub R);
 
-impl<R> Orientation for WrapExactReal<R>
+impl<R> Orientation for ExactRealOrientation<R>
 where
     R: ExactReal,
 {
     fn is_cw(&self) -> bool {
-        self.0 < R::from_i32(0)
+        self.0 < R::zero()
     }
 
     fn is_collinear(&self) -> bool {
-        self.0 == R::from_i32(0)
+        self.0 == R::zero()
     }
 
     fn is_ccw(&self) -> bool {
-        self.0 > R::from_i32(0)
-    }
-}
-
-impl<R> CollinearTest for WrapExactReal<R>
-where
-    R: ExactReal,
-{
-    fn is_before(&self) -> bool {
-        self.0 < R::from_i32(0)
-    }
-
-    fn is_first(&self) -> bool {
-        self.0 == R::from_i32(0)
-    }
-
-    fn is_between(&self) -> bool {
-        self.0 > R::from_i32(0) && self.0 < R::from_i32(2)
-    }
-
-    fn is_second(&self) -> bool {
-        self.0 == R::from_i32(2)
-    }
-
-    fn is_after(&self) -> bool {
-        self.0 > R::from_i32(2)
+        self.0 > R::zero()
     }
 }
 
@@ -66,7 +42,7 @@ where
     fn new(base: &P) -> ExactNearestPointSearch<'_, P, D> {
         ExactNearestPointSearch {
             base: (base.x(), base.y()),
-            dist: P::Real::from_i32(0),
+            dist: P::Real::zero(),
             best: None,
         }
     }
@@ -130,15 +106,15 @@ where
     P::Real: ExactReal,
 {
     type Position = P;
-    type Orientation = WrapExactReal<P::Real>;
-    type CollinearTest = WrapExactReal<P::Real>;
+    type Orientation = ExactRealOrientation<P::Real>;
+    type CollinearTest = CollinearTestType;
 
     fn orientation_triangle(&self, a: &Self::Position, b: &Self::Position, c: &Self::Position) -> Self::Orientation {
         let bax = b.x() - a.x();
         let bay = b.y() - a.y();
         let cax = c.x() - a.x();
         let cay = c.y() - a.y();
-        WrapExactReal(bax * cay - bay * cax)
+        ExactRealOrientation(bax * cay - bay * cax)
     }
 
     fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool {
@@ -156,59 +132,57 @@ where
 
         let abx = ax - bx;
         let aby = ay - by;
-        let r = if abx.abs() > aby.abs() {
+        if abx.abs() > aby.abs() {
             // x-major line
             let apx = ax - px;
-            if apx == P::Real::from_i32(0) {
-                P::Real::from_i32(0)
+            if apx == P::Real::zero() {
+                CollinearTestType::First
             } else {
                 let bpx = bx - px;
-                if bpx == P::Real::from_i32(0) {
-                    P::Real::from_i32(2)
-                } else if abx < P::Real::from_i32(0) {
-                    if apx > P::Real::from_i32(0) {
-                        P::Real::from_i32(-1)
-                    } else if bpx < P::Real::from_i32(0) {
-                        P::Real::from_i32(3)
+                if bpx == P::Real::zero() {
+                    CollinearTestType::Second
+                } else if abx < P::Real::zero() {
+                    if apx > P::Real::zero() {
+                        CollinearTestType::Before
+                    } else if bpx < P::Real::zero() {
+                        CollinearTestType::After
                     } else {
-                        P::Real::from_i32(1)
+                        CollinearTestType::Between
                     }
-                } else if apx < P::Real::from_i32(0) {
-                    P::Real::from_i32(-1)
-                } else if bpx > P::Real::from_i32(0) {
-                    P::Real::from_i32(3)
+                } else if apx < P::Real::zero() {
+                    CollinearTestType::Before
+                } else if bpx > P::Real::zero() {
+                    CollinearTestType::After
                 } else {
-                    P::Real::from_i32(1)
+                    CollinearTestType::Between
                 }
             }
         } else {
             // y-major line
             let apy = ay - py;
-            if apy == P::Real::from_i32(0) {
-                P::Real::from_i32(0)
+            if apy == P::Real::zero() {
+                CollinearTestType::First
             } else {
                 let bpy = by - py;
-                if bpy == P::Real::from_i32(0) {
-                    P::Real::from_i32(2)
-                } else if aby < P::Real::from_i32(0) {
-                    if apy > P::Real::from_i32(0) {
-                        P::Real::from_i32(-1)
-                    } else if bpy < P::Real::from_i32(0) {
-                        P::Real::from_i32(3)
+                if bpy == P::Real::zero() {
+                    CollinearTestType::Second
+                } else if aby < P::Real::zero() {
+                    if apy > P::Real::zero() {
+                        CollinearTestType::Before
+                    } else if bpy < P::Real::zero() {
+                        CollinearTestType::After
                     } else {
-                        P::Real::from_i32(1)
+                        CollinearTestType::Between
                     }
-                } else if apy < P::Real::from_i32(0) {
-                    P::Real::from_i32(-1)
-                } else if bpy > P::Real::from_i32(0) {
-                    P::Real::from_i32(3)
+                } else if apy < P::Real::zero() {
+                    CollinearTestType::Before
+                } else if bpy > P::Real::zero() {
+                    CollinearTestType::After
                 } else {
-                    P::Real::from_i32(1)
+                    CollinearTestType::Between
                 }
             }
-        };
-
-        WrapExactReal(r)
+        }
     }
 }
 

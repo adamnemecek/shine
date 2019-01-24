@@ -44,11 +44,11 @@ impl D3Trace {
         D3Trace { root }
     }
 
-    fn create_geometry<'a, V, I, N>(&mut self, positions: V, normals: N, indices: I) -> Primitive
+    fn create_geometry<V, I, N>(&mut self, positions: V, normals: N, indices: I) -> Primitive
     where
-        V: IntoIterator<Item = &'a (f32, f32, f32)>,
-        N: IntoIterator<Item = &'a (f32, f32, f32)>,
-        I: IntoIterator<Item = &'a u32>,
+        V: IntoIterator<Item = (f32, f32, f32)>,
+        N: IntoIterator<Item = (f32, f32, f32)>,
+        I: IntoIterator<Item = u32>,
     {
         let mut data = BytesMut::new();
 
@@ -60,9 +60,9 @@ impl D3Trace {
                 data.reserve(position_byte_stride * 1024);
             }
 
-            data.put_f32_le(*x);
-            data.put_f32_le(*y);
-            data.put_f32_le(*z);
+            data.put_f32_le(x);
+            data.put_f32_le(y);
+            data.put_f32_le(z);
         }
         let position_byte_count = data.len() - position_byte_offset;
         let position_count = position_byte_count / position_byte_stride;
@@ -75,9 +75,9 @@ impl D3Trace {
                 data.reserve(normal_byte_stride * 1024);
             }
 
-            data.put_f32_le(*x);
-            data.put_f32_le(*y);
-            data.put_f32_le(*z);
+            data.put_f32_le(x);
+            data.put_f32_le(y);
+            data.put_f32_le(z);
         }
         let normal_byte_count = data.len() - normal_byte_offset;
         let normal_count = normal_byte_count / normal_byte_stride;
@@ -92,7 +92,7 @@ impl D3Trace {
                 data.reserve(index_byte_stride * 1024);
             }
 
-            data.put_u32_le(*i);
+            data.put_u32_le(i);
         }
         let index_byte_count = data.len() - index_byte_offset;
         let index_count = index_byte_count / index_byte_stride;
@@ -175,11 +175,11 @@ impl D3Trace {
         }
     }
 
-    pub fn add_indexed_mesh<'a, V, N, I>(&mut self, positions: V, normals: N, indices: I) -> MeshId
+    pub fn add_indexed_mesh<V, N, I>(&mut self, positions: V, normals: N, indices: I) -> MeshId
     where
-        V: IntoIterator<Item = &'a (f32, f32, f32)>,
-        N: IntoIterator<Item = &'a (f32, f32, f32)>,
-        I: IntoIterator<Item = &'a u32>,
+        V: IntoIterator<Item = (f32, f32, f32)>,
+        N: IntoIterator<Item = (f32, f32, f32)>,
+        I: IntoIterator<Item = u32>,
     {
         let geometry = self.create_geometry(positions, normals, indices);
 
@@ -212,11 +212,11 @@ impl D3Trace {
         //info!("{}", self.root.to_string_pretty().unwrap());
     }
 
-    pub fn add_indexed_mesh_instance<'a, V, N, I>(&mut self, positions: V, normals: N, indices: I, location: D3Location) -> MeshId
+    pub fn add_indexed_mesh_instance<V, N, I>(&mut self, positions: V, normals: N, indices: I, location: D3Location) -> MeshId
     where
-        V: IntoIterator<Item = &'a (f32, f32, f32)>,
-        N: IntoIterator<Item = &'a (f32, f32, f32)>,
-        I: IntoIterator<Item = &'a u32>,
+        V: IntoIterator<Item = (f32, f32, f32)>,
+        N: IntoIterator<Item = (f32, f32, f32)>,
+        I: IntoIterator<Item = u32>,
     {
         let id = self.add_indexed_mesh(positions, normals, indices);
         self.add_instance(id.clone(), location);

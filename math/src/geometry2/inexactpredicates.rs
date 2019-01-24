@@ -1,11 +1,12 @@
+use num_traits::Zero;
 use crate::geometry2::{
-    CollinearTest, InexactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
+    CollinearTestType, InexactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
 };
 
 #[derive(Clone, Copy, Debug)]
-pub struct WrapInexactReal<R: InexactReal>(pub R, pub R);
+pub struct InexactRealOrientation<R: InexactReal>(pub R, pub R);
 
-impl<R: InexactReal> Orientation for WrapInexactReal<R> {
+impl<R: InexactReal> Orientation for InexactRealOrientation<R> {
     fn is_cw(&self) -> bool {
         self.0 < -self.1
     }
@@ -16,28 +17,6 @@ impl<R: InexactReal> Orientation for WrapInexactReal<R> {
 
     fn is_ccw(&self) -> bool {
         self.0 > self.1
-    }
-}
-
-impl<R: InexactReal> CollinearTest for WrapInexactReal<R> {
-    fn is_before(&self) -> bool {
-        self.0 < -self.1
-    }
-
-    fn is_first(&self) -> bool {
-        self.0.abs() <= self.1
-    }
-
-    fn is_between(&self) -> bool {
-        self.0 > self.1 && self.0 < R::from_i32(2) - self.1
-    }
-
-    fn is_second(&self) -> bool {
-        (self.0 - R::from_i32(2)).abs() <= self.1
-    }
-
-    fn is_after(&self) -> bool {
-        self.0 > R::from_i32(2) + self.1
     }
 }
 
@@ -59,7 +38,7 @@ where
     fn new(base: &P) -> InexactNearestPointSearch<'_, P, D> {
         InexactNearestPointSearch {
             base: (base.x(), base.y()),
-            dist: P::Real::from_i32(0),
+            dist: P::Real::zero(),
             best: None,
         }
     }
@@ -129,15 +108,15 @@ where
     P::Real: InexactReal,
 {
     type Position = P;
-    type Orientation = WrapInexactReal<P::Real>;
-    type CollinearTest = WrapInexactReal<P::Real>;
+    type Orientation = InexactRealOrientation<P::Real>;
+    type CollinearTest = CollinearTestType;
 
     fn orientation_triangle(&self, a: &Self::Position, b: &Self::Position, c: &Self::Position) -> Self::Orientation {
         let bax = b.x() - a.x();
         let bay = b.y() - a.y();
         let cax = c.x() - a.x();
         let cay = c.y() - a.y();
-        WrapInexactReal(bax * cay - bay * cax, self.eps)
+        InexactRealOrientation(bax * cay - bay * cax, self.eps)
     }
 
     fn test_coincident_points(&self, a: &Self::Position, b: &Self::Position) -> bool {
@@ -155,59 +134,57 @@ where
 
         let abx = ax - bx;
         let aby = ay - by;
-        let r = if abx.abs() > aby.abs() {
+        if abx.abs() > aby.abs() {
             // x-major line
             let apx = ax - px;
             if apx.abs() <= self.eps {
-                P::Real::from_i32(0)
+                CollinearTestType::First
             } else {
                 let bpx = bx - px;
                 if bpx.abs() <= self.eps {
-                    P::Real::from_i32(2)
+                    CollinearTestType::Second
                 } else if abx < -self.eps {
                     if apx > self.eps {
-                        P::Real::from_i32(-1)
+                        CollinearTestType::Before
                     } else if bpx < -self.eps {
-                        P::Real::from_i32(3)
+                        CollinearTestType::After
                     } else {
-                        P::Real::from_i32(1)
+                        CollinearTestType::Between
                     }
                 } else if apx < -self.eps {
-                    P::Real::from_i32(-1)
+                    CollinearTestType::Before
                 } else if bpx > self.eps {
-                    P::Real::from_i32(3)
+                    CollinearTestType::After
                 } else {
-                    P::Real::from_i32(1)
+                    CollinearTestType::Between
                 }
             }
         } else {
             // y-major line
             let apy = ay - py;
             if apy.abs() <= self.eps {
-                P::Real::from_i32(0)
+                CollinearTestType::First
             } else {
                 let bpy = by - py;
                 if bpy.abs() <= self.eps {
-                    P::Real::from_i32(2)
+                    CollinearTestType::Second
                 } else if aby < -self.eps {
                     if apy > self.eps {
-                        P::Real::from_i32(-1)
+                        CollinearTestType::Before
                     } else if bpy < -self.eps {
-                        P::Real::from_i32(3)
+                        CollinearTestType::After
                     } else {
-                        P::Real::from_i32(1)
+                        CollinearTestType::Between
                     }
                 } else if apy < -self.eps {
-                    P::Real::from_i32(-1)
+                    CollinearTestType::Before
                 } else if bpy > self.eps {
-                    P::Real::from_i32(3)
+                    CollinearTestType::After
                 } else {
-                    P::Real::from_i32(1)
+                    CollinearTestType::Between
                 }
             }
-        };
-
-        WrapInexactReal(r, self.eps)
+        }
     }
 }
 
