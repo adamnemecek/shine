@@ -1,10 +1,10 @@
-use crate::voxel::implicit::Function;
+use crate::voxel::implicit::Function3;
 use crate::voxel::Cell;
 
 /// Generate function from implicit function.
 pub struct ImplicitCell<F>
 where
-    F: Function,
+    F: Function3,
 {
     /// Lod of this cell
     lod: usize,
@@ -21,7 +21,7 @@ where
 
 impl<F> ImplicitCell<F>
 where
-    F: Function,
+    F: Function3,
 {
     pub fn new(function: F) -> ImplicitCell<F> {
         ImplicitCell {
@@ -33,7 +33,7 @@ where
     }
 
     pub fn with_resolution(self, x: usize, y: usize, z: usize) -> Self {
-        assert!(x > 0 && y > 0 && z > 0);
+        assert!(x > 1 && y > 1 && z > 1);
         ImplicitCell {
             resolution: (x, y, z),
             ..self
@@ -69,7 +69,7 @@ where
 
 impl<F> Cell for ImplicitCell<F>
 where
-    F: Function,
+    F: Function3,
 {
     fn lod(&self) -> usize {
         self.lod
@@ -83,17 +83,29 @@ where
         if delta_lod != 0 {
             unimplemented!("only delta_lod == 0 is supported");
         }
-        let (rx, ry, rz) = (self.resolution.0 as f32, self.resolution.1 as f32, self.resolution.2 as f32);
+
+        let (rx, ry, rz) = (
+            (self.resolution.0 - 1) as f32,
+            (self.resolution.1 - 1) as f32,
+            (self.resolution.2 - 1) as f32,
+        );
         let (sx, sy, sz) = ((self.domain.0).0, (self.domain.1).0, (self.domain.2).0);
         let (ex, ey, ez) = ((self.domain.0).1, (self.domain.1).1, (self.domain.2).1);
-        let x = (x as f32 + 0.5) as f32 / rx;
-        let y = (y as f32 + 0.5) as f32 / ry;
-        let z = (z as f32 + 0.5) as f32 / rz;
+
+        // map from [0,resolution-1] -> [0,1]
+        let x = (x as f32) / rx;
+        let y = (y as f32) / ry;
+        let z = (z as f32) / rz;
+
+        // map from [0,1] -> [domain.start,domain.end]
         let x = x * (ex - sx) + sx;
         let y = y * (ey - sy) + sy;
         let z = z * (ez - sz) + sz;
 
-        let v = self.function.eval(x, y, z);        
+        // eval function
+        let v = self.function.eval(x, y, z);
+
+        // fixed point
         let l = (1 << 14) as f32;
         let v = v * l;
         if v >= l {

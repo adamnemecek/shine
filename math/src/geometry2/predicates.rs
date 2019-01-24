@@ -60,7 +60,7 @@ impl CollinearTest for CollinearTestType {
         *self == CollinearTestType::Before
     }
 
-    fn is_first(&self) -> bool{
+    fn is_first(&self) -> bool {
         *self == CollinearTestType::First
     }
 

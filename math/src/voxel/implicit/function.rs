@@ -1,115 +1,282 @@
 use std::ops;
 
-pub trait Function {
+pub trait Function3 {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32;
+
+    fn translated(self, x: f32, y: f32, z: f32) -> Translate3<Self>
+    where
+        Self: Sized,
+    {
+        Translate3(self, x, y, z)
+    }
+
+    fn scaled(self, x: f32, y: f32, z: f32) -> Scale3<Self>
+    where
+        Self: Sized,
+    {
+        Scale3(self, x, y, z)
+    }
+
+    /*fn rotated(self, x: f32, y: f32, z: f32) -> impl Function3 where Self: Sized {
+        Rotated3(self, x,y,z)
+    }*/
 }
 
-pub struct Const(pub f32);
+pub struct VarC(pub f32);
 
-impl Function for Const {
+impl Function3 for VarC {
     fn eval(&self, _x: f32, _y: f32, _z: f32) -> f32 {
         self.0
     }
 }
 
-pub struct X;
+pub struct VarX;
 
-impl Function for X {
+impl Function3 for VarX {
     fn eval(&self, x: f32, _y: f32, _z: f32) -> f32 {
         x
     }
 }
 
-pub struct Y;
+pub struct VarY;
 
-impl Function for Y {
+impl Function3 for VarY {
     fn eval(&self, _x: f32, y: f32, _z: f32) -> f32 {
         y
     }
 }
 
-pub struct Z;
+pub struct VarZ;
 
-impl Function for Z {
+impl Function3 for VarZ {
     fn eval(&self, _x: f32, _y: f32, z: f32) -> f32 {
         z
     }
 }
 
-/// Apply a translation on the x,y,z domain.
-pub struct Translate<F: Function>(pub F, pub f32, pub f32, pub f32);
+pub struct Expression<F: Function3>(pub F);
 
-impl<F> Function for Translate<F>
+impl<F> Function3 for Expression<F>
 where
-    F: Function,
+    F: Function3,
 {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        let Translate(ref f, dx, dy, dz) = self;
+        self.0.eval(x, y, z)
+    }
+}
+
+pub struct Addition<F1: Function3, F2: Function3>(pub F1, pub F2);
+
+impl<F1, F2> Function3 for Addition<F1, F2>
+where
+    F1: Function3,
+    F2: Function3,
+{
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        self.0.eval(x, y, z) + self.1.eval(x, y, z)
+    }
+}
+
+pub struct Subtraction<F1, F2>(pub F1, pub F2);
+
+impl<F1, F2> Function3 for Subtraction<F1, F2>
+where
+    F1: Function3,
+    F2: Function3,
+{
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        self.0.eval(x, y, z) - self.1.eval(x, y, z)
+    }
+}
+
+pub struct Multiplication<F1, F2>(pub F1, pub F2);
+
+impl<F1, F2> Function3 for Multiplication<F1, F2>
+where
+    F1: Function3,
+    F2: Function3,
+{
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        self.0.eval(x, y, z) * self.1.eval(x, y, z)
+    }
+}
+
+pub struct Division<F1, F2>(pub F1, pub F2);
+
+impl<F1, F2> Function3 for Division<F1, F2>
+where
+    F1: Function3,
+    F2: Function3,
+{
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        self.0.eval(x, y, z) / self.1.eval(x, y, z)
+    }
+}
+
+/// Apply a translation on the x,y,z domain.
+pub struct Translate3<F: Function3>(pub F, pub f32, pub f32, pub f32);
+
+impl<F> Function3 for Translate3<F>
+where
+    F: Function3,
+{
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        let Translate3(ref f, dx, dy, dz) = self;
         f.eval(x - dx, y - dy, z - dz)
     }
 }
 
 /// Apply a scale on the x,y,z domain.
-pub struct Scale<F: Function>(pub F, pub f32, pub f32, pub f32);
+pub struct Scale3<F: Function3>(pub F, pub f32, pub f32, pub f32);
 
-impl<F> Function for Scale<F>
+impl<F> Function3 for Scale3<F>
 where
-    F: Function,
+    F: Function3,
 {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        let Scale(ref f, sx, sy, sz) = self;
+        let Scale3(ref f, sx, sy, sz) = self;
         f.eval(x / sx, y / sy, z / sz)
     }
 }
 
-/// Apply a translation on the value range.
-pub struct ValueTranslate<F: Function>(pub F, pub f32);
+#[allow(non_snake_case)]
+pub fn C(c: f32) -> Expression<VarC> {
+    Expression(VarC(c))
+}
+const X: Expression<VarX> = Expression(VarX);
+const Y: Expression<VarY> = Expression(VarY);
+const Z: Expression<VarZ> = Expression(VarZ);
 
-impl<F> Function for ValueTranslate<F>
+impl<F1, F2> ops::Add<F2> for Expression<F1>
 where
-    F: Function,
+    F1: Function3,
+    F2: Function3,
 {
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        let ValueTranslate(ref f, dv) = self;
-        f.eval(x, y, z) + dv
+    type Output = Expression<Addition<F1, F2>>;
+
+    fn add(self, rhs: F2) -> Self::Output {
+        Expression(Addition(self.0, rhs))
     }
 }
 
-/// Apply a scale on the the value range.
-pub struct ValueScale<F: Function>(pub F, pub f32);
-
-impl<F> Function for ValueScale<F>
+impl<F1> ops::Add<f32> for Expression<F1>
 where
-    F: Function,
+    F1: Function3,
 {
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        let ValueScale(ref f, sv) = self;
-        f.eval(x, y, z) * sv
+    type Output = Expression<Addition<F1, VarC>>;
+
+    fn add(self, rhs: f32) -> Self::Output {
+        Expression(Addition(self.0, VarC(rhs)))
     }
 }
 
-pub struct Sphere;
+impl<F1, F2> ops::Sub<F2> for Expression<F1>
+where
+    F1: Function3,
+    F2: Function3,
+{
+    type Output = Expression<Subtraction<F1, F2>>;
 
-impl Function for Sphere {
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        x * x + y * y + z * z - 1.
+    fn sub(self, rhs: F2) -> Self::Output {
+        Expression(Subtraction(self.0, rhs))
     }
 }
 
-pub struct Cone;
+impl<F1> ops::Sub<f32> for Expression<F1>
+where
+    F1: Function3,
+{
+    type Output = Expression<Subtraction<F1, VarC>>;
 
-impl Function for Cone {
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        x * x + y * y - z * z
+    fn sub(self, rhs: f32) -> Self::Output {
+        Expression(Subtraction(self.0, VarC(rhs)))
     }
 }
 
+impl<F1, F2> ops::Mul<F2> for Expression<F1>
+where
+    F1: Function3,
+    F2: Function3,
+{
+    type Output = Expression<Multiplication<F1, F2>>;
+
+    fn mul(self, rhs: F2) -> Self::Output {
+        Expression(Multiplication(self.0, rhs))
+    }
+}
+
+impl<F1> ops::Mul<f32> for Expression<F1>
+where
+    F1: Function3,
+{
+    type Output = Expression<Multiplication<F1, VarC>>;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Expression(Multiplication(self.0, VarC(rhs)))
+    }
+}
+
+impl<F1, F2> ops::Div<F2> for Expression<F1>
+where
+    F1: Function3,
+    F2: Function3,
+{
+    type Output = Expression<Division<F1, F2>>;
+
+    fn div(self, rhs: F2) -> Self::Output {
+        Expression(Division(self.0, rhs))
+    }
+}
+
+impl<F1> ops::Div<f32> for Expression<F1>
+where
+    F1: Function3,
+{
+    type Output = Expression<Division<F1, VarC>>;
+
+    fn div(self, rhs: f32) -> Self::Output {
+        Expression(Division(self.0, VarC(rhs)))
+    }
+}
+
+pub struct Quadratic;
+
+impl Quadratic {
+    pub fn sphere() -> impl Function3 {
+        X * X + Y * Y + Z * Z - 1.
+    }
+
+    pub fn cone() -> impl Function3 {
+        X * X + Y * Y - Z * Z
+    }
+
+    pub fn farkas() -> impl Function3 {
+        Z + X / Y * Z * X
+    }
+
+    pub fn farkas2() -> impl Function3 {
+        Z * X + Y / Z * Y + X * X * Z + X
+    }
+
+    pub fn farkas3() -> impl Function3 {
+        X * Y + Z / Y * Y + Z + Z * X / X + Y * X + X * Y + Y * X / Z * X
+    }
+
+    pub fn farkas4() -> impl Function3 {
+        X * X * X * X * X * X * X * X * X * X * Y + Z / X + X + Y - Y * Z + Z
+    }
+
+    pub fn farkas5() -> impl Function3 {
+        X * X * X * X * X * X * X * Z + Z / Y + Z * Y
+    }
+}
+/*
 pub struct Cylinder;
 
 impl Function for Cylinder {
     fn eval(&self, x: f32, y: f32, _z: f32) -> f32 {
         x * x + y * y - 1.
-    }
+    }z
 }
 
 pub struct HyperboloidOneSheet;
@@ -154,3 +321,4 @@ impl Function for Heart {
         a * a * a - b
     }
 }
+*/

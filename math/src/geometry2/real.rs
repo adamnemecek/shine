@@ -1,14 +1,8 @@
+use alga::general::{Lattice, RingCommutative};
 use std::fmt;
-use alga::general::{RingCommutative, Lattice};
 
 /// General numeric type
-pub trait Real:
-    Sized
-    + Copy
-    + RingCommutative
-    + Lattice
-    + fmt::Debug
-{
+pub trait Real: Sized + Copy + RingCommutative + Lattice + fmt::Debug {
     fn approximate(&self) -> f64;
     fn abs(&self) -> Self;
 }

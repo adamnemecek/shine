@@ -10,24 +10,28 @@ use shine_testutils::init_webcontroll_test;
 fn test_cubic() {
     let webctrl = init_webcontroll_test(module_path!());
 
-    let mut mesh = D3VoxelMesh::new();
-
     //let cell = ImplicitCell::new(Function::Const(1.));
-    let cell = ImplicitCell::new(Sphere);
-    //let cell = ImplicitCell::new(Sphere).with_clamp(0.25).with_invert();
-    //let cell = ImplicitCell::new(Cone);
-    //let cell = ImplicitCell::new(Cylinder);
-    //let cell = ImplicitCell::new(Scale(HyperboloidOneSheet, 0.5, 0.5, 0.5));
-    //let cell = ImplicitCell::new(Scale(HyperboloidTwoSheet, 0.5, 0.5, 0.5));
-    //let cell = ImplicitCell::new(Scale(EllipticParaboloid, 0.5, 0.5, 0.5));
-    //let cell = ImplicitCell::new(Scale(HyperbolicParaboloid, 0.5, 0.5, 0.5));
-    //let cell = ImplicitCell::new(Scale(Heart, 0.84, 0.77, 1.));
+    let cell = ImplicitCell::new(Quadratic::sphere()); //.with_resolution(2, 2, 2);
+                                                       //let cell = ImplicitCell::new(Quadratic::farkas2());
+                                                       //let cell = ImplicitCell::new(Sphere).with_clamp(0.25).with_invert();
+                                                       //let cell = ImplicitCell::new(Cone);
+                                                       //let cell = ImplicitCell::new(Cylinder);
+                                                       //let cell = ImplicitCell::new(Scale(HyperboloidOneSheet, 0.5, 0.5, 0.5));
+                                                       //let cell = ImplicitCell::new(Scale(HyperboloidTwoSheet, 0.5, 0.5, 0.5));
+                                                       //let cell = ImplicitCell::new(Scale(EllipticParaboloid, 0.5, 0.5, 0.5));
+                                                       //let cell = ImplicitCell::new(Scale(HyperbolicParaboloid, 0.5, 0.5, 0.5));
+                                                       //let cell = ImplicitCell::new(Scale(Heart, 0.84, 0.77, 1.));
 
     let cfg = Config::new();
-    //let mut pl = Cubic::new().with_config(cfg);
-    let mut pl = Transvoxel::new();//.with_config(cfg);
-    pl.polygonize(&mut mesh, &cell);
 
+    let mut mesh = D3VoxelMesh::new();
+    let mut pl = Cubic::new(); //.with_config(cfg);
+    pl.polygonize(&mut mesh, &cell);
+    webctrl.add_d3(&mesh);
+
+    let mut mesh = D3VoxelMesh::new();
+    let mut pl = Transvoxel::new(); //.with_config(cfg);
+    pl.polygonize(&mut mesh, &cell);
     webctrl.add_d3(&mesh);
 
     webctrl.wait_user();

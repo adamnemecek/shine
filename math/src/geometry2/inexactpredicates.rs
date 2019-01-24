@@ -1,7 +1,7 @@
-use num_traits::Zero;
 use crate::geometry2::{
     CollinearTestType, InexactReal, NearestPointSearch, NearestPointSearchBuilder, Orientation, Position, Predicates, Real,
 };
+use num_traits::Zero;
 
 #[derive(Clone, Copy, Debug)]
 pub struct InexactRealOrientation<R: InexactReal>(pub R, pub R);

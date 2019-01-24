@@ -2,7 +2,7 @@ use crate::voxel::polygonize::mesh::{Mesh, Vertex};
 use crate::voxel::polygonize::transvoxel_lut::*;
 use crate::voxel::polygonize::{Config, Direction, Polygonizer, UVGeneration};
 use crate::voxel::Cell;
-use nalgebra_glm::Vec3;
+use nalgebra_glm::{self as glm, Vec3};
 
 fn lerp(x: f32, y: f32, w: f32) -> f32 {
     x * (1. - w) + y * w
@@ -29,6 +29,7 @@ impl Polygonizer for Transvoxel {
         let (sx, sy, sz) = cell.resolution();
         let lod = cell.lod();
         let step = 1 << lod;
+        let start_vertex = mesh.vertices.len();
 
         for x in 0isize..(sx as isize) {
             for y in 0isize..(sy as isize) {
@@ -75,7 +76,8 @@ impl Polygonizer for Transvoxel {
                         let start_value = values[start_index];
                         let end_value = values[end_index];
                         assert!((start_value > 0) != (end_value > 0)); // It is really an edge (error in table)
-                        
+
+                        //let is_cached = edge.is_cached();
                         let cached_edge = edge.get_cached_index();
                         let cached_direction = edge.get_cached_direction();
 
@@ -91,15 +93,26 @@ impl Polygonizer for Transvoxel {
                             ((z + (((end_index & 0x04) >> 2) as isize)) * step) as f32,
                         );
 
-                        let position = 
-                        if lod == 0 {
+                        let position = if lod == 0 {
                             // Full resolution
                             let alpha = (start_value as f32) / (start_value - end_value) as f32;
 
                             match cached_edge {
-                                1 => Vec3::new(start_position.x, lerp(start_position.y, end_position.y, alpha), start_position.z), // y
-                                2 => Vec3::new(lerp(start_position.x, end_position.x, alpha), start_position.y, start_position.z), // x
-                                3 => Vec3::new(start_position.x, start_position.y, lerp(start_position.z, end_position.z, alpha)), // z
+                                1 => Vec3::new(
+                                    start_position.x,
+                                    lerp(start_position.y, end_position.y, alpha),
+                                    start_position.z,
+                                ), // y
+                                2 => Vec3::new(
+                                    lerp(start_position.x, end_position.x, alpha),
+                                    start_position.y,
+                                    start_position.z,
+                                ), // x
+                                3 => Vec3::new(
+                                    start_position.x,
+                                    start_position.y,
+                                    lerp(start_position.z, end_position.z, alpha),
+                                ), // z
                                 _ => unreachable!(),
                             }
                         } else {
@@ -107,12 +120,11 @@ impl Polygonizer for Transvoxel {
                         };
 
                         // Save vertex if not on edge
-                        /*if (CacheDirection & 0x08 || !CacheDirection) // start_valuetB.IsNull() && LocalIndexB == 7 => !CacheDirection
+                        /*if (CacheDirection & 0x08) // start_valuetB.IsNull() && LocalIndexB == 7 => !CacheDirection
                         {
                             GetCurrentCache()[GetCacheIndex(EdgeIndex, LX, LY)] = VertexIndex;
                         }*/
-                        let vertex = Vertex::new()
-                        .with_position(position);
+                        let vertex = Vertex::new().with_position(position);
                         generated_vertices[vi] = mesh.add_vertex(vertex);
                         generated_vertex_count += 1;
                     }
@@ -124,17 +136,25 @@ impl Polygonizer for Transvoxel {
                         let c = generated_vertices[cell_data.indices[3 * ti + 2] as usize];
 
                         mesh.add_triangle(a, b, c);
+                        let (va, vb, vc) = mesh.get_triangle_vertices_mut(a, b, c);
 
-                        /*if (NormalConfig == EVoxelNormalConfig::MeshNormal)
+                        //if (NormalConfig == EVoxelNormalConfig::SmoothNormal)
                         {
-                            let normal = normal(C.Position - A.Position, B.Position - A.Position).GetSafeNormal();
-                            a.normal += Normal;
-                            B.NormalSum += Normal;
-                            C.NormalSum += Normal;
-                        }*/
+                            let ac = vc.position - va.position;
+                            let ab = vb.position - va.position;
+                            let normal = ac.cross(&ab).normalize();
+
+                            va.normal += normal;
+                            vb.normal += normal;
+                            vc.normal += normal;
+                        }
                     }
                 }
             }
+        }
+
+        for v in mesh.vertices[start_vertex..].iter_mut() {
+            v.normal = glm::normalize(&v.normal);
         }
     }
 }

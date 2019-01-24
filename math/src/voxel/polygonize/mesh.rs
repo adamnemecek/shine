@@ -64,6 +64,16 @@ impl Mesh {
         self.indices.push(c);
     }
 
+    pub fn get_triangle_vertices_mut(&mut self, a: u32, b: u32, c: u32) -> (&mut Vertex, &mut Vertex, &mut Vertex) {
+        assert!(a != b && a != c && b != c);
+        let (a, b, c) = (
+            &mut self.vertices[a as usize] as *mut _,
+            &mut self.vertices[b as usize] as *mut _,
+            &mut self.vertices[c as usize] as *mut _,
+        );
+        unsafe { (&mut *a, &mut *b, &mut *c) }
+    }
+
     pub fn check(&self) -> Result<(), String> {
         for (at, &i) in self.indices.iter().enumerate() {
             if i as usize >= self.vertices.len() {
