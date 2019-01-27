@@ -81,6 +81,7 @@
     var container, stats, shine;
     var renderer, scene, lights, model;
     var camera, cameraControl;
+    var vertexNormalHelper;
 
     function init() {
         container = document.getElementById('modelContainer');
@@ -182,6 +183,24 @@
         zoomToBBox(bbox);
     }
 
+    function toggleVertexNormals(object) {
+        if (vertexNormalHelper === undefined || vertexNormalHelper === null) {
+            /*var wireframe = new THREE.WireframeGeometry(object.geometry);
+            vertexNormalHelper = new THREE.LineSegments(wireframe);
+            vertexNormalHelper.material.depthTest = false;
+            vertexNormalHelper.material.opacity = 0.25;
+            vertexNormalHelper.material.transparent = true;
+            //vertexNormalHelper.position.x = 4;
+            scene.add(vertexNormalHelper);*/
+            vertexNormalHelper = new THREE.VertexNormalsHelper(object, 50);
+            scene.add(vertexNormalHelper);
+        } else {
+            scene.remove(vertexNormalHelper);
+            vertexNormalHelper = null
+        }
+        console.log(vertexNormalHelper);
+    }
+
     function updateMaterials(object, twoSided, wireframe) {
         if (!object) {
             return;
@@ -269,6 +288,11 @@
         render();
     }
 
+    function updateVertexNormals() {
+        toggleVertexNormals(model);
+        render();
+    }
+
     function exportModel() {
         if (model_id < 0 || model_id >= models.length) {
             return;
@@ -350,7 +374,7 @@
                     <li><input id="render_wireframe" type="checkbox" onchange="updateModelMaterials()">
                         <label>Wireframe</label>
                     </li>
-                    <li><input id="render_normals" type="checkbox" onchange="updateModelMaterials()">
+                    <li><input id="render_normals" type="checkbox" onchange="updateVertexNormals()">
                         <label>Normals</label>
                     </li>
                 </ul>

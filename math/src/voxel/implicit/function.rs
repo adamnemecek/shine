@@ -1,27 +1,23 @@
 use std::ops;
 
-pub trait Function3 {
+pub trait Function3: Copy {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32;
 
-    fn translated(self, x: f32, y: f32, z: f32) -> Translate3<Self>
-    where
-        Self: Sized,
-    {
-        Translate3(self, x, y, z)
+    fn translated(self, x: f32, y: f32, z: f32) -> Expression<Translate3<Self>> {
+        Expression(Translate3(self, x, y, z))
     }
 
-    fn scaled(self, x: f32, y: f32, z: f32) -> Scale3<Self>
-    where
-        Self: Sized,
-    {
-        Scale3(self, x, y, z)
+    fn scaled(self, x: f32, y: f32, z: f32) -> Expression<Scale3<Self>> {
+        Expression(Scale3(self, x, y, z))
     }
 
-    /*fn rotated(self, x: f32, y: f32, z: f32) -> impl Function3 where Self: Sized {
+    /*fn rotated(self, x: f32, y: f32, z: f32) -> Expression<Rotate3<Self>>
+    {
         Rotated3(self, x,y,z)
     }*/
 }
 
+#[derive(Clone, Copy)]
 pub struct VarC(pub f32);
 
 impl Function3 for VarC {
@@ -30,6 +26,7 @@ impl Function3 for VarC {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct VarX;
 
 impl Function3 for VarX {
@@ -38,6 +35,7 @@ impl Function3 for VarX {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct VarY;
 
 impl Function3 for VarY {
@@ -46,6 +44,7 @@ impl Function3 for VarY {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct VarZ;
 
 impl Function3 for VarZ {
@@ -54,6 +53,7 @@ impl Function3 for VarZ {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Expression<F: Function3>(pub F);
 
 impl<F> Function3 for Expression<F>
@@ -65,6 +65,7 @@ where
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Addition<F1: Function3, F2: Function3>(pub F1, pub F2);
 
 impl<F1, F2> Function3 for Addition<F1, F2>
@@ -77,6 +78,7 @@ where
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Subtraction<F1, F2>(pub F1, pub F2);
 
 impl<F1, F2> Function3 for Subtraction<F1, F2>
@@ -89,6 +91,7 @@ where
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Multiplication<F1, F2>(pub F1, pub F2);
 
 impl<F1, F2> Function3 for Multiplication<F1, F2>
@@ -101,6 +104,7 @@ where
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Division<F1, F2>(pub F1, pub F2);
 
 impl<F1, F2> Function3 for Division<F1, F2>
@@ -114,6 +118,7 @@ where
 }
 
 /// Apply a translation on the x,y,z domain.
+#[derive(Clone, Copy)]
 pub struct Translate3<F: Function3>(pub F, pub f32, pub f32, pub f32);
 
 impl<F> Function3 for Translate3<F>
@@ -127,6 +132,7 @@ where
 }
 
 /// Apply a scale on the x,y,z domain.
+#[derive(Clone, Copy)]
 pub struct Scale3<F: Function3>(pub F, pub f32, pub f32, pub f32);
 
 impl<F> Function3 for Scale3<F>
@@ -249,6 +255,16 @@ impl Quadratic {
     pub fn cone() -> impl Function3 {
         X * X + Y * Y - Z * Z
     }
+}
+
+pub struct FunFunction;
+
+impl FunFunction {
+    pub fn heart() -> impl Function3 {
+        let a = X * X + Y * Y + Z * Z * 2. - 1.;
+        let b = X * X * Y * Y * Y;
+        a * a * a - b
+    }
 
     pub fn farkas() -> impl Function3 {
         Z + X / Y * Z * X
@@ -269,7 +285,12 @@ impl Quadratic {
     pub fn farkas5() -> impl Function3 {
         X * X * X * X * X * X * X * Z + Z / Y + Z * Y
     }
+
+    pub fn farkas6() -> impl Function3 {
+        Z+X*X/Y*X+X/Z/Z+Y+X*Y+X*Z+Y/X+Z*X
+    }
 }
+
 /*
 pub struct Cylinder;
 

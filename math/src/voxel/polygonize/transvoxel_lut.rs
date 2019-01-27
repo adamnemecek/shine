@@ -58,6 +58,9 @@ pub trait EdgeCode {
     // Get the index of the end point of the edge on which the vertex lies.
     fn get_end_index(self) -> usize;
 
+    /// Return if vertex already generated for another voxel
+    fn is_cached(self) -> bool;
+
     /// Index of the edge in the voxel in which the vertex was generated.
     fn get_cached_index(self) -> usize;
 
@@ -76,6 +79,11 @@ impl EdgeCode for u16 {
 
     fn get_end_index(self) -> usize {
         (self & 0x0F) as usize
+    }
+
+    fn is_cached(self) -> bool {
+        //((self >> 12) & 0x08) != 0
+        false
     }
 
     fn get_cached_index(self) -> usize {

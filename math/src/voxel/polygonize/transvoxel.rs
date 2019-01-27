@@ -77,55 +77,62 @@ impl Polygonizer for Transvoxel {
                         let end_value = values[end_index];
                         assert!((start_value > 0) != (end_value > 0)); // It is really an edge (error in table)
 
-                        //let is_cached = edge.is_cached();
+                        let is_cached = edge.is_cached();
                         let cached_edge = edge.get_cached_index();
                         let cached_direction = edge.get_cached_direction();
 
-                        // Compute vertex
-                        let start_position = Vec3::new(
-                            ((x + (((start_index & 0x01) >> 0) as isize)) * step) as f32,
-                            ((y + (((start_index & 0x02) >> 1) as isize)) * step) as f32,
-                            ((z + (((start_index & 0x04) >> 2) as isize)) * step) as f32,
-                        );
-                        let end_position = Vec3::new(
-                            ((x + (((end_index & 0x01) >> 0) as isize)) * step) as f32,
-                            ((y + (((end_index & 0x02) >> 1) as isize)) * step) as f32,
-                            ((z + (((end_index & 0x04) >> 2) as isize)) * step) as f32,
-                        );
-
-                        let position = if lod == 0 {
-                            // Full resolution
-                            let alpha = (start_value as f32) / (start_value - end_value) as f32;
-
-                            match cached_edge {
-                                1 => Vec3::new(
-                                    start_position.x,
-                                    lerp(start_position.y, end_position.y, alpha),
-                                    start_position.z,
-                                ), // y
-                                2 => Vec3::new(
-                                    lerp(start_position.x, end_position.x, alpha),
-                                    start_position.y,
-                                    start_position.z,
-                                ), // x
-                                3 => Vec3::new(
-                                    start_position.x,
-                                    start_position.y,
-                                    lerp(start_position.z, end_position.z, alpha),
-                                ), // z
-                                _ => unreachable!(),
-                            }
-                        } else {
+                        let generated_vertex = if is_cached  {
                             unimplemented!()
-                        };
+                        } else {
 
-                        // Save vertex if not on edge
-                        /*if (CacheDirection & 0x08) // start_valuetB.IsNull() && LocalIndexB == 7 => !CacheDirection
-                        {
-                            GetCurrentCache()[GetCacheIndex(EdgeIndex, LX, LY)] = VertexIndex;
-                        }*/
-                        let vertex = Vertex::new().with_position(position);
-                        generated_vertices[vi] = mesh.add_vertex(vertex);
+                            // Compute vertex
+                            let start_position = Vec3::new(
+                                ((x + (((start_index & 0x01) >> 0) as isize)) * step) as f32,
+                                ((y + (((start_index & 0x02) >> 1) as isize)) * step) as f32,
+                                ((z + (((start_index & 0x04) >> 2) as isize)) * step) as f32,
+                            );
+                            let end_position = Vec3::new(
+                                ((x + (((end_index & 0x01) >> 0) as isize)) * step) as f32,
+                                ((y + (((end_index & 0x02) >> 1) as isize)) * step) as f32,
+                                ((z + (((end_index & 0x04) >> 2) as isize)) * step) as f32,
+                            );
+
+                            let position = if lod == 0 {
+                                // Full resolution
+                                let alpha = (start_value as f32) / (start_value as f32 - end_value as f32);
+
+                                match cached_edge {
+                                    1 => Vec3::new(
+                                        start_position.x,
+                                        lerp(start_position.y, end_position.y, alpha),
+                                        start_position.z,
+                                    ), // y
+                                    2 => Vec3::new(
+                                        lerp(start_position.x, end_position.x, alpha),
+                                        start_position.y,
+                                        start_position.z,
+                                    ), // x
+                                    3 => Vec3::new(
+                                        start_position.x,
+                                        start_position.y,
+                                        lerp(start_position.z, end_position.z, alpha),
+                                    ), // z
+                                    _ => unreachable!(),
+                                }
+                            } else {
+                                unimplemented!()
+                            };
+
+                            // Save vertex if not on edge
+                            /*if (isCacheDirection & 0x08) // start_valuetB.IsNull() && LocalIndexB == 7 => !CacheDirection
+                            {
+                                GetCurrentCache()[GetCacheIndex(EdgeIndex, LX, LY)] = VertexIndex;
+                            }*/                        
+                        
+                            let vertex = Vertex::new().with_position(position);
+                            mesh.add_vertex(vertex)
+                        };
+                        generated_vertices[vi] = generated_vertex;
                         generated_vertex_count += 1;
                     }
 
@@ -153,8 +160,11 @@ impl Polygonizer for Transvoxel {
             }
         }
 
+    let mut a = 0;
         for v in mesh.vertices[start_vertex..].iter_mut() {
             v.normal = glm::normalize(&v.normal);
+            println!("{}. {}",a, glm::length(&v.normal));
+            a += 1;
         }
     }
 }
