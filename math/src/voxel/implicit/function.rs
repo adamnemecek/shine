@@ -211,14 +211,25 @@ where
     }
 }
 
-impl<F1> ops::Mul<f32> for Expression<F1>
+impl<F> ops::Mul<f32> for Expression<F>
 where
-    F1: Function3,
+    F: Function3,
 {
-    type Output = Expression<Multiplication<F1, VarC>>;
+    type Output = Expression<Multiplication<F, VarC>>;
 
     fn mul(self, rhs: f32) -> Self::Output {
         Expression(Multiplication(self.0, VarC(rhs)))
+    }
+}
+
+impl<F> ops::Mul<F> for VarC
+where
+    F: Function3,
+{
+    type Output = Expression<Multiplication<VarC, F>>;
+
+    fn mul(self, rhs: F) -> Self::Output {
+        Expression(Multiplication(self, rhs))
     }
 }
 
@@ -248,12 +259,16 @@ where
 pub struct Quadratic;
 
 impl Quadratic {
-    pub fn sphere() -> impl Function3 {
-        X * X + Y * Y + Z * Z - 1.
+    pub fn sphere(radius: f32) -> impl Function3 {
+        X * X + Y * Y + Z * Z - radius
     }
 
     pub fn cone() -> impl Function3 {
         X * X + Y * Y - Z * Z
+    }
+
+    pub fn cylinder(radius: f32) -> impl Function3 {
+        X * X + Y * Y - radius
     }
 }
 
@@ -261,7 +276,7 @@ pub struct FunFunction;
 
 impl FunFunction {
     pub fn heart() -> impl Function3 {
-        let a = X * X + Y * Y + Z * Z * 2. - 1.;
+        let a = X * X + Y * Y + VarC(2.) * Z * Z - 1.;
         let b = X * X * Y * Y * Y;
         a * a * a - b
     }
@@ -287,59 +302,6 @@ impl FunFunction {
     }
 
     pub fn farkas6() -> impl Function3 {
-        Z+X*X/Y*X+X/Z/Z+Y+X*Y+X*Z+Y/X+Z*X
+        Z + X * X / Y * X + X / Z / Z + Y + X * Y + X * Z + Y / X + Z * X
     }
 }
-
-/*
-pub struct Cylinder;
-
-impl Function for Cylinder {
-    fn eval(&self, x: f32, y: f32, _z: f32) -> f32 {
-        x * x + y * y - 1.
-    }z
-}
-
-pub struct HyperboloidOneSheet;
-
-impl Function for HyperboloidOneSheet {
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        x * x + y * y - z * z - 1.
-    }
-}
-
-pub struct HyperboloidTwoSheet;
-
-impl Function for HyperboloidTwoSheet {
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        -x * x - y * y + z * z - 1.
-    }
-}
-
-pub struct EllipticParaboloid;
-
-impl Function for EllipticParaboloid {
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        x * x + y * y - z
-    }
-}
-
-pub struct HyperbolicParaboloid;
-
-impl Function for HyperbolicParaboloid {
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        x * x - y * y - z
-    }
-}
-
-// Heart shaped function
-pub struct Heart;
-
-impl Function for Heart {
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        let a = x * x + y * y + 2. * z * z - 1.;
-        let b = x * x * y * y * y;
-        a * a * a - b
-    }
-}
-*/

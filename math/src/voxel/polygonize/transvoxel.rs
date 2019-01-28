@@ -10,12 +10,14 @@ fn lerp(x: f32, y: f32, w: f32) -> f32 {
 
 pub struct Transvoxel {
     config: Config,
+    vertex_cache: Vec<u32>,
 }
 
 impl Transvoxel {
     pub fn new() -> Transvoxel {
         Transvoxel {
             config: Config::default(),
+            vertex_cache: Vec::new(),
         }
     }
 
@@ -26,14 +28,19 @@ impl Transvoxel {
 
 impl Polygonizer for Transvoxel {
     fn polygonize<C: Cell>(&mut self, mesh: &mut Mesh, cell: &C) {
+        for (i, d) in REGULAR_CELL_CLASS.iter().enumerate() {
+            println!("{}({:b}). = {}", i, i, d);
+        }
         let (sx, sy, sz) = cell.resolution();
         let lod = cell.lod();
         let step = 1 << lod;
         let start_vertex = mesh.vertices.len();
 
-        for x in 0isize..(sx as isize) {
+        self.vertex_cache.resize(2 * 3 * sx * sy, u32::max_value());
+
+        for z in 0isize..(sz as isize) {
             for y in 0isize..(sy as isize) {
-                for z in 0isize..(sz as isize) {
+                for x in 0isize..(sx as isize) {
                     let values = [
                         cell.get(0, x, y, z),
                         cell.get(0, x + 1, y, z),
@@ -45,14 +52,18 @@ impl Polygonizer for Transvoxel {
                         cell.get(0, x + 1, y + 1, z + 1),
                     ];
 
-                    let case_code = (((values[0] > 0) as u8) << 0)
-                        | (((values[1] > 0) as u8) << 1)
-                        | (((values[2] > 0) as u8) << 2)
-                        | (((values[3] > 0) as u8) << 3)
-                        | (((values[4] > 0) as u8) << 4)
-                        | (((values[5] > 0) as u8) << 5)
-                        | (((values[6] > 0) as u8) << 6)
-                        | (((values[7] > 0) as u8) << 7);
+                    let case_code = ((values[0] as u16) >> 15 & 0x01)
+                        | ((values[1] as u16) >> 14 & 0x02)
+                        | ((values[2] as u16) >> 13 & 0x04)
+                        | ((values[3] as u16) >> 12 & 0x08)
+                        | ((values[4] as u16) >> 11 & 0x10)
+                        | ((values[5] as u16) >> 10 & 0x20)
+                        | ((values[6] as u16) >> 9 & 0x40)
+                        | ((values[7] as u16) >> 8 & 0x80);
+
+                    println!("x,y,z: ({},{},{})", x, y, z);
+                    println!("values: {:?}", values);
+                    println!("case_code: {}", case_code);
 
                     if case_code == 0 || case_code == 255 {
                         // empty or full cell
@@ -63,6 +74,9 @@ impl Polygonizer for Transvoxel {
                     let cell_data = &REGULAR_CELL_DATA[cell_class as usize];
                     let vertex_data = REGULAR_VERTEX_DATA[case_code as usize];
 
+                    println!("vertex_count: {}", cell_data.get_vertex_count());
+                    println!("triangle_count: {}", cell_data.get_triangle_count());
+
                     // vertices
                     let mut generated_vertices = [0; 12];
                     let mut generated_vertex_count = 0;
@@ -72,19 +86,34 @@ impl Polygonizer for Transvoxel {
                         // A: low point / B: high point
                         let start_index = edge.get_start_index();
                         let end_index = edge.get_end_index();
+                        println!("  vi: {}", vi);
+                        println!("    start_index: {}", start_index);
+                        println!("    end_index: {}", end_index);
 
-                        let start_value = values[start_index];
-                        let end_value = values[end_index];
-                        assert!((start_value > 0) != (end_value > 0)); // It is really an edge (error in table)
+                        assert!((values[start_index] < 0) != (values[end_index] < 0)); // It is really an edge (error in table)
 
+                        let edge_index = edge.get_edge_index();
+                        assert!(edge_index > 0 && edge_index < 4);
                         let is_cached = edge.is_cached();
-                        let cached_edge = edge.get_cached_index();
                         let cached_direction = edge.get_cached_direction();
+                        println!("    cached_direction: {}", cached_direction);
 
-                        let generated_vertex = if is_cached  {
-                            unimplemented!()
+                        let cx = if (cached_direction & 0x01) != 0 { x - 1 } else { x };
+                        let cy = if (cached_direction & 0x02) != 0 { y - 1 } else { y };
+                        let cz = if (cached_direction & 0x04) != 0 { z - 1 } else { z };
+                        println!("    cached at: {},{},{}", cx,cy,cz);
+
+                        let generated_vertex = if is_cached && cx >= 0 && cy >= 0 && cz >= 0 {
+                            let cache_page = cz as usize % 2;
+                            let cache_index = cache_page * 3 * sy * sx
+                                + ((edge_index - 1) as usize) * sy * sx
+                                + (cy as usize) * sx
+                                + (cx as usize);
+                            let v = self.vertex_cache[cache_index];
+                            println!("    cache reuse: {}", v);
+                            assert!((v as usize) < mesh.vertices.len());
+                            v
                         } else {
-
                             // Compute vertex
                             let start_position = Vec3::new(
                                 ((x + (((start_index & 0x01) >> 0) as isize)) * step) as f32,
@@ -98,42 +127,53 @@ impl Polygonizer for Transvoxel {
                             );
 
                             let position = if lod == 0 {
-                                // Full resolution
-                                let alpha = (start_value as f32) / (start_value as f32 - end_value as f32);
+                                let start_value = values[start_index] as f32;
+                                let end_value = values[end_index] as f32;
 
-                                match cached_edge {
+                                // Full resolution
+                                let alpha = start_value / (start_value - end_value);
+                                println!("    alpha: {} ({},{})", alpha, start_value, end_value);
+
+                                match edge_index {
+                                    // y direction
                                     1 => Vec3::new(
                                         start_position.x,
                                         lerp(start_position.y, end_position.y, alpha),
                                         start_position.z,
-                                    ), // y
+                                    ),
+                                    // x direction
                                     2 => Vec3::new(
                                         lerp(start_position.x, end_position.x, alpha),
                                         start_position.y,
                                         start_position.z,
-                                    ), // x
+                                    ),
+                                    // z direction
                                     3 => Vec3::new(
                                         start_position.x,
                                         start_position.y,
                                         lerp(start_position.z, end_position.z, alpha),
-                                    ), // z
+                                    ),
                                     _ => unreachable!(),
                                 }
                             } else {
                                 unimplemented!()
                             };
 
-                            // Save vertex if not on edge
-                            /*if (isCacheDirection & 0x08) // start_valuetB.IsNull() && LocalIndexB == 7 => !CacheDirection
-                            {
-                                GetCurrentCache()[GetCacheIndex(EdgeIndex, LX, LY)] = VertexIndex;
-                            }*/                        
-                        
                             let vertex = Vertex::new().with_position(position);
                             mesh.add_vertex(vertex)
                         };
                         generated_vertices[vi] = generated_vertex;
                         generated_vertex_count += 1;
+
+                        // Save vertex index to reuse in the next voxels
+                        if !is_cached {
+                            let cache_page = (z as usize) % 2;
+                            let cache_index = cache_page * 3 * sy * sx
+                                + ((edge_index - 1) as usize) * sy * sx
+                                + (y as usize) * sx
+                                + (x as usize);
+                            self.vertex_cache[cache_index] = generated_vertex;
+                        }
                     }
 
                     // triangle
@@ -156,14 +196,18 @@ impl Polygonizer for Transvoxel {
                             vc.normal += normal;
                         }
                     }
-                }
-            }
-        }
+                } // x
+            } // y
+        } // z
 
-    let mut a = 0;
+        /*for cahe in &mut vertex_index_cache {
+            cache.clear();
+        }*/
+
+        let mut a = 0;
         for v in mesh.vertices[start_vertex..].iter_mut() {
             v.normal = glm::normalize(&v.normal);
-            println!("{}. {}",a, glm::length(&v.normal));
+            //println!("{}. {}",a, glm::length(&v.normal));
             a += 1;
         }
     }

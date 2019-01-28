@@ -137,26 +137,28 @@ impl Polygonizer for Cubic {
             for y in 0isize..(sy as isize) {
                 for z in 0isize..(sz as isize) {
                     let value = cell.get(0, x, y, z);
-                    if value > 0 {
+                    if value >= 0 {
+                        // outside of the volume
                         continue;
                     }
 
-                    if cell.get(0, x - 1, y, z) > 0 {
+                    // check if neighbor is outside along any direction (this voxel is inside)
+                    if cell.get(0, x - 1, y, z) >= 0 {
                         add_face(mesh, &self.config, x, y, z, Direction::XMin, step);
                     }
-                    if cell.get(0, x + 1, y, z) > 0 {
+                    if cell.get(0, x + 1, y, z) >= 0 {
                         add_face(mesh, &self.config, x, y, z, Direction::XMax, step);
                     }
-                    if cell.get(0, x, y - 1, z) > 0 {
+                    if cell.get(0, x, y - 1, z) >= 0 {
                         add_face(mesh, &self.config, x, y, z, Direction::YMin, step);
                     }
-                    if cell.get(0, x, y + 1, z) > 0 {
+                    if cell.get(0, x, y + 1, z) >= 0 {
                         add_face(mesh, &self.config, x, y, z, Direction::YMax, step);
                     }
-                    if cell.get(0, x, y, z - 1) > 0 {
+                    if cell.get(0, x, y, z - 1) >= 0 {
                         add_face(mesh, &self.config, x, y, z, Direction::ZMin, step);
                     }
-                    if cell.get(0, x, y, z + 1) > 0 {
+                    if cell.get(0, x, y, z + 1) >= 0 {
                         add_face(mesh, &self.config, x, y, z, Direction::ZMax, step);
                     }
                 }

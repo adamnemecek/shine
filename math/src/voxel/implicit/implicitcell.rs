@@ -6,16 +6,9 @@ pub struct ImplicitCell<F>
 where
     F: Function3,
 {
-    /// Lod of this cell
     lod: usize,
-
-    /// Cell resolution
     resolution: (usize, usize, usize),
-
-    /// Tho domain of the function along th x,y,z axis
     domain: ((f32, f32), (f32, f32), (f32, f32)),
-
-    /// The function to evaluate
     function: F,
 }
 

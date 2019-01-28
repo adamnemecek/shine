@@ -58,11 +58,11 @@ pub trait EdgeCode {
     // Get the index of the end point of the edge on which the vertex lies.
     fn get_end_index(self) -> usize;
 
+    /// Index of the edge in the voxel in which the vertex was generated.
+    fn get_edge_index(self) -> usize;
+
     /// Return if vertex already generated for another voxel
     fn is_cached(self) -> bool;
-
-    /// Index of the edge in the voxel in which the vertex was generated.
-    fn get_cached_index(self) -> usize;
 
     // The cache direction to find the already generated vertices
     //  - first bit:  x is different
@@ -81,15 +81,14 @@ impl EdgeCode for u16 {
         (self & 0x0F) as usize
     }
 
-    fn is_cached(self) -> bool {
-        //((self >> 12) & 0x08) != 0
-        false
-    }
-
-    fn get_cached_index(self) -> usize {
+    fn get_edge_index(self) -> usize {
         let index = ((self >> 8) & 0x0F) as usize;
         assert!(index >= 1 && index < 4); // table error
         index
+    }
+    
+    fn is_cached(self) -> bool {
+        ((self >> 12) & 0x08) == 0
     }
 
     fn get_cached_direction(self) -> usize {
@@ -119,12 +118,12 @@ pub static REGULAR_CELL_CLASS: [u8; 256] = [
 /// The REGULAR_CELL_DATA table holds the triangulation data for all 16 distinct classes to
 /// which a case can be mapped by the regularCellClass table.
 pub static REGULAR_CELL_DATA: [RegularCellData; 16] = [
-    RegularCellData::new(0, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    RegularCellData::new(0x31, [0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    RegularCellData::new(0x62, [0, 1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    RegularCellData::new(0x42, [0, 1, 2, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
-    RegularCellData::new(0x53, [0, 1, 4, 1, 3, 4, 1, 2, 3, 0, 0, 0, 0, 0, 0]),
-    RegularCellData::new(0x73, [0, 1, 2, 0, 2, 3, 4, 5, 6, 0, 0, 0, 0, 0, 0]),
+    RegularCellData::new(0, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]),    
+    RegularCellData::new(0x31, [0, 1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 
+    RegularCellData::new(0x62, [0, 1, 2, 3, 4, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 
+    RegularCellData::new(0x42, [0, 1, 2, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]), 
+    RegularCellData::new(0x53, [0, 1, 4, 1, 3, 4, 1, 2, 3, 0, 0, 0, 0, 0, 0]), 
+    RegularCellData::new(0x73, [0, 1, 2, 0, 2, 3, 4, 5, 6, 0, 0, 0, 0, 0, 0]), 
     RegularCellData::new(0x93, [0, 1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0]),
     RegularCellData::new(0x84, [0, 1, 4, 1, 3, 4, 1, 2, 3, 5, 6, 7, 0, 0, 0]),
     RegularCellData::new(0x84, [0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7, 0, 0, 0]),
@@ -140,8 +139,8 @@ pub static REGULAR_CELL_DATA: [RegularCellData; 16] = [
 /// The REGULAR_VERTEX_DATA table gives the vertex locations for every one of the 256 possible
 /// cases in the modified Marching Cubes algorithm. Each 16-bit value also provides information
 /// about whether a vertex can be reused from a neighboring cell. See Section 3.3 for details.
-// The low byte contains the indexes for the two endpoints of the edge on which the vertex lies,
-// as numbered in Figure 3.7. The high byte contains the vertex reuse data shown in Figure 3.8.
+/// The low byte contains the indexes for the two endpoints of the edge on which the vertex lies,
+/// as numbered in Figure 3.7. The high byte contains the vertex reuse data shown in Figure 3.8.
 pub static REGULAR_VERTEX_DATA: [[u16; 12]; 256] = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0x6201, 0x5102, 0x3304, 0, 0, 0, 0, 0, 0, 0, 0, 0],
