@@ -28,9 +28,6 @@ impl Transvoxel {
 
 impl Polygonizer for Transvoxel {
     fn polygonize<C: Cell>(&mut self, mesh: &mut Mesh, cell: &C) {
-        for (i, d) in REGULAR_CELL_CLASS.iter().enumerate() {
-            println!("{}({:b}). = {}", i, i, d);
-        }
         let (sx, sy, sz) = cell.resolution();
         let lod = cell.lod();
         let step = 1 << lod;
@@ -61,9 +58,9 @@ impl Polygonizer for Transvoxel {
                         | ((values[6] as u16) >> 9 & 0x40)
                         | ((values[7] as u16) >> 8 & 0x80);
 
-                    println!("x,y,z: ({},{},{})", x, y, z);
-                    println!("values: {:?}", values);
-                    println!("case_code: {}", case_code);
+                    //println!("x,y,z: ({},{},{})", x, y, z);
+                    //println!("values: {:?}", values);
+                    //println!("case_code: {}", case_code);
 
                     if case_code == 0 || case_code == 255 {
                         // empty or full cell
@@ -74,8 +71,8 @@ impl Polygonizer for Transvoxel {
                     let cell_data = &REGULAR_CELL_DATA[cell_class as usize];
                     let vertex_data = REGULAR_VERTEX_DATA[case_code as usize];
 
-                    println!("vertex_count: {}", cell_data.get_vertex_count());
-                    println!("triangle_count: {}", cell_data.get_triangle_count());
+                    //println!("vertex_count: {}", cell_data.get_vertex_count());
+                    //println!("triangle_count: {}", cell_data.get_triangle_count());
 
                     // vertices
                     let mut generated_vertices = [0; 12];
@@ -86,22 +83,22 @@ impl Polygonizer for Transvoxel {
                         // A: low point / B: high point
                         let start_index = edge.get_start_index();
                         let end_index = edge.get_end_index();
-                        println!("  vi: {}", vi);
-                        println!("    start_index: {}", start_index);
-                        println!("    end_index: {}", end_index);
+                        //println!("  vi: {}", vi);
+                        //println!("    start_index: {}", start_index);
+                        //println!("    end_index: {}", end_index);
 
-                        assert!((values[start_index] < 0) != (values[end_index] < 0)); // It is really an edge (error in table)
+                        assert!((values[start_index] < 0) != (values[end_index] < 0)); // It is really an edge
 
                         let edge_index = edge.get_edge_index();
                         assert!(edge_index > 0 && edge_index < 4);
                         let is_cached = edge.is_cached();
                         let cached_direction = edge.get_cached_direction();
-                        println!("    cached_direction: {}", cached_direction);
+                        //println!("    cached_direction: {}", cached_direction);
 
                         let cx = if (cached_direction & 0x01) != 0 { x - 1 } else { x };
                         let cy = if (cached_direction & 0x02) != 0 { y - 1 } else { y };
                         let cz = if (cached_direction & 0x04) != 0 { z - 1 } else { z };
-                        println!("    cached at: {},{},{}", cx,cy,cz);
+                        //println!("    cached at: {},{},{}", cx,cy,cz);
 
                         let generated_vertex = if is_cached && cx >= 0 && cy >= 0 && cz >= 0 {
                             let cache_page = cz as usize % 2;
@@ -110,7 +107,7 @@ impl Polygonizer for Transvoxel {
                                 + (cy as usize) * sx
                                 + (cx as usize);
                             let v = self.vertex_cache[cache_index];
-                            println!("    cache reuse: {}", v);
+                            //println!("    cache reuse: {}", v);
                             assert!((v as usize) < mesh.vertices.len());
                             v
                         } else {
@@ -132,7 +129,8 @@ impl Polygonizer for Transvoxel {
 
                                 // Full resolution
                                 let alpha = start_value / (start_value - end_value);
-                                println!("    alpha: {} ({},{})", alpha, start_value, end_value);
+                                //let alpha = 0.5;
+                                //println!("    alpha: {} ({},{})", alpha, start_value, end_value);
 
                                 match edge_index {
                                     // y direction
@@ -200,15 +198,10 @@ impl Polygonizer for Transvoxel {
             } // y
         } // z
 
-        /*for cahe in &mut vertex_index_cache {
-            cache.clear();
-        }*/
-
-        let mut a = 0;
         for v in mesh.vertices[start_vertex..].iter_mut() {
             v.normal = glm::normalize(&v.normal);
-            //println!("{}. {}",a, glm::length(&v.normal));
-            a += 1;
         }
+
+        self.vertex_cache.clear();
     }
 }

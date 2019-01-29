@@ -1,14 +1,17 @@
-use std::ops;
+use std::cmp;
 
-pub trait Function3: Copy {
+//https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
+//http://www.hyperfun.org/HOMA08/48890118.pdf
+
+pub trait Function: Copy {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32;
 
-    fn translated(self, x: f32, y: f32, z: f32) -> Expression<Translate3<Self>> {
-        Expression(Translate3(self, x, y, z))
+    fn translated(self, dx: f32, dy: f32, dz: f32) -> Translate<Self> {
+        Translate(self, dx, dy, dz)
     }
 
-    fn scaled(self, x: f32, y: f32, z: f32) -> Expression<Scale3<Self>> {
-        Expression(Scale3(self, x, y, z))
+    fn scaled(self, s: f32) -> Scale<Self> {
+        Scale(self, s)
     }
 
     /*fn rotated(self, x: f32, y: f32, z: f32) -> Expression<Rotate3<Self>>
@@ -17,291 +20,211 @@ pub trait Function3: Copy {
     }*/
 }
 
-#[derive(Clone, Copy)]
-pub struct VarC(pub f32);
-
-impl Function3 for VarC {
-    fn eval(&self, _x: f32, _y: f32, _z: f32) -> f32 {
-        self.0
-    }
+pub fn union<F1: Function, F2: Function>(f1: F1, f2: F2) -> Union<F1, F2> {
+    Union(f1, f2)
 }
 
-#[derive(Clone, Copy)]
-pub struct VarX;
-
-impl Function3 for VarX {
-    fn eval(&self, x: f32, _y: f32, _z: f32) -> f32 {
-        x
-    }
+pub fn intersect<F1: Function, F2: Function>(f1: F1, f2: F2) -> Intersection<F1, F2> {
+    Intersection(f1, f2)
 }
 
-#[derive(Clone, Copy)]
-pub struct VarY;
-
-impl Function3 for VarY {
-    fn eval(&self, _x: f32, y: f32, _z: f32) -> f32 {
-        y
-    }
+pub fn difference<F1: Function, F2: Function>(f1: F1, f2: F2) -> Difference<F1, F2> {
+    Difference(f1, f2)
 }
 
-#[derive(Clone, Copy)]
-pub struct VarZ;
-
-impl Function3 for VarZ {
-    fn eval(&self, _x: f32, _y: f32, z: f32) -> f32 {
-        z
-    }
+pub fn blend<F1: Function, F2: Function>(f1: F1, f2: F2, w: f32) -> Blend<F1, F2> {
+    Blend(f1, f2, w)
 }
 
-#[derive(Clone, Copy)]
-pub struct Expression<F: Function3>(pub F);
+pub fn min_max_blend<F1: Function, F2: Function>(f1: F1, f2: F2, w: f32) -> MinMaxBlend<F1, F2> {
+    MinMaxBlend(f1, f2, w)
+}
 
-impl<F> Function3 for Expression<F>
+fn min(a:f32, b:f32) -> f32 {
+    if(a<b) {a} else {b}
+}
+
+fn max(a:f32, b:f32) -> f32 {
+    if(a>b) {a} else {b}
+}
+
+fn length(x:f32,y:f32,z:f32) -> f32 {
+    (x*x+y*y+z*z).sqrt()
+}
+
+/// Translation an implicit function preserving SDF property
+#[derive(Clone, Copy)]
+pub struct Translate<F: Function>(pub F, pub f32, pub f32, pub f32);
+
+impl<F> Function for Translate<F>
 where
-    F: Function3,
+    F: Function,
 {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        self.0.eval(x, y, z)
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Addition<F1: Function3, F2: Function3>(pub F1, pub F2);
-
-impl<F1, F2> Function3 for Addition<F1, F2>
-where
-    F1: Function3,
-    F2: Function3,
-{
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        self.0.eval(x, y, z) + self.1.eval(x, y, z)
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Subtraction<F1, F2>(pub F1, pub F2);
-
-impl<F1, F2> Function3 for Subtraction<F1, F2>
-where
-    F1: Function3,
-    F2: Function3,
-{
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        self.0.eval(x, y, z) - self.1.eval(x, y, z)
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Multiplication<F1, F2>(pub F1, pub F2);
-
-impl<F1, F2> Function3 for Multiplication<F1, F2>
-where
-    F1: Function3,
-    F2: Function3,
-{
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        self.0.eval(x, y, z) * self.1.eval(x, y, z)
-    }
-}
-
-#[derive(Clone, Copy)]
-pub struct Division<F1, F2>(pub F1, pub F2);
-
-impl<F1, F2> Function3 for Division<F1, F2>
-where
-    F1: Function3,
-    F2: Function3,
-{
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        self.0.eval(x, y, z) / self.1.eval(x, y, z)
-    }
-}
-
-/// Apply a translation on the x,y,z domain.
-#[derive(Clone, Copy)]
-pub struct Translate3<F: Function3>(pub F, pub f32, pub f32, pub f32);
-
-impl<F> Function3 for Translate3<F>
-where
-    F: Function3,
-{
-    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        let Translate3(ref f, dx, dy, dz) = self;
+        let Translate(ref f, dx, dy, dz) = self;
         f.eval(x - dx, y - dy, z - dz)
     }
 }
 
-/// Apply a scale on the x,y,z domain.
+/// Unifromly scale an implicit function preserving SDF property
 #[derive(Clone, Copy)]
-pub struct Scale3<F: Function3>(pub F, pub f32, pub f32, pub f32);
+pub struct Scale<F: Function>(pub F, pub f32);
 
-impl<F> Function3 for Scale3<F>
+impl<F> Function for Scale<F>
 where
-    F: Function3,
+    F: Function,
 {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
-        let Scale3(ref f, sx, sy, sz) = self;
-        f.eval(x / sx, y / sy, z / sz)
+        let Scale(ref f, s) = self;
+        s * f.eval(x / s, y / s, z / s)
     }
 }
 
-#[allow(non_snake_case)]
-pub fn C(c: f32) -> Expression<VarC> {
-    Expression(VarC(c))
-}
-const X: Expression<VarX> = Expression(VarX);
-const Y: Expression<VarY> = Expression(VarY);
-const Z: Expression<VarZ> = Expression(VarZ);
+/// Set union of two implicit functions, only SDF-estimate property is presered
+#[derive(Clone, Copy)]
+pub struct Union<F1: Function, F2: Function>(pub F1, pub F2);
 
-impl<F1, F2> ops::Add<F2> for Expression<F1>
+impl<F1, F2> Function for Union<F1, F2>
 where
-    F1: Function3,
-    F2: Function3,
+    F1: Function,
+    F2: Function,
 {
-    type Output = Expression<Addition<F1, F2>>;
-
-    fn add(self, rhs: F2) -> Self::Output {
-        Expression(Addition(self.0, rhs))
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        let Union(ref f1, ref f2) = self;
+        let a = f1.eval(x, y, z);
+        let b = f2.eval(x, y, z);
+        min(a,b)
     }
 }
 
-impl<F1> ops::Add<f32> for Expression<F1>
+/// Set intersection of two implicit functions, only SDF-estimate property is presered
+#[derive(Clone, Copy)]
+pub struct Intersection<F1: Function, F2: Function>(pub F1, pub F2);
+
+impl<F1, F2> Function for Intersection<F1, F2>
 where
-    F1: Function3,
+    F1: Function,
+    F2: Function,
 {
-    type Output = Expression<Addition<F1, VarC>>;
-
-    fn add(self, rhs: f32) -> Self::Output {
-        Expression(Addition(self.0, VarC(rhs)))
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        let Intersection(ref f1, ref f2) = self;
+        let a = f1.eval(x, y, z);
+        let b = f2.eval(x, y, z);
+        max(a,b)
     }
 }
 
-impl<F1, F2> ops::Sub<F2> for Expression<F1>
+/// Set difference of two implicit functions, only SDF-estimate property is presered
+#[derive(Clone, Copy)]
+pub struct Difference<F1: Function, F2: Function>(pub F1, pub F2);
+
+impl<F1, F2> Function for Difference<F1, F2>
 where
-    F1: Function3,
-    F2: Function3,
+    F1: Function,
+    F2: Function,
 {
-    type Output = Expression<Subtraction<F1, F2>>;
-
-    fn sub(self, rhs: F2) -> Self::Output {
-        Expression(Subtraction(self.0, rhs))
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        let Difference(ref f1, ref f2) = self;
+        let a = f1.eval(x, y, z);
+        let b = f2.eval(x, y, z);
+        max(a,-b)
     }
 }
 
-impl<F1> ops::Sub<f32> for Expression<F1>
+/// Blend two implicit functions, only SDF-estimate property is presered
+#[derive(Clone, Copy)]
+pub struct Blend<F1: Function, F2: Function>(pub F1, pub F2, f32);
+
+impl<F1, F2> Function for Blend<F1, F2>
 where
-    F1: Function3,
+    F1: Function,
+    F2: Function,
 {
-    type Output = Expression<Subtraction<F1, VarC>>;
-
-    fn sub(self, rhs: f32) -> Self::Output {
-        Expression(Subtraction(self.0, VarC(rhs)))
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        let Blend(ref f1, ref f2, w) = self;
+        let a = f1.eval(x, y, z);
+        let b = f2.eval(x, y, z);
+        (1. - w) * a + w * b
     }
 }
 
-impl<F1, F2> ops::Mul<F2> for Expression<F1>
+/// Blend two implicit functions, only SDF-estimate property is presered
+#[derive(Clone, Copy)]
+pub struct MinMaxBlend<F1: Function, F2: Function>(pub F1, pub F2, f32);
+
+impl<F1, F2> Function for MinMaxBlend<F1, F2>
 where
-    F1: Function3,
-    F2: Function3,
+    F1: Function,
+    F2: Function,
 {
-    type Output = Expression<Multiplication<F1, F2>>;
-
-    fn mul(self, rhs: F2) -> Self::Output {
-        Expression(Multiplication(self.0, rhs))
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        let MinMaxBlend(ref f1, ref f2, w) = self;
+        let a = f1.eval(x, y, z);
+        let b = f2.eval(x, y, z);
+        let d = length(x,y,z);
+        let w1 = max(0,1. - d);
+        let w2 = min(1,d);
+        w1 * a + w2 * b
     }
 }
 
-impl<F> ops::Mul<f32> for Expression<F>
+impl<T> Function for T
 where
-    F: Function3,
+    T: Copy + Fn(f32, f32, f32) -> f32,
 {
-    type Output = Expression<Multiplication<F, VarC>>;
-
-    fn mul(self, rhs: f32) -> Self::Output {
-        Expression(Multiplication(self.0, VarC(rhs)))
+    fn eval(&self, x: f32, y: f32, z: f32) -> f32 {
+        self(x, y, z)
     }
 }
 
-impl<F> ops::Mul<F> for VarC
-where
-    F: Function3,
-{
-    type Output = Expression<Multiplication<VarC, F>>;
+pub mod sdf {
+    use super::Function;
 
-    fn mul(self, rhs: F) -> Self::Output {
-        Expression(Multiplication(self, rhs))
+    pub fn sphere(r: f32) -> impl Function {
+        move |x: f32, y: f32, z: f32| (x * x + y * y + z * z).sqrt() - r
     }
+
+    pub fn sphere(r: f32) -> impl Function {
+    return length(max(d,0.0))
+         + min(max(d.x,max(d.y,d.z)),0.0);
 }
 
-impl<F1, F2> ops::Div<F2> for Expression<F1>
-where
-    F1: Function3,
-    F2: Function3,
-{
-    type Output = Expression<Division<F1, F2>>;
+/// non-sdf but nice implicit functions
+pub mod fun {
+    //use super::Function;
 
-    fn div(self, rhs: F2) -> Self::Output {
-        Expression(Division(self.0, rhs))
+    pub fn heart(x: f32, y: f32, z: f32) -> f32 {
+        let a = x * x + y * y + 2. * z * z - 1.;
+        let b = x * x * y * y * y;
+        a * a * a - b
     }
-}
-
-impl<F1> ops::Div<f32> for Expression<F1>
-where
-    F1: Function3,
-{
-    type Output = Expression<Division<F1, VarC>>;
-
-    fn div(self, rhs: f32) -> Self::Output {
-        Expression(Division(self.0, VarC(rhs)))
-    }
-}
-
-pub struct Quadratic;
-
-impl Quadratic {
-    pub fn sphere(radius: f32) -> impl Function3 {
-        X * X + Y * Y + Z * Z - radius
-    }
-
-    pub fn cone() -> impl Function3 {
-        X * X + Y * Y - Z * Z
-    }
-
-    pub fn cylinder(radius: f32) -> impl Function3 {
-        X * X + Y * Y - radius
-    }
-}
-
-pub struct FunFunction;
-
-impl FunFunction {
-    pub fn heart() -> impl Function3 {
-        let a = X * X + Y * Y + VarC(2.) * Z * Z - 1.;
-        let b = X * X * Y * Y * Y;
+    pub fn heart2(x: f32, y: f32, z: f32) -> f32 {
+        let a = x * x + y * y * (9. / 4.) + z * z - 1.;
+        let b = x * x * z * z * z + y * y * z * z * z * (9. / 80.);
         a * a * a - b
     }
 
-    pub fn farkas() -> impl Function3 {
-        Z + X / Y * Z * X
+    pub fn farkas(x: f32, y: f32, z: f32) -> f32 {
+        z + x / y * z * x
     }
 
-    pub fn farkas2() -> impl Function3 {
-        Z * X + Y / Z * Y + X * X * Z + X
+    pub fn farkas2(x: f32, y: f32, z: f32) -> f32 {
+        z * x + y / z * y + x * x * z + x
     }
 
-    pub fn farkas3() -> impl Function3 {
-        X * Y + Z / Y * Y + Z + Z * X / X + Y * X + X * Y + Y * X / Z * X
+    pub fn farkas3(x: f32, y: f32, z: f32) -> f32 {
+        x * y + z / y * y + z + z * x / x + y * x + x * y + y * x / z * x
     }
 
-    pub fn farkas4() -> impl Function3 {
-        X * X * X * X * X * X * X * X * X * X * Y + Z / X + X + Y - Y * Z + Z
+    pub fn farkas4(x: f32, y: f32, z: f32) -> f32 {
+        x * x * x * x * x * x * x * x * x * x * y + z / x + x + y - y * z + z
     }
 
-    pub fn farkas5() -> impl Function3 {
-        X * X * X * X * X * X * X * Z + Z / Y + Z * Y
+    pub fn farkas5(x: f32, y: f32, z: f32) -> f32 {
+        x * x * x * x * x * x * x * z + z / y + z * y
     }
 
-    pub fn farkas6() -> impl Function3 {
-        Z + X * X / Y * X + X / Z / Z + Y + X * Y + X * Z + Y / X + Z * X
+    pub fn farkas6(x: f32, y: f32, z: f32) -> f32 {
+        z + x * x / y * x + x / z / z + y + x * y + x * z + y / x + z * x
     }
 }

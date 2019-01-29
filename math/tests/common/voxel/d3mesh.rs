@@ -32,7 +32,7 @@ impl<'a> IntoD3Data for &'a D3VoxelMesh {
         println!("indices cnt:{}", self.indices.len());
         tr.add_indexed_mesh_instance(
             self.vertices.iter().map(|v| (v.position.x, v.position.y, v.position.z)),
-            /*d3_skip_attributes(),*/ self.vertices.iter().map(|v| (v.normal.x, v.normal.y, v.normal.z)),
+            d3_skip_attributes(), /*self.vertices.iter().map(|v| (v.normal.x, v.normal.y, v.normal.z)),*/
             self.indices.iter().map(|&v| v),
             D3Location::Identity,
         );

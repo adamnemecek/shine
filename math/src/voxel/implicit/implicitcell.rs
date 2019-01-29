@@ -1,10 +1,10 @@
-use crate::voxel::implicit::Function3;
+use crate::voxel::implicit::function::Function;
 use crate::voxel::Cell;
 
 /// Generate function from implicit function.
 pub struct ImplicitCell<F>
 where
-    F: Function3,
+    F: Function,
 {
     lod: usize,
     resolution: (usize, usize, usize),
@@ -14,7 +14,7 @@ where
 
 impl<F> ImplicitCell<F>
 where
-    F: Function3,
+    F: Function,
 {
     pub fn new(function: F) -> ImplicitCell<F> {
         ImplicitCell {
@@ -62,7 +62,7 @@ where
 
 impl<F> Cell for ImplicitCell<F>
 where
-    F: Function3,
+    F: Function,
 {
     fn lod(&self) -> usize {
         self.lod
