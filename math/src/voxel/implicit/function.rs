@@ -1,7 +1,9 @@
 use std::cmp;
 
 //https://www.iquilezles.org/www/articles/distfunctions/distfunctions.htm
-//http://www.hyperfun.org/HOMA08/48890118.pdf
+// http://www.hyperfun.org/HOMA08/48890118.pdf
+//http://vcgl.jacobs-university.de/wp-content/uploads/2010/07/molchanov10_eurovis267.pdf
+//https://pdfs.semanticscholar.org/d27e/141900977ba4a0eafe19fd62e24a2d6af123.pdf
 
 pub trait Function: Copy {
     fn eval(&self, x: f32, y: f32, z: f32) -> f32;
