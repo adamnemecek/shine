@@ -1,35 +1,35 @@
-use nalgebra_glm::{Vec2, Vec3};
+use nalgebra_glm as glm;
 
 pub struct Vertex {
-    pub position: Vec3,
-    pub normal: Vec3,
-    pub tangent: Vec3,
-    pub uv: Vec2,
+    pub position: glm::Vec3,
+    pub normal: glm::Vec3,
+    pub tangent: glm::Vec3,
+    pub uv: glm::Vec2,
 }
 
 impl Vertex {
     pub fn new() -> Vertex {
         Vertex {
-            position: Vec3::new(0., 0., 0.),
-            normal: Vec3::new(0., 0., 0.),
-            tangent: Vec3::new(0., 0., 0.),
-            uv: Vec2::new(0., 0.),
+            position: glm::Vec3::new(0., 0., 0.),
+            normal: glm::Vec3::new(0., 0., 0.),
+            tangent: glm::Vec3::new(0., 0., 0.),
+            uv: glm::Vec2::new(0., 0.),
         }
     }
 
-    pub fn with_position(self, position: Vec3) -> Self {
+    pub fn with_position(self, position: glm::Vec3) -> Self {
         Vertex { position, ..self }
     }
 
-    pub fn with_normal(self, normal: Vec3) -> Self {
+    pub fn with_normal(self, normal: glm::Vec3) -> Self {
         Vertex { normal, ..self }
     }
 
-    pub fn with_tangent(self, tangent: Vec3) -> Self {
+    pub fn with_tangent(self, tangent: glm::Vec3) -> Self {
         Vertex { tangent, ..self }
     }
 
-    pub fn with_uv(self, uv: Vec2) -> Self {
+    pub fn with_uv(self, uv: glm::Vec2) -> Self {
         Vertex { uv, ..self }
     }
 }

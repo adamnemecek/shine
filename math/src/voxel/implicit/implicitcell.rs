@@ -1,5 +1,6 @@
 use crate::voxel::implicit::function::Function;
 use crate::voxel::Cell;
+use nalgebra_glm as glm;
 
 /// Generate function from implicit function.
 pub struct ImplicitCell<F>
@@ -77,26 +78,23 @@ where
             unimplemented!("only delta_lod == 0 is supported");
         }
 
-        let (rx, ry, rz) = (
+        let resolution = glm::vec3(
             (self.resolution.0 - 1) as f32,
             (self.resolution.1 - 1) as f32,
             (self.resolution.2 - 1) as f32,
         );
-        let (sx, sy, sz) = ((self.domain.0).0, (self.domain.1).0, (self.domain.2).0);
-        let (ex, ey, ez) = ((self.domain.0).1, (self.domain.1).1, (self.domain.2).1);
+        let start = glm::vec3((self.domain.0).0, (self.domain.1).0, (self.domain.2).0);
+        let end = glm::vec3((self.domain.0).1, (self.domain.1).1, (self.domain.2).1);
 
+        let p = glm::vec3(x as f32, y as f32, z as f32);
         // map from [0,resolution-1] -> [0,1]
-        let x = (x as f32) / rx;
-        let y = (y as f32) / ry;
-        let z = (z as f32) / rz;
-
+        let p = glm::vec3(p.x / resolution.x, p.y / resolution.y, p.z / resolution.z);
         // map from [0,1] -> [domain.start,domain.end]
-        let x = x * (ex - sx) + sx;
-        let y = y * (ey - sy) + sy;
-        let z = z * (ez - sz) + sz;
+        let d = end - start;
+        let p = glm::vec3(p.x * d.x, p.y * d.y, p.z * d.z) + start;
 
         // eval function
-        let v = self.function.eval(x, y, z);
+        let v = self.function.eval(&p);
 
         // fixed point
         let l = (1 << 14) as f32;

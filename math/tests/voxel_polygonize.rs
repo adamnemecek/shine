@@ -1,6 +1,7 @@
 mod common;
 
 use self::common::voxel_prelude::*;
+use nalgebra_glm as glm;
 use shine_math::voxel::analyze::Info;
 use shine_math::voxel::data::DataCell;
 use shine_math::voxel::implicit::function::*;
@@ -15,17 +16,33 @@ fn test_cubic() {
 
     let mut transvoxel = Transvoxel::new();
     let mut cube = Cubic::new();
+    let ff = sdf::vertical_capsule(0.8, 0.3);
 
-    //let cell = ImplicitCell::new(sdf::sphere(1.5));
+    println!("-0.3 {}", ff.eval(&glm::vec3(0.,-0.8,0.)));
+    println!("-0.3 {}", ff.eval(&glm::vec3(0.,0.8,0.)));
+    println!("0 {}", ff.eval(&glm::vec3(0.,-1.1,0.)));
+    println!("0 {}", ff.eval(&glm::vec3(0.,1.1,0.)));
+    println!("0.4 {}", ff.eval(&glm::vec3(0.,0.,0.)));
+
+    //let cell = ImplicitCell::new(sdf::sphere(0.8));
+    //let cell = ImplicitCell::new(sdf::box_(0.4, 0.5, 0.6));
+    //let cell = ImplicitCell::new(sdf::round_box(0.4, 0.5, 0.6, 0.3));
+    let cell = ImplicitCell::new(sdf::capsule(glm::vec3(-0.8, -0.8, -0.8), glm::vec3(0.8, 0.7, 0.7), 0.2));
+    let cell = ImplicitCell::new(sdf::vertical_capsule(0.8, 0.3));
+    //let cell = ImplicitCell::new(sdf::torus(0.8, 0.3));
+    //let cell = ImplicitCell::new(sdf::cylinder(0.8));
+
+    //let cell = ImplicitCell::new(sdf::box_(glm::vec3(0.3, 0.3, 0.3)));
+    //let cell = ImplicitCell::new(sdf::round_box(glm::vec3(0.8, 0.8, 0.8), 0.3));
     /*let cell = ImplicitCell::new(difference(
         sdf::sphere(0.5).translated(0.25, 0., 0.),
         sdf::sphere(0.25).translated(-0.25, 0., 0.),
     ));*/
-    let cell = ImplicitCell::new(min_max_blend(
+    /*let cell = ImplicitCell::new(min_max_blend(
         sdf::sphere(0.5).translated(0.5, 0., 0.),
         sdf::sphere(0.25).translated(-0.25, 0., 0.),
         0.5,
-    ));
+    ));*/
     println!("extremals: {:?}", cell.extremals());
 
     let mut mesh = D3VoxelMesh::new();
