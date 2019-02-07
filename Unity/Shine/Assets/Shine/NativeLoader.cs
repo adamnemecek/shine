@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -11,6 +10,7 @@ namespace Shine
     public class LibraryInfo
     {
         public string Name { get; set; }
+        public string Path { get; set; }
         public bool IsLoaded { get; set; }
     }
 
@@ -24,20 +24,21 @@ namespace Shine
 
     public class NativeLibrary : INativeLibrary
     {
-        public delegate IntPtr LoadLibraryDelegate(string name);
+        public delegate (string, IntPtr) LoadLibraryDelegate(string name);
         public delegate void UnloadLibraryDelegate(IntPtr addr);
         public delegate IntPtr SymbolLookupDelegate(IntPtr addr, string name);
 
-        public string LibraryPath { get; }
+        public string Name { get; }
 
         protected IntPtr library_;
+        protected string libraryPath_;
         protected LoadLibraryDelegate loadLibrary_;
         protected UnloadLibraryDelegate unloadLibrary_;
         protected SymbolLookupDelegate symbolLookup_;
 
-        public NativeLibrary(string path, LoadLibraryDelegate loadLibrary, UnloadLibraryDelegate unloadLibrary, SymbolLookupDelegate getProcAddress)
+        public NativeLibrary(string name, LoadLibraryDelegate loadLibrary, UnloadLibraryDelegate unloadLibrary, SymbolLookupDelegate getProcAddress)
         {
-            LibraryPath = path;
+            Name = name;
             loadLibrary_ = loadLibrary;
             unloadLibrary_ = unloadLibrary;
             symbolLookup_ = getProcAddress;
@@ -45,14 +46,16 @@ namespace Shine
 
         public void Load()
         {
-            Debug.Log($"Loading library {LibraryPath}");
+            Debug.Log($"Loading library {Name}");
             if (library_ != IntPtr.Zero)
             {
                 Debug.Log($"Load library done, already loaded");
                 return;
             }
 
-            library_ = loadLibrary_(LibraryPath);
+            var load = loadLibrary_(Name);
+            libraryPath_ = load.Item1;
+            library_ = load.Item2;
             Debug.Log($"Loading symbols...");
             LoadSymbols();
             Debug.Log($"Load library done.");
@@ -60,8 +63,9 @@ namespace Shine
 
         public void Unload()
         {
-            Debug.Log($"Unloading library {LibraryPath}");
-            if (library_ == IntPtr.Zero) {
+            Debug.Log($"Unloading library {Name}");
+            if (library_ == IntPtr.Zero)
+            {
                 Debug.Log($"Unload library done, already unloaded.");
                 return;
             }
@@ -70,6 +74,7 @@ namespace Shine
             UnloadSymbols();
             unloadLibrary_(library_);
             library_ = IntPtr.Zero;
+            libraryPath_ = null;
             Debug.Log($"Unload library done.");
         }
 
@@ -77,7 +82,8 @@ namespace Shine
         {
             return new LibraryInfo
             {
-                Name = LibraryPath,
+                Name = Name,
+                Path = libraryPath_,
                 IsLoaded = library_ != IntPtr.Zero,
             };
         }
@@ -92,8 +98,8 @@ namespace Shine
     {
         public T Api { get; }
 
-        public NativeLibrary(string path, LoadLibraryDelegate loadLibrary, UnloadLibraryDelegate unloadLibrary, SymbolLookupDelegate getProcAddress)
-            : base(path, loadLibrary, unloadLibrary, getProcAddress)
+        public NativeLibrary(string name, LoadLibraryDelegate loadLibrary, UnloadLibraryDelegate unloadLibrary, SymbolLookupDelegate getProcAddress)
+            : base(name, loadLibrary, unloadLibrary, getProcAddress)
         {
             Api = new T();
         }
@@ -102,7 +108,7 @@ namespace Shine
         {
             foreach (var prop in GetDelegates(typeof(T)))
             {
-                Debug.Log($"Loading symbol {prop.Name} from {LibraryPath}");
+                Debug.Log($"Loading symbol {prop.Name} from {Name}");
                 var callback = symbolLookup_(library_, prop.Name);
                 if (callback == IntPtr.Zero)
                     throw new Exception($"Cannot load symbol: {prop.Name}");
@@ -114,16 +120,17 @@ namespace Shine
         {
             foreach (var prop in GetDelegates(typeof(T)))
             {
-                Debug.Log($"Unloading symbol {prop.Name} from {LibraryPath}");
+                Debug.Log($"Unloading symbol {prop.Name} from {Name}");
                 prop.SetValue(Api, null);
             }
-        }
+        }      
 
         private IEnumerable<FieldInfo> GetDelegates(Type type)
         {
             return type.GetFields(BindingFlags.Instance | BindingFlags.Public);
         }
     }
+
 
 
     /// <summary>
@@ -134,18 +141,21 @@ namespace Shine
     {
         public const string DLL_PATH_PATTERN_NAME_MACRO = "{name}";
         public const string DLL_PATH_PATTERN_ASSETS_MACRO = "{assets}";
-        public const string DLL_PATH_PATTERN_PROJECT_MACRO = "{proj}";
+        public const string DLL_PATH_PATTERN_PROJECT_MACRO = "{project}";
+        public const string DLL_PATH_PATTERN_DEVEL_MACRO = "{devel}";
 
         public static string NativeLibraryPath { get; set; } =
 #if UNITY_STANDALONE_WIN
-            "{assets}/Plugin/{name}.dll";
+            "{devel}/{name}.dll";
 #elif UNITY_STANDALONE_LINUX
             "{assets}/Plugins/{name}.so",
 #endif
 
-        public static T LoadNativeLibrary<T>(string libName)
+        public static T LoadNativeLibrary<T>()
             where T : class, new()
         {
+            var libName = GetLibraryName(typeof(T));
+
             lock (libraries_)
             {
                 INativeLibrary lib = null;
@@ -219,13 +229,21 @@ namespace Shine
             throw new Exception("LoadLibrary failed: unknown OS");
         }
 
-
         private static string GetDllPath(string dllName)
         {
             return NativeLibraryPath
                 .Replace(DLL_PATH_PATTERN_NAME_MACRO, dllName)
                 .Replace(DLL_PATH_PATTERN_ASSETS_MACRO, Application.dataPath)
-                .Replace(DLL_PATH_PATTERN_PROJECT_MACRO, Application.dataPath + "/../");
+                .Replace(DLL_PATH_PATTERN_PROJECT_MACRO, Application.dataPath + "/../")
+                .Replace(DLL_PATH_PATTERN_DEVEL_MACRO, Application.dataPath + "/../../../target/debug");
+        }
+
+        private static string GetLibraryName(Type type)
+        {
+            var attrib = type.GetCustomAttribute<LibraryNameAttribute>();
+            if (attrib == null)
+                throw new Exception($"Missing library name for {type.Name}");
+            return attrib.LibraryName;
         }
 
 
@@ -241,42 +259,28 @@ namespace Shine
         private static NativeLibrary<T> CreateWindowsLibrary<T>(string libName)
             where T : class, new()
         {
-            string libFile = libName + ".dll";
-            string rootDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-
-            var paths = new[] { GetDllPath(libName) };
-
-            foreach (var path in paths)
-            {
-                if (path == null)
-                    continue;
-
-                if (File.Exists(path))
-                    return new NativeLibrary<T>(path,
-                        x =>
-                        {
-                            var handle = LoadLibrary(x);
-                            if (handle == IntPtr.Zero)
-                            {
-                                var error = Marshal.GetLastWin32Error();
-                                throw new Exception($"LoadLibrary failed: unable to load dll {x}: {string.Format("0x{0:x2}", error)}");
-                            }
-                            return handle;
-                        },
-                        x =>
-                        {
-                            var res = FreeLibrary(x);
-                            if (!res)
-                            {
-                                var error = Marshal.GetLastWin32Error();
-                                throw new Exception($"FreeLibrary failed: unable to unload dll {x}: {string.Format("0x{0:x2}", error)}");
-                            }
-                        },
-                        GetProcAddress);
-            }
-
-            throw new Exception("LoadLibrary failed: unable to locate library " + libFile + ". Searched: " + paths.Aggregate((a, b) => a + "; " + b));
+            return new NativeLibrary<T>(libName,
+               x =>
+               {
+                   var path = GetDllPath(x);
+                   var handle = LoadLibrary(path);
+                   if (handle == IntPtr.Zero)
+                   {
+                       var error = Marshal.GetLastWin32Error();
+                       throw new Exception($"LoadLibrary failed: unable to load library {x}: {path}: {string.Format("0x{0:x2}", error)}");
+                   }
+                   return (path, handle);
+               },
+                x =>
+                {
+                    var res = FreeLibrary(x);
+                    if (!res)
+                    {
+                        var error = Marshal.GetLastWin32Error();
+                        throw new Exception($"FreeLibrary failed: unable to unload library {x}: {string.Format("0x{0:x2}", error)}");
+                    }
+                },
+                GetProcAddress);
         }
 
 
@@ -295,34 +299,20 @@ namespace Shine
         private static NativeLibrary<T> CreatePosixLibrary<T>(string libName)
             where T : class, new()
         {
-            const int RTLD_NOW = 2;
-            string libFile = "lib" + libName.ToLower() + ".so";
-            string rootDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            string assemblyDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-
-            var paths = new[] { GetDllPath(libName) };
-
-            foreach (var path in paths)
-            {
-                if (path == null)
-                    continue;
-
-                if (File.Exists(path))
-                    return new NativeLibrary<T>(path,
-                        x =>
-                        {
-                            var handle = dlopen(x, RTLD_NOW);
-                            return handle;
-                        },
-                        x =>
-                        {
-                            if (dlclose(x) != 0)
-                                throw new Exception($"dlclose failed: unable to unload dll {x}");
-                        }
-                        , dlsym);
-            }
-
-            throw new Exception("dlopen failed: unable to locate library " + libFile + ". Searched: " + paths.Aggregate((a, b) => a + "; " + b));
+            return new NativeLibrary<T>(libName,
+                x =>
+                {
+                    const int RTLD_NOW = 2;
+                    var path = GetDllPath(x);
+                    var handle = dlopen(path, RTLD_NOW);
+                    return (path, handle);
+                },
+                x =>
+                {
+                    if (dlclose(x) != 0)
+                        throw new Exception($"dlclose failed: unable to unload dll {x}");
+                }
+                , dlsym);
         }
     }
 }

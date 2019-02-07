@@ -9,7 +9,7 @@ keywords = ["component system", "game"]
 edition = "2018"
 
 [workspace]
-members = [ "testutils", "store", "graph", "graph-macro", "gltf", "gltf-macro", "ecs", "math" ]
+members = [ "testutils", "store", "graph", "graph-macro", "gltf", "gltf-macro", "ecs", "math", "Unity" ]
 
 [dependencies]
 log = "*"
@@ -21,3 +21,4 @@ shine-math = {path = "math"}
 shine-gltf = {path = "gltf"}
 #shine-render = {path = "render"}
 shine-ecs = {path = "ecs"}
+shine-unity = {path = "Unity"}

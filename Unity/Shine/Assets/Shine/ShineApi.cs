@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace Shine
 {
+    [LibraryName("shine")]
     internal class ShineApi
     {
         public struct MeshInfo
