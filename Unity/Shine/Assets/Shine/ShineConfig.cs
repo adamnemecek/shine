@@ -3,42 +3,25 @@ using UnityEngine;
 
 namespace Shine
 {
-
-    public class ShineConfig : MonoBehaviour
-    {
+    [InitializeOnLoadAttribute]
+    public static class ShineConfig {
         public const string DLL_PATH_PATTERN_NAME_MACRO = "{name}";
         public const string DLL_PATH_PATTERN_ASSETS_MACRO = "{assets}";
         public const string DLL_PATH_PATTERN_PROJECT_MACRO = "{proj}";
 
+        public static NativeLoader NativeLoader = new NativeLoader();
+    }
+
+    public class ShineConfigProps : MonoBehaviour
+    {
         private void OnApplicationQuit()
         {
-            NativeLoader.UnloadAll();
+            ShineConfig.NativeLoader.UnloadAll();
         }
 
         private void OnEnable()
         {
-            if (!EnsureUnique())
-                return;
-
-            NativeLoader.LoadAll();
-        }
-
-        private static ShineConfig singletonInstance_ = null;
-
-        private bool EnsureUnique()
-        {
-            if (singletonInstance_ != null)
-            {
-                if (singletonInstance_ != this)
-                {
-                    Destroy(gameObject);
-                }
-                return false;
-            }
-            singletonInstance_ = this;
-
-            DontDestroyOnLoad(gameObject);
-            return true;
+            ShineConfig.NativeLoader.LoadAll();
         }
     }
 }

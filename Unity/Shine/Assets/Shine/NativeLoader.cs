@@ -137,21 +137,21 @@ namespace Shine
     ///  Helper to load/unload libraries. It is safe to load/unload multiple lib from any thread but using the native library during load/unload
     ///  is undefined behavior.
     /// </summary>
-    public static class NativeLoader
+    public class NativeLoader
     {
         public const string DLL_PATH_PATTERN_NAME_MACRO = "{name}";
         public const string DLL_PATH_PATTERN_ASSETS_MACRO = "{assets}";
         public const string DLL_PATH_PATTERN_PROJECT_MACRO = "{project}";
         public const string DLL_PATH_PATTERN_DEVEL_MACRO = "{devel}";
 
-        public static string NativeLibraryPath { get; set; } =
+        public string NativeLibraryPath { get; set; } =
 #if UNITY_STANDALONE_WIN
             "{devel}/{name}.dll";
 #elif UNITY_STANDALONE_LINUX
             "{assets}/Plugins/{name}.so",
 #endif
 
-        public static T LoadNativeLibrary<T>()
+        public T LoadNativeLibrary<T>()
             where T : class, new()
         {
             var libName = GetLibraryName(typeof(T));
@@ -170,7 +170,7 @@ namespace Shine
             }
         }
 
-        public static bool Any(Func<INativeLibrary, bool> pred)
+        public bool Any(Func<INativeLibrary, bool> pred)
         {
             lock (libraries_)
             {
@@ -178,7 +178,7 @@ namespace Shine
             }
         }
 
-        public static void Foreach(Action<INativeLibrary> pred)
+        public void Foreach(Action<INativeLibrary> pred)
         {
             lock (libraries_)
             {
@@ -189,30 +189,30 @@ namespace Shine
             }
         }
 
-        public static void LoadAll()
+        public void LoadAll()
         {
             Debug.Log("Loading all libraries...");
             Foreach(x => x.Load());
             Debug.Log("Loading all libraries done.");
         }
 
-        public static void UnloadAll()
+        public void UnloadAll()
         {
             Debug.Log("Unloading all libraries...");
             Foreach(x => x.Unload());
             Debug.Log("Unloading all libraries done.");
         }
 
-        public static List<LibraryInfo> GetInfo()
+        public List<LibraryInfo> GetInfo()
         {
             var info = new List<LibraryInfo>();
             Foreach(x => info.Add(x.GetInfo()));
             return info;
         }
 
-        private static Dictionary<string, INativeLibrary> libraries_ = new Dictionary<string, INativeLibrary> { };
+        private Dictionary<string, INativeLibrary> libraries_ = new Dictionary<string, INativeLibrary> { };
 
-        private static NativeLibrary<T> CreateNativeLibrary<T>(string libName)
+        private NativeLibrary<T> CreateNativeLibrary<T>(string libName)
             where T : class, new()
         {
             if (Environment.OSVersion.Platform.ToString().Contains("Win32"))
@@ -229,7 +229,7 @@ namespace Shine
             throw new Exception("LoadLibrary failed: unknown OS");
         }
 
-        private static string GetDllPath(string dllName)
+        private string GetDllPath(string dllName)
         {
             return NativeLibraryPath
                 .Replace(DLL_PATH_PATTERN_NAME_MACRO, dllName)
@@ -238,7 +238,7 @@ namespace Shine
                 .Replace(DLL_PATH_PATTERN_DEVEL_MACRO, Application.dataPath + "/../../../target/debug");
         }
 
-        private static string GetLibraryName(Type type)
+        private string GetLibraryName(Type type)
         {
             var attrib = type.GetCustomAttribute<LibraryNameAttribute>();
             if (attrib == null)
@@ -256,7 +256,7 @@ namespace Shine
         [DllImport("kernel32.dll")]
         private static extern IntPtr GetProcAddress(IntPtr hModule, String procname);
 
-        private static NativeLibrary<T> CreateWindowsLibrary<T>(string libName)
+        private NativeLibrary<T> CreateWindowsLibrary<T>(string libName)
             where T : class, new()
         {
             return new NativeLibrary<T>(libName,
@@ -296,7 +296,7 @@ namespace Shine
         [DllImport("libdl.so")]
         private static extern IntPtr dlsym(IntPtr handle, string symbol);
 
-        private static NativeLibrary<T> CreatePosixLibrary<T>(string libName)
+        private NativeLibrary<T> CreatePosixLibrary<T>(string libName)
             where T : class, new()
         {
             return new NativeLibrary<T>(libName,

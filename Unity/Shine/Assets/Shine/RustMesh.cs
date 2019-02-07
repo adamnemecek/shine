@@ -8,7 +8,7 @@ namespace Shine
     class RustMesh : IDisposable
     {
         private IntPtr mesh;
-        private static ShineApi ShineApi = NativeLoader.LoadNativeLibrary<ShineApi>();
+        private static ShineApi ShineApi = ShineConfig.NativeLoader.LoadNativeLibrary<ShineApi>();
 
         public RustMesh()
         {
