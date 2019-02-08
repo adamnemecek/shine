@@ -47,6 +47,10 @@ pub struct Mesh {
 }
 
 impl Mesh {
+    pub fn new() -> Mesh {
+        Default::default()
+    }
+    
     pub fn clear(&mut self) {
         self.vertices.clear();
         self.indices.clear();

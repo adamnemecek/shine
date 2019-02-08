@@ -10,7 +10,10 @@ edition = "2018"
 
 [lib]
 name = "shine"
-crate-type = ["dylib"]
+crate-type = ["cdylib"]
 
 [dependencies]
+nalgebra = "*"
+nalgebra-glm = "*"
+itertools = "*"
 shine-math = {path = "../math"}

@@ -241,48 +241,58 @@ pub mod sdf {
     pub fn vertical_capsule(height: f32, radius: f32) -> impl Function {
         move |p: &glm::Vec3| {
             let h = clamp_value(p.y, -height, height);
-            glm::length(&glm::vec3(p.x, p.y-h, p.z)) - radius
+            glm::length(&glm::vec3(p.x, p.y - h, p.z)) - radius
         }
     }
 }
-/*
+
 /// non-sdf but nice implicit functions
 pub mod fun {
-    //use super::Function;
+    use super::*;
 
     pub fn heart(p: &glm::Vec3) -> f32 {
+        let (x,y,z) = (p.x, p.y, p.z);
+
         let a = x * x + y * y + 2. * z * z - 1.;
         let b = x * x * y * y * y;
         a * a * a - b
     }
+
     pub fn heart2(p: &glm::Vec3) -> f32 {
+        let (x,y,z) = (p.x, p.y, p.z);
         let a = x * x + y * y * (9. / 4.) + z * z - 1.;
         let b = x * x * z * z * z + y * y * z * z * z * (9. / 80.);
         a * a * a - b
     }
 
     pub fn farkas(p: &glm::Vec3) -> f32 {
+        let (x,y,z) = (p.x, p.y, p.z);
         z + x / y * z * x
     }
 
     pub fn farkas2(p: &glm::Vec3) -> f32 {
+        let (x,y,z) = (p.x, p.y, p.z);
         z * x + y / z * y + x * x * z + x
     }
 
     pub fn farkas3(p: &glm::Vec3) -> f32 {
+        let (x,y,z) = (p.x, p.y, p.z);
         x * y + z / y * y + z + z * x / x + y * x + x * y + y * x / z * x
     }
 
     pub fn farkas4(p: &glm::Vec3) -> f32 {
+        let (x,y,z) = (p.x, p.y, p.z);
         x * x * x * x * x * x * x * x * x * x * y + z / x + x + y - y * z + z
     }
 
     pub fn farkas5(p: &glm::Vec3) -> f32 {
+        let (x,y,z) = (p.x, p.y, p.z);
         x * x * x * x * x * x * x * z + z / y + z * y
     }
 
     pub fn farkas6(p: &glm::Vec3) -> f32 {
+        let (x,y,z) = (p.x, p.y, p.z);
         z + x * x / y * x + x / z / z + y + x * y + x * z + y / x + z * x
     }
 }
-*/
+

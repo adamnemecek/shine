@@ -29,7 +29,11 @@ namespace Shine
         public get_mesh_info_delegate get_mesh_info;
 
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public unsafe delegate void fill_mesh_data_delegate(IntPtr meshId, Vector3* posArray, int posCount, int* indexArray, int indexCount);
+        public unsafe delegate void fill_mesh_data_delegate(IntPtr meshId, Vector3* posArray, int posCount, Vector3* normalArray, int normalCount, int* indexArray, int indexCount);
         public fill_mesh_data_delegate fill_mesh_data;
+
+        [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+        public delegate void polygonize_voxel_delegate(IntPtr meshId);
+        public polygonize_voxel_delegate polygonize_voxel;
     }
 }

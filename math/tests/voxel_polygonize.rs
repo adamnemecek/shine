@@ -18,11 +18,11 @@ fn test_cubic() {
     let mut cube = Cubic::new();
     let ff = sdf::vertical_capsule(0.8, 0.3);
 
-    println!("-0.3 {}", ff.eval(&glm::vec3(0.,-0.8,0.)));
-    println!("-0.3 {}", ff.eval(&glm::vec3(0.,0.8,0.)));
-    println!("0 {}", ff.eval(&glm::vec3(0.,-1.1,0.)));
-    println!("0 {}", ff.eval(&glm::vec3(0.,1.1,0.)));
-    println!("0.4 {}", ff.eval(&glm::vec3(0.,0.,0.)));
+    println!("-0.3 {}", ff.eval(&glm::vec3(0., -0.8, 0.)));
+    println!("-0.3 {}", ff.eval(&glm::vec3(0., 0.8, 0.)));
+    println!("0 {}", ff.eval(&glm::vec3(0., -1.1, 0.)));
+    println!("0 {}", ff.eval(&glm::vec3(0., 1.1, 0.)));
+    println!("0.4 {}", ff.eval(&glm::vec3(0., 0., 0.)));
 
     //let cell = ImplicitCell::new(sdf::sphere(0.8));
     //let cell = ImplicitCell::new(sdf::box_(0.4, 0.5, 0.6));
