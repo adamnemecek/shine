@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace Shine
 {
-    [CustomEditor(typeof(ShineConfigProps))]
+    [CustomEditor(typeof(ShineConfig))]
     public class ShineConfigEditor : Editor
     {
         private readonly GUIContent DLL_PATH_PATTERN_GUI_CONTENT = new GUIContent("Library path pattern",
@@ -17,7 +17,8 @@ namespace Shine
 
         public override void OnInspectorGUI()
         {
-            ShineConfig.NativeLoader.NativeLibraryPath = EditorGUILayout.TextField(DLL_PATH_PATTERN_GUI_CONTENT, ShineConfig.NativeLoader.NativeLibraryPath);
+            var t = (ShineConfig)this.target;
+            t.Options.NativeLibraryPath = EditorGUILayout.TextField(DLL_PATH_PATTERN_GUI_CONTENT, t.Options.NativeLibraryPath);
 
             if (EditorApplication.isPlaying)
             {
@@ -27,13 +28,13 @@ namespace Shine
 
             EditorGUILayout.Space();
 
-            var libInfos = ShineConfig.NativeLoader.GetInfo();
+            var libInfos = ShineGlobalContext.NativeLoader.GetInfo();
             if (!EditorApplication.isPaused)
             {
                 if (GUILayout.Button("Pause & Unload all libraries"))
                 {
                     EditorApplication.isPaused = true;
-                    ShineConfig.NativeLoader.UnloadAll();
+                    ShineGlobalContext.NativeLoader.UnloadAll();
                 }
             }
             else
@@ -58,7 +59,7 @@ namespace Shine
         {
             Debug.LogError(pauseState);
             if (pauseState == PauseState.Unpaused)
-                ShineConfig.NativeLoader.LoadAll();
+                ShineGlobalContext.NativeLoader.LoadAll();
         }
     }
 }

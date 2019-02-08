@@ -1,27 +1,41 @@
-﻿using UnityEditor;
-using UnityEngine;
+﻿using UnityEngine;
 
 namespace Shine
 {
-    [InitializeOnLoadAttribute]
-    public static class ShineConfig {
+    public class ShineConfig : MonoBehaviour
+    {
         public const string DLL_PATH_PATTERN_NAME_MACRO = "{name}";
         public const string DLL_PATH_PATTERN_ASSETS_MACRO = "{assets}";
         public const string DLL_PATH_PATTERN_PROJECT_MACRO = "{proj}";
 
-        public static NativeLoader NativeLoader = new NativeLoader();
-    }
+        public ShineConfigOptions Options = new ShineConfigOptions();
 
-    public class ShineConfigProps : MonoBehaviour
-    {
+        private static ShineConfig singletonInstance_ = null;
+
         private void OnApplicationQuit()
         {
-            ShineConfig.NativeLoader.UnloadAll();
+            ShineGlobalContext.NativeLoader.UnloadAll();
         }
 
         private void OnEnable()
         {
-            ShineConfig.NativeLoader.LoadAll();
+            // ensure uniqueness
+            if (singletonInstance_ != null)
+            {
+                if (singletonInstance_ != this)
+                {
+                    Destroy(gameObject);
+                }
+                return;
+            }
+            singletonInstance_ = this;
+
+            if (ShineGlobalContext.NativeLoader.NativeLibraryPath != Options.NativeLibraryPath)
+            {
+                ShineGlobalContext.NativeLoader.UnloadAll();
+                ShineGlobalContext.NativeLoader.NativeLibraryPath = Options.NativeLibraryPath;
+            }
+            ShineGlobalContext.NativeLoader.LoadAll();
         }
     }
 }

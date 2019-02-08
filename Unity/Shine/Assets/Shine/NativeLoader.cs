@@ -123,7 +123,7 @@ namespace Shine
                 Debug.Log($"Unloading symbol {prop.Name} from {Name}");
                 prop.SetValue(Api, null);
             }
-        }      
+        }
 
         private IEnumerable<FieldInfo> GetDelegates(Type type)
         {
@@ -144,12 +144,7 @@ namespace Shine
         public const string DLL_PATH_PATTERN_PROJECT_MACRO = "{project}";
         public const string DLL_PATH_PATTERN_DEVEL_MACRO = "{devel}";
 
-        public string NativeLibraryPath { get; set; } =
-#if UNITY_STANDALONE_WIN
-            "{devel}/{name}.dll";
-#elif UNITY_STANDALONE_LINUX
-            "{assets}/Plugins/{name}.so",
-#endif
+        public string NativeLibraryPath { get; set; }
 
         public T LoadNativeLibrary<T>()
             where T : class, new()
