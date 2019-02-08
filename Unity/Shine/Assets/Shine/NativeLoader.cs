@@ -144,7 +144,12 @@ namespace Shine
         public const string DLL_PATH_PATTERN_PROJECT_MACRO = "{project}";
         public const string DLL_PATH_PATTERN_DEVEL_MACRO = "{devel}";
 
-        public string NativeLibraryPath { get; set; }
+        public string NativeLibraryPath { get; set; } =
+#if UNITY_STANDALONE_WIN
+            "{devel}/{name}.dll";
+#elif UNITY_STANDALONE_LINUX
+            "{assets}/Plugins/{name}.so";
+#endif
 
         public T LoadNativeLibrary<T>()
             where T : class, new()
@@ -262,7 +267,7 @@ namespace Shine
                    if (handle == IntPtr.Zero)
                    {
                        var error = Marshal.GetLastWin32Error();
-                       throw new Exception($"LoadLibrary failed: unable to load library {x}: {path}: {string.Format("0x{0:x2}", error)}");
+                       throw new Exception($"LoadLibrary failed: unable to load library {x}: [{path}]: {string.Format("0x{0:x2}", error)}");
                    }
                    return (path, handle);
                },

@@ -18,7 +18,8 @@ namespace Shine
         public override void OnInspectorGUI()
         {
             var t = (ShineConfig)this.target;
-            t.Options.NativeLibraryPath = EditorGUILayout.TextField(DLL_PATH_PATTERN_GUI_CONTENT, t.Options.NativeLibraryPath);
+            t.NativeLibraryPath = EditorGUILayout.TextField(DLL_PATH_PATTERN_GUI_CONTENT, t.NativeLibraryPath);
+            EditorUtility.SetDirty(t);
 
             if (EditorApplication.isPlaying)
             {
@@ -28,13 +29,13 @@ namespace Shine
 
             EditorGUILayout.Space();
 
-            var libInfos = ShineGlobalContext.NativeLoader.GetInfo();
+            var libInfos = ShineConfig.NativeLoader.GetInfo();
             if (!EditorApplication.isPaused)
             {
                 if (GUILayout.Button("Pause & Unload all libraries"))
                 {
                     EditorApplication.isPaused = true;
-                    ShineGlobalContext.NativeLoader.UnloadAll();
+                    ShineConfig.NativeLoader.UnloadAll();
                 }
             }
             else
@@ -57,9 +58,8 @@ namespace Shine
 
         private static void OnPauseStateChanged(PauseState pauseState)
         {
-            Debug.LogError(pauseState);
             if (pauseState == PauseState.Unpaused)
-                ShineGlobalContext.NativeLoader.LoadAll();
+                ShineConfig.NativeLoader.LoadAll();
         }
     }
 }
