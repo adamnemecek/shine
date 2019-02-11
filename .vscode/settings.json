@@ -3,7 +3,4 @@
     "editor.formatOnSave": true,
     "rust-client.updateOnStartup": false,
     "rust.cfg_test": true,
-    "rust.features": [
-        "dx12"
-    ]
 }

@@ -11,9 +11,22 @@ edition = "2018"
 [workspace]
 members = [ "testutils", "store", "graph", "graph-macro", "gltf", "gltf-macro", "ecs", "math", "Unity" ]
 
+[features]
+alma = []
+render-dx12 = ["rendy/dx12"]
+render-vulkan = ["rendy/vulkan"]
+default = ["render-vulkan"]
+
 [dependencies]
 log = "*"
 env_logger = "*"
+failure = "*"
+
+lazy_static = "*"
+
+gfx-hal = {version = "*"}
+winit = "*"
+rendy = {version = "*"}
 
 shine-store = {path = "store"}
 shine-graph = {path = "graph"}

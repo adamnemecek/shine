@@ -23,6 +23,9 @@
             "type": "shell",
             "label": "run",
             "command": "cargo",
+            "options": {
+                "cwd": "${workspaceRoot}"
+            },
             "args": [
                 "run",
             ],

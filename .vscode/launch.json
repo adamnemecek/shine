@@ -5,15 +5,9 @@
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
-            "preLaunchTask": "build test",
-            //"program": "${workspaceRoot}/target/debug/${workspaceRootFolderName}",
-            "program": "${workspaceRoot}/target/debug/deps/stub-55910677fa19fcc1.exe",
-            "args": [
-                "--nocapture",
-                //"--ignored",
-            ],
+            "preLaunchTask": "build",
+            "program": "${workspaceRoot}/target/debug/${workspaceRootFolderName}",
             "stopAtEntry": false,
-            "cwd": "${workspaceRoot}/testutils",
             "externalConsole": true
         }
     ]
