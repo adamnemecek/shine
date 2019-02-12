@@ -1,6 +1,6 @@
 use crate::geometry2::{InexactPredicates, Posf64};
 use crate::geometry2::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
-use crate::trace::Trace2;
+use crate::trace::Trace;
 use crate::triangulation::check::{Coloring, EdgeColoring, TracePosition, TriTraceMapping, VertexColoring};
 use crate::triangulation::graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
 use crate::triangulation::query::{TopologyQuery, VertexClue};
@@ -15,7 +15,7 @@ pub trait TriTraceControl {
     fn pause(&mut self);
 }
 
-pub trait TriTrace2: Trace2 {
+pub trait TriTrace2: Trace {
     fn trace_map_vertex(&self, v: VertexIndex, vcw: VertexIndex, vccw: VertexIndex) -> TracePosition;
 
     fn trace_vertex(&self, v: VertexIndex, msg: Option<&str>, color: Option<&VertexColoring>);
@@ -40,7 +40,7 @@ pub trait TriTrace2: Trace2 {
     }
 }
 
-impl<P, V, F, C> Trace2 for Triangulation<P, V, F, C>
+impl<P, V, F, C> Trace for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,
@@ -75,7 +75,7 @@ where
     default fn trace_graph(&self, _color: Option<&Coloring>) {}
 }
 
-impl<P, V, F, C> Trace2 for Triangulation<P, V, F, C>
+impl<P, V, F, C> Trace for Triangulation<P, V, F, C>
 where
     P: Position,
     V: Vertex<Position = P>,

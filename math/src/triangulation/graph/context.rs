@@ -1,5 +1,5 @@
 use crate::geometry2::{ExactPredicates, ExactReal, InexactPredicates, InexactReal, Position, Predicates};
-use crate::trace::Trace2Render;
+use crate::trace::TraceRender2;
 use crate::triangulation::check::TriTraceControl;
 use crate::triangulation::graph::{Face, Triangulation, Vertex};
 use crate::triangulation::types::{FaceEdge, FaceVertex};
@@ -279,12 +279,12 @@ where
 
 /// Trait to provide tracing capabilities
 pub trait TraceContext {
-    fn trace_render(&self) -> Rc<RefCell<dyn Trace2Render>>;
+    fn trace_render(&self) -> Rc<RefCell<dyn TraceRender2>>;
     fn trace_control(&self) -> Rc<RefCell<dyn TriTraceControl>>;
 }
 
 /// Store tracing helpers
-pub struct TraceCtx<TC: TriTraceControl, TR: Trace2Render> {
+pub struct TraceCtx<TC: TriTraceControl, TR: TraceRender2> {
     pub control: Rc<RefCell<TC>>,
     pub render: Rc<RefCell<TR>>,
 }
@@ -298,7 +298,7 @@ where
     pub fn with_trace<TC, TR, T>(self, trace: T) -> Context<P, V, F, Predicates, Tag, Builder, TraceCtx<TC, TR>>
     where
         TC: TriTraceControl,
-        TR: Trace2Render,
+        TR: TraceRender2,
         T: Into<TraceCtx<TC, TR>>,
     {
         Context {
@@ -317,9 +317,9 @@ where
     V: Vertex<Position = P>,
     F: Face,
     TC: 'static + TriTraceControl,
-    TR: 'static + Trace2Render,
+    TR: 'static + TraceRender2,
 {
-    fn trace_render(&self) -> Rc<RefCell<dyn Trace2Render>> {
+    fn trace_render(&self) -> Rc<RefCell<dyn TraceRender2>> {
         self.trace.render.clone()
     }
 

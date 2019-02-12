@@ -1,3 +1,5 @@
-mod trace2;
+mod tracerender2;
+mod tracescope;
 
-pub use self::trace2::*;
+pub use self::tracerender2::*;
+pub use self::tracescope::*;

@@ -11,6 +11,7 @@ use shine_math::voxel::Cell;
 use shine_testutils::init_webcontroll_test;
 
 #[test]
+#[ignore]
 fn test_cubic() {
     let webctrl = init_webcontroll_test(module_path!());
 

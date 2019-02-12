@@ -22,7 +22,7 @@ pub type Backend = rendy::vulkan::Backend;
 
 pub type Graph = rendy::graph::Graph<Backend, World>;
 
-lazy_static::lazy_static! {
+lazy_static! {
     static ref VERTEX: StaticShaderInfo = StaticShaderInfo::new(
         "assets/shaders/tri.vert",
         ShaderKind::Vertex,

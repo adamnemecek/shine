@@ -1,4 +1,4 @@
-use shine_math::trace::Trace2Render;
+use shine_math::trace::TraceRender2;
 use shine_testutils::webserver::{D2Trace, Service};
 use std::mem;
 
@@ -14,7 +14,7 @@ impl D2TraceRender {
     }
 }
 
-impl Trace2Render for D2TraceRender {
+impl TraceRender2 for D2TraceRender {
     fn begin(&mut self) {
         self.end();
         self.render = Some(D2Trace::new());

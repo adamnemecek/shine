@@ -42,8 +42,8 @@
         },
         {
             "type": "shell",
-            "label": "build test",
-            "command": "cargo build -p shine-${input:findSubProject} --test \"${fileBasenameNoExtension}\"",
+            "label": "project run test",
+            "command": "cargo test -p shine-${input:pickProject} -- --test-threads=1",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -57,8 +57,8 @@
         },
         {
             "type": "shell",
-            "label": "run test",
-            "command": "cargo test -p shine-${input:findSubProject} --test \"${fileBasenameNoExtension}\" -- --nocapture",
+            "label": "project clear & clippy",
+            "command": "cargo clean; cargo clippy -p shine-${input:pickProject}",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -72,8 +72,8 @@
         },
         {
             "type": "shell",
-            "label": "run all tests",
-            "command": "cargo test -p shine-${input:findSubProject} -- --test-threads=1",
+            "label": "project clippy",
+            "command": "cargo clippy -p shine-${input:pickProject}",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -87,8 +87,8 @@
         },
         {
             "type": "shell",
-            "label": "clippy",
-            "command": "cargo clean; cargo clippy -p shine-${input:findSubProject}",
+            "label": "single build test",
+            "command": "cargo build -p shine-${input:pickProject} --test \"${fileBasenameNoExtension}\"",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -102,8 +102,8 @@
         },
         {
             "type": "shell",
-            "label": "clippy fast",
-            "command": "cargo clippy -p shine-${input:findSubProject}",
+            "label": "single run test",
+            "command": "cargo test -p shine-${input:pickProject} --test \"${fileBasenameNoExtension}\" -- --nocapture",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -118,7 +118,7 @@
     ],
     "inputs": [
         {
-            "id": "findSubProject",
+            "id": "pickProject",
             "description": "The subproject",
             "type": "pickString",
             "default": "gltf",

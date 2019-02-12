@@ -37,15 +37,15 @@ fn test_component() {
 
     let mut world = World::new();
 
-    world.register_entity::<Force>();
-    world.register_entity::<Acceleration>();
-    world.register_edge::<Weight>();
+    world.register_entity_component::<Force>();
+    world.register_entity_component::<Acceleration>();
+    world.register_edge_component::<Weight>();
 
     debug!("create instances");
     {
         let mut ent = world.entities_mut();
-        let mut force = world.get_entity_mut::<Force>();
-        let mut weight = world.get_edge_mut::<Weight>();
+        let mut force = world.get_entity_component_mut::<Force>();
+        let mut weight = world.get_edge_component_mut::<Weight>();
 
         for i in 0..30 {
             let e = ent.create();
@@ -60,9 +60,9 @@ fn test_component() {
 
     debug!("update instances");
     {
-        let force = world.get_entity::<Force>();
-        let weight = world.get_edge::<Weight>();
-        let mut acc = world.get_entity_mut::<Acceleration>();
+        let force = world.get_entity_component::<Force>();
+        let weight = world.get_edge_component::<Weight>();
+        let mut acc = world.get_entity_component_mut::<Acceleration>();
 
         (force.read(), weight.read()).join_all(|source, (f, w)| {
             trace!("source: {:?} = {:?}", source, f);
@@ -79,7 +79,7 @@ fn test_component() {
 
     debug!("get");
     {
-        let acc = world.get_entity::<Acceleration>();
+        let acc = world.get_entity_component::<Acceleration>();
         assert_eq!(acc.count(), 3);
         assert_eq!(acc.get(Entity::from_id(2)), Some(&Acceleration { x: 1, y: 2, z: 0 }));
         assert_eq!(acc.get(Entity::from_id(3)), Some(&Acceleration { x: 8, y: 16, z: 0 }));

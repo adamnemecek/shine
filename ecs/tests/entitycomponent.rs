@@ -29,14 +29,14 @@ fn test_component() {
 
     let mut world = World::new();
 
-    world.register_entity::<Pos>();
-    world.register_entity::<Velocity>();
+    world.register_entity_component::<Pos>();
+    world.register_entity_component::<Velocity>();
 
     debug!("create instances");
     {
         let mut ent = world.entities_mut();
-        let mut pos = world.get_entity_mut::<Pos>();
-        let mut vel = world.get_entity_mut::<Velocity>();
+        let mut pos = world.get_entity_component_mut::<Pos>();
+        let mut vel = world.get_entity_component_mut::<Velocity>();
 
         for i in 0..30 {
             let e = ent.create();
@@ -50,8 +50,8 @@ fn test_component() {
 
     debug!("update instances");
     {
-        let mut pos = world.get_entity_mut::<Pos>();
-        let vel = world.get_entity::<Velocity>();
+        let mut pos = world.get_entity_component_mut::<Pos>();
+        let vel = world.get_entity_component::<Velocity>();
 
         (pos.update(), vel.read()).join_all(|id, (p, v)| {
             trace!("{:?}: {:?} {:?}", id, p, v);
@@ -63,7 +63,7 @@ fn test_component() {
 
     debug!("get");
     {
-        let mut pos = world.get_entity_mut::<Pos>();
+        let mut pos = world.get_entity_component_mut::<Pos>();
         assert_eq!(pos.get_entry(Entity::from_id(2)).remove(), Some(Pos { x: 2, y: 4, z: 6 }));
         assert_eq!(pos.get(Entity::from_id(1)), Some(&Pos { x: 1, y: 2, z: 0 }));
         assert_eq!(pos.remove(Entity::from_id(4)), Some(Pos { x: 4, y: 8, z: 12 }));

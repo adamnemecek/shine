@@ -8,23 +8,30 @@ pub trait EntityWorld {
     fn entities(&self) -> Fetch<'_, EntityStore>;
     fn entities_mut(&self) -> FetchMut<'_, EntityStore>;
 
-    fn register_entity<D: EntityComponentDescriptor>(&mut self);
-    fn get_entity<D: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<D>>;
-    fn get_entity_mut<D: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<D>>;
+    fn register_entity_component<D: EntityComponentDescriptor>(&mut self);
+    fn get_entity_component<D: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<D>>;
+    fn get_entity_component_mut<D: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<D>>;
 
-    fn register_edge<D: EdgeComponentDescriptor>(&mut self);
-    fn get_edge<D: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<D>>;
-    fn get_edge_mut<D: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<D>>;
+    fn register_edge_component<D: EdgeComponentDescriptor>(&mut self);
+    fn get_edge_component<D: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<D>>;
+    fn get_edge_component_mut<D: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<D>>;
+}
+
+pub trait StoreWorld {
+    fn register_named_store<D: 'static + named::Data>(&mut self);
+    fn get_named_store<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>>;
+    fn get_named_store_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>>;
+
+    fn register_store<D: 'static>(&mut self);
+    fn get_store<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>>;
+    fn get_store_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>>;
 }
 
 pub trait ResourceWorld {
-    fn register_named_resource<D: 'static + named::Data>(&mut self);
-    fn get_named_resource<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>>;
-    fn get_named_resource_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>>;
-
-    fn register_resource<D: 'static>(&mut self);
-    fn get_resource<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>>;
-    fn get_resource_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>>;
+    fn register_resource<D: 'static + Send + Sync + Default>(&mut self);
+    fn register_resource_with<D: 'static + Send + Sync>(&mut self, resource: D);
+    fn get_resource<D: 'static + Send + Sync>(&self) -> Fetch<'_, D>;
+    fn get_resource_mut<D: 'static + Send + Sync>(&self) -> FetchMut<'_, D>;
 }
 
 pub trait SpatialWorld {}
@@ -35,11 +42,11 @@ pub trait SpatialWorld {}
 ///     - store multiple type of data (components) to each id (nodes in a graph)
 ///     - store multiple type of data (edge-component) to id pairs (directed edges in a graph)
 ///     - read/write lock data by components to bulck process the them
-///  - resources ([ResourceWorld](ResourceWorld))
+///  - stores ([StoreWorld](StoreWorld))
 ///     - mapping from a uniqe id to data
 ///     - allow creating handles on demand without blocking, but actual loading is deffered
-///     - mainly used to store share resource between entites (ex textures, geometry, etc.)
-///     - reading and update resources are exclusive and update is performed in a blocking pass
+///     - mainly used to store shared resource between entites (ex textures, geometry, etc.)
+///     - reading and update stores are exclusive and update is performed in a blocking pass
 ///  - spatial partitioning ([SpatialWorld](SpatialWorld)) (TODO)
 ///     - octree based (?)
 ///     - id based space (node) selection
@@ -79,53 +86,71 @@ impl EntityWorld for World {
         self.resources.fetch_mut()
     }
 
-    fn register_entity<D: EntityComponentDescriptor>(&mut self) {
+    fn register_entity_component<D: EntityComponentDescriptor>(&mut self) {
         self.resources.insert::<EntityComponentStore<D>>(Default::default());
     }
 
-    fn get_entity<D: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<D>> {
+    fn get_entity_component<D: EntityComponentDescriptor>(&self) -> Fetch<'_, EntityComponentStore<D>> {
         self.resources.fetch()
     }
 
-    fn get_entity_mut<D: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<D>> {
+    fn get_entity_component_mut<D: EntityComponentDescriptor>(&self) -> FetchMut<'_, EntityComponentStore<D>> {
         self.resources.fetch_mut()
     }
 
-    fn register_edge<D: EdgeComponentDescriptor>(&mut self) {
+    fn register_edge_component<D: EdgeComponentDescriptor>(&mut self) {
         self.resources.insert::<EdgeComponentStore<D>>(Default::default());
     }
 
-    fn get_edge<D: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<D>> {
+    fn get_edge_component<D: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<D>> {
         self.resources.fetch()
     }
 
-    fn get_edge_mut<D: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<D>> {
+    fn get_edge_component_mut<D: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<D>> {
+        self.resources.fetch_mut()
+    }
+}
+
+impl StoreWorld for World {
+    fn register_named_store<D: 'static + named::Data>(&mut self) {
+        self.resources.insert::<named::Store<D>>(Default::default());
+    }
+
+    fn get_named_store<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>> {
+        self.resources.fetch()
+    }
+
+    fn get_named_store_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>> {
+        self.resources.fetch_mut()
+    }
+
+    fn register_store<D: 'static>(&mut self) {
+        self.resources.insert::<unnamed::Store<D>>(Default::default());
+    }
+
+    fn get_store<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>> {
+        self.resources.fetch()
+    }
+
+    fn get_store_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>> {
         self.resources.fetch_mut()
     }
 }
 
 impl ResourceWorld for World {
-    fn register_named_resource<D: 'static + named::Data>(&mut self) {
-        self.resources.insert::<named::Store<D>>(Default::default());
+    fn register_resource<D: 'static + Send + Sync + Default>(&mut self) {
+        self.resources.insert::<D>(Default::default());
     }
 
-    fn get_named_resource<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>> {
+    fn register_resource_with<D: 'static + Send + Sync>(&mut self, resource: D) {
+        self.resources.insert::<D>(resource);
+    }
+
+    fn get_resource<D: 'static + Send + Sync>(&self) -> Fetch<'_, D> {
         self.resources.fetch()
     }
 
-    fn get_named_resource_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>> {
-        self.resources.fetch_mut()
-    }
-
-    fn register_resource<D: 'static>(&mut self) {
-        self.resources.insert::<unnamed::Store<D>>(Default::default());
-    }
-
-    fn get_resource<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>> {
-        self.resources.fetch()
-    }
-
-    fn get_resource_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>> {
+    fn get_resource_mut<D: 'static + Send + Sync>(&self) -> FetchMut<'_, D> {
         self.resources.fetch_mut()
     }
 }
