@@ -1,3 +1,4 @@
+use itertools::izip;
 use nalgebra_glm as glm;
 use shine_math::voxel::analyze::Info;
 use shine_math::voxel::data::DataCell;
@@ -8,7 +9,6 @@ use shine_math::voxel::polygonize::{Config, Cubic, Polygonizer, Transvoxel};
 use shine_math::voxel::Cell;
 use std::os::raw::c_void;
 use std::slice;
-use itertools::izip;
 
 #[repr(C)]
 #[derive(Debug)]

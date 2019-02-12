@@ -4,23 +4,22 @@ mod common;
 
 use self::common::tri_prelude::*;
 use log::{debug, info, trace};
-use shine_math::geometry2::{Posf32, Posf64, Posi32, Posi64};
-use shine_math::geometry2::{Position, Predicates, Real};
+use nalgebra_glm as glm;
+use shine_math::geometry2::{Predicates, Real};
 use shine_math::triangulation::{
     Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, TopologyQuery, Triangulation,
 };
 use shine_testutils::init_test;
-use std::fmt::Debug;
 
 #[test]
 fn simple_points() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR>,
     {
         info!("{}", desc);
@@ -30,33 +29,33 @@ fn simple_points() {
         assert_eq!(tri.check(None), Ok(()));
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
 fn simple_points_dim0() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(mut tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
         trace!("add a point");
-        let vi = { tri.add_vertex(Sample(1., 2.).into(), None) };
+        let vi = { tri.add_vertex(sample_vec::<R>(1., 2.), None) };
         assert!(!tri.is_empty());
         assert_eq!(tri.dimension(), 0);
         assert_eq!(tri.check(None), Ok(()));
 
         trace!("add same point twice");
-        let vi2 = { tri.add_vertex(Sample(1., 2.).into(), None) };
+        let vi2 = { tri.add_vertex(sample_vec::<R>(1., 2.), None) };
         assert_eq!(tri.dimension(), 0);
         assert_eq!(vi, vi2);
 
@@ -67,34 +66,34 @@ fn simple_points_dim0() {
         assert_eq!(tri.check(None), Ok(()));
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
 fn simple_points_dim1() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(mut tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<dyn Fn(f32) -> P>)> = vec![
-            ("(x, 0)", Box::new(|x| Sample(x, 0.).into())),
-            ("(0, x)", Box::new(|x| Sample(0., x).into())),
-            ("(-x, 0)", Box::new(|x| Sample(-x, 0.).into())),
-            ("(0, -x)", Box::new(|x| Sample(0., -x).into())),
-            ("(x, x)", Box::new(|x| Sample(x, x).into())),
-            ("(x, -x)", Box::new(|x| Sample(x, -x).into())),
-            ("(-x, -x)", Box::new(|x| Sample(-x, -x).into())),
-            ("(-x, x)", Box::new(|x| Sample(-x, x).into())),
+        let transforms: Vec<(&str, Box<dyn Fn(f32) -> glm::TVec2<R>>)> = vec![
+            ("(x, 0)", Box::new(|x| sample_vec::<R>(x, 0.))),
+            ("(0, x)", Box::new(|x| sample_vec::<R>(0., x))),
+            ("(-x, 0)", Box::new(|x| sample_vec::<R>(-x, 0.))),
+            ("(0, -x)", Box::new(|x| sample_vec::<R>(0., -x))),
+            ("(x, x)", Box::new(|x| sample_vec::<R>(x, x))),
+            ("(x, -x)", Box::new(|x| sample_vec::<R>(x, -x))),
+            ("(-x, -x)", Box::new(|x| sample_vec::<R>(-x, -x))),
+            ("(-x, x)", Box::new(|x| sample_vec::<R>(-x, x))),
         ];
 
         for (info, map) in transforms.iter() {
@@ -128,34 +127,34 @@ fn simple_points_dim1() {
         }
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
 fn simple_points_dim2() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(mut tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
-            ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
-            ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
-            ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
-            ("(x, -y)", Box::new(|x, y| Sample(x, -y).into())),
-            ("(y, x)", Box::new(|x, y| Sample(y, x).into())),
-            ("(-y, x)", Box::new(|x, y| Sample(-y, x).into())),
-            ("(-y, -x)", Box::new(|x, y| Sample(-y, -x).into())),
-            ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> glm::TVec2<R>>)> = vec![
+            ("(x, y)", Box::new(|x, y| sample_vec::<R>(x, y))),
+            ("(-x, y)", Box::new(|x, y| sample_vec::<R>(-x, y))),
+            ("(-x, -y)", Box::new(|x, y| sample_vec::<R>(-x, -y))),
+            ("(x, -y)", Box::new(|x, y| sample_vec::<R>(x, -y))),
+            ("(y, x)", Box::new(|x, y| sample_vec::<R>(y, x))),
+            ("(-y, x)", Box::new(|x, y| sample_vec::<R>(-y, x))),
+            ("(-y, -x)", Box::new(|x, y| sample_vec::<R>(-y, -x))),
+            ("(y, -x)", Box::new(|x, y| sample_vec::<R>(y, -x))),
         ];
 
         #[allow(unused_attributes)]
@@ -207,8 +206,8 @@ fn simple_points_dim2() {
         }
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }

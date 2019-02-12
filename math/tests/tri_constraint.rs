@@ -4,36 +4,36 @@ mod common;
 
 use self::common::tri_prelude::*;
 use log::{debug, info, trace};
-use shine_math::geometry2::{Posf32, Posf64, Posi32, Posi64, Position, Predicates, Real};
+use nalgebra_glm as glm;
+use shine_math::geometry2::{Predicates, Real};
 use shine_math::triangulation::traverse::CrossingIterator;
 use shine_math::triangulation::{
     Builder, BuilderContext, FullChecker, PredicatesContext, TagContext, TopologyQuery, Triangulation,
 };
 use shine_testutils::init_test;
-use std::fmt::Debug;
 
 #[test]
 fn t0_constraint_segment() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(mut tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<dyn Fn(f32) -> P>)> = vec![
-            ("(x, 0)", Box::new(|x| Sample(x, 0.).into())),
-            ("(0, x)", Box::new(|x| Sample(0., x).into())),
-            ("(-x, 0)", Box::new(|x| Sample(-x, 0.).into())),
-            ("(0, -x)", Box::new(|x| Sample(0., -x).into())),
-            ("(x, x)", Box::new(|x| Sample(x, x).into())),
-            ("(x, -x)", Box::new(|x| Sample(x, -x).into())),
-            ("(-x, -x)", Box::new(|x| Sample(-x, -x).into())),
-            ("(-x, x)", Box::new(|x| Sample(-x, x).into())),
+        let transforms: Vec<(&str, Box<dyn Fn(f32) -> glm::TVec2<R>>)> = vec![
+            ("(x, 0)", Box::new(|x| sample_vec::<R>(x, 0.))),
+            ("(0, x)", Box::new(|x| sample_vec::<R>(0., x))),
+            ("(-x, 0)", Box::new(|x| sample_vec::<R>(-x, 0.))),
+            ("(0, -x)", Box::new(|x| sample_vec::<R>(0., -x))),
+            ("(x, x)", Box::new(|x| sample_vec::<R>(x, x))),
+            ("(x, -x)", Box::new(|x| sample_vec::<R>(x, -x))),
+            ("(-x, -x)", Box::new(|x| sample_vec::<R>(-x, -x))),
+            ("(-x, x)", Box::new(|x| sample_vec::<R>(-x, x))),
         ];
 
         for (info, map) in transforms.iter() {
@@ -60,34 +60,34 @@ fn t0_constraint_segment() {
         }
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
 fn t1_constraint_no_fill1() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(mut tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
-            ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
-            ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
-            ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
-            ("(x, -y)", Box::new(|x, y| Sample(x, -y).into())),
-            ("(y, x)", Box::new(|x, y| Sample(y, x).into())),
-            ("(-y, x)", Box::new(|x, y| Sample(-y, x).into())),
-            ("(-y, -x)", Box::new(|x, y| Sample(-y, -x).into())),
-            ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> glm::TVec2<R>>)> = vec![
+            ("(x, y)", Box::new(|x, y| sample_vec::<R>(x, y))),
+            ("(-x, y)", Box::new(|x, y| sample_vec::<R>(-x, y))),
+            ("(-x, -y)", Box::new(|x, y| sample_vec::<R>(-x, -y))),
+            ("(x, -y)", Box::new(|x, y| sample_vec::<R>(x, -y))),
+            ("(y, x)", Box::new(|x, y| sample_vec::<R>(y, x))),
+            ("(-y, x)", Box::new(|x, y| sample_vec::<R>(-y, x))),
+            ("(-y, -x)", Box::new(|x, y| sample_vec::<R>(-y, -x))),
+            ("(y, -x)", Box::new(|x, y| sample_vec::<R>(y, -x))),
         ];
 
         for (info, map) in transforms.iter() {
@@ -121,34 +121,34 @@ fn t1_constraint_no_fill1() {
         }
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
 fn t2_constraint_no_fill2() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(mut tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
-            ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
-            ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
-            ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
-            ("(x, -y)", Box::new(|x, y| Sample(x, -y).into())),
-            ("(y, x)", Box::new(|x, y| Sample(y, x).into())),
-            ("(-y, x)", Box::new(|x, y| Sample(-y, x).into())),
-            ("(-y, -x)", Box::new(|x, y| Sample(-y, -x).into())),
-            ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> glm::TVec2<R>>)> = vec![
+            ("(x, y)", Box::new(|x, y| sample_vec::<R>(x, y))),
+            ("(-x, y)", Box::new(|x, y| sample_vec::<R>(-x, y))),
+            ("(-x, -y)", Box::new(|x, y| sample_vec::<R>(-x, -y))),
+            ("(x, -y)", Box::new(|x, y| sample_vec::<R>(x, -y))),
+            ("(y, x)", Box::new(|x, y| sample_vec::<R>(y, x))),
+            ("(-y, x)", Box::new(|x, y| sample_vec::<R>(-y, x))),
+            ("(-y, -x)", Box::new(|x, y| sample_vec::<R>(-y, -x))),
+            ("(y, -x)", Box::new(|x, y| sample_vec::<R>(y, -x))),
         ];
 
         for (info, map) in transforms.iter() {
@@ -213,34 +213,34 @@ fn t2_constraint_no_fill2() {
         }
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
 fn t3_crossing_iterator() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(mut tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
-            ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
-            ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
-            ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
-            ("(x, -y)", Box::new(|x, y| Sample(x, -y).into())),
-            ("(y, x)", Box::new(|x, y| Sample(y, x).into())),
-            ("(-y, x)", Box::new(|x, y| Sample(-y, x).into())),
-            ("(-y, -x)", Box::new(|x, y| Sample(-y, -x).into())),
-            ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> glm::TVec2<R>>)> = vec![
+            ("(x, y)", Box::new(|x, y| sample_vec::<R>(x, y))),
+            ("(-x, y)", Box::new(|x, y| sample_vec::<R>(-x, y))),
+            ("(-x, -y)", Box::new(|x, y| sample_vec::<R>(-x, -y))),
+            ("(x, -y)", Box::new(|x, y| sample_vec::<R>(x, -y))),
+            ("(y, x)", Box::new(|x, y| sample_vec::<R>(y, x))),
+            ("(-y, x)", Box::new(|x, y| sample_vec::<R>(-y, x))),
+            ("(-y, -x)", Box::new(|x, y| sample_vec::<R>(-y, -x))),
+            ("(y, -x)", Box::new(|x, y| sample_vec::<R>(y, -x))),
         ];
 
         for (info, map) in transforms.iter() {
@@ -285,34 +285,34 @@ fn t3_crossing_iterator() {
         }
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
 fn t4_constraint_concave() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(mut tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
 
-        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
-            ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
-            ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
-            ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
-            ("(x, -y)", Box::new(|x, y| Sample(x, -y).into())),
-            ("(y, x)", Box::new(|x, y| Sample(y, x).into())),
-            ("(-y, x)", Box::new(|x, y| Sample(-y, x).into())),
-            ("(-y, -x)", Box::new(|x, y| Sample(-y, -x).into())),
-            ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> glm::TVec2<R>>)> = vec![
+            ("(x, y)", Box::new(|x, y| sample_vec::<R>(x, y))),
+            ("(-x, y)", Box::new(|x, y| sample_vec::<R>(-x, y))),
+            ("(-x, -y)", Box::new(|x, y| sample_vec::<R>(-x, -y))),
+            ("(x, -y)", Box::new(|x, y| sample_vec::<R>(x, -y))),
+            ("(y, x)", Box::new(|x, y| sample_vec::<R>(y, x))),
+            ("(-y, x)", Box::new(|x, y| sample_vec::<R>(-y, x))),
+            ("(-y, -x)", Box::new(|x, y| sample_vec::<R>(-y, -x))),
+            ("(y, -x)", Box::new(|x, y| sample_vec::<R>(y, -x))),
         ];
 
         for (info, map) in transforms.iter() {
@@ -339,21 +339,21 @@ fn t4_constraint_concave() {
         }
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }
 
 #[test]
 fn t5_constraint() {
     init_test(module_path!());
 
-    fn test<P, PR, C>(mut tri: Triangulation<P, SimpleVertex<P>, SimpleFace, C>, desc: &str)
+    fn test<R, PR, C>(mut tri: Triangulation<glm::TVec2<R>, SimpleVertex<R>, SimpleFace, C>, desc: &str)
     where
-        P: Default + Position + From<Sample> + Debug,
-        P::Real: Real,
-        PR: Default + Predicates<Position = P>,
+        R: 'static + Real,
+        glm::TVec2<R>: FromSample,
+        PR: Default + Predicates<Position = glm::TVec2<R>>,
         C: PredicatesContext<Predicates = PR> + TagContext + BuilderContext,
     {
         info!("{}", desc);
@@ -421,15 +421,15 @@ fn t5_constraint() {
             ),
         ];
 
-        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> P>)> = vec![
-            ("(x, y)", Box::new(|x, y| Sample(x, y).into())),
-            ("(-x, y)", Box::new(|x, y| Sample(-x, y).into())),
-            ("(-x, -y)", Box::new(|x, y| Sample(-x, -y).into())),
-            ("(x, -y)", Box::new(|x, y| Sample(x, -y).into())),
-            ("(y, x)", Box::new(|x, y| Sample(y, x).into())),
-            ("(-y, x)", Box::new(|x, y| Sample(-y, x).into())),
-            ("(-y, -x)", Box::new(|x, y| Sample(-y, -x).into())),
-            ("(y, -x)", Box::new(|x, y| Sample(y, -x).into())),
+        let transforms: Vec<(&str, Box<dyn Fn(f32, f32) -> glm::TVec2<R>>)> = vec![
+            ("(x, y)", Box::new(|x, y| sample_vec::<R>(x, y))),
+            ("(-x, y)", Box::new(|x, y| sample_vec::<R>(-x, y))),
+            ("(-x, -y)", Box::new(|x, y| sample_vec::<R>(-x, -y))),
+            ("(x, -y)", Box::new(|x, y| sample_vec::<R>(x, -y))),
+            ("(y, x)", Box::new(|x, y| sample_vec::<R>(y, x))),
+            ("(-y, x)", Box::new(|x, y| sample_vec::<R>(-y, x))),
+            ("(-y, -x)", Box::new(|x, y| sample_vec::<R>(-y, -x))),
+            ("(y, -x)", Box::new(|x, y| sample_vec::<R>(y, -x))),
         ];
 
         for (id_points, (points, edges)) in cases.iter().enumerate() {
@@ -465,8 +465,8 @@ fn t5_constraint() {
         }
     }
 
-    test(SimpleContext::<Posf32>::new_inexact_common().create(), "inexact f32");
-    test(SimpleContext::<Posf64>::new_inexact_common().create(), "inexact f64");
-    test(SimpleContext::<Posi32>::new_exact_common().create(), "exact i32");
-    test(SimpleContext::<Posi64>::new_exact_common().create(), "exact i64");
+    test(SimpleContext::<f32>::new_inexact_common().create(), "inexact f32");
+    test(SimpleContext::<f64>::new_inexact_common().create(), "inexact f64");
+    test(SimpleContext::<i32>::new_exact_common().create(), "exact i32");
+    test(SimpleContext::<i64>::new_exact_common().create(), "exact i64");
 }

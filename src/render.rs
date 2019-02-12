@@ -23,19 +23,10 @@ pub type Backend = rendy::vulkan::Backend;
 pub type Graph = rendy::graph::Graph<Backend, World>;
 
 lazy_static! {
-    static ref VERTEX: StaticShaderInfo = StaticShaderInfo::new(
-        "assets/shaders/tri.vert",
-        ShaderKind::Vertex,
-        SourceLanguage::GLSL,
-        "main",
-    );
-
-    static ref FRAGMENT: StaticShaderInfo = StaticShaderInfo::new(
-        "assets/shaders/tri.frag",
-        ShaderKind::Fragment,
-        SourceLanguage::GLSL,
-        "main",
-    );
+    static ref VERTEX: StaticShaderInfo =
+        StaticShaderInfo::new("assets/shaders/tri.vert", ShaderKind::Vertex, SourceLanguage::GLSL, "main",);
+    static ref FRAGMENT: StaticShaderInfo =
+        StaticShaderInfo::new("assets/shaders/tri.frag", ShaderKind::Fragment, SourceLanguage::GLSL, "main",);
 }
 
 #[derive(Debug)]

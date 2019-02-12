@@ -1,34 +1,35 @@
 //#![allow(dead_code)]
 
-use shine_math::geometry2::Position;
+use nalgebra_glm as glm;
+use shine_math::geometry2::Real;
 use shine_math::triangulation::types::{invalid_face_index, invalid_vertex_index, rot3, FaceIndex, Rot3, VertexIndex};
 use shine_math::triangulation::{Constraint, Context, Face, Vertex};
 
-pub struct SimpleVertex<P>
+pub struct SimpleVertex<R>
 where
-    P: Default + Position,
+    R: 'static + Real,
 {
-    position: P,
+    position: glm::TVec2<R>,
     face: FaceIndex,
 }
 
-impl<P> Default for SimpleVertex<P>
+impl<R> Default for SimpleVertex<R>
 where
-    P: Default + Position,
+    R: 'static + Real,
 {
-    fn default() -> SimpleVertex<P> {
+    fn default() -> SimpleVertex<R> {
         SimpleVertex {
-            position: Default::default(),
+            position: glm::vec2(R::zero(), R::zero()),
             face: invalid_face_index(),
         }
     }
 }
 
-impl<P> Vertex for SimpleVertex<P>
+impl<R> Vertex for SimpleVertex<R>
 where
-    P: Default + Position,
+    R: 'static + Real,
 {
-    type Position = P;
+    type Position = glm::TVec2<R>;
 
     fn position(&self) -> &Self::Position {
         &self.position
@@ -135,4 +136,4 @@ impl Face for SimpleFace {
 }
 
 #[allow(dead_code)]
-pub type SimpleContext<P> = Context<P, SimpleVertex<P>, SimpleFace>;
+pub type SimpleContext<R> = Context<glm::TVec2<R>, SimpleVertex<R>, SimpleFace>;

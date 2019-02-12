@@ -11,7 +11,7 @@ use shine_testutils::init_test;
 fn issue39_1() {
     init_test(module_path!());
 
-    let mut tri = SimpleContext::<Posf32>::new()
+    let mut tri = SimpleContext::<f32>::new()
         .with_inexact_predicates()
         .with_tag()
         .with_builder()
@@ -21,7 +21,7 @@ fn issue39_1() {
 
     {
         for &(x, y) in pnts.iter() {
-            tri.add_vertex(Posf32 { x, y }, None);
+            tri.add_vertex(glm::vec2(x, y), None);
         }
     }
 
@@ -33,7 +33,7 @@ fn issue39_1() {
 fn issue39_2() {
     init_test(module_path!());
 
-    let mut tri = SimpleContext::<Posf32>::new()
+    let mut tri = SimpleContext::<f32>::new()
         .with_inexact_predicates()
         .with_tag()
         .with_builder()
@@ -43,7 +43,7 @@ fn issue39_2() {
 
     {
         for &(x, y) in pnts.iter() {
-            tri.add_vertex(Posf32 { x, y }, None);
+            tri.add_vertex(glm::vec2(x, y), None);
         }
     }
     assert_eq!(tri.dimension(), 2);

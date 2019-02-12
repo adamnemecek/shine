@@ -240,17 +240,12 @@ where
 
         if self.is_finite_vertex(v) {
             let p = self.p(v).approximate();
-            render.add_point(&(p.x, p.y), coloring.color.clone());
-            render.add_text(&(p.x, p.y), msg, coloring.text.0.clone(), coloring.text.1);
+            render.add_point(&p, coloring.color.clone());
+            render.add_text(&p, msg, coloring.text.0.clone(), coloring.text.1);
         } else {
             for p in mapping.virtual_positions.iter() {
-                render.add_point(&(p.x, p.y), coloring.infinite.clone());
-                render.add_text(
-                    &(p.x, p.y),
-                    msg.clone(),
-                    coloring.infinite_text.0.clone(),
-                    coloring.infinite_text.1,
-                );
+                render.add_point(&p, coloring.infinite.clone());
+                render.add_text(&p, msg.clone(), coloring.infinite_text.0.clone(), coloring.infinite_text.1);
             }
         }
     }
@@ -278,10 +273,9 @@ where
 
         let pa = self.p(a).approximate();
         let pb = self.p(b).approximate();
-        render.add_line(&(pa.x, pa.y), &(pb.x, pb.y), coloring.color.clone());
-        let x = (pa.x + pb.x) * 0.5;
-        let y = (pa.y + pb.y) * 0.5;
-        render.add_text(&(x, y), msg, coloring.text.0.clone(), coloring.text.1);
+        render.add_line(&pa, &pb, coloring.color.clone());
+        let pab = (pa + pb) * 0.5;
+        render.add_text(&pab, msg, coloring.text.0.clone(), coloring.text.1);
     }
 
     fn trace_face_edge<E: Into<FaceEdge>>(&self, edge: E, msg: Option<&str>, color: Option<&EdgeColoring>) {
@@ -326,7 +320,7 @@ where
                 };
                 let p = positions[edge].position();
                 render.add_text(
-                    &(p.x, p.y),
+                    &p,
                     format!("{}.{} = {}", f.id(), edge, verts[edge].id()),
                     text_style.0.clone(),
                     text_style.1,
@@ -353,9 +347,9 @@ where
             let n = self[f].neighbor(rot3(edge as u8));
             let a = positions[edge_start].position();
             let b = positions[edge_end].position();
-            render.add_line(&(a.x, a.y), &(b.x, b.y), color);
+            render.add_line(&a, &b, color);
 
-            let center = ((a.x + b.x) * 0.5, (a.y + b.y) * 0.5);
+            let center = (a + b) * 0.5;
             render.add_text(
                 &center,
                 format!("{}.{}={}\n   c:{:?}", f.id(), edge, n.id(), constraint),
@@ -371,8 +365,7 @@ where
         for p in positions.iter() {
             if p.is_visible() {
                 let pos = p.position();
-                center.x += pos.x;
-                center.y += pos.y;
+                center += pos;
                 cnt += 1.;
             }
         }
@@ -383,7 +376,7 @@ where
             } else {
                 &coloring.face.infinite_text
             };
-            render.add_text(&(center.x / cnt, center.y / cnt), msg, text_style.0.clone(), text_style.1);
+            render.add_text(&(center / cnt), msg, text_style.0.clone(), text_style.1);
         }
     }
 

@@ -4,7 +4,7 @@ mod common;
 
 use self::common::tri_prelude::*;
 use self::common::tri_trace_prelude::*;
-use shine_math::geometry2::Posf32;
+use nalgebra_glm as glm;
 use shine_math::triangulation::{Builder, FullChecker};
 use shine_testutils::init_webcontroll_test;
 use std::panic;
@@ -14,14 +14,14 @@ use std::panic;
 fn quick_debug() {
     let webctrl = init_webcontroll_test(module_path!());
 
-    let mut tri = SimpleContext::<Posf32>::new_inexact_common()
+    let mut tri = SimpleContext::<f32>::new_inexact_common()
         .with_trace(D2TriTrace::new(webctrl.clone()))
         .create();
 
     let points = vec![(-1., 0.), (1., 0.), (0., 3.), (0., 2.), (-2., 1.), (2., 1.)];
     let edges = vec![(5, 4)];
 
-    let map = |x: f32, y: f32| Posf32::from(Sample(x, y));
+    let map = |x: f32, y: f32| glm::vec2(x, y);
 
     let mut vertices = Vec::new();
     for v in points.iter() {

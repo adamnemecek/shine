@@ -5,7 +5,7 @@ mod d2tracerender;
 pub use self::d2tracerender::*;
 
 pub mod tri_prelude {
-    pub use super::tri::{Sample, SimpleConstraint, SimpleContext, SimpleFace, SimpleVertex};
+    pub use super::tri::{sample_vec, FromSample, SimpleConstraint, SimpleContext, SimpleFace, SimpleVertex};
 }
 
 pub mod tri_trace_prelude {

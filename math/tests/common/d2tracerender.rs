@@ -1,3 +1,4 @@
+use nalgebra_glm as glm;
 use shine_math::trace::TraceRender2;
 use shine_testutils::webserver::{D2Trace, Service};
 use std::mem;
@@ -50,21 +51,21 @@ impl TraceRender2 for D2TraceRender {
         }
     }
 
-    fn add_point(&mut self, p: &(f64, f64), color: String) {
+    fn add_point(&mut self, p: &glm::DVec2, color: String) {
         if let Some(ref mut tr) = self.render.as_mut() {
-            tr.add_point(p, color);
+            tr.add_point(&(p.x, p.y), color);
         }
     }
 
-    fn add_line(&mut self, a: &(f64, f64), b: &(f64, f64), color: String) {
+    fn add_line(&mut self, a: &glm::DVec2, b: &glm::DVec2, color: String) {
         if let Some(ref mut tr) = self.render.as_mut() {
-            tr.add_line(a, b, color);
+            tr.add_line(&(a.x, a.y), &(b.x, b.y), color);
         }
     }
 
-    fn add_text(&mut self, p: &(f64, f64), msg: String, color: String, size: f32) {
+    fn add_text(&mut self, p: &glm::DVec2, msg: String, color: String, size: f32) {
         if let Some(ref mut tr) = self.render.as_mut() {
-            tr.add_text(p, msg, color, size);
+            tr.add_text(&(p.x, p.y), msg, color, size);
         }
     }
 }
