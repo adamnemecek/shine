@@ -1,5 +1,3 @@
-use std::ops;
-
 pub trait TraceRender2 {
     fn begin(&mut self);
     fn end(&mut self);
@@ -13,4 +11,3 @@ pub trait TraceRender2 {
     fn add_line(&mut self, a: &(f64, f64), b: &(f64, f64), color: String);
     fn add_text(&mut self, p: &(f64, f64), msg: String, color: String, size: f32);
 }
-

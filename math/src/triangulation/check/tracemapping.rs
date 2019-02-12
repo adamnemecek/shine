@@ -1,11 +1,11 @@
-use crate::geometry2::Posf64;
+use nalgebra_glm as glm;
 
 /// Vertex trace visualization info
 #[derive(Debug)]
 pub enum TracePosition {
     Invisible,
-    Virtual(Posf64),
-    Real(Posf64),
+    Virtual(glm::DVec2),
+    Real(glm::DVec2),
 }
 
 impl TracePosition {
@@ -24,7 +24,7 @@ impl TracePosition {
         }
     }
 
-    pub fn position(&self) -> &Posf64 {
+    pub fn position(&self) -> &glm::DVec2 {
         match *self {
             TracePosition::Virtual(ref p) => p,
             TracePosition::Real(ref p) => p,
@@ -35,7 +35,7 @@ impl TracePosition {
 
 /// Trace helper to map vertices into virtual positions
 pub struct TriTraceMapping {
-    pub virtual_positions: Vec<Posf64>,
+    pub virtual_positions: Vec<glm::DVec2>,
 }
 
 impl TriTraceMapping {
@@ -49,11 +49,11 @@ impl TriTraceMapping {
         self.virtual_positions.clear();
     }
 
-    pub fn add_virtual_position<VP: Into<Posf64>>(&mut self, p: VP) {
+    pub fn add_virtual_position<VP: Into<glm::DVec2>>(&mut self, p: VP) {
         self.virtual_positions.push(p.into());
     }
 
-    pub fn set_virtual_positions<VP: IntoIterator<Item = Posf64>>(&mut self, p: VP) {
+    pub fn set_virtual_positions<VP: IntoIterator<Item = glm::DVec2>>(&mut self, p: VP) {
         self.virtual_positions = p.into_iter().collect();
     }
 }

@@ -2,8 +2,9 @@ mod common;
 
 use self::common::tri_prelude::*;
 use log::info;
+use nalgebra_glm as glm;
 use shine_math::geometry2::{CollinearTest, Orientation, Position, Predicates, Real};
-use shine_math::geometry2::{ExactPredicates, InexactPredicates, Posf32, Posf64, Posi32, Posi64};
+use shine_math::geometry2::{ExactPredicates, InexactPredicates};
 use shine_testutils::init_test;
 
 #[test]

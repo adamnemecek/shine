@@ -32,6 +32,5 @@ shine-store = {path = "store"}
 shine-graph = {path = "graph"}
 shine-math = {path = "math"}
 shine-gltf = {path = "gltf"}
-#shine-render = {path = "render"}
 shine-ecs = {path = "ecs"}
 shine-unity = {path = "Unity"}

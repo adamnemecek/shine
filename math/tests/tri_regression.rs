@@ -3,7 +3,7 @@
 mod common;
 
 use self::common::tri_prelude::*;
-use shine_math::geometry2::Posf32;
+use nalgebra_glm as glm;
 use shine_math::triangulation::{Builder, FullChecker};
 use shine_testutils::init_test;
 

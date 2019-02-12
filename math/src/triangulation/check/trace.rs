@@ -1,10 +1,11 @@
-use crate::geometry2::{InexactPredicates, Posf64};
+use crate::geometry2::InexactPredicates;
 use crate::geometry2::{NearestPointSearch, NearestPointSearchBuilder, Position, Predicates};
 use crate::trace::Trace;
 use crate::triangulation::check::{Coloring, EdgeColoring, TracePosition, TriTraceMapping, VertexColoring};
 use crate::triangulation::graph::{Constraint, Face, TraceContext, Triangulation, Vertex};
 use crate::triangulation::query::{TopologyQuery, VertexClue};
 use crate::triangulation::types::{rot3, FaceEdge, FaceIndex, VertexIndex};
+use nalgebra_glm as glm;
 
 pub trait TriTraceControl {
     fn coloring(&self) -> &Coloring;
@@ -61,7 +62,7 @@ where
 {
     default fn trace_map_vertex(&self, v: VertexIndex, _vcw: VertexIndex, _vccw: VertexIndex) -> TracePosition {
         if self.is_finite_vertex(v) {
-            let p = Posf64::from(self.p(v));
+            let p = self.p(v).approximate();
             TracePosition::Real(p)
         } else {
             TracePosition::Invisible
@@ -97,7 +98,7 @@ where
         let (mut maxx, mut maxy) = (f64::MIN, f64::MIN);
 
         for v in self.vertex_index_iter() {
-            let p = Posf64::from(self.p(v));
+            let p = self.p(v).approximate();
             minx = if p.x < minx { p.x } else { minx };
             maxx = if p.x > maxx { p.x } else { maxx };
             miny = if p.y < minx { p.y } else { minx };
@@ -166,10 +167,10 @@ where
         let control = control.borrow();
         let mapping = control.mapping();
 
-        let approximate_predicates = InexactPredicates::<Posf64>::new();
+        let approximate_predicates = InexactPredicates::<glm::DVec2>::new();
 
         if self.is_finite_vertex(v) {
-            let p = Posf64::from(self.p(v));
+            let p = self.p(v).approximate();
             return TracePosition::Real(p);
         }
 
@@ -179,8 +180,8 @@ where
 
         // find virtual point best fitting the convex hull in 2d
         if vcw.is_valid() && self.is_finite_vertex(vcw) && vccw.is_valid() && self.is_finite_vertex(vccw) {
-            let pcw = Posf64::from(self.p(vcw));
-            let pccw = Posf64::from(self.p(vccw));
+            let pcw = self.p(vcw).approximate();
+            let pccw = self.p(vccw).approximate();
 
             let mut best_value = 0.;
             let mut best = None;
@@ -201,7 +202,7 @@ where
         // find virtual point best fitting the convex hull in 1d
         for &candidate in [vcw, vccw].iter() {
             if candidate.is_valid() && self.is_finite_vertex(candidate) {
-                let p = Posf64::from(self.p(candidate));
+                let p = self.p(candidate).approximate();
                 let mut search = approximate_predicates.nearest_point_search(&p);
 
                 for virt_pos in mapping.virtual_positions.iter() {
@@ -238,7 +239,7 @@ where
         let msg = msg.map(|m| format!("V: {}", m)).unwrap_or_else(|| format!("V: {}", v.id()));
 
         if self.is_finite_vertex(v) {
-            let p = Posf64::from(self.p(v));
+            let p = self.p(v).approximate();
             render.add_point(&(p.x, p.y), coloring.color.clone());
             render.add_text(&(p.x, p.y), msg, coloring.text.0.clone(), coloring.text.1);
         } else {
@@ -275,8 +276,8 @@ where
             .map(|m| format!("E: {}", m))
             .unwrap_or_else(|| format!("E: ({}-{})", a.id(), b.id()));
 
-        let pa = Posf64::from(self.p(a));
-        let pb = Posf64::from(self.p(b));
+        let pa = self.p(a).approximate();
+        let pb = self.p(b).approximate();
         render.add_line(&(pa.x, pa.y), &(pb.x, pb.y), coloring.color.clone());
         let x = (pa.x + pb.x) * 0.5;
         let y = (pa.y + pb.y) * 0.5;
@@ -365,7 +366,7 @@ where
 
         // text
         let msg = msg.map(|m| format!("F: {}", m)).unwrap_or_else(|| format!("F: {}", f.id()));
-        let mut center = Posf64 { x: 0., y: 0. };
+        let mut center = glm::vec2(0., 0.);
         let mut cnt = 0.;
         for p in positions.iter() {
             if p.is_visible() {

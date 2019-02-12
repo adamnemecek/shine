@@ -1,7 +1,7 @@
 mod d2tritrace;
-mod position;
+mod sample;
 mod simplegraph;
 
 pub use self::d2tritrace::*;
-pub use self::position::*;
+pub use self::sample::*;
 pub use self::simplegraph::*;
