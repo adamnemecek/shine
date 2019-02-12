@@ -124,8 +124,8 @@ impl Polygonizer for Transvoxel {
                             );
 
                             let position = if lod == 0 {
-                                let start_value = values[start_index] as f32;
-                                let end_value = values[end_index] as f32;
+                                let start_value = f32::from(values[start_index]);
+                                let end_value = f32::from(values[end_index]);
 
                                 // Full resolution
                                 let alpha = start_value / (start_value - end_value);

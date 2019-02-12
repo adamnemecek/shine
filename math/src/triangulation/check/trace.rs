@@ -194,9 +194,7 @@ where
                 }
             }
 
-            return best
-                .map(|p| TracePosition::Virtual(p.clone()))
-                .unwrap_or(TracePosition::Invisible);
+            return best.map(|p| TracePosition::Virtual(*p)).unwrap_or(TracePosition::Invisible);
         }
 
         // find virtual point best fitting the convex hull in 1d
@@ -210,7 +208,7 @@ where
                 }
                 return search
                     .nearest()
-                    .map(|(p, _)| TracePosition::Virtual(p.clone()))
+                    .map(|(p, _)| TracePosition::Virtual(*p))
                     .unwrap_or(TracePosition::Invisible);
             }
         }
