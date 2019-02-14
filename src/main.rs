@@ -1,5 +1,6 @@
 use rendy::factory::{Config as RendyConfig, Factory};
-use shine_ecs::World;
+use shine_ecs::{ResourceWorld, World};
+use shine_math::camera::FreeCamera;
 use std::sync::Arc;
 use winit::{Event, EventsLoop, VirtualKeyCode, WindowBuilder, WindowEvent};
 
@@ -13,6 +14,7 @@ fn main() {
         .init();
 
     let mut world = World::new();
+    world.register_resource_with(FreeCamera::new());
 
     let config: RendyConfig = Default::default();
     let mut factory: Factory<render::Backend> = Factory::new(config).unwrap();

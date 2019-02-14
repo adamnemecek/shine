@@ -26,6 +26,25 @@ pub struct FreeCamera {
 }
 
 impl FreeCamera {
+    pub fn new() -> FreeCamera {
+        let mut camera = FreeCamera {
+            eye: glm::vec3(0., 0., -1.),
+            target: glm::vec3(0., 0., 0.),
+            up: glm::vec3(0., 1., 0.),
+            perspective: Perspective3::new(1., 60.0_f32.to_radians(), 0.1, 1000.),
+
+            dir: glm::vec3(0., 0., 0.),
+            side: glm::vec3(0., 0., 0.),
+            view_matrix: glm::Mat4::identity(),
+            inverse_view_matrix: glm::Mat4::identity(),
+            projection_matrix: glm::Mat4::identity(),
+            projection_view_matrix: glm::Mat4::identity(),
+            change_log: 0,
+        };
+        camera.update(DIRTY_ALL);
+        camera
+    }
+
     pub fn look_at(&mut self, eye: glm::Vec3, target: glm::Vec3, up: glm::Vec3) {
         self.eye = eye;
         self.target = target;
@@ -96,7 +115,7 @@ impl FreeCamera {
     }
 
     pub fn set_perspective(&mut self, aspect: f32, fovy: f32, znear: f32, zfar: f32) {
-        self.perspective = Perspective3::new(800.0 / 600.0, fov, znear, zfar);
+        self.perspective = Perspective3::new(aspect, fovy, znear, zfar);
         self.update(DIRTY_PROJECTION);
     }
 
@@ -108,7 +127,7 @@ impl FreeCamera {
         self.perspective.znear()
     }
 
-    pub fn pixel_aspect(&self) -> f32 {
+    pub fn image_aspect(&self) -> f32 {
         self.perspective.aspect()
     }
 
