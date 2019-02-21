@@ -1,11 +1,14 @@
 use crate::render::{
     Backend, Buffer, DescriptorPool, DescriptorSet, DescriptorSetLayout, FrameParameters, PipelineLayout, ShaderModule,
 };
+use gfx_hal::device::Device;
 use lazy_static::lazy_static;
 use rendy::command::{Families, QueueId, RenderPassEncoder};
 use rendy::factory::Factory;
 use rendy::graph::present::PresentNode;
-use rendy::graph::render::{PrepareResult, RenderGroupBuilder, SimpleGraphicsPipeline, SimpleGraphicsPipelineDesc, SetLayout, Layout};
+use rendy::graph::render::{
+    Layout, PrepareResult, RenderGroupBuilder, SetLayout, SimpleGraphicsPipeline, SimpleGraphicsPipelineDesc,
+};
 use rendy::graph::{GraphBuilder, NodeBuffer, NodeImage};
 use rendy::memory::MemoryUsageValue;
 use rendy::mesh::{AsVertex, PosColor};
@@ -13,7 +16,6 @@ use rendy::shader::{Shader, ShaderKind, SourceLanguage, StaticShaderInfo};
 use rendy::wsi::Surface;
 use shine_ecs::{ResourceWorld, World};
 use shine_math::camera::FreeCamera;
-use gfx_hal::device::Device;
 
 pub type Graph = rendy::graph::Graph<Backend, World>;
 
@@ -35,8 +37,7 @@ impl Context {
 #[derive(Debug, Default)]
 struct TriangleRenderPipelineDesc;
 
-impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc
-{
+impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
     type Pipeline = TriangleRenderPipeline;
 
     fn depth_stencil(&self) -> Option<gfx_hal::pso::DepthStencilDesc> {
@@ -159,8 +160,7 @@ struct TriangleRenderPipeline {
     vertex: Option<Buffer>,
 }
 
-impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline
-{
+impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
     type Desc = TriangleRenderPipelineDesc;
 
     fn prepare(
@@ -171,7 +171,6 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline
         index: usize,
         world: &World,
     ) -> PrepareResult {
-
         let camera = world.get_resource::<FreeCamera>();
         let mut frame_parameters = world.get_resource_mut::<FrameParameters>();
         frame_parameters.update(factory, index, 1, &*camera);
@@ -215,7 +214,9 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline
         PrepareResult::DrawReuse
     }
 
-    fn draw(&mut self, _layout: &PipelineLayout, mut encoder: RenderPassEncoder<'_, Backend>, _index: usize, _world: &World) {
+    fn draw(&mut self, layout: &PipelineLayout, mut encoder: RenderPassEncoder<'_, Backend>, index: usize, _world: &World) {
+        encoder.bind_graphics_descriptor_sets(layout, 0, Some(&self.descriptor_sets[index]), std::iter::empty());
+
         let vbuf = self.vertex.as_ref().unwrap();
         encoder.bind_vertex_buffers(0, Some((vbuf.raw(), 0)));
         encoder.draw(0..3, 0..1);

@@ -88,8 +88,8 @@ impl FrameParameters {
                     &mut buffer,
                     offset,
                     &[ProjectionArgs {
-                        proj: nalgebra::Isometry3::identity().into(),//camera.projection(),
-                        view: nalgebra::Isometry3::identity().into(),//camera.view(),
+                        proj: nalgebra::Isometry3::identity().into(), //camera.projection(),
+                        view: nalgebra::Isometry3::identity().into(), //camera.view(),
                     }],
                 )
                 .unwrap()

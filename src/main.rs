@@ -3,18 +3,21 @@
 use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::{ResourceWorld, World};
 use shine_math::camera::FreeCamera;
+use std::env;
 use std::sync::Arc;
 use winit::{Event, EventsLoop, VirtualKeyCode, WindowBuilder, WindowEvent};
 
 mod render;
 
 fn main() {
-    ::std::env::set_var("RUST_BACKTRACE", "1");
+    env::set_var("RUST_BACKTRACE", "1");
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Warn)
         .filter_module("shine", log::LevelFilter::Trace)
         .init();
 
+    log::trace!("current executable {:?}", env::current_exe());
+    log::trace!("current path {:?}", env::current_dir());
     let mut world = World::new();
     world.register_resource_with(FreeCamera::new());
 
