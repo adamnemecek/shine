@@ -1,3 +1,5 @@
+#![feature(core_intrinsics)]
+
 use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::{ResourceWorld, World};
 use shine_math::camera::FreeCamera;
@@ -17,7 +19,7 @@ fn main() {
     world.register_resource_with(FreeCamera::new());
 
     let config: RendyConfig = Default::default();
-    let mut factory: Factory<render::Backend> = Factory::new(config).unwrap();
+    let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();
     let mut event_loop = EventsLoop::new();
 
     let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
@@ -26,7 +28,7 @@ fn main() {
     let mut is_closing = false;
     loop {
         let mut release_graph = false;
-        factory.cleanup();
+        factory.maintain(&mut families);
         event_loop.poll_events(|e| match e {
             Event::WindowEvent { event, .. } => match event {
                 WindowEvent::CloseRequested => is_closing = true,
@@ -49,20 +51,24 @@ fn main() {
         if release_graph || is_closing {
             if let Some(graph) = graph.take() {
                 graph.dispose(&mut factory, &mut world);
+                render::dispose(&mut factory, &mut world);
             }
         }
 
         if is_closing {
+            log::trace!("closing");
             break;
         }
 
         if graph.is_none() {
             let surface = factory.create_surface(window.clone());
-            graph = Some(render::init(&mut factory, surface, &mut world));
+            graph = Some(render::init(&mut factory, &mut families, surface, &mut world));
         }
 
         if let Some(ref mut graph) = graph {
-            graph.run(&mut factory, &mut world);
+            graph.run(&mut factory, &mut families, &mut world);
         }
     }
+
+    log::trace!("bye.");
 }

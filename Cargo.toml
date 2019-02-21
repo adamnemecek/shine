@@ -21,12 +21,14 @@ default = ["render-vulkan"]
 log = "*"
 env_logger = "*"
 failure = "*"
-
 lazy_static = "*"
 
+nalgebra = "*"
+nalgebra-glm = "*"
+
 gfx-hal = {version = "*"}
-winit = "*"
-rendy = {version = "*"}
+winit = "0.18"
+rendy = {git = "https://github.com/omni-viral/rendy.git"}
 
 shine-store = {path = "store"}
 shine-graph = {path = "graph"}

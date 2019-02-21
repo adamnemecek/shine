@@ -176,6 +176,12 @@ impl FreeCamera {
     }
 }
 
+impl Default for FreeCamera {
+    fn default() -> Self {
+        FreeCamera::new()
+    }
+}
+
 impl RenderCamera for FreeCamera {
     fn view(&self) -> glm::Mat4 {
         self.view_matrix.into()

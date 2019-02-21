@@ -2,7 +2,8 @@ use crate::entities::{
     EdgeComponentDescriptor, EdgeComponentStore, EntityComponentDescriptor, EntityComponentStore, EntityStore,
 };
 use crate::resources::{named, unnamed};
-use shred::{Fetch, FetchMut, Resources, SystemData};
+use shred::{Dispatcher, Fetch, FetchMut, Resources, SystemData};
+//use shred::{, Read, System, Write};
 
 pub trait EntityWorld {
     fn entities(&self) -> Fetch<'_, EntityStore>;
@@ -64,6 +65,10 @@ impl World {
         world.resources.insert(EntityStore::new());
 
         world
+    }
+
+    pub fn dispatch<'a, 'b>(&mut self, dispatcher: &mut Dispatcher<'a, 'b>) {
+        dispatcher.dispatch(&mut self.resources);
     }
 
     /// Helper to fetch components without creating some explicit System.
