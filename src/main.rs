@@ -2,7 +2,7 @@
 
 use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::{ResourceWorld, World};
-use shine_math::camera::FreeCamera;
+use shine_math::camera::FpsCamera;
 use std::env;
 use std::sync::Arc;
 use winit::{Event, EventsLoop, VirtualKeyCode, WindowBuilder, WindowEvent};
@@ -16,10 +16,21 @@ fn main() {
         .filter_module("shine", log::LevelFilter::Trace)
         .init();
 
+{
+    use gilrs::{Gilrs, Button, Event};
+
+    let mut gilrs = Gilrs::new().unwrap();
+
+    // Iterate over all connected gamepads
+    for (_id, gamepad) in gilrs.gamepads() {
+        log::info!("{} is {:?}", gamepad.name(), gamepad.power_info());
+    }
+}
+
     log::trace!("current executable {:?}", env::current_exe());
     log::trace!("current path {:?}", env::current_dir());
     let mut world = World::new();
-    world.register_resource_with(FreeCamera::new());
+    world.register_resource_with(FpsCamera::new());
 
     let config: RendyConfig = Default::default();
     let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();

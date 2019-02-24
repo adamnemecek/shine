@@ -15,7 +15,7 @@ use rendy::mesh::{AsVertex, PosColor};
 use rendy::shader::{Shader, ShaderKind, SourceLanguage, StaticShaderInfo};
 use rendy::wsi::Surface;
 use shine_ecs::{ResourceWorld, World};
-use shine_math::camera::FreeCamera;
+use shine_math::camera::FpsCamera;
 
 pub type Graph = rendy::graph::Graph<Backend, World>;
 
@@ -171,7 +171,7 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
         index: usize,
         world: &World,
     ) -> PrepareResult {
-        let camera = world.get_resource::<FreeCamera>();
+        let camera = world.get_resource::<FpsCamera>();
         let mut frame_parameters = world.get_resource_mut::<FrameParameters>();
         frame_parameters.update(factory, index, 1, &*camera);
 

@@ -26,6 +26,8 @@ lazy_static = "*"
 nalgebra = "*"
 nalgebra-glm = "*"
 
+gilrs = "*"
+
 gfx-hal = {version = "*"}
 winit = "0.18"
 rendy = {git = "https://github.com/omni-viral/rendy.git"}

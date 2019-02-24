@@ -1,8 +1,8 @@
-use nalgebra_glm as glm;
+use nalgebra::Matrix4;
 
 pub trait RenderCamera {
-    fn view(&self) -> glm::Mat4;
-    fn inverse_view(&self) -> glm::Mat4;
-    fn projection(&self) -> glm::Mat4;
-    fn projection_view(&self) -> glm::Mat4;
+    fn view(&self) -> Matrix4<f32>;
+    fn inverse_view(&self) -> Matrix4<f32>;
+    fn projection(&self) -> Matrix4<f32>;
+    fn projection_view(&self) -> Matrix4<f32>;
 }

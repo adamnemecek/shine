@@ -74,11 +74,12 @@ impl FrameParameters {
     }
 
     pub fn update(&mut self, factory: &Factory<Backend>, index: usize, frame_id: u32, camera: &RenderCamera) {
-        log::trace!("Updating frameparameters");
+        //log::trace!("Updating frameparameters");
         if self.frame_ids[index] == frame_id {
-            log::trace!("already up to date");
             return;
         }
+
+        self.frame_ids[index] = frame_id;
 
         let offset = self.projection_args_offset(index);
         let mut buffer = &mut self.resources.buffer;
@@ -88,8 +89,8 @@ impl FrameParameters {
                     &mut buffer,
                     offset,
                     &[ProjectionArgs {
-                        proj: nalgebra::Isometry3::identity().into(), //camera.projection(),
-                        view: nalgebra::Isometry3::identity().into(), //camera.view(),
+                        proj: camera.projection(),
+                        view: camera.view(),
                     }],
                 )
                 .unwrap()
