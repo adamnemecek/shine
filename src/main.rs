@@ -74,6 +74,11 @@ fn main() {
             break;
         }
 
+        {
+            let mut cam = world.get_resource_mut::<FreeCamera>();
+            cam.roll(0.1);
+        }
+
         if graph.is_none() {
             let surface = factory.create_surface(window.clone());
             graph = Some(render::init(&mut factory, &mut families, surface, &mut world));
