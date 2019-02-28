@@ -1,6 +1,5 @@
-use crate::render::{
-    Backend, Buffer, DescriptorPool, DescriptorSet, DescriptorSetLayout, FrameParameters, PipelineLayout, ShaderModule,
-};
+use crate::render::{Backend, Buffer, DescriptorPool, DescriptorSet, DescriptorSetLayout, PipelineLayout, ShaderModule};
+use crate::render::{FrameInfo, FrameParameters};
 use gfx_hal::device::Device;
 use lazy_static::lazy_static;
 use rendy::command::{Families, QueueId, RenderPassEncoder};
@@ -171,9 +170,10 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
         index: usize,
         world: &World,
     ) -> PrepareResult {
+        let frame_info = world.get_resource::<FrameInfo>();
         let camera = world.get_resource::<FpsCamera>();
         let mut frame_parameters = world.get_resource_mut::<FrameParameters>();
-        frame_parameters.update(factory, index, 1, &*camera);
+        frame_parameters.update(factory, index, frame_info.frame_id, &*camera);
 
         if self.vertex.is_none() {
             let mut vbuf = factory

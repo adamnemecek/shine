@@ -15,7 +15,7 @@ members = [ "testutils", "store", "graph", "graph-macro", "gltf", "gltf-macro", 
 alma = []
 render-dx12 = ["rendy/dx12"]
 render-vulkan = ["rendy/vulkan"]
-default = ["render-dx12"]
+default = ["render-vulkan"]
 
 [dependencies]
 log = "*"

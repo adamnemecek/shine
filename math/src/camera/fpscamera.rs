@@ -1,6 +1,6 @@
-use crate::camera::RenderCamera ;
-use nalgebra::{Point3,Vector3, Matrix4,Isometry3, Perspective3, UnitQuaternion, Translation3};
+use crate::camera::RenderCamera;
 use alga::linear::Similarity;
+use nalgebra::{Isometry3, Matrix4, Perspective3, Point3, Translation3, UnitQuaternion, Vector3};
 
 const DIRTY_PROJECTION: u32 = 0x1;
 const DIRTY_VIEW: u32 = 0x2;
@@ -14,10 +14,11 @@ pub struct FpsCamera {
     pitch: f32,
     roll: f32,
 
-    view: Isometry3<f32>,
     perspective: Perspective3<f32>,
 
     change_log: u32,
+    view: Isometry3<f32>,
+    inverse_view: Isometry3<f32>,
     view_matrix: Matrix4<f32>,
     inverse_view_matrix: Matrix4<f32>,
     projection_matrix: Matrix4<f32>,
@@ -26,7 +27,7 @@ pub struct FpsCamera {
 
 impl FpsCamera {
     pub fn new() -> FpsCamera {
-        let eye = (0.,0.,1.);
+        let eye = (0., 0., 1.);
 
         let mut camera = FpsCamera {
             eye: Point3::new(eye.0, eye.1, eye.2),
@@ -35,14 +36,15 @@ impl FpsCamera {
             pitch: 0.,
             roll: 0.,
 
-            view: Isometry3::translation(eye.0, eye.1, eye.2),
             perspective: Perspective3::new(1., 60.0_f32.to_radians(), 0.1, 1000.),
 
+            change_log: 0,
+            view: Isometry3::identity(),
+            inverse_view: Isometry3::identity(),
             view_matrix: Matrix4::identity(),
             inverse_view_matrix: Matrix4::identity(),
             projection_matrix: Matrix4::identity(),
             projection_view_matrix: Matrix4::identity(),
-            change_log: 0,
         };
         camera.update(DIRTY_ALL);
         camera
@@ -68,8 +70,18 @@ impl FpsCamera {
         self.view.rotate_vector(&Vector3::new(1., 0., 0.))
     }
 
+    pub fn set_roll(&mut self, angle: f32) {
+        self.roll = angle;
+        self.update(DIRTY_VIEW);
+    }
+
     pub fn roll(&mut self, angle: f32) {
         self.roll += angle;
+        self.update(DIRTY_VIEW);
+    }
+
+    pub fn set_yaw(&mut self, angle: f32) {
+        self.yaw = angle;
         self.update(DIRTY_VIEW);
     }
 
@@ -78,8 +90,14 @@ impl FpsCamera {
         self.update(DIRTY_VIEW);
     }
 
+    pub fn set_pitch(&mut self, angle: f32) {
+        self.pitch = angle;
+        self.update(DIRTY_VIEW);
+    }
+
     pub fn pitch(&mut self, angle: f32) {
         self.pitch += angle;
+        self.update(DIRTY_VIEW);
     }
 
     pub fn move_forward(&mut self, dist: f32) {
@@ -95,6 +113,7 @@ impl FpsCamera {
     }
 
     pub fn move_up(&mut self, dist: f32) {
+        log::trace!("up: {:?}", self.get_up());
         let tr = self.get_up() * dist;
         self.eye += tr;
         self.update(DIRTY_VIEW);
@@ -136,11 +155,17 @@ impl FpsCamera {
         if (self.change_log & DIRTY_VIEW) == 0 {
             return;
         }
-        let rotation = UnitQuaternion::from_euler_angles(self.pitch, self.roll, self.yaw);
-        let trans = Translation3::from(-self.get_eye().coords);
-        self.view = Isometry3::from_parts(trans, rotation);
+        let rot_pitch = UnitQuaternion::from_axis_angle(&Vector3::x_axis(), self.pitch);
+        let rot_yaw = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), self.yaw);
+        let rot_roll = UnitQuaternion::from_axis_angle(&Vector3::z_axis(), self.roll);
+        let rot = rot_roll * rot_pitch * rot_yaw;
+        let trans = Translation3::from(self.get_eye().coords);
+
+        self.inverse_view = Isometry3::from_parts(trans, rot);
+        self.view = self.inverse_view.inverse();
+
         self.view_matrix = self.view.to_homogeneous();
-        self.inverse_view_matrix = self.view.inverse().to_homogeneous();
+        self.inverse_view_matrix = self.inverse_view.to_homogeneous();
         self.change_log &= !DIRTY_VIEW;
     }
 
@@ -148,7 +173,9 @@ impl FpsCamera {
         if (self.change_log & DIRTY_PROJECTION) == 0 {
             return;
         }
-        self.projection_matrix = *self.perspective.as_matrix();
+        // vulkan has a projection matrix where y points downward with respect to nalgebra (and opengl)
+        let flip_y = Matrix4::new_nonuniform_scaling(&Vector3::new(1., -1., 1.));
+        self.projection_matrix = flip_y * self.perspective.as_matrix();
         self.projection_view_matrix = self.projection_matrix * self.view_matrix;
         self.change_log &= !DIRTY_PROJECTION;
     }
@@ -157,23 +184,24 @@ impl FpsCamera {
         self.change_log |= change_log;
         self.update_view();
         self.update_projection();
+        log::trace!("view: {:?}", self.view_matrix);
     }
 }
 
 impl RenderCamera for FpsCamera {
     fn view(&self) -> Matrix4<f32> {
-        self.view_matrix.into()
+        self.view_matrix.clone()
     }
 
     fn inverse_view(&self) -> Matrix4<f32> {
-        self.inverse_view_matrix.into()
+        self.inverse_view_matrix.clone()
     }
 
     fn projection(&self) -> Matrix4<f32> {
-        self.projection_matrix.into()
+        self.projection_matrix.clone()
     }
 
     fn projection_view(&self) -> Matrix4<f32> {
-        self.projection_view_matrix.into()
+        self.projection_view_matrix.clone()
     }
 }
