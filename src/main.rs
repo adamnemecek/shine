@@ -36,8 +36,8 @@ fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gil
                 match input.virtual_keycode {
                     Some(VirtualKeyCode::Escape) => is_closing = true,
                     Some(VirtualKeyCode::F11) => is_surface_lost = true,
-                    Some(VirtualKeyCode::Down) => guestures.up = -1.,
-                    Some(VirtualKeyCode::Up) => guestures.up = 1.,
+                    //Some(VirtualKeyCode::Down) => guestures.up = -1.,
+                    //Some(VirtualKeyCode::Up) => guestures.up = 1.,
                     _ => {}
                 }
             }
@@ -49,6 +49,14 @@ fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gil
     // poll gil events
     if !is_closing {
         while let Some(GilEvent { id, event, time }) = gilrs.next_event() {
+            use gilrs::{Axis, EventType::AxisChanged};
+            match event {
+                AxisChanged(Axis::LeftStickY, v, ..) => guestures.forward = v,
+                AxisChanged(Axis::LeftStickX, v, ..) => guestures.side = v,
+                AxisChanged(Axis::RightStickX, v, ..) => guestures.yaw = v,
+                AxisChanged(Axis::RightStickY, v, ..) => guestures.pitch = v,
+                _ => {},
+            }
             log::trace!("{:?} New event from {}: {:?}", time, id, event);
         }
     }
@@ -115,6 +123,11 @@ fn main() {
             let mut cam = world.get_resource_mut::<FpsCamera>();
 
             cam.move_up(guestures.up * 0.001);
+            cam.move_forward(guestures.forward * 0.01);
+            cam.move_side(guestures.side * 0.001);
+            cam.yaw(-guestures.yaw * 0.001);
+            cam.pitch(guestures.pitch * 0.001);
+            cam.roll(guestures.roll * 0.001);
         }
 
         if graph.is_none() {

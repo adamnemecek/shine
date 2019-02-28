@@ -39,10 +39,6 @@ struct TriangleRenderPipelineDesc;
 impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
     type Pipeline = TriangleRenderPipeline;
 
-    fn depth_stencil(&self) -> Option<gfx_hal::pso::DepthStencilDesc> {
-        None
-    }
-
     fn layout(&self) -> Layout {
         Layout {
             sets: vec![SetLayout {
@@ -241,7 +237,7 @@ pub fn init(
         Some(gfx_hal::command::ClearValue::Color([1.0, 1.0, 1.0, 1.0].into())),
     );
 
-    /* let depth = graph_builder.create_image(
+     let depth = graph_builder.create_image(
         surface.kind(),
         1,
         gfx_hal::format::Format::D16Unorm,
@@ -249,10 +245,12 @@ pub fn init(
         Some(gfx_hal::command::ClearValue::DepthStencil(
             gfx_hal::command::ClearDepthStencil(1.0, 0),
         )),
-    );*/
+    );
 
-    let color_pass_builder = TriangleRenderPipeline::builder().into_subpass().with_color(color);
-    //.with_depth_stencil(depth);
+    let color_pass_builder = TriangleRenderPipeline::builder()
+        .into_subpass()
+        .with_color(color)
+        .with_depth_stencil(depth);
     let color_pass = graph_builder.add_node(color_pass_builder.into_pass());
 
     let present_pass_builder = PresentNode::builder(&factory, surface, color).with_dependency(color_pass);
