@@ -26,7 +26,7 @@ lazy_static = "*"
 nalgebra = "*"
 nalgebra-glm = "*"
 
-gilrs = "*"
+gilrs = {git = "https://gitlab.com/gilrs-project/gilrs.git"}
 
 gfx-hal = {version = "*"}
 winit = "0.18"

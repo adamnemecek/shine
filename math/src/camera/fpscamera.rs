@@ -113,7 +113,6 @@ impl FpsCamera {
     }
 
     pub fn move_up(&mut self, dist: f32) {
-        log::trace!("up: {:?}", self.get_up());
         let tr = self.get_up() * dist;
         self.eye += tr;
         self.update(DIRTY_VIEW);
@@ -184,7 +183,6 @@ impl FpsCamera {
         self.change_log |= change_log;
         self.update_view();
         self.update_projection();
-        log::trace!("view: {:?}", self.view_matrix);
     }
 }
 
