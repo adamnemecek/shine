@@ -8,10 +8,10 @@ use std::env;
 use std::sync::Arc;
 use winit::{EventsLoop, WindowBuilder};
 
-mod guestures;
+mod input;
 mod render;
 
-use guestures::Guestures;
+use input::Manager;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum EventResult {
@@ -21,58 +21,46 @@ enum EventResult {
 }
 
 fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gilrs) -> EventResult {
-    let mut guestures = world.get_resource_mut::<Guestures>();
+    let mut input_manager = world.get_resource_mut::<input::Manager>();
     let mut is_closing = false;
     let mut is_surface_lost = false;
 
     // poll window events
     {
-        use winit::{DeviceEvent, Event, VirtualKeyCode, WindowEvent};
-        event_loop.poll_events(|e| match e {
-            Event::WindowEvent {
-                event: WindowEvent::CloseRequested, 
-                ..
-            } => is_closing = true,
-            /*Event::WindowEvent { event:WindowEvent::Resized { .. }} => {
-                release_graph = true;
-            }*/
-            Event::WindowEvent {
-                event: WindowEvent::KeyboardInput { input, .. }, 
-                ..
-            } => {
-                match input.virtual_keycode {
-                    Some(VirtualKeyCode::Escape) => is_closing = true,
-                    Some(VirtualKeyCode::F11) => is_surface_lost = true,
-                    //Some(VirtualKeyCode::Down) => guestures.up = -1.,
-                    //Some(VirtualKeyCode::Up) => guestures.up = 1.,
-                    _ => {}
-                }
+        use winit::{Event, VirtualKeyCode, WindowEvent};
+        event_loop.poll_events(|event| {
+            input_manager.handle_winit_events(&event);
+
+            match event {
+                Event::WindowEvent {
+                    event: WindowEvent::CloseRequested,
+                    ..
+                } => is_closing = true,
+                /*Event::WindowEvent { event:WindowEvent::Resized { .. }} => {
+                    release_graph = true;
+                }*/
+                Event::WindowEvent {
+                    event: WindowEvent::KeyboardInput { input, .. },
+                    ..
+                } => {
+                    match input.virtual_keycode {
+                        Some(VirtualKeyCode::Escape) => is_closing = true,
+                        Some(VirtualKeyCode::F11) => is_surface_lost = true,
+                        _ => {}
+                    }
+                }                
+                _ => {}
             }
-            Event::DeviceEvent {
-                event: DeviceEvent::Motion { axis, value }, 
-                ..
-            } => {
-                if axis == 0 {
-                    guestures.yaw = value as f32 / 10.0
-                } else if axis == 1 {
-                    guestures.pitch = value as f32 / 10.0
-                }
-            }
-            _ => {}
         });
     }
 
     // poll gil events
     if !is_closing {
-        use gilrs::{Axis, Button, Event, EventType::AxisChanged};
-        while let Some(Event { id, event, time }) = gilrs.next_event() {
-            match event {
-                AxisChanged(Axis::LeftStickY, v, ..) => guestures.forward = v,
-                AxisChanged(Axis::LeftStickX, v, ..) => guestures.side = v,
-                AxisChanged(Axis::RightStickX, v, ..) => guestures.yaw = v,
-                AxisChanged(Axis::RightStickY, v, ..) => guestures.pitch = v,
-                _ => {}
-            }
+        use gilrs::Event;
+        while let Some(event) = gilrs.next_event() {
+            input_manager.handle_gil_events(&event);
+
+            let Event { id, event, time } = event;
             log::trace!("{:?} New event from {}: {:?}", time, id, event);
         }
     }
@@ -104,7 +92,7 @@ fn main() {
     log::trace!("current path {:?}", env::current_dir());
     let mut world = World::new();
     world.register_resource_with(FpsCamera::new());
-    world.register_resource_with(Guestures::new());
+    world.register_resource_with(input::Manager::new());
     world.register_resource_with(render::FrameInfo::new());
 
     let config: RendyConfig = Default::default();
@@ -132,18 +120,19 @@ fn main() {
         }
 
         {
-            let guestures = world.get_resource::<Guestures>();
+            let inputManager = world.get_resource::<input::Manager>();
+            let inputState = inputManager.get_state();
             let mut frame = world.get_resource_mut::<render::FrameInfo>();
             frame.frame_id += 1;
 
             let mut cam = world.get_resource_mut::<FpsCamera>();
 
-            cam.move_up(guestures.up * 0.001);
-            cam.move_forward(guestures.forward * 0.01);
-            cam.move_side(guestures.side * 0.001);
-            cam.yaw(-guestures.yaw * 0.001);
-            cam.pitch(guestures.pitch * 0.001);
-            cam.roll(guestures.roll * 0.001);
+            cam.move_up(inputState.get_joystick(0) * 0.001);
+            cam.move_forward(inputState.get_joystick(0) * 0.01);
+            cam.move_side(inputState.get_joystick(0) * 0.001);
+            cam.yaw(-inputState.get_joystick(0) * 0.001);
+            cam.pitch(inputState.get_joystick(0) * 0.001);
+            cam.roll(inputState.get_joystick(0) * 0.001);
         }
 
         if graph.is_none() {
