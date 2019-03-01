@@ -237,7 +237,7 @@ pub fn init(
         Some(gfx_hal::command::ClearValue::Color([1.0, 1.0, 1.0, 1.0].into())),
     );
 
-     let depth = graph_builder.create_image(
+    let depth = graph_builder.create_image(
         surface.kind(),
         1,
         gfx_hal::format::Format::D16Unorm,

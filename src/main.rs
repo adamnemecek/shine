@@ -1,12 +1,12 @@
 #![feature(core_intrinsics)]
 
-use gilrs::{Button as GilButton, Event as GilEvent, Gilrs};
+use gilrs::Gilrs;
 use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::{ResourceWorld, World};
 use shine_math::camera::FpsCamera;
 use std::env;
 use std::sync::Arc;
-use winit::{Event as WinEvent, EventsLoop, VirtualKeyCode, WindowBuilder, WindowEvent};
+use winit::{EventsLoop, WindowBuilder};
 
 mod guestures;
 mod render;
@@ -26,13 +26,20 @@ fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gil
     let mut is_surface_lost = false;
 
     // poll window events
-    event_loop.poll_events(|e| match e {
-        WinEvent::WindowEvent { event, .. } => match event {
-            WindowEvent::CloseRequested => is_closing = true,
-            /*WindowEvent::Resized { .. } => {
+    {
+        use winit::{DeviceEvent, Event, VirtualKeyCode, WindowEvent};
+        event_loop.poll_events(|e| match e {
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested, 
+                ..
+            } => is_closing = true,
+            /*Event::WindowEvent { event:WindowEvent::Resized { .. }} => {
                 release_graph = true;
             }*/
-            WindowEvent::KeyboardInput { input, .. } => {
+            Event::WindowEvent {
+                event: WindowEvent::KeyboardInput { input, .. }, 
+                ..
+            } => {
                 match input.virtual_keycode {
                     Some(VirtualKeyCode::Escape) => is_closing = true,
                     Some(VirtualKeyCode::F11) => is_surface_lost = true,
@@ -41,21 +48,30 @@ fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gil
                     _ => {}
                 }
             }
+            Event::DeviceEvent {
+                event: DeviceEvent::Motion { axis, value }, 
+                ..
+            } => {
+                if axis == 0 {
+                    guestures.yaw = value as f32 / 10.0
+                } else if axis == 1 {
+                    guestures.pitch = value as f32 / 10.0
+                }
+            }
             _ => {}
-        },
-        _ => {}
-    });
+        });
+    }
 
     // poll gil events
     if !is_closing {
-        while let Some(GilEvent { id, event, time }) = gilrs.next_event() {
-            use gilrs::{Axis, EventType::AxisChanged};
+        use gilrs::{Axis, Button, Event, EventType::AxisChanged};
+        while let Some(Event { id, event, time }) = gilrs.next_event() {
             match event {
                 AxisChanged(Axis::LeftStickY, v, ..) => guestures.forward = v,
                 AxisChanged(Axis::LeftStickX, v, ..) => guestures.side = v,
                 AxisChanged(Axis::RightStickX, v, ..) => guestures.yaw = v,
                 AxisChanged(Axis::RightStickY, v, ..) => guestures.pitch = v,
-                _ => {},
+                _ => {}
             }
             log::trace!("{:?} New event from {}: {:?}", time, id, event);
         }
