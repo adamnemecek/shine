@@ -1,10 +1,13 @@
-use crate::input::{GuestureHandler, GuestureResponse, State};
+use crate::input::mapping::{AxisMap, ButtonMap, Mapping};
+use crate::input::{AxisId, ButtonId, GuestureHandler, GuestureResponse, State};
+use std::collections::HashMap;
 
 pub struct Manager {
     time: u128,
     state: State,
     scope: Vec<String>,
     current_scope: String,
+    mapping: Mapping,
     guestures: Vec<(String, String, Box<GuestureHandler>)>,
 }
 
@@ -19,6 +22,7 @@ impl Manager {
             time: 0,
             scope: Vec::new(),
             current_scope: String::new(),
+            mapping: Mapping::new_debug(),
             guestures: Vec::new(),
             state: State::new(),
         }
@@ -29,6 +33,14 @@ impl Manager {
         let scope: String = scope.to_string();
         assert!(self.guestures.iter().find(|v| v.0 == name).is_none());
         self.guestures.push((name, scope, guesture));
+    }
+
+    pub fn add_axis_mapping(&mut self, from: AxisMap, to: AxisId, sensitivity: f32) {
+        self.mapping.add_axis_mapping(from, to, sensitivity);
+    }
+
+    pub fn add_key_mapping(&mut self, from: ButtonMap, to: ButtonId) {
+        self.mapping.add_key_mapping(from, to);
     }
 
     pub fn get_state(&self) -> &State {
@@ -50,12 +62,14 @@ impl Manager {
         &self.current_scope
     }
 
-    fn check_scope(scope: &str, guesture: &str) -> bool {
+    fn check_scope(manager_scope: &str, guesture_scope: &str) -> bool {
         //todo
         true
     }
 
     pub fn prepare(&mut self) {
+        self.time = Self::now();
+        self.state.time = self.time;
         self.state.auto_reset_joystick();
 
         for (_, ref scope, ref mut guesture) in self.guestures.iter_mut() {
@@ -63,7 +77,7 @@ impl Manager {
                 return;
             }
 
-            guesture.on_prepare(self.time, &mut self.state);
+            guesture.on_prepare(&mut self.state);
         }
     }
 
@@ -73,38 +87,60 @@ impl Manager {
                 return;
             }
 
-            guesture.on_update(self.time, &mut self.state);
+            guesture.on_update(&mut self.state);
         }
     }
 
-    fn map_winit_joystic(&self, device_id: &winit::DeviceId, axis: u32) -> Option<(u32, f32)> {
-        Some((axis, 0.1))
-    }
-
     pub fn handle_winit_events(&mut self, event: &winit::Event) {
-        use winit::{DeviceEvent, Event};
+        use winit::{DeviceEvent, ElementState, Event, WindowEvent};
+
+        // keyboard, button, and mouse position is handled through window events
+        // mouse "delta" movement is handled through device
 
         match *event {
-            /*Event::WindowEvent {} => {
+            Event::WindowEvent {
+                event: WindowEvent::KeyboardInput { input, .. },
+                ..
+            } => {
+                // handling raw keyboard inputs
+                for (_, ref scope, ref mut guesture) in self.guestures.iter_mut() {
+                    if !Self::check_scope(&self.current_scope, scope) {
+                        return;
+                    }
+                    guesture.on_raw_keyboard(&mut self.state, &input)
+                }
 
-            }*/
+                // handling mapped keyboards
+                if let Some(button) = self.mapping.map_winit_button(&input) {
+                    log::trace!("mapped button: {:?} state: {:?}", button, input.state);
+                    self.on_button(button, input.state == ElementState::Pressed)
+                }
+            }
             Event::DeviceEvent {
                 device_id,
                 event: DeviceEvent::Motion { axis, value },
             } => {
-                log::trace!("mapping winit joystick: dev:{:?} axis:{}", device_id, axis);
-                if let Some((axis_id, sensitivity)) = self.map_winit_joystic(&device_id, axis) {
+                if let Some((axis_id, sensitivity)) = self.mapping.map_winit_joystic(&device_id, axis) {
                     let value = value as f32;
-                    log::trace!("value: raw:{}, scaled:{}", value, value * sensitivity);
+                    log::trace!(
+                        "mapping winit joystick: dev:{:?} axis:{}  raw value:{}, scaled value:{}",
+                        device_id,
+                        axis,
+                        value,
+                        value * sensitivity
+                    );
                     self.on_joystick(axis_id, value * sensitivity, true);
                 }
             }
+            Event::DeviceEvent {
+                device_id,
+                event: DeviceEvent::Added,
+            } => {
+                //todo: mapping - add/remove known devices
+                log::trace!("dev added: {:?}", device_id);
+            }
             _ => {}
         };
-    }
-
-    fn map_gil_joystic(&self, device_id: &gilrs::GamepadId, axis: &gilrs::ev::Axis) -> Option<(u32, f32)> {
-        Some((0, 1.))
     }
 
     pub fn handle_gil_events(&mut self, event: &gilrs::Event) {
@@ -114,7 +150,7 @@ impl Manager {
         match event {
             AxisChanged(axis, value, ..) => {
                 log::trace!("mapping gil joystick: dev:{:?} axis:{:?}", id, axis);
-                if let Some((axis_id, sensitivity)) = self.map_gil_joystic(id, axis) {
+                if let Some((axis_id, sensitivity)) = self.mapping.map_gil_joystic(id, axis) {
                     log::trace!("value: raw:{}, scaled:{}", value, value * sensitivity);
                     self.on_joystick(axis_id, value * sensitivity, false);
                 }
@@ -123,13 +159,27 @@ impl Manager {
         }
     }
 
-    fn on_joystick(&mut self, axis_id: u32, value: f32, auto_reset: bool) {
+    fn on_button(&mut self, button_id: ButtonId, is_pressed: bool) {
         for (_, ref scope, ref mut guesture) in self.guestures.iter_mut() {
             if !Self::check_scope(&self.current_scope, scope) {
                 return;
             }
 
-            if guesture.on_joystick(self.time, &mut self.state, axis_id, value) == GuestureResponse::Consumed {
+            if guesture.on_button(&mut self.state, button_id, is_pressed) == GuestureResponse::Consumed {
+                return;
+            }
+        }
+
+        self.state.set_pressed(button_id, is_pressed);
+    }
+
+    fn on_joystick(&mut self, axis_id: AxisId, value: f32, auto_reset: bool) {
+        for (_, ref scope, ref mut guesture) in self.guestures.iter_mut() {
+            if !Self::check_scope(&self.current_scope, scope) {
+                return;
+            }
+
+            if guesture.on_joystick(&mut self.state, axis_id, value) == GuestureResponse::Consumed {
                 return;
             }
         }

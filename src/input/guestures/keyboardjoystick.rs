@@ -1,14 +1,14 @@
-use crate::input::{GuestureHandler, GuestureResponse, State};
+use crate::input::{AxisId, ButtonId};
 
 struct Control {
     /// Button that emulates the moves along the positive direction
-    inc_button_id: u32,
+    inc_button_id: ButtonId,
 
     /// Button that emulates the moves along the negative direction
-    dec_button_id: u32,
+    dec_button_id: ButtonId,
 
     /// The emulated axis
-    axis: u32,
+    axis: AxisId,
 }
 
 /// Emulate joystick by converting keybord down/up events into axis events
@@ -21,7 +21,7 @@ impl KeyboardJoystick {
         KeyboardJoystick { axis: Vec::new() }
     }
 
-    pub fn add_axis(&mut self, axis: u32, inc_button_id: u32, dec_button_id: u32) {
+    pub fn add_axis(&mut self, axis: AxisId, inc_button_id: ButtonId, dec_button_id: ButtonId) {
         self.axis.push(Control {
             inc_button_id,
             dec_button_id,
@@ -29,7 +29,7 @@ impl KeyboardJoystick {
         });
     }
 }
-
+/*
 impl GuestureHandler for KeyboardJoystick {
     fn on_prepare(&mut self, _time: u128, _state: &mut State) {}
 
@@ -39,7 +39,7 @@ impl GuestureHandler for KeyboardJoystick {
         GuestureResponse::None
     }
 
-    fn on_button(&mut self, _time: u128, _state: &mut State, _button_id: u32, _is_down: bool) -> GuestureResponse {
+    fn on_button(&mut self, _time: u128, _state: &mut State, _button_id: Button, _is_down: bool) -> GuestureResponse {
         GuestureResponse::None
     }
-}
+}*/

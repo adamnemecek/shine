@@ -6,13 +6,13 @@ use shine_ecs::{ResourceWorld, World};
 use shine_math::camera::FpsCamera;
 use std::env;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use winit::{EventsLoop, WindowBuilder};
 
-pub mod input;
+mod input;
 mod render;
 
-use input::{Manager, State};
+use input::{AxisId, ButtonId};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum EventResult {
@@ -127,12 +127,12 @@ fn main() {
             let input_state = input_manager.get_state();
             let mut cam = world.get_resource_mut::<FpsCamera>();
 
-            cam.move_up(input_state.get_joystick(0) * 0.001);
-            cam.move_forward(input_state.get_joystick(0) * 0.01);
-            cam.move_side(input_state.get_joystick(0) * 0.001);
+            cam.move_up(input_state.get_joystick(AxisId::new(0)) * 0.01);
+            cam.move_side(input_state.get_joystick(AxisId::new(1)) * 0.01);
+            /*cam.move_forward(input_state.get_joystick(0) * 0.01);
             cam.yaw(-input_state.get_joystick(0) * 0.001);
             cam.pitch(input_state.get_joystick(0) * 0.001);
-            cam.roll(input_state.get_joystick(0) * 0.001);
+            cam.roll(input_state.get_joystick(0) * 0.001);*/
         }
 
         if graph.is_none() {
