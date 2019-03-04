@@ -6,12 +6,13 @@ use shine_ecs::{ResourceWorld, World};
 use shine_math::camera::FpsCamera;
 use std::env;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use winit::{EventsLoop, WindowBuilder};
 
-mod input;
+pub mod input;
 mod render;
 
-use input::Manager;
+use input::{Manager, State};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum EventResult {
@@ -25,6 +26,7 @@ fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gil
     let mut is_closing = false;
     let mut is_surface_lost = false;
 
+    input_manager.prepare();
     // poll window events
     {
         use winit::{Event, VirtualKeyCode, WindowEvent};
@@ -42,13 +44,11 @@ fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gil
                 Event::WindowEvent {
                     event: WindowEvent::KeyboardInput { input, .. },
                     ..
-                } => {
-                    match input.virtual_keycode {
-                        Some(VirtualKeyCode::Escape) => is_closing = true,
-                        Some(VirtualKeyCode::F11) => is_surface_lost = true,
-                        _ => {}
-                    }
-                }                
+                } => match input.virtual_keycode {
+                    Some(VirtualKeyCode::Escape) => is_closing = true,
+                    Some(VirtualKeyCode::F11) => is_surface_lost = true,
+                    _ => {}
+                },
                 _ => {}
             }
         });
@@ -64,6 +64,8 @@ fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gil
             log::trace!("{:?} New event from {}: {:?}", time, id, event);
         }
     }
+
+    input_manager.update();
 
     if is_closing {
         EventResult::Closing
@@ -81,15 +83,9 @@ fn main() {
         .filter_module("shine", log::LevelFilter::Trace)
         .init();
 
-    let mut gilrs = Gilrs::new().unwrap();
-
-    // Iterate over all connected gamepads
-    for (_id, gamepad) in gilrs.gamepads() {
-        log::info!("{} is {:?}", gamepad.name(), gamepad.power_info());
-    }
-
     log::trace!("current executable {:?}", env::current_exe());
     log::trace!("current path {:?}", env::current_dir());
+
     let mut world = World::new();
     world.register_resource_with(FpsCamera::new());
     world.register_resource_with(input::Manager::new());
@@ -97,10 +93,14 @@ fn main() {
 
     let config: RendyConfig = Default::default();
     let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();
+
     let mut event_loop = EventsLoop::new();
+    let mut gilrs = Gilrs::new().unwrap();
 
     let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
     let mut graph: Option<render::Graph> = None;
+    let mut frame_start = None;
+    let mut frame_count = 1;
 
     loop {
         factory.maintain(&mut families);
@@ -120,19 +120,19 @@ fn main() {
         }
 
         {
-            let inputManager = world.get_resource::<input::Manager>();
-            let inputState = inputManager.get_state();
             let mut frame = world.get_resource_mut::<render::FrameInfo>();
-            frame.frame_id += 1;
+            frame.frame_id = frame_count;
 
+            let input_manager = world.get_resource::<input::Manager>();
+            let input_state = input_manager.get_state();
             let mut cam = world.get_resource_mut::<FpsCamera>();
 
-            cam.move_up(inputState.get_joystick(0) * 0.001);
-            cam.move_forward(inputState.get_joystick(0) * 0.01);
-            cam.move_side(inputState.get_joystick(0) * 0.001);
-            cam.yaw(-inputState.get_joystick(0) * 0.001);
-            cam.pitch(inputState.get_joystick(0) * 0.001);
-            cam.roll(inputState.get_joystick(0) * 0.001);
+            cam.move_up(input_state.get_joystick(0) * 0.001);
+            cam.move_forward(input_state.get_joystick(0) * 0.01);
+            cam.move_side(input_state.get_joystick(0) * 0.001);
+            cam.yaw(-input_state.get_joystick(0) * 0.001);
+            cam.pitch(input_state.get_joystick(0) * 0.001);
+            cam.roll(input_state.get_joystick(0) * 0.001);
         }
 
         if graph.is_none() {
@@ -143,6 +143,17 @@ fn main() {
         if let Some(ref mut graph) = graph {
             graph.run(&mut factory, &mut families, &mut world);
         }
+
+        let frame_time = {
+            match frame_start.replace(Instant::now()) {
+                None => 0.0_f64,
+                Some(prev) => prev.elapsed().as_millis() as f64,
+            }
+        };
+        if frame_time > 10. {
+            log::trace!("too long frame: {}", frame_time);
+        }
+        frame_count += 1;
     }
 
     log::trace!("bye.");
