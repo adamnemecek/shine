@@ -12,13 +12,39 @@ use winit::{EventsLoop, WindowBuilder};
 mod input;
 mod render;
 
-use input::{AxisId, ButtonId};
+use input::AxisId;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum EventResult {
     None,
     SurfaceLost,
     Closing,
+}
+
+mod input2 {
+    use super::input::{AxisId, InputMapping, Manager};
+
+    pub const MOVE_FORWARD: AxisId = AxisId::new(0);
+    pub const MOVE_SIDE: AxisId = AxisId::new(1);
+    pub const MOVE_UP: AxisId = AxisId::new(2);
+
+    pub const ROLL: AxisId = AxisId::new(10);
+    pub const YAW: AxisId = AxisId::new(11);
+    pub const PITCH: AxisId = AxisId::new(12);
+
+    pub fn create_input_manager() -> Manager {
+        let mut input_manager = Manager::new();
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(17), MOVE_FORWARD, 1.); // W
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(31), MOVE_FORWARD, -1.); // A
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(32), MOVE_SIDE, 1.); // S
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(30), MOVE_SIDE, -1.); // D
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(18), MOVE_UP, 1.); // Q
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(16), MOVE_UP, -1.); // E
+
+        input_manager.add_axis_mapping(InputMapping::MouseAxis(0), YAW, -0.1); // mouse x
+        input_manager.add_axis_mapping(InputMapping::MouseAxis(1), PITCH, 0.1); // mouse y
+        input_manager
+    }
 }
 
 fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gilrs) -> EventResult {
@@ -88,7 +114,7 @@ fn main() {
 
     let mut world = World::new();
     world.register_resource_with(FpsCamera::new());
-    world.register_resource_with(input::Manager::new());
+    world.register_resource_with(input2::create_input_manager());
     world.register_resource_with(render::FrameInfo::new());
 
     let config: RendyConfig = Default::default();
@@ -99,7 +125,7 @@ fn main() {
 
     let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
     let mut graph: Option<render::Graph> = None;
-    let mut frame_start = None;
+    let mut prev_frame_instant = None;
     let mut frame_count = 1;
 
     loop {
@@ -119,20 +145,35 @@ fn main() {
             break;
         }
 
+        let ellapsed_time = {
+            match prev_frame_instant.replace(Instant::now()) {
+                None => 0.0_f64,
+                Some(prev) => prev.elapsed().as_micros() as f64,
+            }
+        };
+        if ellapsed_time > 10000. {
+            log::trace!("too long frame: {}", ellapsed_time);
+        }
+        frame_count += 1;
+
         {
             let mut frame = world.get_resource_mut::<render::FrameInfo>();
             frame.frame_id = frame_count;
+            frame.ellapsed_time = ellapsed_time;
 
             let input_manager = world.get_resource::<input::Manager>();
             let input_state = input_manager.get_state();
             let mut cam = world.get_resource_mut::<FpsCamera>();
 
-            cam.move_up(input_state.get_joystick(AxisId::new(0)) * 0.01);
-            cam.move_side(input_state.get_joystick(AxisId::new(1)) * 0.01);
-            /*cam.move_forward(input_state.get_joystick(0) * 0.01);
-            cam.yaw(-input_state.get_joystick(0) * 0.001);
-            cam.pitch(input_state.get_joystick(0) * 0.001);
-            cam.roll(input_state.get_joystick(0) * 0.001);*/
+            let dist = (ellapsed_time * 0.000001) as f32;
+            let angle_dist = (ellapsed_time * 0.00001) as f32;
+
+            cam.move_forward(input_state.get_joystick(input2::MOVE_FORWARD) * dist);
+            cam.move_side(input_state.get_joystick(input2::MOVE_SIDE) * dist);
+            cam.move_up(input_state.get_joystick(input2::MOVE_UP) * dist);
+            cam.yaw(input_state.get_joystick(input2::YAW) * angle_dist);
+            cam.roll(input_state.get_joystick(input2::ROLL) * angle_dist);
+            cam.pitch(input_state.get_joystick(input2::PITCH) * angle_dist);
         }
 
         if graph.is_none() {
@@ -143,17 +184,6 @@ fn main() {
         if let Some(ref mut graph) = graph {
             graph.run(&mut factory, &mut families, &mut world);
         }
-
-        let frame_time = {
-            match frame_start.replace(Instant::now()) {
-                None => 0.0_f64,
-                Some(prev) => prev.elapsed().as_millis() as f64,
-            }
-        };
-        if frame_time > 10. {
-            log::trace!("too long frame: {}", frame_time);
-        }
-        frame_count += 1;
     }
 
     log::trace!("bye.");

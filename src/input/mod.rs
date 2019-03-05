@@ -1,48 +1,47 @@
 pub mod guestures;
 mod manager;
 mod mapping;
+mod modifiermask;
 mod state;
 
 pub use self::manager::*;
+pub use self::mapping::InputMapping;
+pub use self::modifiermask::*;
 pub use self::state::*;
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ButtonId(u32);
-
-impl ButtonId {
-    pub fn new(code: u32) -> ButtonId {
-        ButtonId(code)
-    }
-}
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AxisId(u32);
 
 impl AxisId {
-    pub fn new(code: u32) -> AxisId {
+    pub const fn new(code: u32) -> AxisId {
         AxisId(code)
+    }
+
+    pub fn id() -> u32 {
+        self.0
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub enum GuestureResponse {
-    None,
-    Consumed,
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ModifierId(u32);
+
+impl ModifierId {
+    pub const fn new(code: u32) -> ModifierId {
+        ModifierId(code)
+    }
+
+    pub fn id() -> u32 {
+        self.0
+    }
 }
 
 pub trait GuestureHandler: Send + Sync {
     /// Called before injecting system messages
-    fn on_prepare(&mut self, _state: &mut State);
+    fn on_prepare(&mut self, state: &mut State);
 
     /// Called after the injection of system messages
-    fn on_update(&mut self, _state: &mut State);
+    fn on_update(&mut self, state: &mut State);
 
-    /// Raw keyboard input
-    fn on_raw_keyboard(&mut self, _state: &mut State, key: &winit::KeyboardInput);
-
-    /// Called during the handling of the button events of the system
-    fn on_button(&mut self, _state: &mut State, _button_id: ButtonId, _is_down: bool) -> GuestureResponse;
-
-    /// Called during the handling of the joystick events of the system
-    fn on_joystick(&mut self, _state: &mut State, _axis_id: AxisId, _value: f32) -> GuestureResponse;
+    /// Called during the handling of the system messages
+    fn on_joystick(&mut self, state: &mut State, axis_id: AxisId, value: f32);
 }
