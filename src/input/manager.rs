@@ -36,15 +36,15 @@ impl Manager {
         self.mapping.add_modifier_mapping(input_event, modifier_id);
     }
 
-    pub fn add_axis_mapping(
+    pub fn add_button_mapping(
         &mut self,
         input_event: InputMapping,
         input_modifiers: Option<&[(ModifierId, ModifierFilter)]>,
-        axis_id: ButtonId,
+        button_id: ButtonId,
         sensitivity: f32,
     ) {
         self.mapping
-            .add_axis_mapping(input_event, input_modifiers, axis_id, sensitivity);
+            .add_button_mapping(input_event, input_modifiers, button_id, sensitivity);
     }
 
     pub fn get_state(&self) -> &State {
@@ -82,16 +82,16 @@ impl Manager {
                         .set_modifier(modifier_id, input.state == ElementState::Pressed, false);
                 }
 
-                if let Some((axis_id, modifier_mask, sensitivity)) = self.mapping.map_winit_key_to_axis(&input) {
+                if let Some((button_id, modifier_mask, sensitivity)) = self.mapping.map_winit_key_to_button(&input) {
                     let value = if input.state == ElementState::Pressed { 1. } else { 0. };
                     log::trace!(
                         "mapped winit key: {:?} to axis: {:?},{},{}",
                         input,
-                        axis_id,
+                        button_id,
                         value,
                         value * sensitivity
                     );
-                    self.state.set_button(axis_id, modifier_mask, value * sensitivity, false);
+                    self.state.set_button(button_id, modifier_mask, value * sensitivity, false);
                 }
             }
             Event::DeviceEvent {
@@ -104,18 +104,18 @@ impl Manager {
                     self.state.set_modifier(modifier_id, true, true);
                 }
 
-                if let Some((axis_id, modifier_mask, sensitivity)) = self.mapping.map_winit_axis_to_axis(&device_id, axis) {
+                if let Some((button_id, modifier_mask, sensitivity)) = self.mapping.map_winit_axis_to_button(&device_id, axis) {
                     let value = value as f32;
                     log::trace!(
                         "mapping winit axis: {:?},{:?},{:?} to axis: {:?},{},{}",
                         device_id,
                         axis,
                         value,
-                        axis_id,
+                        button_id,
                         value,
                         value * sensitivity
                     );
-                    self.state.set_button(axis_id, modifier_mask, value * sensitivity, true);
+                    self.state.set_button(button_id, modifier_mask, value * sensitivity, true);
                 }
             }
             Event::DeviceEvent {
@@ -141,16 +141,16 @@ impl Manager {
                     self.state.set_modifier(modifier_id, *value != 0., false);
                 }
 
-                if let Some((axis_id, modifier_mask, sensitivity)) = self.mapping.map_gil_axis_to_axis(id, axis) {
+                if let Some((button_id, modifier_mask, sensitivity)) = self.mapping.map_gil_axis_to_button(id, axis) {
                     log::trace!(
                         "mapping gil axis: {:?},{:?} to axis: {:?},{},{}",
                         id,
                         axis,
-                        axis_id,
+                        button_id,
                         value,
                         value * sensitivity
                     );
-                    self.state.set_button(axis_id, modifier_mask, value * sensitivity, false);
+                    self.state.set_button(button_id, modifier_mask, value * sensitivity, false);
                 }
             }
             _ => {}

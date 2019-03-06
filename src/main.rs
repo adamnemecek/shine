@@ -20,7 +20,7 @@ enum EventResult {
 }
 
 mod input2 {
-    use super::input::{ButtonId, InputMapping, Manager};
+    use super::input::{ButtonId, InputMapping, Manager, ModifierId};
 
     pub const MOVE_FORWARD: ButtonId = ButtonId::new(0);
     pub const MOVE_SIDE: ButtonId = ButtonId::new(1);
@@ -30,17 +30,21 @@ mod input2 {
     pub const YAW: ButtonId = ButtonId::new(11);
     pub const PITCH: ButtonId = ButtonId::new(12);
 
+    pub const MOD_SHIFT: ModifierId = ModifierId::new(0);
+
     pub fn create_input_manager() -> Manager {
         let mut input_manager = Manager::new();
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(17), None, MOVE_FORWARD, 1.); // W
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(31), None, MOVE_FORWARD, -1.); // A
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(32), None, MOVE_SIDE, 1.); // S
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(30), None, MOVE_SIDE, -1.); // D
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(18), None, MOVE_UP, 1.); // Q
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(16), None, MOVE_UP, -1.); // E
+        input_manager.add_modifier_mapping(InputMapping::ScanCodeKey(30), MOD_SHIFT); // LEFT_SHIFT
 
-        input_manager.add_axis_mapping(InputMapping::MouseAxis(0), None, YAW, -0.1); // mouse x
-        input_manager.add_axis_mapping(InputMapping::MouseAxis(1), None, PITCH, 0.1); // mouse y
+        input_manager.add_button_mapping(InputMapping::ScanCodeKey(17), None, MOVE_FORWARD, 1.); // W
+        input_manager.add_button_mapping(InputMapping::ScanCodeKey(31), None, MOVE_FORWARD, -1.); // A
+        input_manager.add_button_mapping(InputMapping::ScanCodeKey(32), None, MOVE_SIDE, 1.); // S
+        input_manager.add_button_mapping(InputMapping::ScanCodeKey(30), None, MOVE_SIDE, -1.); // D
+        input_manager.add_button_mapping(InputMapping::ScanCodeKey(18), None, MOVE_UP, 1.); // Q
+        input_manager.add_button_mapping(InputMapping::ScanCodeKey(16), None, MOVE_UP, -1.); // E
+
+        input_manager.add_button_mapping(InputMapping::MouseAxis(0), None, YAW, -0.1); // mouse x
+        input_manager.add_button_mapping(InputMapping::MouseAxis(1), None, PITCH, 0.1); // mouse y
         input_manager
     }
 }

@@ -74,7 +74,7 @@ impl State {
         self.modifier_mask.get(modifier_id)
     }
 
-    pub fn set_button(&mut self, axis_id: ButtonId, modifier_mask: ModifierFilterMask, value: f32, autoreset: bool) {
+    pub fn set_button(&mut self, button_id: ButtonId, modifier_mask: ModifierFilterMask, value: f32, autoreset: bool) {
         // clamp input to [-1,1]
         let value = if value > 1. {
             1.
@@ -85,9 +85,9 @@ impl State {
         };
 
         if value == 0. {
-            let _ = self.buttons.remove(&axis_id);
+            let _ = self.buttons.remove(&button_id);
         } else {
-            let entry = self.buttons.entry(axis_id);
+            let entry = self.buttons.entry(button_id);
             let mut state = entry.or_insert(ButtonState::default());
             state.value = value;
             state.modifier_mask = modifier_mask;
@@ -95,8 +95,8 @@ impl State {
         }
     }
 
-    pub fn get_button(&self, axis_id: ButtonId) -> f32 {
-        match self.buttons.get(&axis_id) {
+    pub fn get_button(&self, button_id: ButtonId) -> f32 {
+        match self.buttons.get(&button_id) {
             None => 0.,
             Some(ref s) => {
                 if s.modifier_mask.check(&self.modifier_mask) {
@@ -108,8 +108,8 @@ impl State {
         }
     }
 
-    pub fn is_button(&self, axis_id: ButtonId) -> bool {
-        self.get_button(axis_id) != 0.
+    pub fn is_button(&self, button_id: ButtonId) -> bool {
+        self.get_button(button_id) != 0.
     }
 }
 
