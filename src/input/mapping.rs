@@ -1,4 +1,4 @@
-use crate::input::AxisId;
+use crate::input::{AxisId, ModifierFilter, ModifierFilterMask, ModifierId};
 use std::collections::{HashMap, HashSet};
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -12,7 +12,7 @@ pub enum InputMapping {
 }
 
 pub struct Mapping {
-    axis_mapping: HashMap<InputMapping, (AxisId, f32)>,
+    axis_mapping: HashMap<InputMapping, (AxisId, ModifierFilterMask, f32)>,
     modifier_mapping: HashMap<InputMapping, ModifierId>,
 }
 
@@ -24,13 +24,22 @@ impl Mapping {
         }
     }
 
-    pub fn add_axis_mapping(&mut self, from: InputMapping, to: AxisId, sensitivity: f32) {
-        self.axis_mapping.insert(from, (to, sensitivity));
+    pub fn add_modifier_mapping(&mut self, input_event: InputMapping, modifier_id: ModifierId) {
+        self.modifier_mapping.insert(input_event, modifier_id);
     }
 
-    pub fn add_modifier_mapping(&mut self, from: InputMapping, to: ModifierId) {
-        assert!(to < MAX_MODIFIER_COUNT);
-        self.modifier_mapping.insert(from, to);
+    pub fn add_axis_mapping(
+        &mut self,
+        input_event: InputMapping,
+        input_modifiers: Option<&[(ModifierId, ModifierFilter)]>,
+        axis_id: AxisId,
+        sensitivity: f32,
+    ) {
+        let mask = match input_modifiers {
+            None => ModifierFilterMask::default(),
+            Some(f) => ModifierFilterMask::from(f),
+        };
+        self.axis_mapping.insert(input_event, (axis_id, mask, sensitivity));
     }
 
     pub fn map_winit_axis_to_modifier(&self, device_id: &winit::DeviceId, axis: u32) -> Option<ModifierId> {
@@ -63,7 +72,7 @@ impl Mapping {
         return None;
     }
 
-    pub fn map_winit_axis_to_axis(&self, device_id: &winit::DeviceId, axis: u32) -> Option<(AxisId, f32)> {
+    pub fn map_winit_axis_to_axis(&self, device_id: &winit::DeviceId, axis: u32) -> Option<(AxisId, ModifierFilterMask, f32)> {
         let mapping = &self.axis_mapping;
 
         if let Some(res) = mapping.get(&InputMapping::MouseAxisWithDevice(device_id.to_owned(), axis)) {
@@ -77,7 +86,7 @@ impl Mapping {
         None
     }
 
-    pub fn map_winit_key_to_axis(&self, key_input: &winit::KeyboardInput) -> Option<(AxisId, f32)> {
+    pub fn map_winit_key_to_axis(&self, key_input: &winit::KeyboardInput) -> Option<(AxisId, ModifierFilterMask, f32)> {
         let mapping = &self.axis_mapping;
 
         if let Some(res) = mapping.get(&InputMapping::ScanCodeKey(key_input.scancode)) {
@@ -107,7 +116,11 @@ impl Mapping {
         None
     }
 
-    pub fn map_gil_axis_to_axis(&self, device_id: &gilrs::GamepadId, axis: &gilrs::ev::Axis) -> Option<(AxisId, f32)> {
+    pub fn map_gil_axis_to_axis(
+        &self,
+        device_id: &gilrs::GamepadId,
+        axis: &gilrs::ev::Axis,
+    ) -> Option<(AxisId, ModifierFilterMask, f32)> {
         let mapping = &self.axis_mapping;
 
         if let Some(res) = mapping.get(&InputMapping::GamepadWithDevice(device_id.to_owned(), axis.to_owned())) {

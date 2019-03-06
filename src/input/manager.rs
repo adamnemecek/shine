@@ -1,5 +1,5 @@
-use crate::input::mapping::{AxisMap, Mapping};
-use crate::input::{AxisId, GuestureHandler, State};
+use crate::input::mapping::{InputMapping, Mapping};
+use crate::input::{AxisId, GuestureHandler, ModifierFilter, ModifierFilterMask, ModifierId, State};
 
 pub struct Manager {
     time: u128,
@@ -34,8 +34,19 @@ impl Manager {
         self.guestures.push((name, scope, guesture));
     }
 
-    pub fn add_axis_mapping(&mut self, from: AxisMap, to: AxisId, sensitivity: f32) {
-        self.mapping.add_axis_mapping(from, to, sensitivity);
+    pub fn add_modifier_mapping(&mut self, input_event: InputMapping, modifier_id: ModifierId) {
+        self.mapping.add_modifier_mapping(input_event, modifier_id);
+    }
+
+    pub fn add_axis_mapping(
+        &mut self,
+        input_event: InputMapping,
+        input_modifiers: Option<&[(ModifierId, ModifierFilter)]>,
+        axis_id: AxisId,
+        sensitivity: f32,
+    ) {
+        self.mapping
+            .add_axis_mapping(input_event, input_modifiers, axis_id, sensitivity);
     }
 
     pub fn get_state(&self) -> &State {
@@ -64,7 +75,8 @@ impl Manager {
     pub fn prepare(&mut self) {
         self.time = Self::now();
         self.state.time = self.time;
-        self.state.auto_reset_joystick();
+        self.state.autoreset_modifiers();
+        self.state.autoreset_joystick();
 
         for (_, ref scope, ref mut guesture) in self.guestures.iter_mut() {
             if !Self::check_scope(&self.current_scope, scope) {
@@ -97,8 +109,13 @@ impl Manager {
                 ..
             } => {
                 // handling mapped keyboards
-                log::trace!("key: {:?}", input);
-                if let Some((axis_id, sensitivity)) = self.mapping.map_winit_key_to_axis(&input) {
+                log::trace!("winit key: {:?}", input);
+
+                if let Some(modifier_id) = self.mapping.map_winit_key_to_modifier(&input) {
+                    self.on_modifier(modifier_id, input.state == ElementState::Pressed, false);
+                }
+
+                if let Some((axis_id, modifier_mask, sensitivity)) = self.mapping.map_winit_key_to_axis(&input) {
                     let value = if input.state == ElementState::Pressed { 1. } else { 0. };
                     log::trace!(
                         "mapped winit key: {:?} to axis: {:?},{},{}",
@@ -107,14 +124,20 @@ impl Manager {
                         value,
                         value * sensitivity
                     );
-                    self.on_joystick(axis_id, value * sensitivity, false);
+                    self.on_joystick(axis_id, modifier_mask, value * sensitivity, false);
                 }
             }
             Event::DeviceEvent {
                 device_id,
                 event: DeviceEvent::Motion { axis, value },
             } => {
-                if let Some((axis_id, sensitivity)) = self.mapping.map_winit_axis_to_axis(&device_id, axis) {
+                log::trace!("winit dev motion: {:?},{:?},{:?}", device_id, axis, value);
+
+                if let Some(modifier_id) = self.mapping.map_winit_axis_to_modifier(&device_id, axis) {
+                    self.on_modifier(modifier_id, true, true);
+                }
+
+                if let Some((axis_id, modifier_mask, sensitivity)) = self.mapping.map_winit_axis_to_axis(&device_id, axis) {
                     let value = value as f32;
                     log::trace!(
                         "mapping winit axis: {:?},{:?},{:?} to axis: {:?},{},{}",
@@ -125,7 +148,7 @@ impl Manager {
                         value,
                         value * sensitivity
                     );
-                    self.on_joystick(axis_id, value * sensitivity, true);
+                    self.on_joystick(axis_id, modifier_mask, value * sensitivity, true);
                 }
             }
             Event::DeviceEvent {
@@ -145,8 +168,13 @@ impl Manager {
         let Event { id, event, .. } = event;
         match event {
             AxisChanged(axis, value, ..) => {
-                log::trace!("mapping gil joystick: dev:{:?} axis:{:?}", id, axis);
-                if let Some((axis_id, sensitivity)) = self.mapping.map_gil_axis_to_axis(id, axis) {
+                log::trace!("gil axis {:?},{:?},{:?}", id, axis, value);
+
+                if let Some(modifier_id) = self.mapping.map_gil_axis_to_modifier(id, axis) {
+                    self.on_modifier(modifier_id, *value != 0., false);
+                }
+
+                if let Some((axis_id, modifier_mask, sensitivity)) = self.mapping.map_gil_axis_to_axis(id, axis) {
                     log::trace!(
                         "mapping gil axis: {:?},{:?} to axis: {:?},{},{}",
                         id,
@@ -155,22 +183,18 @@ impl Manager {
                         value,
                         value * sensitivity
                     );
-                    self.on_joystick(axis_id, value * sensitivity, false);
+                    self.on_joystick(axis_id, modifier_mask, value * sensitivity, false);
                 }
             }
             _ => {}
         }
     }
 
-    fn on_joystick(&mut self, axis_id: AxisId, value: f32, auto_reset: bool) {
-        for (_, ref scope, ref mut guesture) in self.guestures.iter_mut() {
-            if !Self::check_scope(&self.current_scope, scope) {
-                return;
-            }
+    fn on_modifier(&mut self, modifier_id: ModifierId, is_pressed: bool, auto_reset: bool) {
+        self.state.set_modifier(modifier_id, is_pressed, auto_reset);
+    }
 
-            guesture.on_joystick(&mut self.state, axis_id, value);
-        }
-
-        self.state.set_joystick(axis_id, value, auto_reset);
+    fn on_joystick(&mut self, axis_id: AxisId, modifier_mask: ModifierFilterMask, value: f32, auto_reset: bool) {
+        self.state.set_joystick(axis_id, modifier_mask, value, auto_reset);
     }
 }

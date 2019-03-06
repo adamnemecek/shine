@@ -17,7 +17,7 @@ impl AxisId {
         AxisId(code)
     }
 
-    pub fn id() -> u32 {
+    pub fn id(&self) -> u32 {
         self.0
     }
 }
@@ -27,10 +27,11 @@ pub struct ModifierId(u32);
 
 impl ModifierId {
     pub const fn new(code: u32) -> ModifierId {
+        //assert!(code < modifiermask::MAX_MODIFIER_COUNT);
         ModifierId(code)
     }
 
-    pub fn id() -> u32 {
+    pub fn id(&self) -> u32 {
         self.0
     }
 }
@@ -41,7 +42,4 @@ pub trait GuestureHandler: Send + Sync {
 
     /// Called after the injection of system messages
     fn on_update(&mut self, state: &mut State);
-
-    /// Called during the handling of the system messages
-    fn on_joystick(&mut self, state: &mut State, axis_id: AxisId, value: f32);
 }

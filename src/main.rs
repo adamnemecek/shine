@@ -12,8 +12,6 @@ use winit::{EventsLoop, WindowBuilder};
 mod input;
 mod render;
 
-use input::AxisId;
-
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum EventResult {
     None,
@@ -34,15 +32,15 @@ mod input2 {
 
     pub fn create_input_manager() -> Manager {
         let mut input_manager = Manager::new();
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(17), MOVE_FORWARD, 1.); // W
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(31), MOVE_FORWARD, -1.); // A
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(32), MOVE_SIDE, 1.); // S
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(30), MOVE_SIDE, -1.); // D
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(18), MOVE_UP, 1.); // Q
-        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(16), MOVE_UP, -1.); // E
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(17), None, MOVE_FORWARD, 1.); // W
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(31), None, MOVE_FORWARD, -1.); // A
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(32), None, MOVE_SIDE, 1.); // S
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(30), None, MOVE_SIDE, -1.); // D
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(18), None, MOVE_UP, 1.); // Q
+        input_manager.add_axis_mapping(InputMapping::ScanCodeKey(16), None, MOVE_UP, -1.); // E
 
-        input_manager.add_axis_mapping(InputMapping::MouseAxis(0), YAW, -0.1); // mouse x
-        input_manager.add_axis_mapping(InputMapping::MouseAxis(1), PITCH, 0.1); // mouse y
+        input_manager.add_axis_mapping(InputMapping::MouseAxis(0), None, YAW, -0.1); // mouse x
+        input_manager.add_axis_mapping(InputMapping::MouseAxis(1), None, PITCH, 0.1); // mouse y
         input_manager
     }
 }
