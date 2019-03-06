@@ -20,15 +20,15 @@ enum EventResult {
 }
 
 mod input2 {
-    use super::input::{AxisId, InputMapping, Manager};
+    use super::input::{ButtonId, InputMapping, Manager};
 
-    pub const MOVE_FORWARD: AxisId = AxisId::new(0);
-    pub const MOVE_SIDE: AxisId = AxisId::new(1);
-    pub const MOVE_UP: AxisId = AxisId::new(2);
+    pub const MOVE_FORWARD: ButtonId = ButtonId::new(0);
+    pub const MOVE_SIDE: ButtonId = ButtonId::new(1);
+    pub const MOVE_UP: ButtonId = ButtonId::new(2);
 
-    pub const ROLL: AxisId = AxisId::new(10);
-    pub const YAW: AxisId = AxisId::new(11);
-    pub const PITCH: AxisId = AxisId::new(12);
+    pub const ROLL: ButtonId = ButtonId::new(10);
+    pub const YAW: ButtonId = ButtonId::new(11);
+    pub const PITCH: ButtonId = ButtonId::new(12);
 
     pub fn create_input_manager() -> Manager {
         let mut input_manager = Manager::new();
@@ -166,12 +166,12 @@ fn main() {
             let dist = (ellapsed_time * 0.000001) as f32;
             let angle_dist = (ellapsed_time * 0.00001) as f32;
 
-            cam.move_forward(input_state.get_joystick(input2::MOVE_FORWARD) * dist);
-            cam.move_side(input_state.get_joystick(input2::MOVE_SIDE) * dist);
-            cam.move_up(input_state.get_joystick(input2::MOVE_UP) * dist);
-            cam.yaw(input_state.get_joystick(input2::YAW) * angle_dist);
-            cam.roll(input_state.get_joystick(input2::ROLL) * angle_dist);
-            cam.pitch(input_state.get_joystick(input2::PITCH) * angle_dist);
+            cam.move_forward(input_state.get_button(input2::MOVE_FORWARD) * dist);
+            cam.move_side(input_state.get_button(input2::MOVE_SIDE) * dist);
+            cam.move_up(input_state.get_button(input2::MOVE_UP) * dist);
+            cam.yaw(input_state.get_button(input2::YAW) * angle_dist);
+            cam.roll(input_state.get_button(input2::ROLL) * angle_dist);
+            cam.pitch(input_state.get_button(input2::PITCH) * angle_dist);
         }
 
         if graph.is_none() {

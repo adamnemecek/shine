@@ -10,11 +10,11 @@ pub use self::modifiermask::*;
 pub use self::state::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AxisId(u32);
+pub struct ButtonId(u32);
 
-impl AxisId {
-    pub const fn new(code: u32) -> AxisId {
-        AxisId(code)
+impl ButtonId {
+    pub const fn new(code: u32) -> ButtonId {
+        ButtonId(code)
     }
 
     pub fn id(&self) -> u32 {
@@ -37,9 +37,5 @@ impl ModifierId {
 }
 
 pub trait GuestureHandler: Send + Sync {
-    /// Called before injecting system messages
-    fn on_prepare(&mut self, state: &mut State);
-
-    /// Called after the injection of system messages
-    fn on_update(&mut self, state: &mut State);
+    fn on_update(&mut self, prev_state: &State, state: &mut State);
 }

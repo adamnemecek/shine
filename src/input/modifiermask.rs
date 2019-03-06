@@ -23,12 +23,12 @@ impl ModifierMask {
         mask
     }
 
-    pub fn clear(&mut self) {
-        self.0 = 0;
+    pub fn from_masked_clear(mask: &ModifierMask, clear_mask: &ModifierMask) -> ModifierMask {
+        ModifierMask(mask.0 & !clear_mask.0)
     }
 
-    pub fn clear_masked(&mut self, mask: &ModifierMask) {
-        self.0 &= !mask.0;
+    pub fn clear(&mut self) {
+        self.0 = 0;
     }
 
     pub fn get(&self, modifier: ModifierId) -> bool {

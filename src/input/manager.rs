@@ -1,13 +1,13 @@
 use crate::input::mapping::{InputMapping, Mapping};
-use crate::input::{AxisId, GuestureHandler, ModifierFilter, ModifierFilterMask, ModifierId, State};
+use crate::input::{ButtonId, GuestureHandler, ModifierFilter, ModifierFilterMask, ModifierId, State};
+use std::mem;
 
 pub struct Manager {
     time: u128,
-    state: State,
-    scope: Vec<String>,
-    current_scope: String,
     mapping: Mapping,
-    guestures: Vec<(String, String, Box<GuestureHandler>)>,
+    guestures: Vec<(String, Box<GuestureHandler>)>,
+    state: State,
+    previous_state: State,
 }
 
 impl Manager {
@@ -19,19 +19,17 @@ impl Manager {
     pub fn new() -> Manager {
         Manager {
             time: 0,
-            scope: Vec::new(),
-            current_scope: String::new(),
             mapping: Mapping::new(),
             guestures: Vec::new(),
             state: State::new(),
+            previous_state: State::new(),
         }
     }
 
-    pub fn add_guesture<S1: ToString, S2: ToString>(&mut self, name: S1, scope: S2, guesture: Box<GuestureHandler>) {
+    pub fn add_guesture<S1: ToString, S2: ToString>(&mut self, name: S1, guesture: Box<GuestureHandler>) {
         let name: String = name.to_string();
-        let scope: String = scope.to_string();
         assert!(self.guestures.iter().find(|v| v.0 == name).is_none());
-        self.guestures.push((name, scope, guesture));
+        self.guestures.push((name, guesture));
     }
 
     pub fn add_modifier_mapping(&mut self, input_event: InputMapping, modifier_id: ModifierId) {
@@ -42,7 +40,7 @@ impl Manager {
         &mut self,
         input_event: InputMapping,
         input_modifiers: Option<&[(ModifierId, ModifierFilter)]>,
-        axis_id: AxisId,
+        axis_id: ButtonId,
         sensitivity: f32,
     ) {
         self.mapping
@@ -53,47 +51,15 @@ impl Manager {
         &self.state
     }
 
-    pub fn push_scope<S: ToString>(&mut self, s: S) {
-        self.scope.push(s.to_string());
-        self.current_scope = self.scope.join(".");
-    }
-
-    pub fn pop_scope(&mut self) -> String {
-        let s = self.scope.pop().unwrap();
-        self.current_scope = self.scope.join(".");
-        s
-    }
-
-    pub fn get_scope(&self) -> &str {
-        &self.current_scope
-    }
-
-    fn check_scope(manager_scope: &str, guesture_scope: &str) -> bool {
-        manager_scope == guesture_scope
-    }
-
     pub fn prepare(&mut self) {
         self.time = Self::now();
-        self.state.time = self.time;
-        self.state.autoreset_modifiers();
-        self.state.autoreset_joystick();
-
-        for (_, ref scope, ref mut guesture) in self.guestures.iter_mut() {
-            if !Self::check_scope(&self.current_scope, scope) {
-                return;
-            }
-
-            guesture.on_prepare(&mut self.state);
-        }
+        mem::swap(&mut self.previous_state, &mut self.state);
+        self.state.prepare(&self.previous_state, self.time);
     }
 
     pub fn update(&mut self) {
-        for (_, ref scope, ref mut guesture) in self.guestures.iter_mut() {
-            if !Self::check_scope(&self.current_scope, scope) {
-                return;
-            }
-
-            guesture.on_update(&mut self.state);
+        for (_, ref mut guesture) in self.guestures.iter_mut() {
+            guesture.on_update(&self.previous_state, &mut self.state);
         }
     }
 
@@ -112,7 +78,8 @@ impl Manager {
                 log::trace!("winit key: {:?}", input);
 
                 if let Some(modifier_id) = self.mapping.map_winit_key_to_modifier(&input) {
-                    self.on_modifier(modifier_id, input.state == ElementState::Pressed, false);
+                    self.state
+                        .set_modifier(modifier_id, input.state == ElementState::Pressed, false);
                 }
 
                 if let Some((axis_id, modifier_mask, sensitivity)) = self.mapping.map_winit_key_to_axis(&input) {
@@ -124,7 +91,7 @@ impl Manager {
                         value,
                         value * sensitivity
                     );
-                    self.on_joystick(axis_id, modifier_mask, value * sensitivity, false);
+                    self.state.set_button(axis_id, modifier_mask, value * sensitivity, false);
                 }
             }
             Event::DeviceEvent {
@@ -134,7 +101,7 @@ impl Manager {
                 log::trace!("winit dev motion: {:?},{:?},{:?}", device_id, axis, value);
 
                 if let Some(modifier_id) = self.mapping.map_winit_axis_to_modifier(&device_id, axis) {
-                    self.on_modifier(modifier_id, true, true);
+                    self.state.set_modifier(modifier_id, true, true);
                 }
 
                 if let Some((axis_id, modifier_mask, sensitivity)) = self.mapping.map_winit_axis_to_axis(&device_id, axis) {
@@ -148,7 +115,7 @@ impl Manager {
                         value,
                         value * sensitivity
                     );
-                    self.on_joystick(axis_id, modifier_mask, value * sensitivity, true);
+                    self.state.set_button(axis_id, modifier_mask, value * sensitivity, true);
                 }
             }
             Event::DeviceEvent {
@@ -171,7 +138,7 @@ impl Manager {
                 log::trace!("gil axis {:?},{:?},{:?}", id, axis, value);
 
                 if let Some(modifier_id) = self.mapping.map_gil_axis_to_modifier(id, axis) {
-                    self.on_modifier(modifier_id, *value != 0., false);
+                    self.state.set_modifier(modifier_id, *value != 0., false);
                 }
 
                 if let Some((axis_id, modifier_mask, sensitivity)) = self.mapping.map_gil_axis_to_axis(id, axis) {
@@ -183,18 +150,10 @@ impl Manager {
                         value,
                         value * sensitivity
                     );
-                    self.on_joystick(axis_id, modifier_mask, value * sensitivity, false);
+                    self.state.set_button(axis_id, modifier_mask, value * sensitivity, false);
                 }
             }
             _ => {}
         }
-    }
-
-    fn on_modifier(&mut self, modifier_id: ModifierId, is_pressed: bool, auto_reset: bool) {
-        self.state.set_modifier(modifier_id, is_pressed, auto_reset);
-    }
-
-    fn on_joystick(&mut self, axis_id: AxisId, modifier_mask: ModifierFilterMask, value: f32, auto_reset: bool) {
-        self.state.set_joystick(axis_id, modifier_mask, value, auto_reset);
     }
 }
