@@ -1,11 +1,11 @@
-use crate::input::mapping::{InputMapping, Mapping};
-use crate::input::{ButtonId, GuestureHandler, ModifierFilter, ModifierFilterMask, ModifierId, State};
+use crate::mapping::{InputMapping, Mapping};
+use crate::{ButtonId, Guesture, ModifierFilterMask, ModifierId, State};
 use std::mem;
 
 pub struct Manager {
     time: u128,
     mapping: Mapping,
-    guestures: Vec<(String, Box<GuestureHandler>)>,
+    guestures: Vec<(String, Box<Guesture>)>,
     state: State,
     previous_state: State,
 }
@@ -26,10 +26,26 @@ impl Manager {
         }
     }
 
-    pub fn add_guesture<S1: ToString, S2: ToString>(&mut self, name: S1, guesture: Box<GuestureHandler>) {
+    pub fn add_guesture<S: ToString>(&mut self, name: S, guesture: Box<Guesture>) {
         let name: String = name.to_string();
         assert!(self.guestures.iter().find(|v| v.0 == name).is_none());
         self.guestures.push((name, guesture));
+    }
+
+    pub fn get_guesture<S: ToString>(&self, name: S) -> Option<&Guesture> {
+        let name = name.to_string();
+        self.guestures
+            .iter()
+            .find_map(|v| if v.0 == name { Some(v.1.as_ref()) } else { None })
+    }
+
+    pub fn get_guesture_mut<S: ToString>(&mut self, name: S) -> Option<&mut Guesture> {
+        let name = name.to_string();
+        let id = self.guestures.iter().position(|v| v.0 == name);
+        match id {
+            None => None,
+            Some(i) => Some(self.guestures[i].1.as_mut()),
+        }
     }
 
     pub fn add_modifier_mapping(&mut self, input_event: InputMapping, modifier_id: ModifierId) {
@@ -39,7 +55,7 @@ impl Manager {
     pub fn add_button_mapping(
         &mut self,
         input_event: InputMapping,
-        input_modifiers: Option<&[(ModifierId, ModifierFilter)]>,
+        input_modifiers: Option<ModifierFilterMask>,
         button_id: ButtonId,
         sensitivity: f32,
     ) {
@@ -100,11 +116,11 @@ impl Manager {
             } => {
                 log::trace!("winit dev motion: {:?},{:?},{:?}", device_id, axis, value);
 
-                if let Some(modifier_id) = self.mapping.map_winit_axis_to_modifier(&device_id, axis) {
+                if let Some(modifier_id) = self.mapping.map_winit_axis_to_modifier(device_id, axis) {
                     self.state.set_modifier(modifier_id, true, true);
                 }
 
-                if let Some((button_id, modifier_mask, sensitivity)) = self.mapping.map_winit_axis_to_button(&device_id, axis) {
+                if let Some((button_id, modifier_mask, sensitivity)) = self.mapping.map_winit_axis_to_button(device_id, axis) {
                     let value = value as f32;
                     log::trace!(
                         "mapping winit axis: {:?},{:?},{:?} to axis: {:?},{},{}",
@@ -130,18 +146,18 @@ impl Manager {
     }
 
     pub fn handle_gil_events(&mut self, event: &gilrs::Event) {
-        use gilrs::{Event, EventType::AxisChanged};
+        use gilrs::{Event, EventType};
 
         let Event { id, event, .. } = event;
         match event {
-            AxisChanged(axis, value, ..) => {
+            EventType::AxisChanged(axis, value, ..) => {
                 log::trace!("gil axis {:?},{:?},{:?}", id, axis, value);
 
-                if let Some(modifier_id) = self.mapping.map_gil_axis_to_modifier(id, axis) {
+                if let Some(modifier_id) = self.mapping.map_gil_axis_to_modifier(*id, *axis) {
                     self.state.set_modifier(modifier_id, *value != 0., false);
                 }
 
-                if let Some((button_id, modifier_mask, sensitivity)) = self.mapping.map_gil_axis_to_button(id, axis) {
+                if let Some((button_id, modifier_mask, sensitivity)) = self.mapping.map_gil_axis_to_button(*id, *axis) {
                     log::trace!(
                         "mapping gil axis: {:?},{:?} to axis: {:?},{},{}",
                         id,
@@ -153,7 +169,16 @@ impl Manager {
                     self.state.set_button(button_id, modifier_mask, value * sensitivity, false);
                 }
             }
+            EventType::ButtonChanged(button, value, ..) => {
+                log::trace!("gil button {:?},{:?}", button, value);
+            }
             _ => {}
         }
+    }
+}
+
+impl Default for Manager {
+    fn default() -> Manager {
+        Manager::new()
     }
 }

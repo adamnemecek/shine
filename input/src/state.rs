@@ -1,5 +1,5 @@
-use crate::input::ButtonId;
-use crate::input::{ModifierFilterMask, ModifierId, ModifierMask};
+use crate::ButtonId;
+use crate::{ModifierFilterMask, ModifierId, ModifierMask};
 use std::collections::HashMap;
 
 /// State of a button
@@ -74,6 +74,10 @@ impl State {
         self.modifier_mask.get(modifier_id)
     }
 
+    pub fn remove_button(&mut self, button_id: ButtonId) {
+        let _ = self.buttons.remove(&button_id);
+    }
+
     pub fn set_button(&mut self, button_id: ButtonId, modifier_mask: ModifierFilterMask, value: f32, autoreset: bool) {
         // clamp input to [-1,1]
         let value = if value > 1. {
@@ -85,10 +89,10 @@ impl State {
         };
 
         if value == 0. {
-            let _ = self.buttons.remove(&button_id);
+            self.remove_button(button_id);
         } else {
             let entry = self.buttons.entry(button_id);
-            let mut state = entry.or_insert(ButtonState::default());
+            let mut state = entry.or_insert_with(ButtonState::default);
             state.value = value;
             state.modifier_mask = modifier_mask;
             state.autoreset = autoreset;
@@ -99,6 +103,7 @@ impl State {
         match self.buttons.get(&button_id) {
             None => 0.,
             Some(ref s) => {
+                log::trace!("s: {:?}", s);
                 if s.modifier_mask.check(&self.modifier_mask) {
                     s.value
                 } else {

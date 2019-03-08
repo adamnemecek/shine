@@ -10,6 +10,7 @@ use std::time::Instant;
 use winit::{EventsLoop, WindowBuilder};
 
 mod input;
+use self::input::*;
 mod render;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -19,38 +20,8 @@ enum EventResult {
     Closing,
 }
 
-mod input2 {
-    use super::input::{ButtonId, InputMapping, Manager, ModifierId};
-
-    pub const MOVE_FORWARD: ButtonId = ButtonId::new(0);
-    pub const MOVE_SIDE: ButtonId = ButtonId::new(1);
-    pub const MOVE_UP: ButtonId = ButtonId::new(2);
-
-    pub const ROLL: ButtonId = ButtonId::new(10);
-    pub const YAW: ButtonId = ButtonId::new(11);
-    pub const PITCH: ButtonId = ButtonId::new(12);
-
-    pub const MOD_SHIFT: ModifierId = ModifierId::new(0);
-
-    pub fn create_input_manager() -> Manager {
-        let mut input_manager = Manager::new();
-        input_manager.add_modifier_mapping(InputMapping::ScanCodeKey(30), MOD_SHIFT); // LEFT_SHIFT
-
-        input_manager.add_button_mapping(InputMapping::ScanCodeKey(17), None, MOVE_FORWARD, 1.); // W
-        input_manager.add_button_mapping(InputMapping::ScanCodeKey(31), None, MOVE_FORWARD, -1.); // A
-        input_manager.add_button_mapping(InputMapping::ScanCodeKey(32), None, MOVE_SIDE, 1.); // S
-        input_manager.add_button_mapping(InputMapping::ScanCodeKey(30), None, MOVE_SIDE, -1.); // D
-        input_manager.add_button_mapping(InputMapping::ScanCodeKey(18), None, MOVE_UP, 1.); // Q
-        input_manager.add_button_mapping(InputMapping::ScanCodeKey(16), None, MOVE_UP, -1.); // E
-
-        input_manager.add_button_mapping(InputMapping::MouseAxis(0), None, YAW, -0.1); // mouse x
-        input_manager.add_button_mapping(InputMapping::MouseAxis(1), None, PITCH, 0.1); // mouse y
-        input_manager
-    }
-}
-
 fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gilrs) -> EventResult {
-    let mut input_manager = world.get_resource_mut::<input::Manager>();
+    let mut input_manager = world.get_resource_mut::<InputManager>();
     let mut is_closing = false;
     let mut is_surface_lost = false;
 
@@ -108,6 +79,7 @@ fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     env_logger::Builder::from_default_env()
         .filter_level(log::LevelFilter::Warn)
+        .filter_module("shine_input", log::LevelFilter::Warn)
         .filter_module("shine", log::LevelFilter::Trace)
         .init();
 
@@ -116,7 +88,7 @@ fn main() {
 
     let mut world = World::new();
     world.register_resource_with(FpsCamera::new());
-    world.register_resource_with(input2::create_input_manager());
+    world.register_resource_with(input::create_input_manager());
     world.register_resource_with(render::FrameInfo::new());
 
     let config: RendyConfig = Default::default();
@@ -163,19 +135,19 @@ fn main() {
             frame.frame_id = frame_count;
             frame.ellapsed_time = ellapsed_time;
 
-            let input_manager = world.get_resource::<input::Manager>();
+            let input_manager = world.get_resource::<InputManager>();
             let input_state = input_manager.get_state();
             let mut cam = world.get_resource_mut::<FpsCamera>();
 
             let dist = (ellapsed_time * 0.000001) as f32;
             let angle_dist = (ellapsed_time * 0.00001) as f32;
 
-            cam.move_forward(input_state.get_button(input2::MOVE_FORWARD) * dist);
-            cam.move_side(input_state.get_button(input2::MOVE_SIDE) * dist);
-            cam.move_up(input_state.get_button(input2::MOVE_UP) * dist);
-            cam.yaw(input_state.get_button(input2::YAW) * angle_dist);
-            cam.roll(input_state.get_button(input2::ROLL) * angle_dist);
-            cam.pitch(input_state.get_button(input2::PITCH) * angle_dist);
+            cam.move_forward(input_state.get_button(buttons::MOVE_FORWARD) * dist);
+            cam.move_side(input_state.get_button(buttons::MOVE_SIDE) * dist);
+            cam.move_up(input_state.get_button(buttons::MOVE_UP) * dist);
+            cam.yaw(input_state.get_button(buttons::YAW) * angle_dist);
+            cam.roll(input_state.get_button(buttons::ROLL) * angle_dist);
+            cam.pitch(input_state.get_button(buttons::PITCH) * angle_dist);
         }
 
         if graph.is_none() {

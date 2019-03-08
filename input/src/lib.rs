@@ -1,12 +1,16 @@
 pub mod guestures;
-mod manager;
-mod mapping;
-mod modifiermask;
-mod state;
+pub use self::guestures::Guesture;
 
+mod manager;
 pub use self::manager::*;
+
+mod mapping;
 pub use self::mapping::InputMapping;
+
+mod modifiermask;
 pub use self::modifiermask::*;
+
+mod state;
 pub use self::state::*;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -17,7 +21,7 @@ impl ButtonId {
         ButtonId(code)
     }
 
-    pub fn id(&self) -> u32 {
+    pub fn id(self) -> u32 {
         self.0
     }
 }
@@ -31,11 +35,7 @@ impl ModifierId {
         ModifierId(code)
     }
 
-    pub fn id(&self) -> u32 {
+    pub fn id(self) -> u32 {
         self.0
     }
-}
-
-pub trait GuestureHandler: Send + Sync {
-    fn on_update(&mut self, prev_state: &State, state: &mut State);
 }

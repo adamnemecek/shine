@@ -1,5 +1,5 @@
-use crate::input::{ButtonId, ModifierFilter, ModifierFilterMask, ModifierId};
-use std::collections::{HashMap, HashSet};
+use crate::{ButtonId, ModifierFilterMask, ModifierId};
+use std::collections::HashMap;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum InputMapping {
@@ -25,24 +25,28 @@ impl Mapping {
     }
 
     pub fn add_modifier_mapping(&mut self, input_event: InputMapping, modifier_id: ModifierId) {
+        if self.modifier_mapping.values().any(|m| *m == modifier_id) {
+            log::warn!("Multiple mapping for {:?}", modifier_id);
+        }
         self.modifier_mapping.insert(input_event, modifier_id);
     }
 
     pub fn add_button_mapping(
         &mut self,
         input_event: InputMapping,
-        input_modifiers: Option<&[(ModifierId, ModifierFilter)]>,
+        input_modifiers: Option<ModifierFilterMask>,
         button_id: ButtonId,
         sensitivity: f32,
     ) {
-        let mask = match input_modifiers {
-            None => ModifierFilterMask::default(),
-            Some(f) => ModifierFilterMask::from(f),
-        };
+        if self.axis_mapping.values().any(|b| b.0 == button_id) {
+            log::warn!("Multiple mapping for {:?}", button_id);
+        }
+
+        let mask = input_modifiers.unwrap_or_default();
         self.axis_mapping.insert(input_event, (button_id, mask, sensitivity));
     }
 
-    pub fn map_winit_axis_to_modifier(&self, device_id: &winit::DeviceId, axis: u32) -> Option<ModifierId> {
+    pub fn map_winit_axis_to_modifier(&self, device_id: winit::DeviceId, axis: u32) -> Option<ModifierId> {
         let mapping = &self.modifier_mapping;
 
         if let Some(res) = mapping.get(&InputMapping::MouseAxisWithDevice(device_id.to_owned(), axis)) {
@@ -69,14 +73,10 @@ impl Mapping {
             }
         }
 
-        return None;
+        None
     }
 
-    pub fn map_winit_axis_to_button(
-        &self,
-        device_id: &winit::DeviceId,
-        axis: u32,
-    ) -> Option<(ButtonId, ModifierFilterMask, f32)> {
+    pub fn map_winit_axis_to_button(&self, device_id: winit::DeviceId, axis: u32) -> Option<(ButtonId, ModifierFilterMask, f32)> {
         let mapping = &self.axis_mapping;
 
         if let Some(res) = mapping.get(&InputMapping::MouseAxisWithDevice(device_id.to_owned(), axis)) {
@@ -103,10 +103,10 @@ impl Mapping {
             }
         }
 
-        return None;
+        None
     }
 
-    pub fn map_gil_axis_to_modifier(&self, device_id: &gilrs::GamepadId, axis: &gilrs::ev::Axis) -> Option<ModifierId> {
+    pub fn map_gil_axis_to_modifier(&self, device_id: gilrs::GamepadId, axis: gilrs::ev::Axis) -> Option<ModifierId> {
         let mapping = &self.modifier_mapping;
 
         if let Some(res) = mapping.get(&InputMapping::GamepadWithDevice(device_id.to_owned(), axis.to_owned())) {
@@ -122,8 +122,8 @@ impl Mapping {
 
     pub fn map_gil_axis_to_button(
         &self,
-        device_id: &gilrs::GamepadId,
-        axis: &gilrs::ev::Axis,
+        device_id: gilrs::GamepadId,
+        axis: gilrs::ev::Axis,
     ) -> Option<(ButtonId, ModifierFilterMask, f32)> {
         let mapping = &self.axis_mapping;
 

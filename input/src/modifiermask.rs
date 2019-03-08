@@ -1,13 +1,6 @@
-use crate::input::ModifierId;
+use crate::ModifierId;
 
 pub const MAX_MODIFIER_COUNT: u32 = 128;
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub enum ModifierFilter {
-    Set,
-    Unset,
-    Ignore,
-}
 
 #[derive(Clone, Debug)]
 pub struct ModifierMask(pub(crate) u128);
@@ -17,7 +10,7 @@ impl ModifierMask {
         ModifierMask(0)
     }
 
-    pub fn from(filter: &[ModifierId]) -> ModifierMask {
+    pub fn new_from(filter: &[ModifierId]) -> ModifierMask {
         let mut mask = ModifierMask(0);
         mask.set_from_slice(filter);
         mask
@@ -33,7 +26,7 @@ impl ModifierMask {
 
     pub fn get(&self, modifier: ModifierId) -> bool {
         let m = 1_u128 << modifier.id();
-        (self.0 | m) != 0
+        (self.0 & m) != 0
     }
 
     pub fn set(&mut self, modifier: ModifierId, value: bool) {
@@ -59,12 +52,24 @@ impl Default for ModifierMask {
     }
 }
 
+impl From<&[ModifierId]> for ModifierMask {
+    fn from(value: &[ModifierId]) -> ModifierMask {
+        ModifierMask::new_from(value)
+    }
+}
+
+impl From<[ModifierId; 1]> for ModifierMask {
+    fn from(value: [ModifierId; 1]) -> ModifierMask {
+        ModifierMask::new_from(&value)
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct ModifierFilterMask {
     /// Tha mask to consider in the required mask
     filter: ModifierMask,
 
-    /// The required modifiers
+    /// The required value for each modifiers
     required: ModifierMask,
 }
 
@@ -76,21 +81,14 @@ impl ModifierFilterMask {
         }
     }
 
-    pub fn from(filter: &[(ModifierId, ModifierFilter)]) -> ModifierFilterMask {
+    pub fn new_from(filter: &[(ModifierId, bool)]) -> ModifierFilterMask {
         let mut mask = ModifierFilterMask::new();
-        let mut assert_mask = ModifierMask::default();
 
         for (i, f) in filter {
-            assert!(!assert_mask.get(*i), "filter already set for {:?}", i);
-            assert_mask.set(*i, true);
-
-            if *f == ModifierFilter::Ignore {
-                continue;
-            }
+            log::trace!("{:?}", mask.filter);
+            assert!(!mask.filter.get(*i), "filter already set for {:?}", i);
             mask.filter.set(*i, true);
-            if *f == ModifierFilter::Set {
-                mask.required.set(*i, true);
-            }
+            mask.required.set(*i, *f);
         }
         mask
     }
@@ -103,5 +101,17 @@ impl ModifierFilterMask {
 impl Default for ModifierFilterMask {
     fn default() -> ModifierFilterMask {
         ModifierFilterMask::new()
+    }
+}
+
+impl From<&[(ModifierId, bool)]> for ModifierFilterMask {
+    fn from(value: &[(ModifierId, bool)]) -> ModifierFilterMask {
+        ModifierFilterMask::new_from(value)
+    }
+}
+
+impl From<[(ModifierId, bool); 1]> for ModifierFilterMask {
+    fn from(value: [(ModifierId, bool); 1]) -> ModifierFilterMask {
+        ModifierFilterMask::new_from(&value)
     }
 }
