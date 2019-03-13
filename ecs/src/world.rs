@@ -1,5 +1,5 @@
 use crate::entities::{
-    EdgeComponentDescriptor, EdgeComponentStore, EntityComponentDescriptor, EntityComponentStore, EntityStore,
+    EdgeComponentDescriptor, EdgeComponentStore, EntityBuilder, EntityComponentDescriptor, EntityComponentStore, EntityStore,
 };
 use crate::resources::{named, unnamed};
 use shred::{Dispatcher, Fetch, FetchMut, Resources, SystemData};
@@ -16,6 +16,13 @@ pub trait EntityWorld {
     fn register_edge_component<D: EdgeComponentDescriptor>(&mut self);
     fn get_edge_component<D: EdgeComponentDescriptor>(&self) -> Fetch<'_, EdgeComponentStore<D>>;
     fn get_edge_component_mut<D: EdgeComponentDescriptor>(&self) -> FetchMut<'_, EdgeComponentStore<D>>;
+
+    fn create_entity(&mut self) -> EntityBuilder<'_, Self>
+    where
+        Self: Sized,
+    {
+        EntityBuilder::new(self)
+    }
 }
 
 pub trait StoreWorld {

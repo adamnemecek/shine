@@ -150,10 +150,28 @@ impl FpsCamera {
 
     //pub fn fov_zoom(&mut self, ratio: f32) {}
 
+    fn clamp_angles(&mut self) {
+        use std::f32::consts::PI;
+
+        self.yaw = self.yaw % (PI * 2.);
+        self.roll = self.roll % (PI * 2.);
+
+        let pitch_limit = PI - 0.001;
+        if self.pitch < -pitch_limit {
+            self.pitch = -pitch_limit;
+        }
+        if self.pitch > pitch_limit {
+            self.pitch = pitch_limit;
+        }
+    }
+
     fn update_view(&mut self) {
         if (self.change_log & DIRTY_VIEW) == 0 {
             return;
         }
+
+        self.clamp_angles();
+
         let rot_yaw = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), self.yaw);
         let rot_pitch = UnitQuaternion::from_axis_angle(&Vector3::x_axis(), self.pitch);
         let rot_roll = UnitQuaternion::from_axis_angle(&Vector3::z_axis(), self.roll);
