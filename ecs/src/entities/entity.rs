@@ -1,4 +1,3 @@
-use log::{debug, trace};
 use shine_graph::svec::{self, DrainIter, STVector, UnitStore};
 use shred::{Read, ResourceId, Resources, SystemData, Write};
 use std::ops::{Deref, DerefMut};
@@ -58,8 +57,6 @@ impl EntityStore {
 
     /// Allocates a new entity
     pub fn create(&mut self) -> Entity {
-        trace!("{:?}", self.killed);
-
         // find a free slot
         let id = match self.free.first_entry() {
             Some((id, mut entry)) => {
@@ -82,7 +79,7 @@ impl EntityStore {
         }
         self.count += 1;
 
-        debug!("create id: {}, count: {}, max: {}", id, self.count, self.max_entity_count);
+        log::debug!("create id: {}, count: {}, max: {}", id, self.count, self.max_entity_count);
 
         Entity { id }
     }
@@ -102,9 +99,11 @@ impl EntityStore {
         self.killed.add_default(entity.id);
         self.raised.remove(entity.id);
 
-        debug!(
+        log::debug!(
             "release id: {}, count: {}, max: {}",
-            entity.id, self.count, self.max_entity_count
+            entity.id,
+            self.count,
+            self.max_entity_count
         );
     }
 

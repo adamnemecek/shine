@@ -1,4 +1,4 @@
-use crate::entities::{storage, Entity, EntityComponent, EntityComponentDescriptor, EntityComponentStore};
+use crate::entities::{Entity, EntityComponent};
 use crate::EntityWorld;
 
 pub struct EntityBuilder<'a, W>
@@ -18,16 +18,14 @@ where
         EntityBuilder { world, entity }
     }
 
-    /*pub fn with<S, T>(&mut self, component: T) -> &mut Self
+    pub fn with<T>(&mut self, component: T) -> &mut Self
     where
-        S: storage::Category,
-        T: 'static + EntityComponent<StorageCategory = S>,
-        (S, T): EntityComponentDescriptor,
+        T: 'static + EntityComponent,
     {
         {
             let mut store = self.world.get_entity_component_mut::<T>();
             store.add(self.entity, component);
         }
         self
-    }*/
+    }
 }

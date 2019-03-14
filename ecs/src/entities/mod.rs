@@ -5,8 +5,6 @@ mod entitybuilder;
 mod entitycomponent;
 mod join;
 
-pub mod storage;
-
 #[doc(inline)]
 pub use self::edge::*;
 #[doc(inline)]

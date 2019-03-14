@@ -22,5 +22,5 @@ pub enum Direction {
 }
 
 pub trait Polygonizer {
-    fn polygonize<C: Cell>(&mut self, mesh: &mut Mesh, cell: &C);
+    fn polygonize<C: ?Sized + Cell>(&mut self, mesh: &mut Mesh, cell: &C);
 }

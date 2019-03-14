@@ -1,5 +1,6 @@
-use log::{debug, trace};
-use shine_ecs::entities::{storage, Entity, EntityComponent, IntoJoinExt};
+#![feature(custom_attribute)]
+
+use shine_ecs::entities::{es, Entity, EntityComponent, IntoJoinExt};
 use shine_ecs::{EntityWorld, World};
 use shine_testutils::init_test;
 
@@ -10,7 +11,7 @@ struct Pos {
     z: i32,
 }
 impl EntityComponent for Pos {
-    type StorageCategory = storage::Dense;
+    type Store = es::DenseStore<Self>;
 }
 
 #[derive(Debug)]
@@ -20,7 +21,7 @@ struct Velocity {
     z: i32,
 }
 impl EntityComponent for Velocity {
-    type StorageCategory = storage::Sparse;
+    type Store = es::HashStore<Self>;
 }
 
 #[test]
@@ -32,7 +33,7 @@ fn test_component() {
     world.register_entity_component::<Pos>();
     world.register_entity_component::<Velocity>();
 
-    debug!("create instances");
+    log::debug!("create instances");
     {
         let mut ent = world.entities_mut();
         let mut pos = world.get_entity_component_mut::<Pos>();
@@ -48,20 +49,20 @@ fn test_component() {
         }
     }
 
-    debug!("update instances");
+    log::debug!("update instances");
     {
         let mut pos = world.get_entity_component_mut::<Pos>();
         let vel = world.get_entity_component::<Velocity>();
 
         (pos.update(), vel.read()).join_all(|id, (p, v)| {
-            trace!("{:?}: {:?} {:?}", id, p, v);
+            log::trace!("{:?}: {:?} {:?}", id, p, v);
             p.x += v.x;
             p.y += v.y;
             p.z += v.z;
         });
     }
 
-    debug!("get");
+    log::debug!("get");
     {
         let mut pos = world.get_entity_component_mut::<Pos>();
         assert_eq!(pos.get_entry(Entity::from_id(2)).remove(), Some(Pos { x: 2, y: 4, z: 6 }));

@@ -1,12 +1,13 @@
-use crate::render::{IntoMesh, Mesh, MeshBuilder};
-use shine_ecs::entities::{storage, EntityComponent};
+use crate::render::{DriverResource, IntoMesh, Mesh, MeshBuilder};
+use rendy::command::QueueId;
+use shine_ecs::entities::{es, EntityComponent};
 
 pub struct SimpleMeshData {
-    mesh: MeshBuilder<'static>,
+    pub mesh: MeshBuilder<'static>,
 }
 
 impl EntityComponent for SimpleMeshData {
-    type StorageCategory = storage::Sparse;
+    type Store = es::DenseStore<Self>;
 }
 
 impl SimpleMeshData {
@@ -21,11 +22,22 @@ impl SimpleMeshData {
     }
 }
 
-/*pub struct SimpleMesh : {
-    queueId: QueueId,
-    mesh: Mesh,
+impl Default for SimpleMeshData {
+    fn default() -> Self {
+        SimpleMeshData::new()
+    }
 }
 
-impl EntityComponent for SimpleMeshData {
-    type StorageCategory = storage::Dense;
-}*/
+struct SimpleMeshResources {
+    //buffer: Buffer,
+}
+
+pub struct SimpleMesh {
+    queueId: QueueId,
+    mesh: Mesh,
+    resources: DriverResource<SimpleMeshResources>,
+}
+
+impl EntityComponent for SimpleMesh {
+    type Store = es::DenseStore<Self>;
+}

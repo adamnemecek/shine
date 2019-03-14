@@ -15,6 +15,7 @@ itertools = "*"
 
 shine-graph = {path = "../graph"}
 shine-store = {path = "../store"}
+shine-ecs-macro = {path = "../ecs-macro"}
 
 [dev-dependencies]
 env_logger = "*"

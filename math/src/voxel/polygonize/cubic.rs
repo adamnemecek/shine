@@ -128,7 +128,7 @@ impl Cubic {
 }
 
 impl Polygonizer for Cubic {
-    fn polygonize<C: Cell>(&mut self, mesh: &mut Mesh, cell: &C) {
+    fn polygonize<C: ?Sized + Cell>(&mut self, mesh: &mut Mesh, cell: &C) {
         let (sx, sy, sz) = cell.resolution();
         let lod = cell.lod();
         let step = 1 << lod;

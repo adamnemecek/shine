@@ -9,7 +9,7 @@ keywords = ["component system", "game"]
 edition = "2018"
 
 [workspace]
-members = [ "testutils", "store", "graph", "graph-macro", "gltf", "gltf-macro", "ecs", "math", "input" ]
+members = [ "testutils", "store", "graph", "graph-macro", "gltf", "gltf-macro", "ecs", "ecs-macro", "math", "input" ]
 
 [features]
 alma = []
@@ -26,11 +26,12 @@ lazy_static = "*"
 nalgebra = "*"
 nalgebra-glm = "*"
 
-gilrs = "*"
-
 gfx-hal = {version = "*"}
 winit = "0.18"
+gilrs = "*"
 rendy = {git = "https://github.com/omni-viral/rendy.git"}
+
+shred = "*"
 
 shine-store = {path = "store"}
 shine-graph = {path = "graph"}

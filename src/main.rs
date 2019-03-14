@@ -2,7 +2,7 @@
 
 use gilrs::Gilrs;
 use rendy::factory::{Config as RendyConfig, Factory};
-use shine_ecs::{EntityWorld, ResourceWorld, World};
+use shine_ecs::{ResourceWorld, World};
 use shine_math::camera::FpsCamera;
 use std::env;
 use std::sync::Arc;
@@ -94,7 +94,7 @@ fn main() {
     world.register_resource_with(render::FrameInfo::new());
     components::prepare_world(&mut world);
 
-    demo::prepare_scene(&mut world);
+    let mut dispatch = demo::prepare_scene(&mut world);
 
     let config: RendyConfig = Default::default();
     let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();
@@ -123,6 +123,8 @@ fn main() {
             log::trace!("closing");
             break;
         }
+
+        world.dispatch(&mut dispatch);
 
         let ellapsed_time = {
             match prev_frame_instant.replace(Instant::now()) {

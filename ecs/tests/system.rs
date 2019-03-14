@@ -1,4 +1,3 @@
-use log::{debug, trace};
 use shine_ecs::{ResourceWorld, World};
 use shine_testutils::init_test;
 use shred::{DispatcherBuilder, Read, System, Write};
@@ -24,8 +23,8 @@ impl<'a> System<'a> for PrintSystem {
 
         b.value += a.value;
 
-        trace!("{:?}", &*a);
-        trace!("{:?}", &*b);
+        log::trace!("{:?}", &*a);
+        log::trace!("{:?}", &*b);
     }
 }
 

@@ -25,7 +25,7 @@ pub struct FrameParameters {
     frame_ids: Vec<u32>,
     uniform_align: BufferOffset,
     frame_buffer_size: BufferOffset,
-    resources: DriverResource<FrameParameterResources, Backend>,
+    resources: DriverResource<FrameParameterResources>,
 }
 
 impl FrameParameters {
