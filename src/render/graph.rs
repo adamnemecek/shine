@@ -1,9 +1,10 @@
-use crate::render::{Backend, Buffer, DescriptorPool, DescriptorSet, DescriptorSetLayout, PipelineLayout, ShaderModule};
+use crate::render::{
+    Backend, Buffer, DescriptorSet, DescriptorSetLayout, Factory, GraphContext, PipelineLayout, ShaderModule,
+};
 use crate::render::{FrameInfo, FrameParameters};
 use gfx_hal::device::Device;
 use lazy_static::lazy_static;
 use rendy::command::{Families, QueueId, RenderPassEncoder};
-use rendy::factory::Factory;
 use rendy::graph::present::PresentNode;
 use rendy::graph::render::{
     Layout, PrepareResult, RenderGroupBuilder, SetLayout, SimpleGraphicsPipeline, SimpleGraphicsPipelineDesc,
@@ -67,8 +68,8 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
     fn load_shader_set<'a>(
         &self,
         storage: &'a mut Vec<ShaderModule>,
-        factory: &mut Factory<Backend>,
-        _world: &mut World,
+        factory: &mut Factory,
+        _world: &World,
     ) -> gfx_hal::pso::GraphicsShaderSet<'a, Backend> {
         storage.clear();
 
@@ -97,11 +98,12 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
 
     fn build<'a>(
         self,
-        factory: &mut Factory<Backend>,
+        _context: &mut GraphContext,
+        factory: &mut Factory,
         _queue: QueueId,
-        world: &mut World,
-        buffers: Vec<NodeBuffer<'a, Backend>>,
-        images: Vec<NodeImage<'a, Backend>>,
+        world: &World,
+        buffers: Vec<NodeBuffer>,
+        images: Vec<NodeImage>,
         set_layouts: &[DescriptorSetLayout],
     ) -> Result<TriangleRenderPipeline, failure::Error> {
         assert!(buffers.is_empty());
@@ -111,27 +113,15 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
         let frame_parameters = world.get_resource::<FrameParameters>();
         let frames = frame_parameters.frame_count();
 
-        let mut descriptor_pool = unsafe {
-            factory.create_descriptor_pool(
-                frames,
-                Some(gfx_hal::pso::DescriptorRangeDesc {
-                    ty: gfx_hal::pso::DescriptorType::UniformBuffer,
-                    count: frames,
-                }),
-            )
-        }
-        .unwrap();
-
         let mut descriptor_sets = Vec::new();
         for index in 0..frames {
             let projection_range = frame_parameters.projection_args_range(index);
             let buffer = frame_parameters.buffer();
 
-            use gfx_hal::pso::DescriptorPool;
             unsafe {
-                let set = descriptor_pool.allocate_set(&set_layouts[0]).unwrap();
+                let set =  factory.create_descriptor_set(&set_layouts[0]).unwrap();
                 factory.write_descriptor_sets(Some(gfx_hal::pso::DescriptorSetWrite {
-                    set: &set,
+                    set: set.raw(),
                     binding: 0,
                     array_offset: 0,
                     descriptors: Some(gfx_hal::pso::Descriptor::Buffer(buffer.raw(), projection_range)),
@@ -142,7 +132,6 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
 
         Ok(TriangleRenderPipeline {
             vertex: None,
-            descriptor_pool,
             descriptor_sets,
         })
     }
@@ -150,7 +139,6 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
 
 #[derive(Debug)]
 struct TriangleRenderPipeline {
-    descriptor_pool: DescriptorPool,
     descriptor_sets: Vec<DescriptorSet>,
     vertex: Option<Buffer>,
 }
@@ -160,7 +148,7 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
 
     fn prepare(
         &mut self,
-        factory: &Factory<Backend>,
+        factory: &Factory,
         _queue: QueueId,
         _set_layouts: &[DescriptorSetLayout],
         index: usize,
@@ -211,22 +199,17 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
     }
 
     fn draw(&mut self, layout: &PipelineLayout, mut encoder: RenderPassEncoder<'_, Backend>, index: usize, _world: &World) {
-        encoder.bind_graphics_descriptor_sets(layout, 0, Some(&self.descriptor_sets[index]), std::iter::empty());
+        encoder.bind_graphics_descriptor_sets(layout, 0, Some(self.descriptor_sets[index].raw()), std::iter::empty());
 
         let vbuf = self.vertex.as_ref().unwrap();
         encoder.bind_vertex_buffers(0, Some((vbuf.raw(), 0)));
         encoder.draw(0..3, 0..1);
     }
 
-    fn dispose(self, _factory: &mut Factory<Backend>, _world: &mut World) {}
+    fn dispose(self, _factory: &mut Factory, _world: &World) {}
 }
 
-pub fn init(
-    factory: &mut Factory<Backend>,
-    families: &mut Families<Backend>,
-    surface: Surface<Backend>,
-    world: &mut World,
-) -> Graph {
+pub fn init(factory: &mut Factory, families: &mut Families<Backend>, surface: Surface<Backend>, world: &mut World) -> Graph {
     let mut graph_builder = GraphBuilder::<Backend, World>::new();
 
     let color = graph_builder.create_image(
@@ -262,7 +245,7 @@ pub fn init(
     graph_builder.build(factory, families, world).unwrap()
 }
 
-pub fn dispose(factory: &mut Factory<Backend>, world: &mut World) {
+pub fn dispose(factory: &mut Factory, world: &mut World) {
     log::trace!("disposing world");
     world.get_resource_mut::<FrameParameters>().dispose(factory);
 }

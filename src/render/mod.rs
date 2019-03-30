@@ -1,7 +1,3 @@
-use rendy::factory::Factory as RendyFactory;
-use rendy::mesh::{Mesh as RendyMesh, MeshBuilder as RendyMeshBuilder};
-use rendy::resource::buffer::Buffer as RendyBuffer;
-
 #[cfg(feature = "render-dx12")]
 pub type Backend = rendy::dx12::Backend;
 
@@ -11,17 +7,18 @@ pub type Backend = rendy::metal::Backend;
 #[cfg(feature = "render-vulkan")]
 pub type Backend = rendy::vulkan::Backend;
 
-pub type Buffer = RendyBuffer<Backend>;
-pub type Factory = RendyFactory<Backend>;
+pub type Buffer = rendy::resource::buffer::Buffer<Backend>;
+pub type Factory = rendy::factory::Factory<Backend>;
+pub type GraphContext = rendy::graph::GraphContext<Backend>;
 
-pub type DescriptorPool = <Backend as gfx_hal::Backend>::DescriptorPool;
-pub type DescriptorSet = <Backend as gfx_hal::Backend>::DescriptorSet;
-pub type DescriptorSetLayout = <Backend as gfx_hal::Backend>::DescriptorSetLayout;
+//pub type DescriptorPool = <Backend as gfx_hal::Backend>::DescriptorPool;
+pub type DescriptorSet = rendy::resource::set::DescriptorSet<Backend>;
+pub type DescriptorSetLayout = rendy::resource::set::DescriptorSetLayout<Backend>;
 pub type PipelineLayout = <Backend as gfx_hal::Backend>::PipelineLayout;
 pub type ShaderModule = <Backend as gfx_hal::Backend>::ShaderModule;
 
-pub type Mesh = RendyMesh<Backend>;
-pub type MeshBuilder<'a> = RendyMeshBuilder<'a>;
+pub type Mesh = rendy::mesh::Mesh<Backend>;
+pub type MeshBuilder<'a> = rendy::mesh::MeshBuilder<'a>;
 
 pub trait IntoMesh {
     fn into_mesh(&self) -> MeshBuilder<'static>;
