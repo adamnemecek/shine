@@ -31,6 +31,8 @@ winit = "0.18"
 gilrs = "*"
 rendy = {git = "https://github.com/omni-viral/rendy.git"}
 
+crossbeam = "*"
+rayon = "*"
 shred = "*"
 
 shine-store = {path = "store"}

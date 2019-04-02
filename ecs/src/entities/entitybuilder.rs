@@ -23,7 +23,7 @@ where
         T: 'static + EntityComponent,
     {
         {
-            let mut store = self.world.get_entity_component_mut::<T>();
+            let mut store = self.world.entity_components_mut::<T>();
             store.add(self.entity, component);
         }
         self

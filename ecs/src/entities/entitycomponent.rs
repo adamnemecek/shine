@@ -1,5 +1,7 @@
 use crate::entities::Entity;
 use shine_graph::svec;
+use shred::{Read, ResourceId, Resources, SystemData, Write};
+use std::ops::{Deref, DerefMut};
 
 pub mod es {
     pub use shine_graph::svec::Entry;
@@ -76,5 +78,94 @@ where
         Self {
             store: Default::default(),
         }
+    }
+}
+
+/// Grant immutable access to the components inside a System
+pub struct ReadEntityComponents<'a, C>
+where
+    C: EntityComponent,
+{
+    inner: Read<'a, <C as EntityComponent>::Store>,
+}
+
+impl<'a, C> Deref for ReadEntityComponents<'a, C>
+where
+    C: EntityComponent,
+{
+    type Target = <C as EntityComponent>::Store;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl<'a, C> SystemData<'a> for ReadEntityComponents<'a, C>
+where
+    C: EntityComponent,
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        ReadEntityComponents {
+            inner: res.fetch::<<C as EntityComponent>::Store>().into(),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![ResourceId::new::<<C as EntityComponent>::Store>()]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![]
+    }
+}
+
+/// Grant mutable access to the components inside a System
+pub struct WriteEntityComponents<'a, C>
+where
+    C: EntityComponent,
+{
+    inner: Write<'a, <C as EntityComponent>::Store>,
+}
+
+impl<'a, C> Deref for WriteEntityComponents<'a, C>
+where
+    C: EntityComponent,
+{
+    type Target = <C as EntityComponent>::Store;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl<'a, C> DerefMut for WriteEntityComponents<'a, C>
+where
+    C: EntityComponent,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner.deref_mut()
+    }
+}
+
+impl<'a, C> SystemData<'a> for WriteEntityComponents<'a, C>
+where
+    C: EntityComponent,
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        WriteEntityComponents {
+            inner: res.fetch_mut::<<C as EntityComponent>::Store>().into(),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![ResourceId::new::<<C as EntityComponent>::Store>()]
     }
 }

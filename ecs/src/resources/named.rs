@@ -1,4 +1,6 @@
 use shine_store::namedstore::Store as InnerStore;
+use shred::{Read, ResourceId, Resources, SystemData, Write};
+use std::ops::{Deref, DerefMut};
 
 pub use shine_store::namedstore::{Data, Index, ReadGuard, WriteGuard};
 
@@ -33,5 +35,94 @@ impl<D: Data> Store<D> {
 impl<D: Data> Default for Store<D> {
     fn default() -> Self {
         Store::new()
+    }
+}
+
+/// Grant immutable access to a named store inside a System
+pub struct ReadNamedStore<'a, D>
+where
+    D: 'static + Data,
+{
+    inner: Read<'a, Store<D>>,
+}
+
+impl<'a, D> Deref for ReadNamedStore<'a, D>
+where
+    D: 'static + Data,
+{
+    type Target = Store<D>;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl<'a, D> SystemData<'a> for ReadNamedStore<'a, D>
+where
+    D: 'static + Data,
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        ReadNamedStore {
+            inner: res.fetch::<Store<D>>().into(),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![ResourceId::new::<Store<D>>()]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![]
+    }
+}
+
+/// Grant mutable access to a named store inside a System
+pub struct WriteNamedStore<'a, D>
+where
+    D: 'static + Data,
+{
+    inner: Write<'a, Store<D>>,
+}
+
+impl<'a, D> Deref for WriteNamedStore<'a, D>
+where
+    D: 'static + Data,
+{
+    type Target = Store<D>;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl<'a, D> DerefMut for WriteNamedStore<'a, D>
+where
+    D: 'static + Data,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner.deref_mut()
+    }
+}
+
+impl<'a, D> SystemData<'a> for WriteNamedStore<'a, D>
+where
+    D: 'static + Data,
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        WriteNamedStore {
+            inner: res.fetch_mut::<Store<D>>().into(),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![ResourceId::new::<Store<D>>()]
     }
 }

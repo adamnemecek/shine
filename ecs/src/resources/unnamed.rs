@@ -1,4 +1,6 @@
 use shine_store::unnamedstore::Store as InnerStore;
+use shred::{Read, ResourceId, Resources, SystemData, Write};
+use std::ops::{Deref, DerefMut};
 
 pub use shine_store::unnamedstore::{Index, ReadGuard, WriteGuard};
 
@@ -33,5 +35,94 @@ impl<D> Store<D> {
 impl<D> Default for Store<D> {
     fn default() -> Self {
         Store::new()
+    }
+}
+
+/// Grant immutable access to a (unnamed) store inside a System
+pub struct ReadStore<'a, D>
+where
+    D: 'static,
+{
+    inner: Read<'a, Store<D>>,
+}
+
+impl<'a, D> Deref for ReadStore<'a, D>
+where
+    D: 'static,
+{
+    type Target = Store<D>;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl<'a, D> SystemData<'a> for ReadStore<'a, D>
+where
+    D: 'static,
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        ReadStore {
+            inner: res.fetch::<Store<D>>().into(),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![ResourceId::new::<Store<D>>()]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![]
+    }
+}
+
+/// Grant mutable access to a (unnamed) store inside a System
+pub struct WriteStore<'a, D>
+where
+    D: 'static,
+{
+    inner: Write<'a, Store<D>>,
+}
+
+impl<'a, D> Deref for WriteStore<'a, D>
+where
+    D: 'static,
+{
+    type Target = Store<D>;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl<'a, D> DerefMut for WriteStore<'a, D>
+where
+    D: 'static,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner.deref_mut()
+    }
+}
+
+impl<'a, D> SystemData<'a> for WriteStore<'a, D>
+where
+    D: 'static,
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        WriteStore {
+            inner: res.fetch_mut::<Store<D>>().into(),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![ResourceId::new::<Store<D>>()]
     }
 }

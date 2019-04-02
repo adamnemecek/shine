@@ -1,4 +1,5 @@
 mod edge;
+mod edgebuilder;
 mod edgecomponent;
 mod entity;
 mod entitybuilder;
@@ -7,6 +8,8 @@ mod join;
 
 #[doc(inline)]
 pub use self::edge::*;
+#[doc(inline)]
+pub use self::edgebuilder::*;
 #[doc(inline)]
 pub use self::edgecomponent::*;
 #[doc(inline)]

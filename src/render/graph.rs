@@ -108,7 +108,7 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
         assert!(images.is_empty());
         assert_eq!(set_layouts.len(), 1);
 
-        let frame_parameters = world.get_resource::<FrameParameters>();
+        let frame_parameters = world.resource::<FrameParameters>();
         let frames = frame_parameters.frame_count();
 
         let mut descriptor_pool = unsafe {
@@ -166,9 +166,9 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
         index: usize,
         world: &World,
     ) -> PrepareResult {
-        let frame_info = world.get_resource::<FrameInfo>();
-        let camera = world.get_resource::<FpsCamera>();
-        let mut frame_parameters = world.get_resource_mut::<FrameParameters>();
+        let frame_info = world.resource::<FrameInfo>();
+        let camera = world.resource::<FpsCamera>();
+        let mut frame_parameters = world.resource_mut::<FrameParameters>();
         frame_parameters.update(factory, index, frame_info.frame_id, &*camera);
 
         if self.vertex.is_none() {
@@ -264,5 +264,5 @@ pub fn init(
 
 pub fn dispose(factory: &mut Factory<Backend>, world: &mut World) {
     log::trace!("disposing world");
-    world.get_resource_mut::<FrameParameters>().dispose(factory);
+    world.resource_mut::<FrameParameters>().dispose(factory);
 }

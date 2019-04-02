@@ -13,7 +13,7 @@ pub fn prepare_scene<'a, 'b>(world: &mut World) -> Dispatcher<'a, 'b> {
         .with(SimpleMeshData::new());
 
     let dispatcher = DispatcherBuilder::new()
-        .with(VoxelMeshSystem, "VoxelMesherSystem", &[])
+        //.with(VoxelMeshSystem, "VoxelMesherSystem", &[])
         .build();
 
     dispatcher

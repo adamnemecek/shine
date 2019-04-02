@@ -46,6 +46,6 @@ fn test_system() {
     world.dispatch(&mut dispatcher);
     world.dispatch(&mut dispatcher);
 
-    assert_eq!(world.get_resource::<ResA>().value, 11);
-    assert_eq!(world.get_resource::<ResB>().value, 56);
+    assert_eq!(world.resource::<ResA>().value, 11);
+    assert_eq!(world.resource::<ResB>().value, 56);
 }

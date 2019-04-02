@@ -122,7 +122,7 @@ impl Default for EntityStore {
     }
 }
 
-/// Grant immutable access to the entities
+/// Grant immutable access to the entities inside a System
 pub struct ReadEntities<'a> {
     inner: Read<'a, EntityStore>,
 }
@@ -153,7 +153,7 @@ impl<'a> SystemData<'a> for ReadEntities<'a> {
     }
 }
 
-/// Grant mutable access to the entities
+/// Grant mutable access to the entities inside a System
 pub struct WriteEntities<'a> {
     inner: Write<'a, EntityStore>,
 }

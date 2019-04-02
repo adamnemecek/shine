@@ -1,19 +1,19 @@
-use crate::entities::{EdgeComponent, EdgeComponentStore, EntityBuilder, EntityComponent, EntityComponentStore, EntityStore};
+use crate::entities::{Edge, EdgeBuilder, EdgeComponent, EdgeComponentStore};
+use crate::entities::{EntityBuilder, EntityComponent, EntityComponentStore, EntityStore};
 use crate::resources::{named, unnamed};
 use shred::{Dispatcher, Fetch, FetchMut, Resources, SystemData};
-//use shred::{, Read, System, Write};
 
 pub trait EntityWorld {
     fn entities(&self) -> Fetch<'_, EntityStore>;
     fn entities_mut(&self) -> FetchMut<'_, EntityStore>;
 
     fn register_entity_component<C: EntityComponent>(&mut self);
-    fn get_entity_component<C: EntityComponent>(&self) -> Fetch<'_, EntityComponentStore<C>>;
-    fn get_entity_component_mut<C: EntityComponent>(&self) -> FetchMut<'_, EntityComponentStore<C>>;
+    fn entity_components<C: EntityComponent>(&self) -> Fetch<'_, EntityComponentStore<C>>;
+    fn entity_components_mut<C: EntityComponent>(&self) -> FetchMut<'_, EntityComponentStore<C>>;
 
     fn register_edge_component<C: EdgeComponent>(&mut self);
-    fn get_edge_component<C: EdgeComponent>(&self) -> Fetch<'_, EdgeComponentStore<C>>;
-    fn get_edge_component_mut<C: EdgeComponent>(&self) -> FetchMut<'_, EdgeComponentStore<C>>;
+    fn edge_components<C: EdgeComponent>(&self) -> Fetch<'_, EdgeComponentStore<C>>;
+    fn edge_components_mut<C: EdgeComponent>(&self) -> FetchMut<'_, EdgeComponentStore<C>>;
 
     fn create_entity(&mut self) -> EntityBuilder<'_, Self>
     where
@@ -21,23 +21,30 @@ pub trait EntityWorld {
     {
         EntityBuilder::new(self)
     }
+
+    fn create_edge(&mut self, edge: Edge) -> EdgeBuilder<'_, Self>
+    where
+        Self: Sized,
+    {
+        EdgeBuilder::new(self, edge)
+    }
 }
 
 pub trait StoreWorld {
     fn register_named_store<D: 'static + named::Data>(&mut self);
-    fn get_named_store<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>>;
-    fn get_named_store_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>>;
+    fn named_store<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>>;
+    fn named_store_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>>;
 
     fn register_store<D: 'static>(&mut self);
-    fn get_store<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>>;
-    fn get_store_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>>;
+    fn store<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>>;
+    fn store_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>>;
 }
 
 pub trait ResourceWorld {
     fn register_resource<D: 'static + Send + Sync + Default>(&mut self);
     fn register_resource_with<D: 'static + Send + Sync>(&mut self, resource: D);
-    fn get_resource<D: 'static + Send + Sync>(&self) -> Fetch<'_, D>;
-    fn get_resource_mut<D: 'static + Send + Sync>(&self) -> FetchMut<'_, D>;
+    fn resource<D: 'static + Send + Sync>(&self) -> Fetch<'_, D>;
+    fn resource_mut<D: 'static + Send + Sync>(&self) -> FetchMut<'_, D>;
 }
 
 pub trait SpatialWorld {}
@@ -72,8 +79,8 @@ impl World {
         world
     }
 
-    pub fn dispatch<'a, 'b>(&mut self, dispatcher: &mut Dispatcher<'a, 'b>) {
-        dispatcher.dispatch(&mut self.resources);
+    pub fn dispatch<'a, 'b>(&self, dispatcher: &mut Dispatcher<'a, 'b>) {
+        dispatcher.dispatch(&self.resources);
     }
 
     /// Helper to fetch components without creating some explicit System.
@@ -100,11 +107,11 @@ impl EntityWorld for World {
         self.resources.insert::<EntityComponentStore<C>>(Default::default());
     }
 
-    fn get_entity_component<C: EntityComponent>(&self) -> Fetch<'_, EntityComponentStore<C>> {
+    fn entity_components<C: EntityComponent>(&self) -> Fetch<'_, EntityComponentStore<C>> {
         self.resources.fetch()
     }
 
-    fn get_entity_component_mut<C: EntityComponent>(&self) -> FetchMut<'_, EntityComponentStore<C>> {
+    fn entity_components_mut<C: EntityComponent>(&self) -> FetchMut<'_, EntityComponentStore<C>> {
         self.resources.fetch_mut()
     }
 
@@ -112,11 +119,11 @@ impl EntityWorld for World {
         self.resources.insert::<EdgeComponentStore<C>>(Default::default());
     }
 
-    fn get_edge_component<C: EdgeComponent>(&self) -> Fetch<'_, EdgeComponentStore<C>> {
+    fn edge_components<C: EdgeComponent>(&self) -> Fetch<'_, EdgeComponentStore<C>> {
         self.resources.fetch()
     }
 
-    fn get_edge_component_mut<C: EdgeComponent>(&self) -> FetchMut<'_, EdgeComponentStore<C>> {
+    fn edge_components_mut<C: EdgeComponent>(&self) -> FetchMut<'_, EdgeComponentStore<C>> {
         self.resources.fetch_mut()
     }
 }
@@ -126,11 +133,11 @@ impl StoreWorld for World {
         self.resources.insert::<named::Store<D>>(Default::default());
     }
 
-    fn get_named_store<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>> {
+    fn named_store<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>> {
         self.resources.fetch()
     }
 
-    fn get_named_store_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>> {
+    fn named_store_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>> {
         self.resources.fetch_mut()
     }
 
@@ -138,11 +145,11 @@ impl StoreWorld for World {
         self.resources.insert::<unnamed::Store<D>>(Default::default());
     }
 
-    fn get_store<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>> {
+    fn store<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>> {
         self.resources.fetch()
     }
 
-    fn get_store_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>> {
+    fn store_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>> {
         self.resources.fetch_mut()
     }
 }
@@ -156,11 +163,11 @@ impl ResourceWorld for World {
         self.resources.insert::<D>(resource);
     }
 
-    fn get_resource<D: 'static + Send + Sync>(&self) -> Fetch<'_, D> {
+    fn resource<D: 'static + Send + Sync>(&self) -> Fetch<'_, D> {
         self.resources.fetch()
     }
 
-    fn get_resource_mut<D: 'static + Send + Sync>(&self) -> FetchMut<'_, D> {
+    fn resource_mut<D: 'static + Send + Sync>(&self) -> FetchMut<'_, D> {
         self.resources.fetch_mut()
     }
 }

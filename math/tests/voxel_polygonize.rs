@@ -3,7 +3,7 @@ mod common;
 use self::common::voxel_prelude::*;
 use nalgebra_glm as glm;
 use shine_math::voxel::analyze::Info;
-use shine_math::voxel::data::DataCell;
+//use shine_math::voxel::data::DataCell;
 use shine_math::voxel::implicit::function::*;
 use shine_math::voxel::implicit::ImplicitCell;
 use shine_math::voxel::polygonize::{Config, Cubic, Polygonizer, Transvoxel};

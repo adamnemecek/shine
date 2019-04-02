@@ -1,5 +1,7 @@
 use crate::entities::Edge;
 use shine_graph::smat;
+use shred::{Read, ResourceId, Resources, SystemData, Write};
+use std::ops::{Deref, DerefMut};
 
 pub mod ds {
     pub use super::smat::Entry;
@@ -78,5 +80,94 @@ where
         Self {
             store: Default::default(),
         }
+    }
+}
+
+/// Grant immutable access to the components inside a System
+pub struct ReadEdgeComponents<'a, C>
+where
+    C: EdgeComponent,
+{
+    inner: Read<'a, <C as EdgeComponent>::Store>,
+}
+
+impl<'a, C> Deref for ReadEdgeComponents<'a, C>
+where
+    C: EdgeComponent,
+{
+    type Target = <C as EdgeComponent>::Store;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl<'a, C> SystemData<'a> for ReadEdgeComponents<'a, C>
+where
+    C: EdgeComponent,
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        ReadEdgeComponents {
+            inner: res.fetch::<<C as EdgeComponent>::Store>().into(),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![ResourceId::new::<<C as EdgeComponent>::Store>()]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![]
+    }
+}
+
+/// Grant mutable access to the components inside a System
+pub struct WriteEdgeComponents<'a, C>
+where
+    C: EdgeComponent,
+{
+    inner: Write<'a, <C as EdgeComponent>::Store>,
+}
+
+impl<'a, C> Deref for WriteEdgeComponents<'a, C>
+where
+    C: EdgeComponent,
+{
+    type Target = <C as EdgeComponent>::Store;
+
+    fn deref(&self) -> &Self::Target {
+        self.inner.deref()
+    }
+}
+
+impl<'a, C> DerefMut for WriteEdgeComponents<'a, C>
+where
+    C: EdgeComponent,
+{
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        self.inner.deref_mut()
+    }
+}
+
+impl<'a, C> SystemData<'a> for WriteEdgeComponents<'a, C>
+where
+    C: EdgeComponent,
+{
+    fn setup(_: &mut Resources) {}
+
+    fn fetch(res: &'a Resources) -> Self {
+        WriteEdgeComponents {
+            inner: res.fetch_mut::<<C as EdgeComponent>::Store>().into(),
+        }
+    }
+
+    fn reads() -> Vec<ResourceId> {
+        vec![]
+    }
+
+    fn writes() -> Vec<ResourceId> {
+        vec![ResourceId::new::<<C as EdgeComponent>::Store>()]
     }
 }

@@ -23,7 +23,7 @@ enum EventResult {
 }
 
 fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gilrs) -> EventResult {
-    let mut input_manager = world.get_resource_mut::<InputManager>();
+    let mut input_manager = world.resource_mut::<InputManager>();
     let mut is_closing = false;
     let mut is_surface_lost = false;
 
@@ -138,13 +138,13 @@ fn main() {
         frame_count += 1;
 
         {
-            let mut frame = world.get_resource_mut::<render::FrameInfo>();
+            let mut frame = world.resource_mut::<render::FrameInfo>();
             frame.frame_id = frame_count;
             frame.ellapsed_time = ellapsed_time;
 
-            let input_manager = world.get_resource::<InputManager>();
+            let input_manager = world.resource::<InputManager>();
             let input_state = input_manager.get_state();
-            let mut cam = world.get_resource_mut::<FpsCamera>();
+            let mut cam = world.resource_mut::<FpsCamera>();
 
             let dist = (ellapsed_time * 0.000001) as f32;
             let angle_dist = (ellapsed_time * 0.00001) as f32;
