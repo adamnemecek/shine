@@ -37,11 +37,10 @@ impl<'a> System<'a> for VoxelMeshSystem {
 
         let mut cube = Cubic::new();
         let mut voxel_mesh = VoxelMesh::new();
-        (voxel.read(), mesh.update()).join_all(|_, (voxel, mesh)| 
-        {
+        (voxel.read(), mesh.update()).join_all(|_, (voxel, mesh)| {
             voxel_mesh.clear();
             cube.polygonize(&mut voxel_mesh, voxel.cell.as_ref());
             mesh.mesh = voxel_mesh.into_mesh();
-        }
+        })
     }
 }

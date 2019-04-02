@@ -6,7 +6,7 @@ use syn;
 
 use proc_macro::TokenStream;
 
-#[proc_macro_derive(ecs::EntityComponent)]
+#[proc_macro_derive(EntityComponent)]
 pub fn derive_entity_component(input: TokenStream) -> TokenStream {
     let ast: syn::DeriveInput = syn::parse(input).unwrap();
     let gen = derive_entity_component_impl(&ast);
@@ -23,7 +23,7 @@ fn derive_entity_component_impl(ast: &syn::DeriveInput) -> proc_macro2::TokenStr
     }
 }
 
-#[proc_macro_derive(ecs::EdgeComponent)]
+#[proc_macro_derive(EdgeComponent)]
 pub fn derive_edge_component(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
     let gen = derive_edge_component_impl(&ast);

@@ -33,7 +33,7 @@ struct SimpleMeshResources {
 }
 
 pub struct SimpleMesh {
-    queueId: QueueId,
+    queue_id: QueueId,
     mesh: Mesh,
     resources: DriverResource<SimpleMeshResources>,
 }
