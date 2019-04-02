@@ -13,7 +13,7 @@ impl<'a, W> EntityBuilder<'a, W>
 where
     W: EntityWorld,
 {
-    pub fn new<'b>(world: &'b mut W) -> EntityBuilder<'b, W> {
+    pub fn new(world: &mut W) -> EntityBuilder<'_, W> {
         let entity = world.entities_mut().create();
         EntityBuilder { world, entity }
     }
