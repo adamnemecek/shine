@@ -29,27 +29,13 @@ pub struct FrameParameters {
 }
 
 impl FrameParameters {
-    pub fn new(factory: &mut Factory<Backend>, frame_count: usize) -> FrameParameters {
-        let uniform_align = gfx_hal::adapter::PhysicalDevice::limits(factory.physical()).min_uniform_buffer_offset_alignment;
-        let frame_buffer_size = ((PROJECTION_ARGS_SIZE - 1) / uniform_align + 1) * uniform_align;
-
-        let buffer = factory
-            .create_buffer(
-                uniform_align,
-                frame_buffer_size * frame_count as BufferOffset,
-                (gfx_hal::buffer::Usage::UNIFORM, MemoryUsageValue::Dynamic),
-            )
-            .unwrap();
-
-        let mut frame_ids = Vec::with_capacity(frame_count);
-        frame_ids.resize(frame_count, 0);
-
+    pub fn new() -> FrameParameters {
         FrameParameters {
-            uniform_align,
-            frame_count,
-            frame_ids,
-            frame_buffer_size,
-            resources: DriverResource::from(FrameParameterResources { buffer }),
+            frame_count: 0,
+            frame_ids: vec![],
+            uniform_align: BufferOffset::default(),
+            frame_buffer_size: BufferOffset::default(),
+            resources: DriverResource::default(),
         }
     }
 
@@ -71,6 +57,25 @@ impl FrameParameters {
 
     pub fn dispose(&mut self, factory: &mut Factory<Backend>) {
         self.resources.dispose(factory);
+    }
+
+    pub fn init(&mut self, factory: &Factory<Backend>, frame_count: usize) {
+        assert!(self.resources.is_disposed());
+
+        //log::trace!("Init frameparameters");
+        self.frame_count = frame_count;
+        self.uniform_align = gfx_hal::adapter::PhysicalDevice::limits(factory.physical()).min_uniform_buffer_offset_alignment;
+        self.frame_buffer_size = ((PROJECTION_ARGS_SIZE - 1) / self.uniform_align + 1) * self.uniform_align;
+        self.frame_ids.resize(self.frame_count, 0);
+
+        let buffer = factory
+            .create_buffer(
+                self.uniform_align,
+                self.frame_buffer_size * self.frame_count as BufferOffset,
+                (gfx_hal::buffer::Usage::UNIFORM, MemoryUsageValue::Dynamic),
+            )
+            .unwrap();
+        self.resources.replace(FrameParameterResources { buffer });
     }
 
     pub fn update(&mut self, factory: &Factory<Backend>, index: usize, frame_id: u32, camera: &RenderCamera) {
@@ -95,5 +100,11 @@ impl FrameParameters {
                 )
                 .unwrap()
         };
+    }
+}
+
+impl Default for FrameParameters {
+    fn default() -> Self {
+        FrameParameters::new()
     }
 }

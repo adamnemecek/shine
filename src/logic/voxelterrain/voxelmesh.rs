@@ -1,5 +1,5 @@
-use crate::components::{SimpleMeshData, VoxelCell};
-use crate::render::{IntoMesh, MeshBuilder};
+use crate::logic::VoxelCell;
+use crate::render::{IntoMesh, MeshBuilder, SimpleMeshData};
 use rendy::mesh::PosNorm;
 use shine_ecs::entities::{EntityComponentStore, IntoJoinExt};
 use shine_math::voxel::polygonize::{Cubic, Mesh as VoxelMesh, Polygonizer};

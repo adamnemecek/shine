@@ -32,6 +32,20 @@ impl<T> DriverResource<T> {
         log::trace!("disposing resource {}", unsafe { type_name::<T>() });
         self.inner.take();
     }
+
+    pub fn is_disposed(&self) -> bool {
+        self.inner.is_none()
+    }
+
+    pub fn replace(&mut self, data: T) {
+        self.inner.replace(data);
+    }
+}
+
+impl<T> Default for DriverResource<T> {
+    fn default() -> Self {
+        DriverResource::new()
+    }
 }
 
 impl<T> Drop for DriverResource<T> {

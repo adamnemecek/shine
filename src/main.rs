@@ -5,14 +5,16 @@ use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::{ResourceWorld, World};
 use shine_math::camera::FpsCamera;
 use std::env;
-use std::sync::Arc;
-use std::time::Instant;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, RwLock};
+use std::thread;
+use std::time::Duration;
 use winit::{EventsLoop, WindowBuilder};
 
 mod input;
 use self::input::*;
-mod components;
 mod demo;
+mod logic;
 mod render;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -22,7 +24,7 @@ enum EventResult {
     Closing,
 }
 
-fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gilrs) -> EventResult {
+fn handle_events(world: &World, event_loop: &mut EventsLoop, gilrs: &mut Gilrs) -> EventResult {
     let mut input_manager = world.resource_mut::<InputManager>();
     let mut is_closing = false;
     let mut is_surface_lost = false;
@@ -77,6 +79,100 @@ fn handle_events(world: &mut World, event_loop: &mut EventsLoop, gilrs: &mut Gil
     }
 }
 
+#[derive(Debug)]
+struct SyncData {
+    sync_count: usize,
+}
+
+type SyncLock = RwLock<SyncData>;
+
+fn logic(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
+    let mut dispatcher = demo::logic_tasks();
+
+    while !stopping.load(Ordering::Relaxed) {
+        log::info!("logic update");
+        world.dispatch(&mut dispatcher);
+        thread::sleep(Duration::from_secs(1));
+
+        //sync point b/n render and logic
+        {
+            let mut l = sync_lock.write().unwrap();
+            l.sync_count += 1;
+            thread::sleep(Duration::from_micros(10));
+        }
+    }
+}
+
+fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
+    let mut dispatcher = demo::render_tasks();
+
+    let mut event_loop = EventsLoop::new();
+    let mut gilrs = Gilrs::new().unwrap();
+    let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
+    let mut frame_timer = render::FrameTimer::new();
+
+    let config: RendyConfig = Default::default();
+    let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();
+    let mut graph: Option<render::Graph> = None;
+
+    loop {
+        factory.maintain(&mut families);
+
+        let event_result = handle_events(&world, &mut event_loop, &mut gilrs);
+
+        if event_result == EventResult::SurfaceLost || event_result == EventResult::Closing {
+            if let Some(graph) = graph.take() {
+                graph.dispose(&mut factory, &world);
+                render::dispose(&mut factory, &world);
+            }
+        }
+
+        if event_result == EventResult::Closing {
+            log::trace!("closing");
+            stopping.store(true, Ordering::Relaxed);
+            break;
+        }
+
+        {
+            let r = sync_lock.read().unwrap();
+            log::trace!("r: {:?}", *r);
+            world.dispatch(&mut dispatcher);
+            frame_timer.end_frame();
+
+            {
+                let ellapsed_time = frame_timer.get_last_frame_time();
+
+                let mut frame = world.resource_mut::<render::FrameInfo>();
+                frame.frame_id = frame_timer.get_frame_count();
+                frame.ellapsed_time = ellapsed_time;
+
+                let input_manager = world.resource::<InputManager>();
+                let input_state = input_manager.get_state();
+                let mut cam = world.resource_mut::<FpsCamera>();
+
+                let dist = (ellapsed_time * 0.000001) as f32;
+                let angle_dist = (ellapsed_time * 0.00001) as f32;
+
+                cam.move_forward(input_state.get_button(buttons::MOVE_FORWARD) * dist);
+                cam.move_side(input_state.get_button(buttons::MOVE_SIDE) * dist);
+                cam.move_up(input_state.get_button(buttons::MOVE_UP) * dist);
+                cam.yaw(input_state.get_button(buttons::YAW) * angle_dist);
+                cam.roll(input_state.get_button(buttons::ROLL) * angle_dist);
+                cam.pitch(input_state.get_button(buttons::PITCH) * angle_dist);
+            }
+
+            if graph.is_none() {
+                let surface = factory.create_surface(window.clone());
+                graph = Some(render::init(&mut factory, &mut families, surface, &world));
+            }
+
+            if let Some(ref mut graph) = graph {
+                graph.run(&mut factory, &mut families, &world);
+            }
+        }
+    }
+}
+
 fn main() {
     env::set_var("RUST_BACKTRACE", "1");
     env_logger::Builder::from_default_env()
@@ -88,84 +184,28 @@ fn main() {
     log::trace!("current executable {:?}", env::current_exe());
     log::trace!("current path {:?}", env::current_dir());
 
-    let mut world = World::new();
-    world.register_resource_with(FpsCamera::new());
-    world.register_resource_with(input::create_input_manager());
-    world.register_resource_with(render::FrameInfo::new());
-    components::prepare_world(&mut world);
+    let world = {
+        let mut world = World::new();
+        world.register_resource_with(FpsCamera::new());
+        world.register_resource_with(input::create_input_manager());
+        world.register_resource_with(render::FrameInfo::new());
+        logic::prepare_world(&mut world);
+        render::prepare_world(&mut world);
+        demo::prepare_scene(&mut world);
+        world
+    };
+    let stopping = AtomicBool::new(false);
+    let sync_lock = RwLock::new(SyncData { sync_count: 0 });
 
-    let mut dispatch = demo::prepare_scene(&mut world);
-
-    let config: RendyConfig = Default::default();
-    let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();
-
-    let mut event_loop = EventsLoop::new();
-    let mut gilrs = Gilrs::new().unwrap();
-
-    let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
-    let mut graph: Option<render::Graph> = None;
-    let mut prev_frame_instant = None;
-    let mut frame_count = 1;
-
-    loop {
-        factory.maintain(&mut families);
-
-        let event_result = handle_events(&mut world, &mut event_loop, &mut gilrs);
-
-        if event_result == EventResult::SurfaceLost || event_result == EventResult::Closing {
-            if let Some(graph) = graph.take() {
-                graph.dispose(&mut factory, &mut world);
-                render::dispose(&mut factory, &mut world);
-            }
-        }
-
-        if event_result == EventResult::Closing {
-            log::trace!("closing");
-            break;
-        }
-
-        world.dispatch(&mut dispatch);
-
-        let ellapsed_time = {
-            match prev_frame_instant.replace(Instant::now()) {
-                None => 0.0_f64,
-                Some(prev) => prev.elapsed().as_micros() as f64,
-            }
-        };
-        if ellapsed_time > 10000. {
-            log::trace!("too long frame: {}", ellapsed_time);
-        }
-        frame_count += 1;
-
-        {
-            let mut frame = world.resource_mut::<render::FrameInfo>();
-            frame.frame_id = frame_count;
-            frame.ellapsed_time = ellapsed_time;
-
-            let input_manager = world.resource::<InputManager>();
-            let input_state = input_manager.get_state();
-            let mut cam = world.resource_mut::<FpsCamera>();
-
-            let dist = (ellapsed_time * 0.000001) as f32;
-            let angle_dist = (ellapsed_time * 0.00001) as f32;
-
-            cam.move_forward(input_state.get_button(buttons::MOVE_FORWARD) * dist);
-            cam.move_side(input_state.get_button(buttons::MOVE_SIDE) * dist);
-            cam.move_up(input_state.get_button(buttons::MOVE_UP) * dist);
-            cam.yaw(input_state.get_button(buttons::YAW) * angle_dist);
-            cam.roll(input_state.get_button(buttons::ROLL) * angle_dist);
-            cam.pitch(input_state.get_button(buttons::PITCH) * angle_dist);
-        }
-
-        if graph.is_none() {
-            let surface = factory.create_surface(window.clone());
-            graph = Some(render::init(&mut factory, &mut families, surface, &mut world));
-        }
-
-        if let Some(ref mut graph) = graph {
-            graph.run(&mut factory, &mut families, &mut world);
-        }
-    }
+    crossbeam::scope(|scope| {
+        let _logic_thread = scope.spawn(|_| {
+            logic(&world, &stopping, &sync_lock);
+        });
+        let _render_thread = scope.spawn(|_| {
+            render(&world, &stopping, &sync_lock);
+        });
+    })
+    .unwrap();
 
     log::trace!("bye.");
 }

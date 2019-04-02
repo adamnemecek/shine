@@ -24,12 +24,20 @@ pub trait IntoMesh {
     fn into_mesh(&self) -> MeshBuilder<'static>;
 }
 
+mod components;
 mod driverresource;
-mod frameinfo;
-mod frameparameters;
 mod graph;
+mod frametimer;
 
+pub use self::components::*;
 pub use self::driverresource::*;
-pub use self::frameinfo::*;
-pub use self::frameparameters::*;
 pub use self::graph::*;
+pub use self::frametimer::*;
+
+use shine_ecs::{EntityWorld, ResourceWorld, World};
+
+pub fn prepare_world(world: &mut World) {
+    world.register_resource::<FrameParameters>();
+    world.register_entity_component::<SimpleMeshData>();
+    world.register_entity_component::<SimpleMesh>();
+}

@@ -1,6 +1,4 @@
-use crate::render::{
-    Backend, Buffer, DescriptorSet, DescriptorSetLayout, Factory, GraphContext, PipelineLayout, ShaderModule,
-};
+use crate::render::{Backend, Buffer, DescriptorSet, DescriptorSetLayout, Factory, GraphContext, PipelineLayout, ShaderModule};
 use crate::render::{FrameInfo, FrameParameters};
 use gfx_hal::device::Device;
 use lazy_static::lazy_static;
@@ -119,7 +117,7 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
             let buffer = frame_parameters.buffer();
 
             unsafe {
-                let set =  factory.create_descriptor_set(&set_layouts[0]).unwrap();
+                let set = factory.create_descriptor_set(&set_layouts[0]).unwrap();
                 factory.write_descriptor_sets(Some(gfx_hal::pso::DescriptorSetWrite {
                     set: set.raw(),
                     binding: 0,
@@ -156,8 +154,9 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
     ) -> PrepareResult {
         let frame_info = world.resource::<FrameInfo>();
         let camera = world.resource::<FpsCamera>();
-        let mut frame_parameters = world.resource_mut::<FrameParameters>();
-        frame_parameters.update(factory, index, frame_info.frame_id, &*camera);
+        world
+            .resource_mut::<FrameParameters>()
+            .update(factory, index, frame_info.frame_id, &*camera);
 
         if self.vertex.is_none() {
             let mut vbuf = factory
@@ -209,7 +208,7 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
     fn dispose(self, _factory: &mut Factory, _world: &World) {}
 }
 
-pub fn init(factory: &mut Factory, families: &mut Families<Backend>, surface: Surface<Backend>, world: &mut World) -> Graph {
+pub fn init(factory: &mut Factory, families: &mut Families<Backend>, surface: Surface<Backend>, world: &World) -> Graph {
     let mut graph_builder = GraphBuilder::<Backend, World>::new();
 
     let color = graph_builder.create_image(
@@ -240,12 +239,15 @@ pub fn init(factory: &mut Factory, families: &mut Families<Backend>, surface: Su
     let frame_count = present_pass_builder.image_count() as usize;
     let _present_pass = graph_builder.add_node(present_pass_builder);
 
-    world.register_resource_with(FrameParameters::new(factory, frame_count));
+    {
+        let mut frame_params = world.resource_mut::<FrameParameters>();
+        frame_params.init(factory, frame_count);
+    }
 
     graph_builder.build(factory, families, world).unwrap()
 }
 
-pub fn dispose(factory: &mut Factory, world: &mut World) {
+pub fn dispose(factory: &mut Factory, world: &World) {
     log::trace!("disposing world");
     world.resource_mut::<FrameParameters>().dispose(factory);
 }
