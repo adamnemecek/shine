@@ -1,9 +1,9 @@
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 pub struct FrameTimer {
     prev_frame_instant: Option<Instant>,
     frame_count: u32,
-    last_frame_time: f64,
+    last_frame_time: Duration,
 }
 
 impl FrameTimer {
@@ -11,11 +11,11 @@ impl FrameTimer {
         FrameTimer {
             prev_frame_instant: None,
             frame_count: 0,
-            last_frame_time: 0.,
+            last_frame_time: Duration::default(),
         }
     }
 
-    pub fn get_last_frame_time(&self) -> f64 {
+    pub fn get_last_frame_time(&self) -> Duration {
         self.last_frame_time
     }
 
@@ -26,13 +26,13 @@ impl FrameTimer {
     pub fn end_frame(&mut self) {
         self.last_frame_time = {
             match self.prev_frame_instant.replace(Instant::now()) {
-                None => 0.0_f64,
-                Some(prev) => prev.elapsed().as_micros() as f64,
+                None => Duration::default(),
+                Some(prev) => prev.elapsed(),
             }
         };
 
-        if self.last_frame_time > 10000. {
-            log::trace!("too long frame: {}ms", self.last_frame_time / 1000.);
+        if self.last_frame_time > Duration::from_millis(20) {
+            log::trace!("too long frame: {:?}", self.last_frame_time);
         }
 
         self.frame_count += 1;

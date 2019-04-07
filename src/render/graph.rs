@@ -10,6 +10,7 @@ use rendy::graph::render::{
 use rendy::graph::{GraphBuilder, NodeBuffer, NodeImage};
 use rendy::memory::MemoryUsageValue;
 use rendy::mesh::{AsVertex, PosColor};
+use rendy::resource::{BufferInfo, Escape, Handle};
 use rendy::shader::{Shader, ShaderKind, SourceLanguage, StaticShaderInfo};
 use rendy::wsi::Surface;
 use shine_ecs::{ResourceWorld, World};
@@ -72,10 +73,10 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
         storage.clear();
 
         log::trace!("Load shader module '{:#?}'", *VERTEX);
-        storage.push(VERTEX.module(factory).unwrap());
+        storage.push(unsafe { VERTEX.module(factory).unwrap() });
 
         log::trace!("Load shader module '{:#?}'", *FRAGMENT);
-        storage.push(FRAGMENT.module(factory).unwrap());
+        storage.push(unsafe { FRAGMENT.module(factory).unwrap() });
 
         gfx_hal::pso::GraphicsShaderSet {
             vertex: gfx_hal::pso::EntryPoint {
@@ -102,7 +103,7 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
         world: &World,
         buffers: Vec<NodeBuffer>,
         images: Vec<NodeImage>,
-        set_layouts: &[DescriptorSetLayout],
+        set_layouts: &[Handle<DescriptorSetLayout>],
     ) -> Result<TriangleRenderPipeline, failure::Error> {
         assert!(buffers.is_empty());
         assert!(images.is_empty());
@@ -117,7 +118,7 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
             let buffer = frame_parameters.buffer();
 
             unsafe {
-                let set = factory.create_descriptor_set(&set_layouts[0]).unwrap();
+                let set = factory.create_descriptor_set(set_layouts[0].clone()).unwrap();
                 factory.write_descriptor_sets(Some(gfx_hal::pso::DescriptorSetWrite {
                     set: set.raw(),
                     binding: 0,
@@ -137,8 +138,8 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
 
 #[derive(Debug)]
 struct TriangleRenderPipeline {
-    descriptor_sets: Vec<DescriptorSet>,
-    vertex: Option<Buffer>,
+    descriptor_sets: Vec<Escape<DescriptorSet>>,
+    vertex: Option<Escape<Buffer>>,
 }
 
 impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
@@ -148,7 +149,7 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
         &mut self,
         factory: &Factory,
         _queue: QueueId,
-        _set_layouts: &[DescriptorSetLayout],
+        _set_layouts: &[Handle<DescriptorSetLayout>],
         index: usize,
         world: &World,
     ) -> PrepareResult {
@@ -161,9 +162,11 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
         if self.vertex.is_none() {
             let mut vbuf = factory
                 .create_buffer(
-                    512,
-                    PosColor::VERTEX.stride as u64 * 3,
-                    (gfx_hal::buffer::Usage::VERTEX, MemoryUsageValue::Dynamic),
+                    BufferInfo {
+                        size: PosColor::VERTEX.stride as u64 * 3,
+                        usage: gfx_hal::buffer::Usage::VERTEX,
+                    },
+                    MemoryUsageValue::Dynamic,
                 )
                 .unwrap();
 

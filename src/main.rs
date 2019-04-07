@@ -17,6 +17,8 @@ mod demo;
 mod logic;
 mod render;
 
+use render::{FrameLimit, FrameLimiter};
+
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum EventResult {
     None,
@@ -88,11 +90,14 @@ type SyncLock = RwLock<SyncData>;
 
 fn logic(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
     let mut dispatcher = demo::logic_tasks();
+    let mut frame_limiter = FrameLimiter::new();
 
     while !stopping.load(Ordering::Relaxed) {
+        frame_limiter.start();
         log::info!("logic update");
         world.dispatch(&mut dispatcher);
-        thread::sleep(Duration::from_secs(1));
+        let t = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_micros(1000 * 1000)));
+        log::info!("t: {:?}, {:?}, {:?}, {:?}", t, frame_limiter.work_time(), frame_limiter.sleep_time(), frame_limiter.spin_time());
 
         //sync point b/n render and logic
         {
@@ -109,6 +114,7 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
     let mut event_loop = EventsLoop::new();
     let mut gilrs = Gilrs::new().unwrap();
     let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
+    let mut frame_limiter = FrameLimiter::new();
     let mut frame_timer = render::FrameTimer::new();
 
     let config: RendyConfig = Default::default();
@@ -116,6 +122,7 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
     let mut graph: Option<render::Graph> = None;
 
     loop {
+        frame_limiter.start();
         factory.maintain(&mut families);
 
         let event_result = handle_events(&world, &mut event_loop, &mut gilrs);
@@ -140,18 +147,18 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
             frame_timer.end_frame();
 
             {
-                let ellapsed_time = frame_timer.get_last_frame_time();
+                let elapsed_time = frame_timer.get_last_frame_time().as_micros() as f32 / 1_000_000.0_f32;
 
                 let mut frame = world.resource_mut::<render::FrameInfo>();
                 frame.frame_id = frame_timer.get_frame_count();
-                frame.ellapsed_time = ellapsed_time;
+                frame.elapsed_time = elapsed_time;
 
                 let input_manager = world.resource::<InputManager>();
                 let input_state = input_manager.get_state();
                 let mut cam = world.resource_mut::<FpsCamera>();
 
-                let dist = (ellapsed_time * 0.000001) as f32;
-                let angle_dist = (ellapsed_time * 0.00001) as f32;
+                let dist = elapsed_time;
+                let angle_dist = elapsed_time;
 
                 cam.move_forward(input_state.get_button(buttons::MOVE_FORWARD) * dist);
                 cam.move_side(input_state.get_button(buttons::MOVE_SIDE) * dist);
@@ -170,6 +177,9 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
                 graph.run(&mut factory, &mut families, &world);
             }
         }
+
+        let t = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_micros(10)));
+        log::info!("t: {:?}, {:?}, {:?}, {:?}", t, frame_limiter.work_time(), frame_limiter.sleep_time(), frame_limiter.spin_time());
     }
 }
 

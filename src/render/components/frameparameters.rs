@@ -3,6 +3,7 @@ use gfx_hal::buffer::Offset as BufferOffset;
 use nalgebra::Matrix4;
 use rendy::factory::Factory;
 use rendy::memory::MemoryUsageValue;
+use rendy::resource::{BufferInfo, Escape};
 use shine_math::camera::RenderCamera;
 use std::mem;
 use std::ops::Range;
@@ -17,7 +18,7 @@ struct ProjectionArgs {
 const PROJECTION_ARGS_SIZE: BufferOffset = mem::size_of::<ProjectionArgs>() as BufferOffset;
 
 struct FrameParameterResources {
-    buffer: Buffer,
+    buffer: Escape<Buffer>,
 }
 
 pub struct FrameParameters {
@@ -70,9 +71,11 @@ impl FrameParameters {
 
         let buffer = factory
             .create_buffer(
-                self.uniform_align,
-                self.frame_buffer_size * self.frame_count as BufferOffset,
-                (gfx_hal::buffer::Usage::UNIFORM, MemoryUsageValue::Dynamic),
+                BufferInfo {
+                    size: self.frame_buffer_size * self.frame_count as BufferOffset,
+                    usage: gfx_hal::buffer::Usage::UNIFORM,
+                },
+                MemoryUsageValue::Dynamic,
             )
             .unwrap();
         self.resources.replace(FrameParameterResources { buffer });
