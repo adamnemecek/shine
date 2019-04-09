@@ -15,7 +15,7 @@ lazy_static = "*"
 num-traits = "*"
 arrayvec = "*"
 
-shine-store = {path = "../store"}
+shine-utils = {path = "../utils"}
 shine-graph-macro = {path = "../graph-macro"}
 
 [dev-dependencies]

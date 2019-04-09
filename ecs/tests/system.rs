@@ -1,23 +1,33 @@
-use shine_ecs::{ResourceWorld, World};
+use shine_ecs::{DispatcherBuilder, ResourceWorld, Scoped, ScopedReadOptional, ScopedSystem, ScopedWriteOptional, System, World};
 use shine_testutils::init_test;
-use shred::{DispatcherBuilder, Read, System, Write};
 
-#[derive(Debug)]
+struct TestScope;
+struct LogicScopes;
+
+#[derive(Debug, Default)]
 struct ResA {
     value: i32,
+}
+impl Scoped for ResA {
+    type Scope = TestScope;
 }
 
 #[derive(Debug)]
 struct ResB {
     value: i32,
 }
+impl Scoped for ResB {
+    type Scope = TestScope;
+}
 
 struct PrintSystem;
 impl<'a> System<'a> for PrintSystem {
-    type SystemData = (Option<Read<'a, ResA>>, Option<Write<'a, ResB>>);
+    type SystemData = (ScopedReadOptional<'a, ResA>, ScopedWriteOptional<'a, ResB>);
 
     fn run(&mut self, data: Self::SystemData) {
         let (a, b) = data;
+        let a = &*a;
+        let b = &*b;
         let a = a.unwrap();
         let mut b = b.unwrap();
 
@@ -26,6 +36,9 @@ impl<'a> System<'a> for PrintSystem {
         log::trace!("{:?}", &*a);
         log::trace!("{:?}", &*b);
     }
+}
+impl<'a> ScopedSystem<'a> for PrintSystem {
+    type Scope = TestScope;
 }
 
 #[test]
@@ -40,7 +53,7 @@ fn test_system() {
         .with(PrintSystem, "print", &[]) // Adds a system "print" without dependencies
         .build();
 
-    world.dispatch(&mut dispatcher);
+    world.dispatch::<TestScope>(&mut dispatcher);
     world.dispatch(&mut dispatcher);
     world.dispatch(&mut dispatcher);
     world.dispatch(&mut dispatcher);

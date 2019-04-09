@@ -6,7 +6,7 @@
 .cargo_test_template: &cargo_test
   stage: test  
   script:
-    - cargo test --verbose --jobs 1 -p shine-store -- --test-threads=1
+    - cargo test --verbose --jobs 1 -p shine-utils -- --test-threads=1
     - cargo test --verbose --jobs 1 -p shine-graph
     - cargo test --verbose --jobs 1 -p shine-ecs -- --test-threads=1
     - cargo test --verbose --jobs 1 -p shine-gltf

@@ -1,8 +1,8 @@
-use shine_store::namedstore::Store as InnerStore;
+use shine_utils::namedstore::Store as InnerStore;
 use shred::{Read, ResourceId, Resources, SystemData, Write};
 use std::ops::{Deref, DerefMut};
 
-pub use shine_store::namedstore::{Data, Index, ReadGuard, WriteGuard};
+pub use shine_utils::namedstore::{Data, Index, ReadGuard, WriteGuard};
 
 /// A thing wrapper around [InnerStore](InnerStore) to make it more ergonomic to the world.
 pub struct Store<D: Data> {

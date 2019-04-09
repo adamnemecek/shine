@@ -26,8 +26,6 @@ pub trait IntoMesh {
 
 mod components;
 mod driverresource;
-mod framelimiter;
-mod frametimer;
 mod graph;
 
 pub use self::components::*;

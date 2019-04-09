@@ -87,8 +87,8 @@
         },
         {
             "type": "shell",
-            "label": "single build test",
-            "command": "cargo build -p shine-${input:pickProject} --test \"${fileBasenameNoExtension}\"",
+            "label": "build test",
+            "command": "cargo build -p shine-${input:pickProject}",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -102,8 +102,8 @@
         },
         {
             "type": "shell",
-            "label": "single run test",
-            "command": "cargo test -p shine-${input:pickProject} --test \"${fileBasenameNoExtension}\" -- --nocapture",
+            "label": "run test",
+            "command": "cargo test -p shine-${input:pickProject} -- --nocapture",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -127,7 +127,7 @@
                 "ecs",
                 "gltf",
                 "graph",
-                "store"
+                "utils"
                 "input"
                 "testutils"
             ]

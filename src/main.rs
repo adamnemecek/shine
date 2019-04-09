@@ -4,6 +4,7 @@ use gilrs::Gilrs;
 use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::{ResourceWorld, World};
 use shine_math::camera::FpsCamera;
+use shine_utils::time::{FrameLimit, FrameLimiter, FrameStatistics};
 use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
@@ -115,7 +116,7 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
     let mut gilrs = Gilrs::new().unwrap();
     let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
     let mut frame_limiter = FrameLimiter::new();
-    let mut frame_timer = render::FrameTimer::new();
+    let mut frame_stats = FrameStatistics::new();
 
     let config: RendyConfig = Default::default();
     let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();
@@ -144,13 +145,13 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
             let r = sync_lock.read().unwrap();
             //log::trace!("r: {:?}", *r);
             world.dispatch(&mut dispatcher);
-            frame_timer.end_frame();
+            frame_stats.end_frame();
 
             {
-                let elapsed_time = frame_timer.get_last_frame_time().as_micros() as f32 / 1_000_000.0_f32;
+                let elapsed_time = frame_stats.get_last_frame_time().as_micros() as f32 / 1_000_000.0_f32;
 
                 let mut frame = world.resource_mut::<render::FrameInfo>();
-                frame.frame_id = frame_timer.get_frame_count();
+                frame.frame_id = frame_stats.get_frame_count();
                 frame.elapsed_time = elapsed_time;
 
                 let input_manager = world.resource::<InputManager>();

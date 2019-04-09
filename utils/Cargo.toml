@@ -1,22 +1,21 @@
 [package]
-name = "shine-ecs"
+name = "shine-utils"
 version = "0.1.1"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "SHINE. Entity component system module of a general purpose multi-threaded rendering engine."
+description = "SHINE. General utilities for the general purpose multi-threaded rendering engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["shine", "render", "opengl", "game"]
 edition = "2018"
 
 [dependencies]
+libc = "*"
 log = "*"
-shred = "*"
-itertools = "*"
-
-shine-graph = {path = "../graph"}
-shine-utils = {path = "../utils"}
-shine-ecs-macro = {path = "../ecs-macro"}
+lazy_static = "*"
+num_cpus="*"
 
 [dev-dependencies]
 env_logger = "*"
+rand = "*"
+permutohedron = "*"
 shine-testutils = {path = "../testutils"}

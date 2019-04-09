@@ -1,7 +1,8 @@
 use crate::entities::{Edge, EdgeBuilder, EdgeComponent, EdgeComponentStore};
 use crate::entities::{EntityBuilder, EntityComponent, EntityComponentStore, EntityStore};
 use crate::resources::{named, unnamed};
-use shred::{Dispatcher, Fetch, FetchMut, Resources, SystemData};
+use crate::{Dispatcher, Fetch, FetchMut};
+use shred;
 
 pub trait EntityWorld {
     fn entities(&self) -> Fetch<'_, EntityStore>;
@@ -65,13 +66,13 @@ pub trait SpatialWorld {}
 ///     - id based space (node) selection
 ///     - concurent hashmap based spatial space partitioning (ex voxel grids)
 pub struct World {
-    resources: Resources,
+    resources: shred::Resources,
 }
 
 impl World {
     pub fn new() -> World {
         let mut world = World {
-            resources: Resources::new(),
+            resources: shred::Resources::new(),
         };
 
         world.resources.insert(EntityStore::new());
@@ -79,18 +80,8 @@ impl World {
         world
     }
 
-    pub fn dispatch<'a, 'b>(&self, dispatcher: &mut Dispatcher<'a, 'b>) {
-        dispatcher.dispatch(&self.resources);
-    }
-
-    /// Helper to fetch components without creating some explicit System.
-    /// let (a,mut b) : (Read<i8>, Write<i8>) = world.system_data();
-    /// (a.read(),b.write()).join_all(...);
-    pub fn system_data<'a, T>(&'a self) -> T
-    where
-        T: SystemData<'a>,
-    {
-        SystemData::fetch(&self.resources)
+    pub fn dispatch<'a, 'b, S>(&self, dispatcher: &mut Dispatcher<'a, 'b, S>) {
+        dispatcher.inner.dispatch(&self.resources);
     }
 }
 
