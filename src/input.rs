@@ -40,13 +40,6 @@ pub fn create_input_manager() -> InputManager {
 
     let mut input_manager = InputManager::new();
 
-    let mut key_joystick = guestures::KeyboardJoystick::default();
-    key_joystick.add_axis(MOVE_FORWARD_POS, MOVE_FORWARD_NEG, MOVE_FORWARD, None.into());
-    key_joystick.add_axis(MOVE_SIDE_POS, MOVE_SIDE_NEG, MOVE_SIDE, None.into());
-    key_joystick.add_axis(MOVE_UP_POS, MOVE_UP_NEG, MOVE_UP, None.into());
-
-    input_manager.add_guesture("key_joystick", Box::new(key_joystick));
-
     input_manager.add_modifier_mapping(InputMapping::VirtualKey(VirtualKeyCode::LShift), LSHIFT);
     input_manager.add_modifier_mapping(InputMapping::VirtualKey(VirtualKeyCode::RShift), RSHIFT);
     input_manager.add_modifier_mapping(InputMapping::VirtualKey(VirtualKeyCode::LControl), LCONTROL);
@@ -63,5 +56,13 @@ pub fn create_input_manager() -> InputManager {
 
     input_manager.add_button_mapping(InputMapping::MouseAxis(0), None, YAW, -0.1); // mouse x
     input_manager.add_button_mapping(InputMapping::MouseAxis(1), None, PITCH, -0.1); // mouse y
+
+    let mut key_joystick = guestures::KeyboardJoystick::default();
+    key_joystick.add_axis(MOVE_FORWARD_POS, MOVE_FORWARD_NEG, MOVE_FORWARD, None.into());
+    key_joystick.add_axis(MOVE_SIDE_POS, MOVE_SIDE_NEG, MOVE_SIDE, None.into());
+    key_joystick.add_axis(MOVE_UP_POS, MOVE_UP_NEG, MOVE_UP, None.into());
+
+    input_manager.add_guesture("key_joystick", Box::new(key_joystick));
+
     input_manager
 }

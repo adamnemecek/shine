@@ -95,9 +95,9 @@ fn logic(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
     while !stopping.load(Ordering::Relaxed) {
         frame_limiter.start();
         log::info!("logic update");
-        world.dispatch(&mut dispatcher);
-        let t = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_micros(1000 * 1000)));
-        log::info!("t: {:?}, {:?}, {:?}, {:?}", t, frame_limiter.work_time(), frame_limiter.sleep_time(), frame_limiter.spin_time());
+        //world.dispatch(&mut dispatcher);
+        let _ = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_millis(100)));
+        log::info!("logic frame limit: {:?}", frame_limiter);
 
         //sync point b/n render and logic
         {
@@ -142,7 +142,7 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
 
         {
             let r = sync_lock.read().unwrap();
-            log::trace!("r: {:?}", *r);
+            //log::trace!("r: {:?}", *r);
             world.dispatch(&mut dispatcher);
             frame_timer.end_frame();
 
@@ -178,8 +178,15 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
             }
         }
 
-        let t = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_micros(10)));
-        log::info!("t: {:?}, {:?}, {:?}, {:?}", t, frame_limiter.work_time(), frame_limiter.sleep_time(), frame_limiter.spin_time());
+        /*let t = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_micros(10)));
+        log::info!(
+            "t: {:?}, {:?}, {:?}, {:?}, {:?}us",
+            t,
+            frame_limiter.work_time(),
+            frame_limiter.sleep_time(),
+            frame_limiter.spin_time(),
+            frame_limiter.global_off_time_us()
+        );*/
     }
 }
 
