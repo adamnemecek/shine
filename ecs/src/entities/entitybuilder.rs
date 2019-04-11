@@ -1,5 +1,5 @@
 use crate::entities::{Entity, EntityComponent};
-use crate::EntityWorld;
+use crate::world::EntityWorld;
 
 pub struct EntityBuilder<'a, W>
 where

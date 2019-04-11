@@ -13,7 +13,7 @@ use rendy::mesh::{AsVertex, PosColor};
 use rendy::resource::{BufferInfo, Escape, Handle};
 use rendy::shader::{Shader, ShaderKind, SourceLanguage, StaticShaderInfo};
 use rendy::wsi::Surface;
-use shine_ecs::{ResourceWorld, World};
+use shine_ecs::world::{ResourceWorld, World};
 use shine_math::camera::FpsCamera;
 
 pub type Graph = rendy::graph::Graph<Backend, World>;

@@ -70,6 +70,20 @@ impl EntityStore {
             }
         };
 
+        self.allocate_entry(id)
+    }
+
+    /// Allocates an entity with the given id. Usually used to keep two system in sync.
+    pub fn create_with_id(&mut self, id: usize) -> Option<Entity> {
+        let mut entry = self.free.get_entry(id);
+
+        match entry.remove() {
+            Some(_) => Some(self.allocate_entry(id)),
+            None => None,
+        }
+    }
+
+    fn allocate_entry(&mut self, id: usize) -> Entity {
         // activate the slot
         self.used.add_default(id);
         self.raised.add_default(id);
@@ -84,8 +98,8 @@ impl EntityStore {
         Entity { id }
     }
 
-    /// Release an entity
-    pub fn release(&mut self, entity: Entity) {
+    /// Destroy an entity
+    pub fn destroy(&mut self, entity: Entity) {
         if !entity.is_valid() {
             return;
         }
@@ -107,8 +121,16 @@ impl EntityStore {
         );
     }
 
+    pub fn raised(&self) -> &STVector {
+        &self.raised
+    }
+
     pub fn drain_raised(&mut self) -> DrainIter<'_, UnitStore> {
         self.raised.drain_iter()
+    }
+
+    pub fn killed(&self) -> &STVector {
+        &self.killed
     }
 
     pub fn drain_killed(&mut self) -> DrainIter<'_, UnitStore> {

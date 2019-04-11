@@ -1,5 +1,5 @@
 use crate::entities::{Edge, EdgeComponent};
-use crate::EntityWorld;
+use crate::world::EntityWorld;
 
 pub struct EdgeBuilder<'a, W>
 where

@@ -1,8 +1,9 @@
-use crate::entities::{Edge, EdgeBuilder, EdgeComponent, EdgeComponentStore};
-use crate::entities::{EntityBuilder, EntityComponent, EntityComponentStore, EntityStore};
+use crate::entities::{
+    Edge, EdgeBuilder, EdgeComponent, EdgeComponentStore, Entity, EntityBuilder, EntityComponent, EntityComponentStore,
+    EntityStore,
+};
 use crate::resources::{named, unnamed};
-use crate::{Dispatcher, Fetch, FetchMut};
-use shred;
+use shred::{Dispatcher, Fetch, FetchMut};
 
 pub trait EntityWorld {
     fn entities(&self) -> Fetch<'_, EntityStore>;
@@ -28,6 +29,44 @@ pub trait EntityWorld {
         Self: Sized,
     {
         EdgeBuilder::new(self, edge)
+    }
+
+    /// Synchronize the entities of this world to another based on the latest change.
+    fn sync_entities_to<E, R, K>(&mut self, target: &mut E, on_killed: K, on_raised: R)
+    where
+        Self: Sized,
+        E: EntityWorld,
+        K: Fn(&mut Self, Entity),
+        R: Fn(&mut Self, &mut E, Entity),
+    {
+        let mut killed = Vec::new();
+        let mut raised = Vec::new();
+
+        {
+            let mut entites = self.entities_mut();
+            let target = target.entities();
+
+            killed.reserve(target.killed().nnz());
+            for k in target.killed().mask_iter() {
+                let e = Entity::from_id(k);
+                entites.destroy(e);
+                killed.push(e)
+            }
+
+            killed.reserve(target.raised().nnz());
+            for r in target.raised().mask_iter() {
+                entites.create_with_id(r);
+                let e = Entity::from_id(r);
+                raised.push(e)
+            }
+        }
+
+        for k in killed {
+            on_killed(self, k);
+        }
+        for r in raised {
+            on_raised(self, target, r);
+        }
     }
 }
 
@@ -80,8 +119,8 @@ impl World {
         world
     }
 
-    pub fn dispatch<'a, 'b, S>(&self, dispatcher: &mut Dispatcher<'a, 'b, S>) {
-        dispatcher.inner.dispatch(&self.resources);
+    pub fn dispatch<'a, 'b>(&self, dispatcher: &mut Dispatcher<'a, 'b>) {
+        dispatcher.dispatch(&self.resources);
     }
 }
 

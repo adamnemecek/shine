@@ -7,6 +7,7 @@ use std::slice;
 /// http://www.cs.loyola.edu/~binkley/papers/tcsrt08-hbit-vectors.pdf
 pub struct BitSet<B: BitBlock> {
     capacity: usize,
+    set_count: usize,
     top: B,
     levels: ArrayVec<[Vec<B>; MAX_LEVEL]>,
 }
@@ -15,6 +16,7 @@ impl<B: BitBlock> BitSet<B> {
     pub fn new() -> BitSet<B> {
         BitSet {
             capacity: B::bit_count(),
+            set_count: 0,
             top: B::zero(),
             levels: ArrayVec::new(),
         }
@@ -24,6 +26,11 @@ impl<B: BitBlock> BitSet<B> {
         let mut set = Self::new();
         set.reserve(capacity);
         set
+    }
+
+    /// return the number of set bits
+    pub fn number_of_set(&self) -> usize {
+        self.set_count
     }
 
     pub fn capacity(&self) -> usize {
@@ -120,6 +127,7 @@ impl<B: BitBlock> BitSet<B> {
             return true;
         }
 
+        self.set_count += 1;
         // update levels
         while self.set_level(&idx) && idx.level_up() {}
         false
@@ -136,6 +144,7 @@ impl<B: BitBlock> BitSet<B> {
             return false;
         }
 
+        self.set_count -= 1;
         // update levels
         while self.unset_level(&idx) && idx.level_up() {}
         true
@@ -143,6 +152,7 @@ impl<B: BitBlock> BitSet<B> {
 
     pub fn clear(&mut self) {
         self.capacity = 0;
+        self.set_count = 0;
         self.top = B::zero();
         for level in self.levels.iter_mut() {
             level.clear();

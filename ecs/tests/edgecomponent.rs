@@ -2,7 +2,7 @@
 
 use log::{debug, trace};
 use shine_ecs::entities::{ds, es, Edge, EdgeComponent, Entity, EntityComponent, IntoJoinExt};
-use shine_ecs::{EntityWorld, World};
+use shine_ecs::world::{EntityWorld, World};
 use shine_testutils::init_test;
 
 #[derive(Debug, PartialEq)]

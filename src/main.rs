@@ -2,7 +2,7 @@
 
 use gilrs::Gilrs;
 use rendy::factory::{Config as RendyConfig, Factory};
-use shine_ecs::{ResourceWorld, World};
+use shine_ecs::world::{ResourceWorld, World};
 use shine_math::camera::FpsCamera;
 use shine_utils::time::{FrameLimit, FrameLimiter, FrameStatistics};
 use std::env;

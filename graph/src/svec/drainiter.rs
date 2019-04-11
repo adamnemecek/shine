@@ -25,6 +25,15 @@ where
     }
 }
 
+/*
+impl<'a> Iterator for DrainIter<'a, ()> {
+    type Item = usize;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.iterator.next()
+    }
+}*/
+
 impl<'a, S> Drop for DrainIter<'a, S>
 where
     S: 'a + Store,

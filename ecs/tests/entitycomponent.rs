@@ -1,7 +1,7 @@
 #![feature(custom_attribute)]
 
 use shine_ecs::entities::{es, Entity, EntityComponent, IntoJoinExt};
-use shine_ecs::{EntityWorld, World};
+use shine_ecs::world::{EntityWorld, World};
 use shine_testutils::init_test;
 
 #[derive(Debug, PartialEq)]

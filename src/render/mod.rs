@@ -34,7 +34,7 @@ pub use self::framelimiter::*;
 pub use self::frametimer::*;
 pub use self::graph::*;
 
-use shine_ecs::{EntityWorld, ResourceWorld, World};
+use shine_ecs::world::{EntityWorld, ResourceWorld, World};
 
 pub fn prepare_world(world: &mut World) {
     world.register_resource::<FrameParameters>();

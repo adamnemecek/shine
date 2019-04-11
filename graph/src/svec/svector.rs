@@ -1,4 +1,4 @@
-use crate::bits::BitSetViewExt;
+use crate::bits::{BitIter, BitSetViewExt};
 use crate::join::IntoJoin;
 use crate::svec::{DataIter, DataIterMut, DrainIter, Entry, Store, VectorMask, WrapRead, WrapUpdate, WrapWrite};
 use std::fmt::{self, Debug, Formatter};
@@ -13,10 +13,6 @@ pub struct SVector<S: Store> {
 impl<S: Store> SVector<S> {
     pub fn new(mask: VectorMask, store: S) -> Self {
         SVector { nnz: 0, mask, store }
-    }
-
-    pub fn get_mask(&self) -> &VectorMask {
-        &self.mask
     }
 
     /// The last known valid index
@@ -110,6 +106,14 @@ impl<S: Store> SVector<S> {
             Some(id) => Some((id, self.get_entry(id))),
             None => None,
         }
+    }
+
+    pub fn get_mask(&self) -> &VectorMask {
+        &self.mask
+    }
+
+    pub fn mask_iter(&self) -> BitIter<&VectorMask> {
+        (&self.mask).into_iter()
     }
 
     pub fn data_iter(&self) -> DataIter<'_, S> {
