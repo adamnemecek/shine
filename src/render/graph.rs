@@ -97,7 +97,7 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
 
     fn build<'a>(
         self,
-        _context: &mut GraphContext,
+        _context: &GraphContext,
         factory: &mut Factory,
         _queue: QueueId,
         world: &World,
@@ -218,7 +218,6 @@ pub fn init(factory: &mut Factory, families: &mut Families<Backend>, surface: Su
         surface.kind(),
         1,
         factory.get_surface_format(&surface),
-        MemoryUsageValue::Data,
         Some(gfx_hal::command::ClearValue::Color([1.0, 1.0, 1.0, 1.0].into())),
     );
 
@@ -226,7 +225,6 @@ pub fn init(factory: &mut Factory, families: &mut Families<Backend>, surface: Su
         surface.kind(),
         1,
         gfx_hal::format::Format::D16Unorm,
-        MemoryUsageValue::Data,
         Some(gfx_hal::command::ClearValue::DepthStencil(
             gfx_hal::command::ClearDepthStencil(1.0, 0),
         )),

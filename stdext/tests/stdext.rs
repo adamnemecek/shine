@@ -1,4 +1,4 @@
-use shine_utils::stdext::SliceOrdExt;
+use shine_stdext::stdext::SliceOrdExt;
 use shine_testutils::init_test;
 
 #[test]

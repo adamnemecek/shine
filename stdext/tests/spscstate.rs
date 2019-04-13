@@ -1,4 +1,4 @@
-use shine_utils::spscstate::state_channel;
+use shine_stdext::spscstate::state_channel;
 use shine_testutils::{init_test, init_test_no_thread};
 use std::thread;
 

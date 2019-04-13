@@ -10,11 +10,11 @@ edition = "2018"
 
 [dependencies]
 log = "*"
-shred = "*"
+shred = { version = "*", features = ["nightly"]}
 itertools = "*"
 
 shine-graph = {path = "../graph"}
-shine-utils = {path = "../utils"}
+shine-stdext = {path = "../stdext"}
 shine-ecs-macro = {path = "../ecs-macro"}
 
 [dev-dependencies]

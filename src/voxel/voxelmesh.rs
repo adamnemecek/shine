@@ -1,10 +1,10 @@
-use crate::logic::VoxelCell;
-//use crate::render::SimpleMeshData;
+use crate::render::SimpleMeshData;
 use crate::render::{IntoMesh, MeshBuilder};
+use crate::voxel::VoxelCell;
 use rendy::mesh::PosNorm;
 use shine_ecs::entities::{EntityComponentStore, IntoJoinExt};
+use shine_ecs::shred::{Read, System, Write};
 use shine_math::voxel::polygonize::{Cubic, Mesh as VoxelMesh, Polygonizer};
-use shred::{Read, System, Write};
 use std::borrow::Cow;
 
 impl IntoMesh for VoxelMesh {

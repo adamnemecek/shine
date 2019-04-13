@@ -2,7 +2,7 @@ use log::{debug, info, trace};
 use std::sync::Arc;
 use std::{mem, thread};
 
-use shine_utils::namedstore::{Data, Store};
+use shine_stdext::namedstore::{Data, Store};
 use shine_testutils::{init_test, init_test_no_thread};
 
 /// Resource id for test data

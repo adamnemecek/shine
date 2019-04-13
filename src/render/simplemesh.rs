@@ -1,6 +1,10 @@
-use crate::render::{DriverResource, IntoMesh, Mesh, MeshBuilder};
+use crate::render::{DriverResource, Mesh, MeshBuilder};
 use rendy::command::QueueId;
 use shine_ecs::entities::{es, EntityComponent};
+
+pub trait IntoMesh {
+    fn into_mesh(&self) -> MeshBuilder<'static>;
+}
 
 /// Raw cpu data to be uploaded to the GPU.
 pub struct SimpleMeshData {

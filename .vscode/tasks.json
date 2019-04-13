@@ -42,8 +42,23 @@
         },
         {
             "type": "shell",
-            "label": "project run test",
-            "command": "cargo test -p shine-${input:pickProject} -- --test-threads=1",
+            "label": "build all tests",
+            "command": "cargo build -p shine-${input:pickProject}",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "clear": true,
+            },
+            "problemMatcher": [
+                "$rustc"
+            ],
+            "group": "build"
+        },
+        {
+            "type": "shell",
+            "label": "project run all tests",
+            "command": "cargo test -p shine-${input:pickProject} -- --nocapture --test-threads=1",
             "presentation": {
                 "echo": true,
                 "reveal": "always",
@@ -85,36 +100,6 @@
             ],
             "group": "build"
         },
-        {
-            "type": "shell",
-            "label": "build test",
-            "command": "cargo build -p shine-${input:pickProject}",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "clear": true,
-            },
-            "problemMatcher": [
-                "$rustc"
-            ],
-            "group": "build"
-        },
-        {
-            "type": "shell",
-            "label": "run test",
-            "command": "cargo test -p shine-${input:pickProject} -- --nocapture",
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": false,
-                "clear": true,
-            },
-            "problemMatcher": [
-                "$rustc"
-            ],
-            "group": "build"
-        },
     ],
     "inputs": [
         {
@@ -127,7 +112,22 @@
                 "ecs",
                 "gltf",
                 "graph",
-                "utils"
+                "stdext"
+                "input"
+                "testutils"
+            ]
+        },
+        {
+            "id": "pickTest_math",
+            "description": "The test in math",
+            "type": "pickString",
+            "default": "",
+            "options": [
+                "math",
+                "ecs",
+                "gltf",
+                "graph",
+                "stdext"
                 "input"
                 "testutils"
             ]

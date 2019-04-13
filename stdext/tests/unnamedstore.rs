@@ -1,5 +1,5 @@
 use log::{info, trace};
-use shine_utils::unnamedstore::Store;
+use shine_stdext::unnamedstore::Store;
 use shine_testutils::{init_test, init_test_no_thread};
 use std::sync::Arc;
 use std::{mem, thread};

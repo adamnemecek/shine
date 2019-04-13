@@ -4,7 +4,7 @@ use gilrs::Gilrs;
 use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::world::{ResourceWorld, World};
 use shine_math::camera::FpsCamera;
-use shine_utils::time::{FrameLimit, FrameLimiter, FrameStatistics};
+use shine_stdext::time::{FrameLimit, FrameLimiter, FrameStatistics};
 use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, RwLock};
@@ -14,11 +14,13 @@ use winit::{EventsLoop, WindowBuilder};
 
 mod input;
 use self::input::*;
-mod demo;
-mod logic;
 mod render;
 
-use render::{FrameLimit, FrameLimiter};
+mod logic;
+
+mod voxel;
+
+mod demo;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum EventResult {
@@ -207,9 +209,7 @@ fn main() {
         world.register_resource_with(FpsCamera::new());
         world.register_resource_with(input::create_input_manager());
         world.register_resource_with(render::FrameInfo::new());
-        logic::prepare_world(&mut world);
-        render::prepare_world(&mut world);
-        demo::prepare_scene(&mut world);
+        demo::prepare_world(&mut world);
         world
     };
     let stopping = AtomicBool::new(false);

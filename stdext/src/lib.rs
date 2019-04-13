@@ -16,5 +16,5 @@ pub mod arena;
 pub mod namedstore;
 pub mod spscstate;
 pub mod stdext;
-pub mod unnamedstore;
 pub mod time;
+pub mod unnamedstore;

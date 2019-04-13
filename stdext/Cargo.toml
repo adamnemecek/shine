@@ -1,5 +1,5 @@
 [package]
-name = "shine-utils"
+name = "shine-stdext"
 version = "0.1.1"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"

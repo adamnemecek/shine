@@ -9,7 +9,7 @@ keywords = ["component system", "game"]
 edition = "2018"
 
 [workspace]
-members = [ "testutils", "utils", "graph", "graph-macro", "gltf", "gltf-macro", "ecs", "ecs-macro", "math", "input" ]
+members = [ "testutils", "stdext", "graph", "graph-macro", "gltf", "gltf-macro", "ecs", "ecs-macro", "math", "input" ]
 
 [features]
 alma = []
@@ -33,9 +33,8 @@ rendy = {git = "https://github.com/omni-viral/rendy.git"}
 
 crossbeam = "*"
 rayon = "*"
-shred = "*"
 
-shine-utils = {path = "utils"}
+shine-stdext = {path = "stdext"}
 shine-graph = {path = "graph"}
 shine-math = {path = "math"}
 shine-gltf = {path = "gltf"}

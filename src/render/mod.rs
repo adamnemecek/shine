@@ -20,19 +20,16 @@ pub type ShaderModule = <Backend as gfx_hal::Backend>::ShaderModule;
 pub type Mesh = rendy::mesh::Mesh<Backend>;
 pub type MeshBuilder<'a> = rendy::mesh::MeshBuilder<'a>;
 
-pub trait IntoMesh {
-    fn into_mesh(&self) -> MeshBuilder<'static>;
-}
-
-mod components;
 mod driverresource;
-mod graph;
-
-pub use self::components::*;
 pub use self::driverresource::*;
-pub use self::framelimiter::*;
-pub use self::frametimer::*;
+mod graph;
 pub use self::graph::*;
+mod simplemesh;
+pub use self::simplemesh::*;
+mod frameinfo;
+pub use self::frameinfo::*;
+mod frameparameters;
+pub use self::frameparameters::*;
 
 use shine_ecs::world::{EntityWorld, ResourceWorld, World};
 

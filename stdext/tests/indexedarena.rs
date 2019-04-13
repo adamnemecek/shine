@@ -6,7 +6,7 @@ use rand::seq::SliceRandom;
 use std::cell::Cell;
 use std::mem;
 
-use shine_utils::arena::IndexedArena;
+use shine_stdext::arena::IndexedArena;
 use shine_testutils::init_test;
 
 struct DropTracker<'a>(&'a Cell<usize>);

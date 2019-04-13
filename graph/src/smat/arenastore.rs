@@ -1,5 +1,5 @@
 use crate::smat::Store;
-use shine_utils::arena::IndexedArena;
+use shine_stdext::arena::IndexedArena;
 use std::mem;
 
 pub struct ArenaStore<T> {
