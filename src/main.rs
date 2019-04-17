@@ -11,6 +11,7 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 use winit::{EventsLoop, WindowBuilder};
+use interact_prompt;
 
 mod input;
 use self::input::*;
@@ -216,11 +217,23 @@ fn main() {
     let sync_lock = RwLock::new(SyncData { sync_count: 0 });
 
     crossbeam::scope(|scope| {
-        let _logic_thread = scope.spawn(|_| {
+        let _logic_thread = scope
+        .builder()
+        .name("logic".to_string())
+        .spawn(|_| {
             logic(&world, &stopping, &sync_lock);
         });
-        let _render_thread = scope.spawn(|_| {
+        let _render_thread = scope
+        .builder()
+        .name("render".to_string())
+        .spawn(|_| {
             render(&world, &stopping, &sync_lock);
+        });
+        let _interact_thread = scope
+        .builder()
+        .name("interact".to_string())
+        .spawn(|_| {
+            interact_prompt::direct(interact_prompt::Settings::default(), ()).unwrap();
         });
     })
     .unwrap();

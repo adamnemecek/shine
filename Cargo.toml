@@ -20,6 +20,8 @@ default = ["render-vulkan"]
 [dependencies]
 log = "*"
 env_logger = "*"
+interact = "*"
+interact_prompt = "*"
 failure = "*"
 lazy_static = "*"
 
