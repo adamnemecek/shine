@@ -106,29 +106,15 @@
             "id": "pickProject",
             "description": "The subproject",
             "type": "pickString",
-            "default": "gltf",
+            "default": "shard",
             "options": [
                 "math",
                 "ecs",
                 "gltf",
                 "graph",
-                "stdext"
-                "input"
-                "testutils"
-            ]
-        },
-        {
-            "id": "pickTest_math",
-            "description": "The test in math",
-            "type": "pickString",
-            "default": "",
-            "options": [
-                "math",
-                "ecs",
-                "gltf",
-                "graph",
-                "stdext"
-                "input"
+                "stdext",
+                "input",
+                "shard",
                 "testutils"
             ]
         },

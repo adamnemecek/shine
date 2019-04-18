@@ -14,7 +14,7 @@ use rendy::resource::{BufferInfo, Escape, Handle};
 use rendy::shader::{Shader, ShaderKind, SourceLanguage, StaticShaderInfo};
 use rendy::wsi::Surface;
 use shine_ecs::world::{ResourceWorld, World};
-use shine_math::camera::FpsCamera;
+use shine_shard::camera::RenderCamera;
 
 pub type Graph = rendy::graph::Graph<Backend, World>;
 
@@ -154,7 +154,7 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
         world: &World,
     ) -> PrepareResult {
         let frame_info = world.resource::<FrameInfo>();
-        let camera = world.resource::<FpsCamera>();
+        let camera = world.resource::<RenderCamera>();
         world
             .resource_mut::<FrameParameters>()
             .update(factory, index, frame_info.frame_id, &*camera);

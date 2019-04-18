@@ -1,9 +1,10 @@
 #![feature(core_intrinsics)]
 
 use gilrs::Gilrs;
+use interact_prompt;
 use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::world::{ResourceWorld, World};
-use shine_math::camera::FpsCamera;
+use shine_shard::camera::{FpsCamera, RenderCamera};
 use shine_stdext::time::{FrameLimit, FrameLimiter, FrameStatistics};
 use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -11,7 +12,6 @@ use std::sync::{Arc, RwLock};
 use std::thread;
 use std::time::Duration;
 use winit::{EventsLoop, WindowBuilder};
-use interact_prompt;
 
 mod input;
 use self::input::*;
@@ -170,6 +170,10 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
                 cam.yaw(input_state.get_button(buttons::YAW) * angle_dist);
                 cam.roll(input_state.get_button(buttons::ROLL) * angle_dist);
                 cam.pitch(input_state.get_button(buttons::PITCH) * angle_dist);
+
+                let mut rcam = world.resource_mut::<RenderCamera>();
+                log::info!("update rcam {:?}", rcam.view_matrix());
+                rcam.set_camera(&*cam);
             }
 
             if graph.is_none() {
@@ -208,6 +212,7 @@ fn main() {
     let world = {
         let mut world = World::new();
         world.register_resource_with(FpsCamera::new());
+        world.register_resource_with(RenderCamera::new());
         world.register_resource_with(input::create_input_manager());
         world.register_resource_with(render::FrameInfo::new());
         demo::prepare_world(&mut world);
@@ -217,24 +222,15 @@ fn main() {
     let sync_lock = RwLock::new(SyncData { sync_count: 0 });
 
     crossbeam::scope(|scope| {
-        let _logic_thread = scope
-        .builder()
-        .name("logic".to_string())
-        .spawn(|_| {
+        let _logic_thread = scope.builder().name("logic".to_string()).spawn(|_| {
             logic(&world, &stopping, &sync_lock);
         });
-        let _render_thread = scope
-        .builder()
-        .name("render".to_string())
-        .spawn(|_| {
+        let _render_thread = scope.builder().name("render".to_string()).spawn(|_| {
             render(&world, &stopping, &sync_lock);
         });
-        let _interact_thread = scope
-        .builder()
-        .name("interact".to_string())
-        .spawn(|_| {
+        /*let _interact_thread = scope.builder().name("interact".to_string()).spawn(|_| {
             interact_prompt::direct(interact_prompt::Settings::default(), ()).unwrap();
-        });
+        });*/
     })
     .unwrap();
 

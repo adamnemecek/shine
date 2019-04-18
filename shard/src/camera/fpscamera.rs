@@ -1,10 +1,6 @@
-use crate::camera::RenderCamera;
+use crate::camera::Camera;
 use alga::linear::Similarity;
-use nalgebra::{Isometry3, Matrix4, Perspective3, Point3, Translation3, UnitQuaternion, Vector3};
-
-const DIRTY_PROJECTION: u32 = 0x1;
-const DIRTY_VIEW: u32 = 0x2;
-const DIRTY_ALL: u32 = 0x3;
+use nalgebra::{Isometry3, Perspective3, Point3, Translation3, UnitQuaternion, Vector3};
 
 /// First person camera
 pub struct FpsCamera {
@@ -15,14 +11,8 @@ pub struct FpsCamera {
     roll: f32,
 
     perspective: Perspective3<f32>,
-
-    change_log: u32,
     view: Isometry3<f32>,
     inverse_view: Isometry3<f32>,
-    view_matrix: Matrix4<f32>,
-    inverse_view_matrix: Matrix4<f32>,
-    projection_matrix: Matrix4<f32>,
-    projection_view_matrix: Matrix4<f32>,
 }
 
 impl FpsCamera {
@@ -37,16 +27,10 @@ impl FpsCamera {
             roll: 0.,
 
             perspective: Perspective3::new(1., 60.0_f32.to_radians(), 0.1, 1000.),
-
-            change_log: 0,
             view: Isometry3::identity(),
             inverse_view: Isometry3::identity(),
-            view_matrix: Matrix4::identity(),
-            inverse_view_matrix: Matrix4::identity(),
-            projection_matrix: Matrix4::identity(),
-            projection_view_matrix: Matrix4::identity(),
         };
-        camera.update(DIRTY_ALL);
+        camera.update();
         camera
     }
 
@@ -72,60 +56,60 @@ impl FpsCamera {
 
     pub fn set_roll(&mut self, angle: f32) {
         self.roll = angle;
-        self.update(DIRTY_VIEW);
+        self.update();
     }
 
     pub fn roll(&mut self, angle: f32) {
         self.roll += angle;
-        self.update(DIRTY_VIEW);
+        self.update();
     }
 
     pub fn set_yaw(&mut self, angle: f32) {
         self.yaw = angle;
-        self.update(DIRTY_VIEW);
+        self.update();
     }
 
     pub fn yaw(&mut self, angle: f32) {
         self.yaw += angle;
-        self.update(DIRTY_VIEW);
+        self.update();
     }
 
     pub fn set_pitch(&mut self, angle: f32) {
         self.pitch = angle;
-        self.update(DIRTY_VIEW);
+        self.update();
     }
 
     pub fn pitch(&mut self, angle: f32) {
         self.pitch += angle;
-        self.update(DIRTY_VIEW);
+        self.update();
     }
 
     pub fn move_forward(&mut self, dist: f32) {
         let tr = self.get_forward() * dist;
         self.eye += tr;
-        self.update(DIRTY_VIEW);
+        self.update();
     }
 
     pub fn move_side(&mut self, dist: f32) {
         let tr = self.get_side() * dist;
         self.eye += tr;
-        self.update(DIRTY_VIEW);
+        self.update();
     }
 
     pub fn move_up(&mut self, dist: f32) {
         let tr = self.get_up() * dist;
         self.eye += tr;
-        self.update(DIRTY_VIEW);
+        self.update();
     }
 
-    pub fn set_projection(&mut self, perspective: Perspective3<f32>) {
+    pub fn set_perspective(&mut self, perspective: Perspective3<f32>) {
         self.perspective = perspective;
-        self.update(DIRTY_PROJECTION);
+        //self.update();
     }
 
-    pub fn set_perspective(&mut self, aspect: f32, fovy: f32, znear: f32, zfar: f32) {
+    pub fn set_perspective_parameters(&mut self, aspect: f32, fovy: f32, znear: f32, zfar: f32) {
         self.perspective = Perspective3::new(aspect, fovy, znear, zfar);
-        self.update(DIRTY_PROJECTION);
+        //self.update();
     }
 
     pub fn znear(&self) -> f32 {
@@ -150,6 +134,8 @@ impl FpsCamera {
 
     //pub fn fov_zoom(&mut self, ratio: f32) {}
 
+    //pub fn set_perspective_view(view: Isometry3<f32>, perspective:Perspective3<f32> )
+
     fn clamp_angles(&mut self) {
         use std::f32::consts::PI;
 
@@ -165,11 +151,7 @@ impl FpsCamera {
         }
     }
 
-    fn update_view(&mut self) {
-        if (self.change_log & DIRTY_VIEW) == 0 {
-            return;
-        }
-
+    fn update(&mut self) {
         self.clamp_angles();
 
         let rot_yaw = UnitQuaternion::from_axis_angle(&Vector3::y_axis(), self.yaw);
@@ -180,44 +162,19 @@ impl FpsCamera {
 
         self.inverse_view = Isometry3::from_parts(trans, rot);
         self.view = self.inverse_view.inverse();
-
-        self.view_matrix = self.view.to_homogeneous();
-        self.inverse_view_matrix = self.inverse_view.to_homogeneous();
-        self.change_log &= !DIRTY_VIEW;
-    }
-
-    fn update_projection(&mut self) {
-        if (self.change_log & DIRTY_PROJECTION) == 0 {
-            return;
-        }
-        // vulkan has a projection matrix where y points downward with respect to nalgebra (and opengl)
-        let flip_y = Matrix4::new_nonuniform_scaling(&Vector3::new(1., -1., 1.));
-        self.projection_matrix = flip_y * self.perspective.as_matrix();
-        self.projection_view_matrix = self.projection_matrix * self.view_matrix;
-        self.change_log &= !DIRTY_PROJECTION;
-    }
-
-    fn update(&mut self, change_log: u32) {
-        self.change_log |= change_log;
-        self.update_view();
-        self.update_projection();
     }
 }
 
-impl RenderCamera for FpsCamera {
-    fn view(&self) -> Matrix4<f32> {
-        self.view_matrix.clone()
+impl Camera for FpsCamera {
+    fn get_view(&self) -> Isometry3<f32> {
+        self.view.clone()
     }
 
-    fn inverse_view(&self) -> Matrix4<f32> {
-        self.inverse_view_matrix.clone()
+    fn get_inverse_view(&self) -> Isometry3<f32> {
+        self.inverse_view.clone()
     }
 
-    fn projection(&self) -> Matrix4<f32> {
-        self.projection_matrix.clone()
-    }
-
-    fn projection_view(&self) -> Matrix4<f32> {
-        self.projection_view_matrix.clone()
+    fn get_perspective(&self) -> Perspective3<f32> {
+        self.perspective.clone()
     }
 }

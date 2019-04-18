@@ -1,0 +1,25 @@
+[package]
+name = "shine-shard"
+version = "0.1.1"
+authors = ["gzp <z.p.gaal.devel@gmail.com>"]
+license = "MIT/Apache-2.0"
+description = "SHINE. Common component building blocks for the shine engine."
+repository = "https://github.com/zpgaal/shine"
+keywords = ["shine", "render", "opengl", "game"]
+edition = "2018"
+
+[dependencies]
+log = "*"
+
+alga = "*"
+nalgebra = "*"
+
+shine-graph = {path = "../graph"}
+shine-stdext = {path = "../stdext"}
+shine-ecs = {path = "../ecs"}
+shine-ecs-macro = {path = "../ecs-macro"}
+shine-math = {path = "../math"}
+
+[dev-dependencies]
+env_logger = "*"
+shine-testutils = {path = "../testutils"}

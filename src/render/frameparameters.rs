@@ -4,7 +4,7 @@ use nalgebra::Matrix4;
 use rendy::factory::Factory;
 use rendy::memory::MemoryUsageValue;
 use rendy::resource::{BufferInfo, Escape};
-use shine_math::camera::RenderCamera;
+use shine_shard::camera::RenderCamera;
 use std::mem;
 use std::ops::Range;
 
@@ -97,8 +97,8 @@ impl FrameParameters {
                     &mut buffer,
                     offset,
                     &[ProjectionArgs {
-                        proj: camera.projection(),
-                        view: camera.view(),
+                        proj: camera.projection_matrix().clone(),
+                        view: camera.view_matrix().clone(),
                     }],
                 )
                 .unwrap()
