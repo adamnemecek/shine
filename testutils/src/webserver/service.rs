@@ -2,17 +2,18 @@ use crate::webserver::appcontext::AppContext;
 use crate::webserver::control::{handle_notify_user, Control};
 use crate::webserver::d2trace::{handle_d2data_request, handle_d2datas_request, handle_d2view_request, IntoD2Data};
 use crate::webserver::d3trace::{handle_d3data_request, handle_d3datas_request, handle_d3view_request, IntoD3Data};
-use actix;
-use actix_web::{fs, http, middleware, server, App, Error as ActixWebError};
-use futures::future::Future;
-use log::info;
+use actix_rt;
+use actix_files;
+use actix_web::{dev,web, middleware, App, HttpServer, Error as ActixWebError};
+use log;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
 use tera::compile_templates;
+use futures::future::Future;
 
 #[derive(Clone)]
 pub struct Service {
-    service_addr: actix::Addr<server::Server>,
+    server: dev::Server,
     control: Control,
     d2datas: Arc<Mutex<Vec<String>>>,
     d3datas: Arc<Mutex<Vec<String>>>,
@@ -32,51 +33,45 @@ impl Service {
             let d3datas = d3datas.clone();
             let control = control.clone();
             move || {
-                let sys = actix::System::new("d2-server");
+                let sys = actix_rt::System::new("d2-server");
 
-                let addr = server::new(move || {
-                    let static_content = fs::StaticFiles::new("www")
-                        .or_else(|_| fs::StaticFiles::new("../testutils/www")) // fall back for devel mode
+                let server = HttpServer::new(move || {
+                    /*let static_content = actix_files::Files::new("www")
+                        .or_else(|_| actix_files::Files::new("../testutils/www")) // fall back for devel mode
                         .unwrap()
-                        .index_file("index.html");
+                        .index_file("index.html");*/
+                    let data = AppContext {
+                            d2datas: d2datas.clone(),
+                            d3datas: d3datas.clone(),
+                            control: control.clone(),
+                            template: compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*")),
+                        };
 
-                    App::with_state({
-                        let template = compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*"));
-                        let d2datas = d2datas.clone();
-                        let d3datas = d3datas.clone();
-                        let control = control.clone();
-                        AppContext {
-                            d2datas,
-                            d3datas,
-                            control,
-                            template,
-                        }
-                    })
-                    .middleware(middleware::Logger::default())
-                    .resource("/d2view.html", |r| r.method(http::Method::GET).f(handle_d2view_request))
-                    .resource("/d3view.html", |r| r.method(http::Method::GET).f(handle_d3view_request))
-                    .resource("/rest/v1/d2data", |r| r.method(http::Method::GET).f(handle_d2data_request))
-                    .resource("/rest/v1/d2datas", |r| r.method(http::Method::GET).f(handle_d2datas_request))
-                    .resource("/rest/v1/d3data", |r| r.method(http::Method::GET).f(handle_d3data_request))
-                    .resource("/rest/v1/d3datas", |r| r.method(http::Method::GET).f(handle_d3datas_request))
-                    .resource("/rest/v1/control/notify", |r| {
-                        r.method(http::Method::POST).f(handle_notify_user)
-                    })
-                    .handler("/", static_content)
+                    App::new()
+                    .data(data)
+                    .wrap(middleware::Logger::default())
+                    .service(web::resource("/d2view.html").route(web::get().to(handle_d2view_request)))
+                    .service(web::resource("/d3view.html").route(web::get().to(handle_d3view_request)))
+                    .service(web::resource("/rest/v1/d2data").route(web::get().to(handle_d2data_request)))
+                    .service(web::resource("/rest/v1/d2datas").route(web::get().to(handle_d2datas_request)))
+                    .service(web::resource("/rest/v1/d3data").route(web::get().to(handle_d3data_request)))
+                    .service(web::resource("/rest/v1/d3datas").route(web::get().to(handle_d3datas_request)))
+                    .service(web::resource("/rest/v1/control/notify").route(web::post().to(handle_notify_user)))
+                    //.handler("/", static_content)
                 })
                 .workers(1)
                 .bind(bind_address.clone())
                 .unwrap_or_else(|_| panic!("Cannot bind to {}", bind_address))
                 .start();
 
-                let _ = tx.send(addr);
+                let _ = tx.send(server);
                 let _ = sys.run();
             }
         });
 
-        let service_addr = rx.recv().unwrap();
+        let server = rx.recv().unwrap();
         Ok(Service {
-            service_addr,
+            server,
             control,
             d2datas,
             d3datas,
@@ -84,13 +79,13 @@ impl Service {
     }
 
     pub fn stop(self) {
-        let _ = self.service_addr.send(server::StopServer { graceful: true }).wait();
+        let _ = self.server.stop(true).wait();
     }
 
     pub fn add_d2_raw(&self, image: String) {
         let mut d2datas = self.d2datas.lock().unwrap();
         d2datas.push(image);
-        info!("New d2 data added: id={}", d2datas.len());
+        log::info!("New d2 data added: id={}", d2datas.len());
     }
 
     pub fn add_d2<D: IntoD2Data>(&self, data: D) {
@@ -100,7 +95,7 @@ impl Service {
     pub fn add_d3_raw(&self, model: String) {
         let mut d3datas = self.d3datas.lock().unwrap();
         d3datas.push(model);
-        info!("New d3 data added: id={}", d3datas.len());
+        log::info!("New d3 data added: id={}", d3datas.len());
     }
 
     pub fn add_d3<D: IntoD3Data>(&self, data: D) {

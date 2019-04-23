@@ -1,6 +1,7 @@
 use crate::webserver::appcontext::AppContext;
-use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
+use actix_web::{web, error, Error as ActixWebError, HttpRequest, HttpResponse};
 use log::info;
+use serde::{Deserialize};
 use serde_json;
 use std::collections::HashMap;
 use svg::node::{self, element};
@@ -217,19 +218,14 @@ impl IntoD2Data for D2Trace {
     }
 }
 
-pub fn handle_d2data_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    let state = req.state();
+#[derive(Deserialize)]
+pub struct D2DataRequest {
+    id: usize,
+}
 
-    // input is 1 based
-    let id: usize = match req.query().get("id") {
-        Some(id) => id
-            .parse()
-            .map_err(|_| error::ErrorBadRequest(format!("Invalid id: {}", id)))?,
-        None => 1,
-    };
-
+pub fn handle_d2data_request(state: web::Data<AppContext>, req: web::Query<D2DataRequest>) -> HttpResponse {
     // convert to 0 based
-    let id = if id == 0 { usize::max_value() } else { id - 1 };
+    let id = if req.id == 0 { usize::max_value() } else { req.id - 1 };
     let image = {
         info!("Getting d2data for {}", id);
         let img = state.d2datas.lock().unwrap();
@@ -240,24 +236,20 @@ pub fn handle_d2data_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
         }
     };
 
-    Ok(HttpResponse::Ok().content_type("image/svg+xml").body(image))
+    HttpResponse::Ok().content_type("image/svg+xml").body(image)
 }
 
-pub fn handle_d2datas_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    let state = req.state();
-
+pub fn handle_d2datas_request(state: web::Data<AppContext>) -> HttpResponse {
     info!("Getting all d2datas");
     let data = {
         let img = state.d2datas.lock().unwrap();
         serde_json::to_string(&*img).unwrap()
     };
 
-    Ok(HttpResponse::Ok().content_type("application/json").body(data))
+    HttpResponse::Ok().content_type("application/json").body(data)
 }
 
-pub fn handle_d2view_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    let state = req.state();
-
+pub fn handle_d2view_request(state: web::Data<AppContext>) -> Result<HttpResponse, ActixWebError> {
     let all_data = {
         let img = state.d2datas.lock().unwrap();
         serde_json::to_string(&*img).unwrap()

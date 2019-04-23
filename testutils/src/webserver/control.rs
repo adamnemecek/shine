@@ -1,5 +1,5 @@
 use crate::webserver::appcontext::AppContext;
-use actix_web::{Error as ActixWebError, HttpRequest, HttpResponse};
+use actix_web::{web, Error as ActixWebError, HttpResponse};
 use log::info;
 use std::sync::{Arc, Condvar, Mutex};
 
@@ -49,9 +49,8 @@ impl Control {
     }
 }
 
-pub fn handle_notify_user(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
+pub fn handle_notify_user(_pl: web::Payload,state: web::Data<AppContext>) -> Result<HttpResponse, ActixWebError> {
     info!("Notify user");
-    let state = req.state();
     state.control.notify();
     Ok(HttpResponse::Ok().finish())
 }

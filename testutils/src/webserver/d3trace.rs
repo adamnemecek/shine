@@ -1,8 +1,9 @@
 use crate::webserver::appcontext::AppContext;
-use actix_web::{error, Error as ActixWebError, HttpRequest, HttpResponse};
+use actix_web::{web, error, Error as ActixWebError, HttpRequest, HttpResponse};
 use base64;
 use bytes::{BufMut, BytesMut};
-use log::info;
+use log;
+use serde::{Deserialize};
 use serde_json;
 use shine_gltf::{accessor, buffer, optional_attribute_map, Accessor, Buffer, GetMut, Index, Mesh, Node, Primitive, Root, Scene};
 use std::{iter, mem};
@@ -236,18 +237,15 @@ impl IntoD3Data for D3Trace {
     }
 }
 
-pub fn handle_d3data_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    let state = req.state();
+#[derive(Deserialize)]
+pub struct D3DataRequest {
+    id: usize,
+}
 
-    let id: usize = match req.query().get("id") {
-        Some(id) => id
-            .parse()
-            .map_err(|_| error::ErrorBadRequest(format!("Invalid id: {}", id)))?,
-        None => 0,
-    };
-
+pub fn handle_d3data_request(state: web::Data<AppContext>, req: web::Query<D3DataRequest>) -> HttpResponse {
+    let id: usize = req.id;
     let data = {
-        info!("Getting d3data for {}", id);
+        log::info!("Getting d3data for {}", id);
         let d3datas = state.d3datas.lock().unwrap();
         if id >= d3datas.len() {
             "".into()
@@ -256,13 +254,11 @@ pub fn handle_d3data_request(req: &HttpRequest<AppContext>) -> Result<HttpRespon
         }
     };
 
-    Ok(HttpResponse::Ok().content_type("application/json").body(data))
+    HttpResponse::Ok().content_type("application/json").body(data)
 }
 
-pub fn handle_d3datas_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    let state = req.state();
-
-    info!("Getting all d3datas");
+pub fn handle_d3datas_request(state: web::Data<AppContext>, req: HttpRequest) -> Result<HttpResponse, ActixWebError> {
+    log::info!("Getting all d3datas");
     let data = {
         let d3datas = state.d3datas.lock().unwrap();
         d3datas.join(",")
@@ -271,9 +267,7 @@ pub fn handle_d3datas_request(req: &HttpRequest<AppContext>) -> Result<HttpRespo
     Ok(HttpResponse::Ok().content_type("application/json").body(data))
 }
 
-pub fn handle_d3view_request(req: &HttpRequest<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    let state = req.state();
-
+pub fn handle_d3view_request(state: web::Data<AppContext>, req: HttpRequest) -> Result<HttpResponse, ActixWebError> {
     let all_data = {
         let img = state.d3datas.lock().unwrap();
         serde_json::to_string(&*img).unwrap()

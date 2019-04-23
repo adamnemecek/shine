@@ -1,3 +1,5 @@
+#![feature(await_macro)]
+
 pub mod webserver;
 
 use std::env;
