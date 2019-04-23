@@ -1,15 +1,21 @@
-use crate::webserver::appcontext::AppContext;
 use crate::webserver::control::{handle_notify_user, Control};
 use crate::webserver::d2trace::{handle_d2data_request, handle_d2datas_request, handle_d2view_request, IntoD2Data};
 use crate::webserver::d3trace::{handle_d3data_request, handle_d3datas_request, handle_d3view_request, IntoD3Data};
-use actix_rt;
 use actix_files;
-use actix_web::{dev,web, middleware, App, HttpServer, Error as ActixWebError};
+use actix_rt;
+use actix_web::{dev, middleware, web, App, Error as ActixWebError, HttpServer};
+use futures::future::Future;
 use log;
 use std::sync::{mpsc, Arc, Mutex};
 use std::thread;
-use tera::compile_templates;
-use futures::future::Future;
+use tera::{compile_templates, Tera};
+
+pub(crate) struct AppData {
+    pub d2datas: Arc<Mutex<Vec<String>>>,
+    pub d3datas: Arc<Mutex<Vec<String>>>,
+    pub control: Control,
+    pub template: Tera,
+}
 
 #[derive(Clone)]
 pub struct Service {
@@ -36,28 +42,24 @@ impl Service {
                 let sys = actix_rt::System::new("d2-server");
 
                 let server = HttpServer::new(move || {
-                    /*let static_content = actix_files::Files::new("www")
-                        .or_else(|_| actix_files::Files::new("../testutils/www")) // fall back for devel mode
-                        .unwrap()
-                        .index_file("index.html");*/
-                    let data = AppContext {
-                            d2datas: d2datas.clone(),
-                            d3datas: d3datas.clone(),
-                            control: control.clone(),
-                            template: compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*")),
-                        };
-
+                    let data = AppData {
+                        d2datas: d2datas.clone(),
+                        d3datas: d3datas.clone(),
+                        control: control.clone(),
+                        template: compile_templates!(concat!(env!("CARGO_MANIFEST_DIR"), "/templates/**/*")),
+                    };
                     App::new()
-                    .data(data)
-                    .wrap(middleware::Logger::default())
-                    .service(web::resource("/d2view.html").route(web::get().to(handle_d2view_request)))
-                    .service(web::resource("/d3view.html").route(web::get().to(handle_d3view_request)))
-                    .service(web::resource("/rest/v1/d2data").route(web::get().to(handle_d2data_request)))
-                    .service(web::resource("/rest/v1/d2datas").route(web::get().to(handle_d2datas_request)))
-                    .service(web::resource("/rest/v1/d3data").route(web::get().to(handle_d3data_request)))
-                    .service(web::resource("/rest/v1/d3datas").route(web::get().to(handle_d3datas_request)))
-                    .service(web::resource("/rest/v1/control/notify").route(web::post().to(handle_notify_user)))
-                    //.handler("/", static_content)
+                        .data(data)
+                        .wrap(middleware::Logger::default())
+                        .service(web::resource("/d2view.html").route(web::get().to(handle_d2view_request)))
+                        .service(web::resource("/d3view.html").route(web::get().to(handle_d3view_request)))
+                        .service(web::resource("/rest/v1/d2data").route(web::get().to(handle_d2data_request)))
+                        .service(web::resource("/rest/v1/d2datas").route(web::get().to(handle_d2datas_request)))
+                        .service(web::resource("/rest/v1/d3data").route(web::get().to(handle_d3data_request)))
+                        .service(web::resource("/rest/v1/d3datas").route(web::get().to(handle_d3datas_request)))
+                        .service(web::resource("/rest/v1/control/notify").route(web::post().to(handle_notify_user)))
+                        .service(actix_files::Files::new("/", "www").index_file("index.html"))
+                        .service(actix_files::Files::new("/", "../testutils/www").index_file("index.html"))
                 })
                 .workers(1)
                 .bind(bind_address.clone())

@@ -1,10 +1,10 @@
 use shine_stdext::unnamedstore::Store as InnerStore;
-use shred::{Read, ResourceId, Resources, SystemData, Write};
+use shred::{Read, ResourceId, SystemData, Write};
 use std::ops::{Deref, DerefMut};
 
 pub use shine_stdext::unnamedstore::{Index, ReadGuard, WriteGuard};
 
-/// A thing wrapper around [InnerStore](InnerStore) to make it more ergonomic to the world.
+/// A thin wrapper for [InnerStore](InnerStore) to make it more ergonomic to the world.
 pub struct Store<D> {
     inner: InnerStore<D>,
 }
@@ -61,9 +61,9 @@ impl<'a, D> SystemData<'a> for ReadStore<'a, D>
 where
     D: 'static,
 {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut shred::World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
+    fn fetch(res: &'a shred::World) -> Self {
         ReadStore {
             inner: res.fetch::<Store<D>>().into(),
         }
@@ -110,9 +110,9 @@ impl<'a, D> SystemData<'a> for WriteStore<'a, D>
 where
     D: 'static,
 {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut shred::World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
+    fn fetch(res: &'a shred::World) -> Self {
         WriteStore {
             inner: res.fetch_mut::<Store<D>>().into(),
         }

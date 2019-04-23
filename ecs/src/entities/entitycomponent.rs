@@ -1,6 +1,6 @@
 use crate::entities::Entity;
 use shine_graph::svec;
-use shred::{Read, ResourceId, Resources, SystemData, Write};
+use shred::{Read, ResourceId, SystemData, World, Write};
 use std::ops::{Deref, DerefMut};
 
 pub mod es {
@@ -82,14 +82,14 @@ where
 }
 
 /// Grant immutable access to the components inside a System
-pub struct ReadEntityComponents<'a, C>
+pub struct ReadEntityComponent<'a, C>
 where
     C: EntityComponent,
 {
     inner: Read<'a, <C as EntityComponent>::Store>,
 }
 
-impl<'a, C> Deref for ReadEntityComponents<'a, C>
+impl<'a, C> Deref for ReadEntityComponent<'a, C>
 where
     C: EntityComponent,
 {
@@ -100,14 +100,14 @@ where
     }
 }
 
-impl<'a, C> SystemData<'a> for ReadEntityComponents<'a, C>
+impl<'a, C> SystemData<'a> for ReadEntityComponent<'a, C>
 where
     C: EntityComponent,
 {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
-        ReadEntityComponents {
+    fn fetch(res: &'a World) -> Self {
+        ReadEntityComponent {
             inner: res.fetch::<<C as EntityComponent>::Store>().into(),
         }
     }
@@ -122,14 +122,14 @@ where
 }
 
 /// Grant mutable access to the components inside a System
-pub struct WriteEntityComponents<'a, C>
+pub struct WriteEntityComponent<'a, C>
 where
     C: EntityComponent,
 {
     inner: Write<'a, <C as EntityComponent>::Store>,
 }
 
-impl<'a, C> Deref for WriteEntityComponents<'a, C>
+impl<'a, C> Deref for WriteEntityComponent<'a, C>
 where
     C: EntityComponent,
 {
@@ -140,7 +140,7 @@ where
     }
 }
 
-impl<'a, C> DerefMut for WriteEntityComponents<'a, C>
+impl<'a, C> DerefMut for WriteEntityComponent<'a, C>
 where
     C: EntityComponent,
 {
@@ -149,14 +149,14 @@ where
     }
 }
 
-impl<'a, C> SystemData<'a> for WriteEntityComponents<'a, C>
+impl<'a, C> SystemData<'a> for WriteEntityComponent<'a, C>
 where
     C: EntityComponent,
 {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
-        WriteEntityComponents {
+    fn fetch(res: &'a World) -> Self {
+        WriteEntityComponent {
             inner: res.fetch_mut::<<C as EntityComponent>::Store>().into(),
         }
     }

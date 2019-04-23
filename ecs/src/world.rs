@@ -3,7 +3,7 @@ use crate::entities::{
     EntityStore,
 };
 use crate::resources::{named, unnamed};
-use shred::{Dispatcher, Fetch, FetchMut};
+use shred::{self, Dispatcher, Fetch, FetchMut};
 
 pub trait EntityWorld {
     fn entities(&self) -> Fetch<'_, EntityStore>;
@@ -105,100 +105,100 @@ pub trait SpatialWorld {}
 ///     - id based space (node) selection
 ///     - concurent hashmap based spatial space partitioning (ex voxel grids)
 pub struct World {
-    resources: shred::Resources,
+    world: shred::World,
 }
 
 impl World {
     pub fn new() -> World {
         let mut world = World {
-            resources: shred::Resources::new(),
+            world: shred::World::default(),
         };
 
-        world.resources.insert(EntityStore::new());
+        world.world.insert(EntityStore::new());
 
         world
     }
 
     pub fn dispatch<'a, 'b>(&self, dispatcher: &mut Dispatcher<'a, 'b>) {
-        dispatcher.dispatch(&self.resources);
+        dispatcher.dispatch(&self.world);
     }
 }
 
 impl EntityWorld for World {
     fn entities(&self) -> Fetch<'_, EntityStore> {
-        self.resources.fetch()
+        self.world.fetch()
     }
 
     fn entities_mut(&self) -> FetchMut<'_, EntityStore> {
-        self.resources.fetch_mut()
+        self.world.fetch_mut()
     }
 
     fn register_entity_component<C: EntityComponent>(&mut self) {
-        self.resources.insert::<EntityComponentStore<C>>(Default::default());
+        self.world.insert::<EntityComponentStore<C>>(Default::default());
     }
 
     fn entity_components<C: EntityComponent>(&self) -> Fetch<'_, EntityComponentStore<C>> {
-        self.resources.fetch()
+        self.world.fetch()
     }
 
     fn entity_components_mut<C: EntityComponent>(&self) -> FetchMut<'_, EntityComponentStore<C>> {
-        self.resources.fetch_mut()
+        self.world.fetch_mut()
     }
 
     fn register_edge_component<C: EdgeComponent>(&mut self) {
-        self.resources.insert::<EdgeComponentStore<C>>(Default::default());
+        self.world.insert::<EdgeComponentStore<C>>(Default::default());
     }
 
     fn edge_components<C: EdgeComponent>(&self) -> Fetch<'_, EdgeComponentStore<C>> {
-        self.resources.fetch()
+        self.world.fetch()
     }
 
     fn edge_components_mut<C: EdgeComponent>(&self) -> FetchMut<'_, EdgeComponentStore<C>> {
-        self.resources.fetch_mut()
+        self.world.fetch_mut()
     }
 }
 
 impl StoreWorld for World {
     fn register_named_store<D: 'static + named::Data>(&mut self) {
-        self.resources.insert::<named::Store<D>>(Default::default());
+        self.world.insert::<named::Store<D>>(Default::default());
     }
 
     fn named_store<D: 'static + named::Data>(&self) -> Fetch<'_, named::Store<D>> {
-        self.resources.fetch()
+        self.world.fetch()
     }
 
     fn named_store_mut<D: 'static + named::Data>(&self) -> FetchMut<'_, named::Store<D>> {
-        self.resources.fetch_mut()
+        self.world.fetch_mut()
     }
 
     fn register_store<D: 'static>(&mut self) {
-        self.resources.insert::<unnamed::Store<D>>(Default::default());
+        self.world.insert::<unnamed::Store<D>>(Default::default());
     }
 
     fn store<D: 'static>(&self) -> Fetch<'_, unnamed::Store<D>> {
-        self.resources.fetch()
+        self.world.fetch()
     }
 
     fn store_mut<D: 'static>(&self) -> FetchMut<'_, unnamed::Store<D>> {
-        self.resources.fetch_mut()
+        self.world.fetch_mut()
     }
 }
 
 impl ResourceWorld for World {
     fn register_resource<D: 'static + Send + Sync + Default>(&mut self) {
-        self.resources.insert::<D>(Default::default());
+        self.world.insert::<D>(Default::default());
     }
 
     fn register_resource_with<D: 'static + Send + Sync>(&mut self, resource: D) {
-        self.resources.insert::<D>(resource);
+        self.world.insert::<D>(resource);
     }
 
     fn resource<D: 'static + Send + Sync>(&self) -> Fetch<'_, D> {
-        self.resources.fetch()
+        self.world.fetch()
     }
 
     fn resource_mut<D: 'static + Send + Sync>(&self) -> FetchMut<'_, D> {
-        self.resources.fetch_mut()
+        self.world.fetch_mut()
     }
 }
 

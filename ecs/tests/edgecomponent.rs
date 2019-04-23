@@ -36,6 +36,7 @@ impl EdgeComponent for Weight {
 }
 
 #[test]
+#[ignore]
 fn test_component() {
     init_test(module_path!());
 

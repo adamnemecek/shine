@@ -1,6 +1,6 @@
-use crate::webserver::appcontext::AppContext;
+use crate::webserver::service::AppData;
 use actix_web::{web, Error as ActixWebError, HttpResponse};
-use log::info;
+use log;
 use std::sync::{Arc, Condvar, Mutex};
 
 #[derive(Clone, Copy, Debug)]
@@ -19,7 +19,7 @@ impl BlockingState {
 }
 
 #[derive(Clone)]
-pub struct Control {
+pub(crate) struct Control {
     block: Arc<(Mutex<BlockingState>, Condvar)>,
 }
 
@@ -35,10 +35,10 @@ impl Control {
         let mut blocked = lock.lock().unwrap();
         *blocked = BlockingState::WaitingUser;
         while blocked.is_blocked() {
-            info!("Waiting for user");
+            log::info!("Waiting for user");
             blocked = cvar.wait(blocked).unwrap();
         }
-        info!("Waiting for user done");
+        log::info!("Waiting for user done");
     }
 
     pub fn notify(&self) {
@@ -49,8 +49,8 @@ impl Control {
     }
 }
 
-pub fn handle_notify_user(_pl: web::Payload,state: web::Data<AppContext>) -> Result<HttpResponse, ActixWebError> {
-    info!("Notify user");
+pub(crate) fn handle_notify_user(state: web::Data<AppData>) -> Result<HttpResponse, ActixWebError> {
+    log::info!("Notify user");
     state.control.notify();
     Ok(HttpResponse::Ok().finish())
 }

@@ -1,6 +1,6 @@
 use crate::entities::Edge;
 use shine_graph::smat;
-use shred::{Read, ResourceId, Resources, SystemData, Write};
+use shred::{Read, ResourceId, SystemData, World, Write};
 use std::ops::{Deref, DerefMut};
 
 pub mod ds {
@@ -84,14 +84,14 @@ where
 }
 
 /// Grant immutable access to the components inside a System
-pub struct ReadEdgeComponents<'a, C>
+pub struct ReadEdgeComponent<'a, C>
 where
     C: EdgeComponent,
 {
     inner: Read<'a, <C as EdgeComponent>::Store>,
 }
 
-impl<'a, C> Deref for ReadEdgeComponents<'a, C>
+impl<'a, C> Deref for ReadEdgeComponent<'a, C>
 where
     C: EdgeComponent,
 {
@@ -102,14 +102,14 @@ where
     }
 }
 
-impl<'a, C> SystemData<'a> for ReadEdgeComponents<'a, C>
+impl<'a, C> SystemData<'a> for ReadEdgeComponent<'a, C>
 where
     C: EdgeComponent,
 {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
-        ReadEdgeComponents {
+    fn fetch(res: &'a World) -> Self {
+        ReadEdgeComponent {
             inner: res.fetch::<<C as EdgeComponent>::Store>().into(),
         }
     }
@@ -124,14 +124,14 @@ where
 }
 
 /// Grant mutable access to the components inside a System
-pub struct WriteEdgeComponents<'a, C>
+pub struct WriteEdgeComponent<'a, C>
 where
     C: EdgeComponent,
 {
     inner: Write<'a, <C as EdgeComponent>::Store>,
 }
 
-impl<'a, C> Deref for WriteEdgeComponents<'a, C>
+impl<'a, C> Deref for WriteEdgeComponent<'a, C>
 where
     C: EdgeComponent,
 {
@@ -142,7 +142,7 @@ where
     }
 }
 
-impl<'a, C> DerefMut for WriteEdgeComponents<'a, C>
+impl<'a, C> DerefMut for WriteEdgeComponent<'a, C>
 where
     C: EdgeComponent,
 {
@@ -151,14 +151,14 @@ where
     }
 }
 
-impl<'a, C> SystemData<'a> for WriteEdgeComponents<'a, C>
+impl<'a, C> SystemData<'a> for WriteEdgeComponent<'a, C>
 where
     C: EdgeComponent,
 {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
-        WriteEdgeComponents {
+    fn fetch(res: &'a World) -> Self {
+        WriteEdgeComponent {
             inner: res.fetch_mut::<<C as EdgeComponent>::Store>().into(),
         }
     }

@@ -1,12 +1,13 @@
-use crate::webserver::appcontext::AppContext;
-use actix_web::{web, error, Error as ActixWebError, HttpRequest, HttpResponse};
+use crate::webserver::service::AppData;
+use actix_web::{error, web, Error as ActixWebError, HttpResponse};
 use log::info;
-use serde::{Deserialize};
+use serde::Deserialize;
 use serde_json;
 use std::collections::HashMap;
 use svg::node::{self, element};
 use svg::{Document, Node};
 use tera;
+
 
 pub trait IntoD2Data {
     fn into_data(self) -> String;
@@ -219,11 +220,11 @@ impl IntoD2Data for D2Trace {
 }
 
 #[derive(Deserialize)]
-pub struct D2DataRequest {
+pub(crate) struct D2DataRequest {
     id: usize,
 }
 
-pub fn handle_d2data_request(state: web::Data<AppContext>, req: web::Query<D2DataRequest>) -> HttpResponse {
+pub(crate) fn handle_d2data_request(state: web::Data<AppData>, req: web::Query<D2DataRequest>) -> HttpResponse {
     // convert to 0 based
     let id = if req.id == 0 { usize::max_value() } else { req.id - 1 };
     let image = {
@@ -239,7 +240,7 @@ pub fn handle_d2data_request(state: web::Data<AppContext>, req: web::Query<D2Dat
     HttpResponse::Ok().content_type("image/svg+xml").body(image)
 }
 
-pub fn handle_d2datas_request(state: web::Data<AppContext>) -> HttpResponse {
+pub(crate) fn handle_d2datas_request(state: web::Data<AppData>) -> HttpResponse {
     info!("Getting all d2datas");
     let data = {
         let img = state.d2datas.lock().unwrap();
@@ -249,7 +250,7 @@ pub fn handle_d2datas_request(state: web::Data<AppContext>) -> HttpResponse {
     HttpResponse::Ok().content_type("application/json").body(data)
 }
 
-pub fn handle_d2view_request(state: web::Data<AppContext>) -> Result<HttpResponse, ActixWebError> {
+pub(crate) fn handle_d2view_request(state: web::Data<AppData>) -> Result<HttpResponse, ActixWebError> {
     let all_data = {
         let img = state.d2datas.lock().unwrap();
         serde_json::to_string(&*img).unwrap()
@@ -259,7 +260,7 @@ pub fn handle_d2view_request(state: web::Data<AppContext>) -> Result<HttpRespons
     ctx.insert("svg_list", &all_data);
 
     let body = state.template.render("d2view.html", &ctx).map_err(|e| {
-        println!("Template error: {}", e);
+        log::error!("Template error: {}", e);
         error::ErrorInternalServerError(format!("Template error: {}", e))
     })?;
 

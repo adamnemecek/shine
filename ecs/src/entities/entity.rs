@@ -1,5 +1,5 @@
 use shine_graph::svec::{self, DrainIter, STVector, UnitStore};
-use shred::{Read, ResourceId, Resources, SystemData, Write};
+use shred::{Read, ResourceId, SystemData, World, Write};
 use std::ops::{Deref, DerefMut};
 
 /// An entity instance.
@@ -158,9 +158,9 @@ impl<'a> Deref for ReadEntities<'a> {
 }
 
 impl<'a> SystemData<'a> for ReadEntities<'a> {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
+    fn fetch(res: &'a World) -> Self {
         ReadEntities {
             inner: res.fetch::<EntityStore>().into(),
         }
@@ -195,9 +195,9 @@ impl<'a> DerefMut for WriteEntities<'a> {
 }
 
 impl<'a> SystemData<'a> for WriteEntities<'a> {
-    fn setup(_: &mut Resources) {}
+    fn setup(_: &mut World) {}
 
-    fn fetch(res: &'a Resources) -> Self {
+    fn fetch(res: &'a World) -> Self {
         WriteEntities {
             inner: res.fetch_mut::<EntityStore>().into(),
         }

@@ -1,12 +1,12 @@
-use crate::webserver::appcontext::AppContext;
-use actix_web::{web, error, Error as ActixWebError, HttpRequest, HttpResponse};
+use actix_web::{error, web, Error as ActixWebError, HttpResponse};
 use base64;
 use bytes::{BufMut, BytesMut};
 use log;
-use serde::{Deserialize};
+use serde::Deserialize;
 use serde_json;
 use shine_gltf::{accessor, buffer, optional_attribute_map, Accessor, Buffer, GetMut, Index, Mesh, Node, Primitive, Root, Scene};
 use std::{iter, mem};
+use crate::webserver::service::AppData;
 
 pub trait IntoD3Data {
     fn into_data(self) -> String;
@@ -242,7 +242,7 @@ pub struct D3DataRequest {
     id: usize,
 }
 
-pub fn handle_d3data_request(state: web::Data<AppContext>, req: web::Query<D3DataRequest>) -> HttpResponse {
+pub(crate) fn handle_d3data_request(state: web::Data<AppData>, req: web::Query<D3DataRequest>) -> HttpResponse {
     let id: usize = req.id;
     let data = {
         log::info!("Getting d3data for {}", id);
@@ -257,7 +257,7 @@ pub fn handle_d3data_request(state: web::Data<AppContext>, req: web::Query<D3Dat
     HttpResponse::Ok().content_type("application/json").body(data)
 }
 
-pub fn handle_d3datas_request(state: web::Data<AppContext>, req: HttpRequest) -> Result<HttpResponse, ActixWebError> {
+pub(crate) fn handle_d3datas_request(state: web::Data<AppData>) -> Result<HttpResponse, ActixWebError> {
     log::info!("Getting all d3datas");
     let data = {
         let d3datas = state.d3datas.lock().unwrap();
@@ -267,7 +267,7 @@ pub fn handle_d3datas_request(state: web::Data<AppContext>, req: HttpRequest) ->
     Ok(HttpResponse::Ok().content_type("application/json").body(data))
 }
 
-pub fn handle_d3view_request(state: web::Data<AppContext>, req: HttpRequest) -> Result<HttpResponse, ActixWebError> {
+pub(crate) fn handle_d3view_request(state: web::Data<AppData>) -> Result<HttpResponse, ActixWebError> {
     let all_data = {
         let img = state.d3datas.lock().unwrap();
         serde_json::to_string(&*img).unwrap()
