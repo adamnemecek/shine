@@ -2,13 +2,13 @@
 
 use gilrs::Gilrs;
 use interact_prompt;
+use parking_lot::{RwLock, RwLockReadGuard};
 use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::world::{EntityWorld, ResourceWorld, World};
 use shine_shard::camera::{FpsCamera, RawCamera, RenderCamera};
 use shine_stdext::time::{FrameLimit, FrameLimiter, FrameStatistics};
 use std::env;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Weak};
 use std::thread;
 use std::time::Duration;
 use winit::{EventsLoop, WindowBuilder};
@@ -86,16 +86,11 @@ fn handle_events(world: &World, event_loop: &mut EventsLoop, gilrs: &mut Gilrs) 
     }
 }
 
-#[derive(Debug)]
-struct SyncData {
-    sync_count: usize,
-}
-
-fn logic<A: App>(app: &A, logic_world: &mut World, render_world: &RwLock<World>, stopping: &AtomicBool) {
+fn logic<A: App>(app: &A, logic_world: &mut World, render_world: &RwLock<World>, stop_signal: Weak<()>) {
     let mut frame_limiter = FrameLimiter::new();
     let mut app = app.create_logic();
 
-    while !stopping.load(Ordering::Relaxed) {
+    while stop_signal.upgrade().is_some() {
         frame_limiter.start();
         log::info!("logic update");
         app.update(logic_world);
@@ -104,14 +99,14 @@ fn logic<A: App>(app: &A, logic_world: &mut World, render_world: &RwLock<World>,
 
         //sync point b/n render and logic
         {
-            let mut render_world = render_world.write().unwrap();
+            let mut render_world = render_world.write();
             log::info!("sync render to logic");
             app.sync(logic_world, &mut *render_world);
         }
     }
 }
 
-fn render<A: App>(app: &A, world: &RwLock<World>, stopping: &AtomicBool) {
+fn render<A: App>(app: &A, world: &RwLock<World>, mut stop_signal: Option<Arc<()>>) {
     let mut event_loop = EventsLoop::new();
     let mut gilrs = Gilrs::new().unwrap();
     let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
@@ -128,7 +123,7 @@ fn render<A: App>(app: &A, world: &RwLock<World>, stopping: &AtomicBool) {
         //frame_stats.start_frame();
         frame_limiter.start();
         factory.maintain(&mut families);
-        let mut world = world.read().unwrap();
+        let world = world.read();
 
         let event_result = handle_events(&world, &mut event_loop, &mut gilrs);
 
@@ -141,7 +136,7 @@ fn render<A: App>(app: &A, world: &RwLock<World>, stopping: &AtomicBool) {
 
         if event_result == EventResult::Closing {
             log::trace!("closing");
-            stopping.store(true, Ordering::Relaxed);
+            stop_signal.take();
             break;
         }
 
@@ -166,6 +161,28 @@ fn render<A: App>(app: &A, world: &RwLock<World>, stopping: &AtomicBool) {
             frame_limiter.global_off_time_us()
         );*/
         frame_stats.end_frame();
+
+        RwLockReadGuard::unlock_fair(world);
+    }
+}
+
+struct InteractHandler {
+    stop_signal: Weak<()>,
+}
+
+impl interact_prompt::Handler for InteractHandler {
+    fn receive_interaction(&self, intr: interact_prompt::Interaction) -> interact_prompt::Response {
+        if self.stop_signal.upgrade().is_none() {
+            interact_prompt::Response::Exit
+        } else {
+            match intr {
+                /*interact_prompt::Interaction::Line(string) => {
+                    interact_prompt::Commands::new().handle_cmd(&string);
+                }*/
+                _ => {}
+            }
+            interact_prompt::Response::Continue
+        }
     }
 }
 
@@ -200,19 +217,21 @@ fn main() {
     let app = Demo::default();
     app.prepare_logic(&mut logic_world);
     app.prepare_render(&mut logic_world, &mut render_world);
-
-    let stopping = AtomicBool::new(false);
+    
     let render_world = RwLock::new(render_world);
+
+    let stop_signal = Arc::new(());
+    let stop_observer = Arc::downgrade(&stop_signal);
 
     crossbeam::scope(|scope| {
         let _logic_thread = scope.builder().name("logic".to_string()).spawn(|_| {
-            logic(&app, &mut logic_world, &render_world, &stopping);
+            logic(&app, &mut logic_world, &render_world, stop_observer.clone());
         });
         let _render_thread = scope.builder().name("render".to_string()).spawn(|_| {
-            render(&app, &render_world, &stopping);
+            render(&app, &render_world, Some(stop_signal));
         });
         /*let _interact_thread = scope.builder().name("interact".to_string()).spawn(|_| {
-            interact_prompt::direct(interact_prompt::Settings::default(), ()).unwrap();
+            interact_prompt::direct(interact_prompt::Settings::default(), InteractHandler{stop_signal:stop_observer.clone()}).unwrap();
         });*/
     })
     .unwrap();

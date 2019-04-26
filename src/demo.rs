@@ -34,7 +34,9 @@ pub struct DemoLogic<'a> {
 impl<'a> DemoLogic<'a> {
     pub fn new<'b>() -> DemoLogic<'b> {
         DemoLogic {
-            task: DispatcherBuilder::new().with(VoxelMeshSystem, "VoxelMesherSystem", &[]).build(),
+            task: DispatcherBuilder::new()
+                .with(VoxelMeshSystem, "VoxelMesherSystem", &[])
+                .build(),
         }
     }
 }
@@ -45,7 +47,7 @@ impl<'a> AppLogic for DemoLogic<'a> {
     }
 
     fn sync(&mut self, logic_world: &mut World, render_world: &mut World) {
-        render_world.sync_entities_to(logic_world, |_,_| {}, |_,_,_| {});
+        render_world.sync_entities_to(logic_world, |_, _| {}, |_, _, _| {});
         //todo: sync camera
     }
 }
@@ -96,12 +98,12 @@ impl<'a> AppRender for DemoRender<'a> {
 
 #[derive(Default)]
 pub struct Demo<'l, 'r> {
-    ph: PhantomData<Fn() -> (& 'l(), & 'r())>,
+    ph: PhantomData<Fn() -> (&'l (), &'r ())>,
 }
 
 // GAT, 'l,'r shall be part of the associated type
-unsafe impl<'l, 'r> Send for Demo<'l, 'r> {} 
-unsafe impl<'l, 'r> Sync for Demo<'l, 'r> {} 
+unsafe impl<'l, 'r> Send for Demo<'l, 'r> {}
+unsafe impl<'l, 'r> Sync for Demo<'l, 'r> {}
 
 impl<'l, 'r> App for Demo<'l, 'r> {
     type Logic = DemoLogic<'l>;
