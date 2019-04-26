@@ -8,7 +8,6 @@ use svg::node::{self, element};
 use svg::{Document, Node};
 use tera;
 
-
 pub trait IntoD2Data {
     fn into_data(self) -> String;
 }

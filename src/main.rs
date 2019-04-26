@@ -3,8 +3,8 @@
 use gilrs::Gilrs;
 use interact_prompt;
 use rendy::factory::{Config as RendyConfig, Factory};
-use shine_ecs::world::{ResourceWorld, World};
-use shine_shard::camera::{FpsCamera, RenderCamera};
+use shine_ecs::world::{EntityWorld, ResourceWorld, World};
+use shine_shard::camera::{FpsCamera, RawCamera, RenderCamera};
 use shine_stdext::time::{FrameLimit, FrameLimiter, FrameStatistics};
 use std::env;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -22,6 +22,7 @@ mod logic;
 mod voxel;
 
 mod demo;
+use demo::{App, AppLogic, AppRender, Demo};
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum EventResult {
@@ -90,31 +91,27 @@ struct SyncData {
     sync_count: usize,
 }
 
-type SyncLock = RwLock<SyncData>;
-
-fn logic(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
-    let mut dispatcher = demo::logic_tasks();
+fn logic<A: App>(app: &A, logic_world: &mut World, render_world: &RwLock<World>, stopping: &AtomicBool) {
     let mut frame_limiter = FrameLimiter::new();
+    let mut app = app.create_logic();
 
     while !stopping.load(Ordering::Relaxed) {
         frame_limiter.start();
         log::info!("logic update");
-        //world.dispatch(&mut dispatcher);
+        app.update(logic_world);
         let _ = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_millis(100)));
         log::info!("logic frame limit: {:?}", frame_limiter);
 
         //sync point b/n render and logic
         {
-            let mut l = sync_lock.write().unwrap();
-            l.sync_count += 1;
-            thread::sleep(Duration::from_micros(10));
+            let mut render_world = render_world.write().unwrap();
+            log::info!("sync render to logic");
+            app.sync(logic_world, &mut *render_world);
         }
     }
 }
 
-fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
-    let mut dispatcher = demo::render_tasks();
-
+fn render<A: App>(app: &A, world: &RwLock<World>, stopping: &AtomicBool) {
     let mut event_loop = EventsLoop::new();
     let mut gilrs = Gilrs::new().unwrap();
     let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
@@ -125,9 +122,13 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
     let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();
     let mut graph: Option<render::Graph> = None;
 
+    let mut app = app.create_render();
+
     loop {
+        //frame_stats.start_frame();
         frame_limiter.start();
         factory.maintain(&mut families);
+        let mut world = world.read().unwrap();
 
         let event_result = handle_events(&world, &mut event_loop, &mut gilrs);
 
@@ -144,46 +145,15 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
             break;
         }
 
-        {
-            let r = sync_lock.read().unwrap();
-            //log::trace!("r: {:?}", *r);
-            world.dispatch(&mut dispatcher);
-            frame_stats.end_frame();
+        app.update(&*world);
 
-            {
-                let elapsed_time = frame_stats.get_last_frame_time().as_micros() as f32 / 1_000_000.0_f32;
+        if graph.is_none() {
+            let surface = factory.create_surface(window.clone());
+            graph = Some(render::init(&mut factory, &mut families, surface, &world));
+        }
 
-                let mut frame = world.resource_mut::<render::FrameInfo>();
-                frame.frame_id = frame_stats.get_frame_count();
-                frame.elapsed_time = elapsed_time;
-
-                let input_manager = world.resource::<InputManager>();
-                let input_state = input_manager.get_state();
-                let mut cam = world.resource_mut::<FpsCamera>();
-
-                let dist = elapsed_time;
-                let angle_dist = elapsed_time;
-
-                cam.move_forward(input_state.get_button(buttons::MOVE_FORWARD) * dist);
-                cam.move_side(input_state.get_button(buttons::MOVE_SIDE) * dist);
-                cam.move_up(input_state.get_button(buttons::MOVE_UP) * dist);
-                cam.yaw(input_state.get_button(buttons::YAW) * angle_dist);
-                cam.roll(input_state.get_button(buttons::ROLL) * angle_dist);
-                cam.pitch(input_state.get_button(buttons::PITCH) * angle_dist);
-
-                let mut rcam = world.resource_mut::<RenderCamera>();
-                log::info!("update rcam {:?}", rcam.view_matrix());
-                rcam.set_camera(&*cam);
-            }
-
-            if graph.is_none() {
-                let surface = factory.create_surface(window.clone());
-                graph = Some(render::init(&mut factory, &mut families, surface, &world));
-            }
-
-            if let Some(ref mut graph) = graph {
-                graph.run(&mut factory, &mut families, &world);
-            }
+        if let Some(ref mut graph) = graph {
+            graph.run(&mut factory, &mut families, &world);
         }
 
         /*let t = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_micros(10)));
@@ -195,6 +165,7 @@ fn render(world: &World, stopping: &AtomicBool, sync_lock: &SyncLock) {
             frame_limiter.spin_time(),
             frame_limiter.global_off_time_us()
         );*/
+        frame_stats.end_frame();
     }
 }
 
@@ -209,24 +180,36 @@ fn main() {
     log::trace!("current executable {:?}", env::current_exe());
     log::trace!("current path {:?}", env::current_dir());
 
-    let world = {
+    let mut logic_world = {
+        log::trace!("prepare logic world");
         let mut world = World::new();
-        world.register_resource_with(FpsCamera::new());
-        world.register_resource_with(RenderCamera::new());
-        world.register_resource_with(input::create_input_manager());
-        world.register_resource_with(render::FrameInfo::new());
-        demo::prepare_world(&mut world);
+        world.register_resource_with(RawCamera::new());
         world
     };
+
+    let mut render_world = {
+        log::trace!("prepare render world");
+        let mut world = World::new();
+        world.register_resource_with(input::create_input_manager());
+        world.register_resource_with(render::FrameInfo::new());
+        world.register_resource_with(RenderCamera::new());
+        world.register_resource_with(FpsCamera::new());
+        world
+    };
+
+    let app = Demo::default();
+    app.prepare_logic(&mut logic_world);
+    app.prepare_render(&mut logic_world, &mut render_world);
+
     let stopping = AtomicBool::new(false);
-    let sync_lock = RwLock::new(SyncData { sync_count: 0 });
+    let render_world = RwLock::new(render_world);
 
     crossbeam::scope(|scope| {
         let _logic_thread = scope.builder().name("logic".to_string()).spawn(|_| {
-            logic(&world, &stopping, &sync_lock);
+            logic(&app, &mut logic_world, &render_world, &stopping);
         });
         let _render_thread = scope.builder().name("render".to_string()).spawn(|_| {
-            render(&world, &stopping, &sync_lock);
+            render(&app, &render_world, &stopping);
         });
         /*let _interact_thread = scope.builder().name("interact".to_string()).spawn(|_| {
             interact_prompt::direct(interact_prompt::Settings::default(), ()).unwrap();

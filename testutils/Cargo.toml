@@ -20,9 +20,9 @@ tera =  "*"
 futures = "*"
 
 actix-rt = "0.2"
-actix-web = "1.0.0-beta.1"
-actix-files = "0.1.0-beta.1"
-actix-session = "0.1.0-beta.1"
+actix-web = "1.0.0-beta"
+actix-files = "0.1.0-beta"
+actix-session = "0.1.0-beta"
 
 svg =  "*"
 shine-gltf = {path = "../gltf"}

@@ -1,3 +1,4 @@
+use crate::webserver::service::AppData;
 use actix_web::{error, web, Error as ActixWebError, HttpResponse};
 use base64;
 use bytes::{BufMut, BytesMut};
@@ -6,7 +7,6 @@ use serde::Deserialize;
 use serde_json;
 use shine_gltf::{accessor, buffer, optional_attribute_map, Accessor, Buffer, GetMut, Index, Mesh, Node, Primitive, Root, Scene};
 use std::{iter, mem};
-use crate::webserver::service::AppData;
 
 pub trait IntoD3Data {
     fn into_data(self) -> String;
