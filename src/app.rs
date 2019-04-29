@@ -1,6 +1,5 @@
 use crate::logic::LogicConfig;
 use shine_ecs::world::World;
-use std::time::Duration;
 
 /// Trait to handle the update during the logic frame
 pub trait AppLogicHandler {

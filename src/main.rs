@@ -5,7 +5,7 @@ use interact_prompt;
 use parking_lot::{RwLock, RwLockWriteGuard};
 use rendy::factory::{Config as RendyConfig, Factory};
 use shine_ecs::world::{ResourceWorld, World};
-use shine_stdext::time::{FrameLimit, FrameLimiter, FrameStatistics, FrameTimer};
+use shine_stdext::time::{FrameLimit, FrameLimiter};
 use std::env;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
@@ -67,7 +67,7 @@ fn logic<A: App>(app: &A, app_logic: &RwLock<AppLogic>, app_render: &RwLock<AppR
             let logic_world = &mut app_logic.world;
             let render_world = &mut app_render.world;
 
-            render_world.resource_mut::<FrameTimer>().start(world_frame_length);
+            render_world.resource_mut::<render::FrameInfo>().start_logic(world_frame_length);
             app.sync(logic_world, &mut *render_world);
 
             RwLockWriteGuard::unlock_fair(app_render);
@@ -142,7 +142,6 @@ fn render<A: App>(app: &A, app_render: &RwLock<AppRender>, mut stop_signal: Opti
 
     let mut app = app.create_render_handler();
     let mut frame_limiter = FrameLimiter::new();
-    let mut frame_stats = FrameStatistics::new();
 
     loop {
         frame_limiter.start();
@@ -152,7 +151,11 @@ fn render<A: App>(app: &A, app_render: &RwLock<AppRender>, mut stop_signal: Opti
             let mut app_render = app_render.write();
             let world = &mut app_render.world;
 
-            world.resource_mut::<FrameTimer>().advance();
+            {
+                let mut frame_info = world.resource_mut::<render::FrameInfo>();
+                frame_info.start_frame();
+                log::info!("{:#?}", &*frame_info);
+            }
 
             let event_result = handle_events(&world, &mut event_loop, &mut gilrs);
             if event_result == EventResult::SurfaceLost || event_result == EventResult::Closing {
@@ -181,7 +184,6 @@ fn render<A: App>(app: &A, app_render: &RwLock<AppRender>, mut stop_signal: Opti
         }
 
         let _ = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_millis(10)));
-        frame_stats.end_frame();
     }
 }
 
@@ -227,8 +229,7 @@ fn main() {
     // todo: start render thread after the 1st sync point, thus no need to configure anything prior
     let mut render_world = World::new();
     render_world.register_resource_with(input::create_input_manager());
-    render_world.register_resource_with(FrameTimer::new(frame_world_length));
-    render_world.register_resource_with(render::FrameInfo::new());
+    render_world.register_resource_with(render::FrameInfo::new(frame_world_length));
     app.prepare_render(&mut logic_world, &mut render_world);
 
     let app_logic = RwLock::new(AppLogic { world: logic_world });

@@ -49,13 +49,9 @@ impl<'a> AppRenderHandler for DemoRenderHandler<'a> {
         /*{
             let elapsed_time = frame_stats.get_last_frame_time().as_micros() as f32 / 1_000_000.0_f32;
 
-            let mut frame = world.resource_mut::<render::FrameInfo>();
-            frame.frame_id = frame_stats.get_frame_count();
-            frame.elapsed_time = elapsed_time;
-
             let input_manager = world.resource::<InputManager>();
             let input_state = input_manager.get_state();
-            let mut cam = world.resource_mut::<FpsCamera>();
+            let mut cam = world.resource_mut::<camera::FpsCamera>();
 
             let dist = elapsed_time;
             let angle_dist = elapsed_time;

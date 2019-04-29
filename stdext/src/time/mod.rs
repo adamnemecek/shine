@@ -1,8 +1,9 @@
 mod framelimiter;
-pub use self::framelimiter::*;
-
-mod framestatistics;
-pub use self::framestatistics::*;
-
 mod frametimer;
+mod logictimer;
+mod scaledblander;
+
+pub use self::framelimiter::*;
 pub use self::frametimer::*;
+pub use self::logictimer::*;
+pub use self::scaledblander::*;
