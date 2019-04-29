@@ -2,33 +2,78 @@
 
 use gilrs::Gilrs;
 use interact_prompt;
-use parking_lot::{RwLock, RwLockReadGuard};
+use parking_lot::{RwLock, RwLockWriteGuard};
 use rendy::factory::{Config as RendyConfig, Factory};
-use shine_ecs::world::{EntityWorld, ResourceWorld, World};
-use shine_shard::camera::{FpsCamera, RawCamera, RenderCamera};
-use shine_stdext::time::{FrameLimit, FrameLimiter, FrameStatistics};
+use shine_ecs::world::{ResourceWorld, World};
+use shine_stdext::time::{FrameLimit, FrameLimiter, FrameStatistics, FrameTimer};
 use std::env;
 use std::sync::{Arc, Weak};
-use std::thread;
 use std::time::Duration;
 use winit::{EventsLoop, WindowBuilder};
 
+mod app;
+mod demo;
 mod input;
-use self::input::*;
-mod render;
-
 mod logic;
-
+mod render;
 mod voxel;
 
-mod demo;
-use demo::{App, AppLogic, AppRender, Demo};
+use self::app::{App, AppLogicHandler, AppRenderHandler};
+use self::input::*;
+use demo::Demo;
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 enum EventResult {
     None,
     SurfaceLost,
     Closing,
+}
+
+struct AppLogic {
+    world: World,
+}
+
+struct AppRender {
+    world: World,
+}
+
+fn logic<A: App>(app: &A, app_logic: &RwLock<AppLogic>, app_render: &RwLock<AppRender>, stop_signal: Weak<()>) {
+    let mut frame_limiter = FrameLimiter::new();
+    let mut app = app.create_logic_handler();
+
+    while stop_signal.upgrade().is_some() {
+        let world_frame_length = {
+            log::info!("logic update");
+            frame_limiter.start();
+
+            let mut app_logic = app_logic.write();
+            let logic_world = &mut app_logic.world;
+
+            app.update(logic_world);
+            let world_frame_length = logic_world.resource::<logic::LogicConfig>().world_frame_length();
+
+            RwLockWriteGuard::unlock_fair(app_logic);
+
+            let _ = frame_limiter.limit(FrameLimit::SleepSpin(world_frame_length));
+
+            world_frame_length
+        };
+
+        {
+            log::info!("sync render to logic");
+            let mut app_logic = app_logic.write();
+            let mut app_render = app_render.write();
+
+            let logic_world = &mut app_logic.world;
+            let render_world = &mut app_render.world;
+
+            render_world.resource_mut::<FrameTimer>().start(world_frame_length);
+            app.sync(logic_world, &mut *render_world);
+
+            RwLockWriteGuard::unlock_fair(app_render);
+            RwLockWriteGuard::unlock_fair(app_logic);
+        }
+    }
 }
 
 fn handle_events(world: &World, event_loop: &mut EventsLoop, gilrs: &mut Gilrs) -> EventResult {
@@ -86,83 +131,57 @@ fn handle_events(world: &World, event_loop: &mut EventsLoop, gilrs: &mut Gilrs) 
     }
 }
 
-fn logic<A: App>(app: &A, logic_world: &mut World, render_world: &RwLock<World>, stop_signal: Weak<()>) {
-    let mut frame_limiter = FrameLimiter::new();
-    let mut app = app.create_logic();
-
-    while stop_signal.upgrade().is_some() {
-        frame_limiter.start();
-        log::info!("logic update");
-        app.update(logic_world);
-        let _ = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_millis(100)));
-        log::info!("logic frame limit: {:?}", frame_limiter);
-
-        //sync point b/n render and logic
-        {
-            let mut render_world = render_world.write();
-            log::info!("sync render to logic");
-            app.sync(logic_world, &mut *render_world);
-        }
-    }
-}
-
-fn render<A: App>(app: &A, world: &RwLock<World>, mut stop_signal: Option<Arc<()>>) {
+fn render<A: App>(app: &A, app_render: &RwLock<AppRender>, mut stop_signal: Option<Arc<()>>) {
     let mut event_loop = EventsLoop::new();
     let mut gilrs = Gilrs::new().unwrap();
     let window = Arc::new(WindowBuilder::new().with_title("Shine").build(&event_loop).unwrap());
-    let mut frame_limiter = FrameLimiter::new();
-    let mut frame_stats = FrameStatistics::new();
 
     let config: RendyConfig = Default::default();
     let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();
     let mut graph: Option<render::Graph> = None;
 
-    let mut app = app.create_render();
+    let mut app = app.create_render_handler();
+    let mut frame_limiter = FrameLimiter::new();
+    let mut frame_stats = FrameStatistics::new();
 
     loop {
-        //frame_stats.start_frame();
         frame_limiter.start();
         factory.maintain(&mut families);
-        let world = world.read();
 
-        let event_result = handle_events(&world, &mut event_loop, &mut gilrs);
+        {
+            let mut app_render = app_render.write();
+            let world = &mut app_render.world;
 
-        if event_result == EventResult::SurfaceLost || event_result == EventResult::Closing {
-            if let Some(graph) = graph.take() {
-                graph.dispose(&mut factory, &world);
-                render::dispose(&mut factory, &world);
+            world.resource_mut::<FrameTimer>().advance();
+
+            let event_result = handle_events(&world, &mut event_loop, &mut gilrs);
+            if event_result == EventResult::SurfaceLost || event_result == EventResult::Closing {
+                if let Some(graph) = graph.take() {
+                    graph.dispose(&mut factory, &world);
+                    render::dispose(&mut factory, &world);
+                }
             }
+            if event_result == EventResult::Closing {
+                log::trace!("closing");
+                stop_signal.take();
+                break;
+            }
+
+            app.update(world);
+
+            if graph.is_none() {
+                let surface = factory.create_surface(window.clone());
+                graph = Some(render::init(&mut factory, &mut families, surface, &world));
+            }
+
+            if let Some(ref mut graph) = graph {
+                graph.run(&mut factory, &mut families, &world);
+            }
+            RwLockWriteGuard::unlock_fair(app_render);
         }
 
-        if event_result == EventResult::Closing {
-            log::trace!("closing");
-            stop_signal.take();
-            break;
-        }
-
-        app.update(&*world);
-
-        if graph.is_none() {
-            let surface = factory.create_surface(window.clone());
-            graph = Some(render::init(&mut factory, &mut families, surface, &world));
-        }
-
-        if let Some(ref mut graph) = graph {
-            graph.run(&mut factory, &mut families, &world);
-        }
-
-        /*let t = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_micros(10)));
-        log::info!(
-            "t: {:?}, {:?}, {:?}, {:?}, {:?}us",
-            t,
-            frame_limiter.work_time(),
-            frame_limiter.sleep_time(),
-            frame_limiter.spin_time(),
-            frame_limiter.global_off_time_us()
-        );*/
+        let _ = frame_limiter.limit(FrameLimit::SleepSpin(Duration::from_millis(10)));
         frame_stats.end_frame();
-
-        RwLockReadGuard::unlock_fair(world);
     }
 }
 
@@ -197,41 +216,42 @@ fn main() {
     log::trace!("current executable {:?}", env::current_exe());
     log::trace!("current path {:?}", env::current_dir());
 
-    let mut logic_world = {
-        log::trace!("prepare logic world");
-        let mut world = World::new();
-        world.register_resource_with(RawCamera::new());
-        world
-    };
-
-    let mut render_world = {
-        log::trace!("prepare render world");
-        let mut world = World::new();
-        world.register_resource_with(input::create_input_manager());
-        world.register_resource_with(render::FrameInfo::new());
-        world.register_resource_with(RenderCamera::new());
-        world.register_resource_with(FpsCamera::new());
-        world
-    };
-
     let app = Demo::default();
+
+    let mut logic_world = World::new();
+    let logic_config = app.create_logic_config();
+    let frame_world_length = logic_config.world_frame_length();
+    logic_world.register_resource_with(logic_config);
     app.prepare_logic(&mut logic_world);
+
+    // todo: start render thread after the 1st sync point, thus no need to configure anything prior
+    let mut render_world = World::new();
+    render_world.register_resource_with(input::create_input_manager());
+    render_world.register_resource_with(FrameTimer::new(frame_world_length));
+    render_world.register_resource_with(render::FrameInfo::new());
     app.prepare_render(&mut logic_world, &mut render_world);
-    
-    let render_world = RwLock::new(render_world);
+
+    let app_logic = RwLock::new(AppLogic { world: logic_world });
+    let app_render = RwLock::new(AppRender { world: render_world });
 
     let stop_signal = Arc::new(());
     let stop_observer = Arc::downgrade(&stop_signal);
 
     crossbeam::scope(|scope| {
         let _logic_thread = scope.builder().name("logic".to_string()).spawn(|_| {
-            logic(&app, &mut logic_world, &render_world, stop_observer.clone());
+            logic(&app, &app_logic, &app_render, stop_observer.clone());
         });
         let _render_thread = scope.builder().name("render".to_string()).spawn(|_| {
-            render(&app, &render_world, Some(stop_signal));
+            render(&app, &app_render, Some(stop_signal));
         });
         /*let _interact_thread = scope.builder().name("interact".to_string()).spawn(|_| {
-            interact_prompt::direct(interact_prompt::Settings::default(), InteractHandler{stop_signal:stop_observer.clone()}).unwrap();
+            interact_prompt::direct(
+                interact_prompt::Settings::default(),
+                InteractHandler {
+                    stop_signal: stop_observer.clone(),
+                },
+            )
+            .unwrap();
         });*/
     })
     .unwrap();

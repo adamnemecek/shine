@@ -30,11 +30,3 @@ mod frameinfo;
 pub use self::frameinfo::*;
 mod frameparameters;
 pub use self::frameparameters::*;
-
-use shine_ecs::world::{EntityWorld, ResourceWorld, World};
-
-pub fn prepare_world(world: &mut World) {
-    world.register_resource::<FrameParameters>();
-    world.register_entity_component::<SimpleMeshData>();
-    world.register_entity_component::<SimpleMesh>();
-}

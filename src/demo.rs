@@ -1,47 +1,25 @@
-use crate::logic;
-use crate::render::{self, SimpleMeshData};
-use crate::voxel::{self, VoxelCell, VoxelMeshSystem};
-use nalgebra_glm as glm;
+use crate::app::{App, AppLogicHandler, AppRenderHandler};
+use crate::render;
 use shine_ecs::shred::{Dispatcher, DispatcherBuilder};
-use shine_ecs::world::{EntityWorld, World};
-use shine_math::voxel::implicit::function::*;
+use shine_ecs::world::{EntityWorld, ResourceWorld, World};
+use shine_shard::camera;
 use std::marker::PhantomData;
 
-pub trait AppLogic {
-    fn update(&mut self, world: &World);
-    fn sync(&mut self, logic_world: &mut World, render_world: &mut World);
-}
-
-pub trait AppRender {
-    fn update(&mut self, world: &World);
-}
-
-pub trait App {
-    type Logic: AppLogic;
-    type Render: AppRender;
-
-    fn prepare_logic(&self, world: &mut World);
-    fn prepare_render(&self, logic_world: &mut World, render: &mut World);
-
-    fn create_logic(&self) -> Self::Logic;
-    fn create_render(&self) -> Self::Render;
-}
-
-pub struct DemoLogic<'a> {
+pub struct DemoLogicHandler<'a> {
     task: Dispatcher<'a, 'a>,
 }
 
-impl<'a> DemoLogic<'a> {
-    pub fn new<'b>() -> DemoLogic<'b> {
-        DemoLogic {
+impl<'a> DemoLogicHandler<'a> {
+    pub fn new<'b>() -> DemoLogicHandler<'b> {
+        DemoLogicHandler {
             task: DispatcherBuilder::new()
-                .with(VoxelMeshSystem, "VoxelMesherSystem", &[])
+                //.with(VoxelMeshSystem, "VoxelMesherSystem", &[])
                 .build(),
         }
     }
 }
 
-impl<'a> AppLogic for DemoLogic<'a> {
+impl<'a> AppLogicHandler for DemoLogicHandler<'a> {
     fn update(&mut self, world: &World) {
         world.dispatch(&mut self.task);
     }
@@ -52,19 +30,19 @@ impl<'a> AppLogic for DemoLogic<'a> {
     }
 }
 
-pub struct DemoRender<'a> {
+pub struct DemoRenderHandler<'a> {
     task: Dispatcher<'a, 'a>,
 }
 
-impl<'a> DemoRender<'a> {
-    pub fn new<'b>() -> DemoRender<'b> {
-        DemoRender {
+impl<'a> DemoRenderHandler<'a> {
+    pub fn new<'b>() -> DemoRenderHandler<'b> {
+        DemoRenderHandler {
             task: DispatcherBuilder::new().build(),
         }
     }
 }
 
-impl<'a> AppRender for DemoRender<'a> {
+impl<'a> AppRenderHandler for DemoRenderHandler<'a> {
     fn update(&mut self, world: &World) {
         world.dispatch(&mut self.task);
 
@@ -101,36 +79,39 @@ pub struct Demo<'l, 'r> {
     ph: PhantomData<Fn() -> (&'l (), &'r ())>,
 }
 
-// GAT, 'l,'r shall be part of the associated type
+// GAT, 'l,'r shall be part of the associated Logic and Render types
 unsafe impl<'l, 'r> Send for Demo<'l, 'r> {}
 unsafe impl<'l, 'r> Sync for Demo<'l, 'r> {}
 
 impl<'l, 'r> App for Demo<'l, 'r> {
-    type Logic = DemoLogic<'l>;
-    type Render = DemoRender<'r>;
+    type Logic = DemoLogicHandler<'l>;
+    type Render = DemoRenderHandler<'r>;
 
     fn prepare_logic(&self, world: &mut World) {
-        logic::prepare_world(world);
-        render::prepare_world(world);
-        voxel::prepare_world(world);
+        world.register_resource_with(camera::RawCamera::new());
+        //voxel::prepare_world(world);
 
-        let fun = sdf::capsule(glm::vec3(-0.8, -0.8, -0.8), glm::vec3(0.8, 0.7, 0.7), 0.2);
+        //let fun = sdf::capsule(glm::vec3(-0.8, -0.8, -0.8), glm::vec3(0.8, 0.7, 0.7), 0.2);
 
-        world
-            .create_entity()
-            .with(VoxelCell::new_implicit(fun))
-            .with(SimpleMeshData::new());
+        /*world
+        .create_entity()
+        .with(VoxelCell::new_implicit(fun))
+        .with(SimpleMeshData::new());*/
     }
 
-    fn prepare_render(&self, _logic_world: &mut World, render: &mut World) {
-        render::prepare_world(render);
+    fn prepare_render(&self, _logic_world: &mut World, render_world: &mut World) {
+        render_world.register_resource_with(camera::RenderCamera::new());
+        render_world.register_resource_with(camera::FpsCamera::new());
+        render_world.register_resource::<render::FrameParameters>();
+        render_world.register_entity_component::<render::SimpleMeshData>();
+        render_world.register_entity_component::<render::SimpleMesh>();
     }
 
-    fn create_logic(&self) -> Self::Logic {
-        DemoLogic::new()
+    fn create_logic_handler(&self) -> Self::Logic {
+        DemoLogicHandler::new()
     }
 
-    fn create_render(&self) -> Self::Render {
-        DemoRender::new()
+    fn create_render_handler(&self) -> Self::Render {
+        DemoRenderHandler::new()
     }
 }
