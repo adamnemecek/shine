@@ -1,5 +1,4 @@
 use std::time::{Duration, Instant};
-use std::fmt;
 
 /// Measure the time of a single frame
 #[derive(Debug)]
@@ -26,7 +25,16 @@ impl FrameTimer {
         self.prev_frame_length
     }
 
-    pub fn exact_elapsed(&self) -> Duration {
+    /// Return the elapsed time since frame start as 
+    pub fn elapsed_s(&self) -> f32 {
+        self.elapsed().as_micros() as f32 / 1_000_000.
+    }
+
+    pub fn elapsed_exact(&self) -> Duration {
         self.frame_start.map(|v| v.elapsed()).unwrap_or(Duration::default())
+    }
+
+    pub fn elapsed_exact_s(&self) -> f32 {
+        self.elapsed_exact().as_micros() as f32 / 1_000_000.
     }
 }

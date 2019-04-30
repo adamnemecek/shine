@@ -81,7 +81,6 @@ impl FrameLimiter {
 
         let wait = limit - elapsed - self.sleep_limit;
         let sleep_start = Instant::now();
-        log::info!("sleep: {:?}", wait);
         thread::sleep(wait);
         self.sleep_time += sleep_start.elapsed();
     }

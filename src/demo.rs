@@ -44,10 +44,9 @@ impl<'a> DemoRenderHandler<'a> {
 
 impl<'a> AppRenderHandler for DemoRenderHandler<'a> {
     fn update(&mut self, world: &World) {
-        world.dispatch(&mut self.task);
-
-        /*{
-            let elapsed_time = frame_stats.get_last_frame_time().as_micros() as f32 / 1_000_000.0_f32;
+        {
+            use crate::input::{buttons, InputManager};
+            let elapsed_time = world.resource::<render::FrameInfo>().frame_timer.elapsed_s();
 
             let input_manager = world.resource::<InputManager>();
             let input_state = input_manager.get_state();
@@ -63,10 +62,12 @@ impl<'a> AppRenderHandler for DemoRenderHandler<'a> {
             cam.roll(input_state.get_button(buttons::ROLL) * angle_dist);
             cam.pitch(input_state.get_button(buttons::PITCH) * angle_dist);
 
-            let mut rcam = world.resource_mut::<RenderCamera>();
+            let mut rcam = world.resource_mut::<camera::RenderCamera>();
             log::info!("update rcam {:?}", rcam.view_matrix());
             rcam.set_camera(&*cam);
-        }*/
+        }
+
+        world.dispatch(&mut self.task);
     }
 }
 

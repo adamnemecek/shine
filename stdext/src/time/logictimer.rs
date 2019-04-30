@@ -11,10 +11,10 @@ pub struct LogicTimer {
 }
 
 impl LogicTimer {
-    pub fn new(frame_length: Duration) -> LogicTimer {
+    pub fn new() -> LogicTimer {
         LogicTimer {
             start: Instant::now(),
-            frame_length,
+            frame_length: Duration::default(),
             prev_blend: 0.,
             cur_blend: 0.,
         }

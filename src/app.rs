@@ -1,4 +1,3 @@
-use crate::logic::LogicConfig;
 use shine_ecs::world::World;
 
 /// Trait to handle the update during the logic frame
@@ -19,10 +18,6 @@ pub trait App {
 
     fn prepare_logic(&self, world: &mut World);
     fn prepare_render(&self, logic_world: &mut World, render: &mut World);
-
-    fn create_logic_config(&self) -> LogicConfig {
-        LogicConfig::default()
-    }
 
     fn create_logic_handler(&self) -> Self::Logic;
     fn create_render_handler(&self) -> Self::Render;

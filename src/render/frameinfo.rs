@@ -10,10 +10,10 @@ pub struct FrameInfo {
 }
 
 impl FrameInfo {
-    pub fn new(frame_length: Duration) -> FrameInfo {
+    pub fn new() -> FrameInfo {
         FrameInfo {
             logic_frame_id: 0,
-            logic_timer: LogicTimer::new(frame_length),
+            logic_timer: LogicTimer::new(),
             frame_id: 0,
             frame_timer: FrameTimer::new(),
         }
