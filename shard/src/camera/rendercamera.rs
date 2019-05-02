@@ -1,8 +1,6 @@
 use crate::camera::Camera;
 use nalgebra::{Isometry3, Matrix4, Perspective3, Vector3};
 use shine_ecs::entities::es;
-use shine_ecs::shred::System;
-use std::marker::PhantomData;
 
 /// Camera used for rendering
 pub struct RenderCamera {
@@ -61,18 +59,4 @@ impl Default for RenderCamera {
 
 impl es::Component for RenderCamera {
     type Store = es::HashStore<Self>;
-}
-
-#[derive(Default)]
-struct CameraToRenderCamera<C: Camera> {
-    ph: PhantomData<C>,
-}
-
-impl<'a, C> System<'a> for CameraToRenderCamera<C>
-where
-    C: es::Component + Camera,
-{
-    type SystemData = (es::ReadComponents<'a, C>, es::WriteComponents<'a, RenderCamera>);
-
-    fn run(&mut self, data: Self::SystemData) {}
 }
