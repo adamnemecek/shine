@@ -25,7 +25,7 @@ impl FrameTimer {
         self.prev_frame_length
     }
 
-    /// Return the elapsed time since frame start as 
+    /// Return the elapsed time since frame start as
     pub fn elapsed_s(&self) -> f32 {
         self.elapsed().as_micros() as f32 / 1_000_000.
     }

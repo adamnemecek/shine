@@ -1,11 +1,11 @@
-use crate::smat::{MatrixMask, SMatrix, Store};
+use crate::smat::{MatrixMask, SMatrix, StoreMut};
 use std::fmt::{self, Debug, Formatter};
 
 /// Entry to a slot in a sparse vector.
 pub struct Entry<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     idx: (usize, usize),
     data: Option<*mut S::Item>,
@@ -15,7 +15,7 @@ where
 impl<'a, M, S> Entry<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     pub(crate) fn new(store: &mut SMatrix<M, S>, r: usize, c: usize) -> Entry<'_, M, S> {
         Entry {
@@ -62,7 +62,7 @@ impl<'a, I, M, S> Entry<'a, M, S>
 where
     I: Default,
     M: MatrixMask,
-    S: Store<Item = I>,
+    S: StoreMut<Item = I>,
 {
     /// Get the mutable non-zero data at the given slot or creates a new item if the entry is vacant.
     pub fn get_or_default(&mut self) -> &mut S::Item {
@@ -74,7 +74,7 @@ impl<'a, I, M, S> Debug for Entry<'a, M, S>
 where
     I: Debug,
     M: MatrixMask,
-    S: Store<Item = I>,
+    S: StoreMut<Item = I>,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.get())

@@ -1,6 +1,6 @@
 use crate::render::{DriverResource, Mesh, MeshBuilder};
 use rendy::command::QueueId;
-use shine_ecs::entities::{es, EntityComponent};
+use shine_ecs::entities::es;
 
 pub trait IntoMesh {
     fn into_mesh(&self) -> MeshBuilder<'static>;
@@ -11,7 +11,7 @@ pub struct SimpleMeshData {
     pub mesh: MeshBuilder<'static>,
 }
 
-impl EntityComponent for SimpleMeshData {
+impl es::Component for SimpleMeshData {
     type Store = es::DenseStore<Self>;
 }
 
@@ -44,6 +44,6 @@ pub struct SimpleMesh {
     resources: DriverResource<SimpleMeshResources>,
 }
 
-impl EntityComponent for SimpleMesh {
+impl es::Component for SimpleMesh {
     type Store = es::DenseStore<Self>;
 }

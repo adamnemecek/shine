@@ -1,4 +1,4 @@
-use crate::svec::Store;
+use crate::svec::{Store, StoreMut};
 
 pub struct UnitStore {
     unit: (),
@@ -19,6 +19,12 @@ impl Default for UnitStore {
 impl Store for UnitStore {
     type Item = ();
 
+    fn get(&self, _idx: usize) -> &Self::Item {
+        &self.unit
+    }
+}
+
+impl StoreMut for UnitStore {
     fn clear(&mut self) {}
 
     fn add(&mut self, _idx: usize, _value: Self::Item) {}
@@ -29,10 +35,6 @@ impl Store for UnitStore {
 
     fn replace(&mut self, _idx: usize, _value: Self::Item) -> Self::Item {
         self.unit
-    }
-
-    fn get(&self, _idx: usize) -> &Self::Item {
-        &self.unit
     }
 
     fn get_mut(&mut self, _idx: usize) -> &mut Self::Item {

@@ -1,7 +1,7 @@
 #![feature(custom_attribute)]
 
 use log::{debug, trace};
-use shine_ecs::entities::{ds, es, Edge, EdgeComponent, Entity, EntityComponent, IntoJoinExt};
+use shine_ecs::entities::{ds, es, Edge, Entity, IntoJoinExt};
 use shine_ecs::world::{EntityWorld, World};
 use shine_testutils::init_test;
 
@@ -11,7 +11,7 @@ struct Force {
     y: i32,
     z: i32,
 }
-impl EntityComponent for Force {
+impl es::Component for Force {
     type Store = es::DenseStore<Self>;
 }
 
@@ -22,7 +22,7 @@ struct Acceleration {
     y: i32,
     z: i32,
 }
-impl EntityComponent for Acceleration {
+impl es::Component for Acceleration {
     type Store = es::DenseStore<Self>;
 }
 
@@ -30,7 +30,7 @@ impl EntityComponent for Acceleration {
 struct Weight {
     w: i32,
 }
-impl EdgeComponent for Weight {
+impl ds::Component for Weight {
     type Mask = ds::CSMatrixMask;
     type Store = ds::ArenaStore<Self>;
 }

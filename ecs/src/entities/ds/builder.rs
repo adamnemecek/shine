@@ -1,7 +1,7 @@
-use crate::entities::{Edge, EdgeComponent};
+use crate::entities::{ds, Edge};
 use crate::world::EntityWorld;
 
-pub struct EdgeBuilder<'a, W>
+pub struct Builder<'a, W>
 where
     W: EntityWorld,
 {
@@ -9,17 +9,17 @@ where
     world: &'a mut W,
 }
 
-impl<'a, W> EdgeBuilder<'a, W>
+impl<'a, W> Builder<'a, W>
 where
     W: EntityWorld,
 {
-    pub fn new(world: &mut W, edge: Edge) -> EdgeBuilder<'_, W> {
-        EdgeBuilder { edge, world }
+    pub fn new(world: &mut W, edge: Edge) -> Builder<'_, W> {
+        Builder { edge, world }
     }
 
     pub fn with<T>(&mut self, component: T) -> &mut Self
     where
-        T: 'static + EdgeComponent,
+        T: 'static + ds::Component,
     {
         {
             let mut store = self.world.edge_components_mut::<T>();

@@ -1,5 +1,5 @@
 use crate::join::{IntoJoin, Join};
-use crate::smat::{DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, SMatrix, Store};
+use crate::smat::{DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, SMatrix, Store, StoreMut};
 use crate::traits::{IndexExcl, IndexLowerBound};
 use std::mem;
 
@@ -56,7 +56,7 @@ where
 pub struct RowUpdate<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     //crate row_index: usize,
     pub(crate) mask: &'a M,
@@ -67,9 +67,9 @@ where
 impl<'a, M, S> IndexExcl<usize> for RowUpdate<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
-    type Item = &'a mut S::Item;
+    type Item = &'a mut <S as Store>::Item;
 
     fn index(&mut self, idx: usize) -> Self::Item {
         let DataPosition(pos) = self.mask.find_column_position(idx, self.data_range).unwrap();
@@ -80,7 +80,7 @@ where
 impl<'a, M, S> IndexLowerBound<usize> for RowUpdate<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         //perf: we could also increment data range if it's guranted that no "step" occures.
@@ -93,7 +93,7 @@ where
 impl<'a, M, S> IntoJoin for RowUpdate<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     type Store = Self;
 
@@ -106,7 +106,7 @@ where
 pub struct RowWrite<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     //pub(crate) row_index: usize,
     pub(crate) row: usize,
@@ -116,7 +116,7 @@ where
 impl<'a, M, S> IndexExcl<usize> for RowWrite<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     type Item = Entry<'a, M, S>;
 
@@ -128,7 +128,7 @@ where
 impl<'a, M, S> IndexLowerBound<usize> for RowWrite<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         Some(idx)
@@ -138,7 +138,7 @@ where
 impl<'a, M, S> IntoJoin for RowWrite<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     type Store = Self;
 

@@ -1,6 +1,6 @@
 use crate::bits::BitSetViewExt;
 use crate::join::{IntoJoin, Join};
-use crate::smat::{MatrixMask, RowRead, RowUpdate, RowWrite, SMatrix, Store};
+use crate::smat::{MatrixMask, RowRead, RowUpdate, RowWrite, SMatrix, Store, StoreMut};
 use crate::traits::{IndexExcl, IndexLowerBound};
 use std::mem;
 
@@ -59,7 +59,7 @@ where
 impl<'a, M, S> IndexExcl<usize> for WrapRowUpdate<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     type Item = RowUpdate<'a, M, S>;
 
@@ -71,7 +71,7 @@ where
 impl<'a, M, S> IndexLowerBound<usize> for WrapRowUpdate<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         self.mat.row_mask.lower_bound(idx)
@@ -81,7 +81,7 @@ where
 impl<'a, M, S> IntoJoin for WrapRowUpdate<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     type Store = Self;
 
@@ -94,7 +94,7 @@ where
 pub struct WrapRowWrite<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     pub(crate) mat: &'a mut SMatrix<M, S>,
 }
@@ -102,7 +102,7 @@ where
 impl<'a, M, S> IndexExcl<usize> for WrapRowWrite<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     type Item = RowWrite<'a, M, S>;
 
@@ -114,7 +114,7 @@ where
 impl<'a, M, S> IndexLowerBound<usize> for WrapRowWrite<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         Some(idx)
@@ -124,7 +124,7 @@ where
 impl<'a, M, S> IntoJoin for WrapRowWrite<'a, M, S>
 where
     M: MatrixMask,
-    S: Store,
+    S: StoreMut,
 {
     type Store = Self;
 

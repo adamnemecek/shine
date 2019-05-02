@@ -1,6 +1,7 @@
 use crate::camera::Camera;
 use alga::linear::Similarity;
 use nalgebra::{Isometry3, Perspective3, Point3, Translation3, UnitQuaternion, Vector3};
+use shine_ecs::entities::es;
 
 /// First person camera
 pub struct FpsCamera {
@@ -177,4 +178,8 @@ impl Camera for FpsCamera {
     fn get_perspective(&self) -> Perspective3<f32> {
         self.perspective.clone()
     }
+}
+
+impl es::Component for FpsCamera {
+    type Store = es::HashStore<Self>;
 }

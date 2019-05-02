@@ -1,5 +1,5 @@
-use std::time::Duration;
 use shine_stdext::time::FrameTimer;
+use std::time::Duration;
 
 /// Common configuration for the logic frames
 pub struct FrameInfo {

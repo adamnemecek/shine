@@ -1,22 +1,15 @@
-mod edge;
-mod edgebuilder;
-mod edgecomponent;
 mod entity;
-mod entitybuilder;
-mod entitycomponent;
-mod join;
-
-#[doc(inline)]
-pub use self::edge::*;
-#[doc(inline)]
-pub use self::edgebuilder::*;
-#[doc(inline)]
-pub use self::edgecomponent::*;
 #[doc(inline)]
 pub use self::entity::*;
 #[doc(inline)]
-pub use self::entitybuilder::*;
+pub mod es;
+
+mod edge;
 #[doc(inline)]
-pub use self::entitycomponent::*;
+pub use self::edge::*;
+#[doc(inline)]
+pub mod ds;
+
+mod join;
 #[doc(inline)]
 pub use self::join::*;

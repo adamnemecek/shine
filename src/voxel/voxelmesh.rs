@@ -2,8 +2,8 @@ use crate::render::SimpleMeshData;
 use crate::render::{IntoMesh, MeshBuilder};
 use crate::voxel::VoxelCell;
 use rendy::mesh::PosNorm;
-use shine_ecs::entities::{EntityComponentStore, IntoJoinExt};
-use shine_ecs::shred::{Read, System, Write};
+use shine_ecs::entities::{es, IntoJoinExt};
+use shine_ecs::shred::System;
 use shine_math::voxel::polygonize::{Cubic, Mesh as VoxelMesh, Polygonizer};
 use std::borrow::Cow;
 
@@ -28,10 +28,7 @@ impl IntoMesh for VoxelMesh {
 pub struct VoxelMeshSystem;
 
 impl<'a> System<'a> for VoxelMeshSystem {
-    type SystemData = (
-        Read<'a, EntityComponentStore<VoxelCell>>,
-        Write<'a, EntityComponentStore<SimpleMeshData>>,
-    );
+    type SystemData = (es::ReadComponents<'a, VoxelCell>, es::WriteComponents<'a, SimpleMeshData>);
 
     fn run(&mut self, data: Self::SystemData) {
         let (voxel, mut mesh) = data;

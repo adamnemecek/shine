@@ -3,12 +3,12 @@ use rand;
 use log::{debug, trace};
 use rand::Rng;
 
-use shine_graph::svec::{new_dvec, new_hvec, SVector, Store};
+use shine_graph::svec::{new_dvec, new_hvec, SVector, StoreMut};
 use shine_testutils::init_test;
 
 type Data = usize;
 
-fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
+fn test_simple_<S: StoreMut<Item = Data>>(mut vector: SVector<S>) {
     for i in 0..2 {
         debug!("pass: {}", i);
 
@@ -90,7 +90,7 @@ fn test_simple() {
     test_simple_(new_hvec());
 }
 
-fn test_stress_<S: Store<Item = Data>>(mut vector: SVector<S>, size: usize, cnt: usize) {
+fn test_stress_<S: StoreMut<Item = Data>>(mut vector: SVector<S>, size: usize, cnt: usize) {
     let mut vc = vec![0; size];
 
     let mut rng = rand::thread_rng();
@@ -127,7 +127,7 @@ fn test_stress() {
     }
 }
 
-fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
+fn test_data_iter_<S: StoreMut<Item = Data>>(mut vector: SVector<S>) {
     assert_eq!(vector.data_iter().next(), None);
 
     vector.add(14, 14);

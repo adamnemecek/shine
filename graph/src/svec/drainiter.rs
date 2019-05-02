@@ -1,11 +1,11 @@
 use crate::bits::BitIter;
-use crate::svec::{SVector, Store, VectorMask};
+use crate::svec::{SVector, StoreMut, VectorMask};
 use std::mem;
 
 /// Iterate over the non-zero (mutable) elements of a vector
 pub struct DrainIter<'a, S>
 where
-    S: Store,
+    S: StoreMut,
 {
     pub(crate) vec_ptr: *mut SVector<S>,
     pub(crate) iterator: BitIter<&'a VectorMask>,
@@ -14,7 +14,7 @@ where
 
 impl<'a, S> Iterator for DrainIter<'a, S>
 where
-    S: 'a + Store,
+    S: 'a + StoreMut,
 {
     type Item = (usize, &'a mut S::Item);
 
@@ -36,7 +36,7 @@ impl<'a> Iterator for DrainIter<'a, ()> {
 
 impl<'a, S> Drop for DrainIter<'a, S>
 where
-    S: 'a + Store,
+    S: 'a + StoreMut,
 {
     fn drop(&mut self) {
         let vec = unsafe { &mut *self.vec_ptr };

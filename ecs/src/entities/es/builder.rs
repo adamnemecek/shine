@@ -1,7 +1,7 @@
-use crate::entities::{Entity, EntityComponent};
+use crate::entities::{es, Entity};
 use crate::world::EntityWorld;
 
-pub struct EntityBuilder<'a, W>
+pub struct Builder<'a, W>
 where
     W: EntityWorld,
 {
@@ -9,18 +9,18 @@ where
     world: &'a mut W,
 }
 
-impl<'a, W> EntityBuilder<'a, W>
+impl<'a, W> Builder<'a, W>
 where
     W: EntityWorld,
 {
-    pub fn new(world: &mut W) -> EntityBuilder<'_, W> {
+    pub fn new(world: &mut W) -> Builder<'_, W> {
         let entity = world.entities_mut().create();
-        EntityBuilder { world, entity }
+        Builder { world, entity }
     }
 
     pub fn with<T>(&mut self, component: T) -> &mut Self
     where
-        T: 'static + EntityComponent,
+        T: 'static + es::Component,
     {
         {
             let mut store = self.world.entity_components_mut::<T>();

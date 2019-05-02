@@ -2,12 +2,12 @@ use rand;
 
 use log::{debug, trace};
 use rand::Rng;
-use shine_graph::smat::{new_amat, new_dmat, MatrixMask, SMatrix, Store};
+use shine_graph::smat::{new_amat, new_dmat, MatrixMask, SMatrix, StoreMut};
 use shine_testutils::init_test;
 
 type Data = (usize, usize);
 
-fn test_simple_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
+fn test_simple_<M: MatrixMask, S: StoreMut<Item = Data>>(mut matrix: SMatrix<M, S>) {
     for i in 0..2 {
         debug!("pass: {}", i);
 
@@ -74,7 +74,7 @@ fn test_simple() {
     test_simple_(new_amat::<Data>());
 }
 
-fn test_stress_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>, size: usize, cnt: usize) {
+fn test_stress_<M: MatrixMask, S: StoreMut<Item = Data>>(mut matrix: SMatrix<M, S>, size: usize, cnt: usize) {
     let mut mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
@@ -117,7 +117,7 @@ fn test_stress() {
     }
 }
 
-fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
+fn test_data_iter_<M: MatrixMask, S: StoreMut<Item = Data>>(mut matrix: SMatrix<M, S>) {
     assert_eq!(matrix.data_iter().next(), None);
 
     matrix.add(14, 8, (14, 8));

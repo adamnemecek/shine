@@ -21,7 +21,7 @@ impl FrameInfo {
 
     pub fn start_logic(&mut self, world_frame_length: Duration) {
         self.logic_frame_id += 1;
-        self.logic_timer.start_logic(world_frame_length);        
+        self.logic_timer.start_logic(world_frame_length);
     }
 
     pub fn start_frame(&mut self) {

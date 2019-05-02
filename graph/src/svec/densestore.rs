@@ -1,4 +1,4 @@
-use crate::svec::Store;
+use crate::svec::{Store, StoreMut};
 use std::mem;
 
 pub struct DenseStore<T> {
@@ -26,6 +26,12 @@ impl<T> Default for DenseStore<T> {
 impl<T> Store for DenseStore<T> {
     type Item = T;
 
+    fn get(&self, idx: usize) -> &Self::Item {
+        self.values[idx].as_ref().unwrap()
+    }
+}
+
+impl<T> StoreMut for DenseStore<T> {
     fn clear(&mut self) {
         for v in &mut self.values {
             *v = None;
@@ -45,10 +51,6 @@ impl<T> Store for DenseStore<T> {
 
     fn replace(&mut self, idx: usize, value: Self::Item) -> Self::Item {
         mem::replace(&mut self.values[idx], Some(value)).unwrap()
-    }
-
-    fn get(&self, idx: usize) -> &Self::Item {
-        self.values[idx].as_ref().unwrap()
     }
 
     fn get_mut(&mut self, idx: usize) -> &mut Self::Item {

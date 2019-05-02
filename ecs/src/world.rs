@@ -1,7 +1,4 @@
-use crate::entities::{
-    Edge, EdgeBuilder, EdgeComponent, EdgeComponentStore, Entity, EntityBuilder, EntityComponent, EntityComponentStore,
-    EntityStore,
-};
+use crate::entities::{ds, es, Edge, Entity, EntityStore};
 use crate::resources::{named, unnamed};
 use shred::{self, Dispatcher, Fetch, FetchMut};
 
@@ -9,26 +6,26 @@ pub trait EntityWorld {
     fn entities(&self) -> Fetch<'_, EntityStore>;
     fn entities_mut(&self) -> FetchMut<'_, EntityStore>;
 
-    fn register_entity_component<C: EntityComponent>(&mut self);
-    fn entity_components<C: EntityComponent>(&self) -> Fetch<'_, EntityComponentStore<C>>;
-    fn entity_components_mut<C: EntityComponent>(&self) -> FetchMut<'_, EntityComponentStore<C>>;
+    fn register_entity_component<C: es::Component>(&mut self);
+    fn entity_components<C: es::Component>(&self) -> Fetch<'_, es::ComponentStore<C>>;
+    fn entity_components_mut<C: es::Component>(&self) -> FetchMut<'_, es::ComponentStore<C>>;
 
-    fn register_edge_component<C: EdgeComponent>(&mut self);
-    fn edge_components<C: EdgeComponent>(&self) -> Fetch<'_, EdgeComponentStore<C>>;
-    fn edge_components_mut<C: EdgeComponent>(&self) -> FetchMut<'_, EdgeComponentStore<C>>;
+    fn register_edge_component<C: ds::Component>(&mut self);
+    fn edge_components<C: ds::Component>(&self) -> Fetch<'_, ds::ComponentStore<C>>;
+    fn edge_components_mut<C: ds::Component>(&self) -> FetchMut<'_, ds::ComponentStore<C>>;
 
-    fn create_entity(&mut self) -> EntityBuilder<'_, Self>
+    fn create_entity(&mut self) -> es::Builder<'_, Self>
     where
         Self: Sized,
     {
-        EntityBuilder::new(self)
+        es::Builder::new(self)
     }
 
-    fn create_edge(&mut self, edge: Edge) -> EdgeBuilder<'_, Self>
+    fn create_edge(&mut self, edge: Edge) -> ds::Builder<'_, Self>
     where
         Self: Sized,
     {
-        EdgeBuilder::new(self, edge)
+        ds::Builder::new(self, edge)
     }
 
     /// Synchronize the entities of this world to another based on the latest change.
@@ -133,27 +130,27 @@ impl EntityWorld for World {
         self.world.fetch_mut()
     }
 
-    fn register_entity_component<C: EntityComponent>(&mut self) {
-        self.world.insert::<EntityComponentStore<C>>(Default::default());
+    fn register_entity_component<C: es::Component>(&mut self) {
+        self.world.insert::<es::ComponentStore<C>>(Default::default());
     }
 
-    fn entity_components<C: EntityComponent>(&self) -> Fetch<'_, EntityComponentStore<C>> {
+    fn entity_components<C: es::Component>(&self) -> Fetch<'_, es::ComponentStore<C>> {
         self.world.fetch()
     }
 
-    fn entity_components_mut<C: EntityComponent>(&self) -> FetchMut<'_, EntityComponentStore<C>> {
+    fn entity_components_mut<C: es::Component>(&self) -> FetchMut<'_, es::ComponentStore<C>> {
         self.world.fetch_mut()
     }
 
-    fn register_edge_component<C: EdgeComponent>(&mut self) {
-        self.world.insert::<EdgeComponentStore<C>>(Default::default());
+    fn register_edge_component<C: ds::Component>(&mut self) {
+        self.world.insert::<ds::ComponentStore<C>>(Default::default());
     }
 
-    fn edge_components<C: EdgeComponent>(&self) -> Fetch<'_, EdgeComponentStore<C>> {
+    fn edge_components<C: ds::Component>(&self) -> Fetch<'_, ds::ComponentStore<C>> {
         self.world.fetch()
     }
 
-    fn edge_components_mut<C: EdgeComponent>(&self) -> FetchMut<'_, EdgeComponentStore<C>> {
+    fn edge_components_mut<C: ds::Component>(&self) -> FetchMut<'_, ds::ComponentStore<C>> {
         self.world.fetch_mut()
     }
 }

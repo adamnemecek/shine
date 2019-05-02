@@ -1,10 +1,10 @@
-use crate::svec::{SVector, Store};
+use crate::svec::{SVector, StoreMut};
 use std::fmt::{self, Debug, Formatter};
 
 /// Entry to a slot in a sparse vector.
 pub struct Entry<'a, S>
 where
-    S: Store,
+    S: StoreMut,
 {
     idx: usize,
     data: Option<*mut S::Item>,
@@ -13,7 +13,7 @@ where
 
 impl<'a, S> Entry<'a, S>
 where
-    S: 'a + Store,
+    S: 'a + StoreMut,
 {
     pub(crate) fn new<'b>(store: &'b mut SVector<S>, idx: usize) -> Entry<'b, S> {
         Entry {
@@ -63,7 +63,7 @@ where
 impl<'a, I, S> Entry<'a, S>
 where
     I: Default,
-    S: 'a + Store<Item = I>,
+    S: 'a + StoreMut<Item = I>,
 {
     /// Get the mutable non-zero data at the given slot or creates a new item if the entry is vacant.
     pub fn get_or_default(&mut self) -> &mut S::Item {
@@ -74,7 +74,7 @@ where
 impl<'a, I, S> Debug for Entry<'a, S>
 where
     I: Debug,
-    S: 'a + Store<Item = I>,
+    S: 'a + StoreMut<Item = I>,
 {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{:?}", self.get())

@@ -1,4 +1,4 @@
-use crate::svec::Store;
+use crate::svec::{Store, StoreMut};
 use std::collections::HashMap;
 
 pub struct HashStore<T> {
@@ -26,6 +26,13 @@ impl<T> Default for HashStore<T> {
 impl<T> Store for HashStore<T> {
     type Item = T;
 
+    fn get(&self, idx: usize) -> &Self::Item {
+        #[allow(clippy::get_unwrap)]
+        &self.values[&idx]
+    }
+}
+
+impl<T> StoreMut for HashStore<T> {
     fn clear(&mut self) {
         self.values.clear();
     }
@@ -40,11 +47,6 @@ impl<T> Store for HashStore<T> {
 
     fn replace(&mut self, idx: usize, value: Self::Item) -> Self::Item {
         self.values.insert(idx, value).unwrap()
-    }
-
-    fn get(&self, idx: usize) -> &Self::Item {
-        #[allow(clippy::get_unwrap)]
-        &self.values[&idx]
     }
 
     fn get_mut(&mut self, idx: usize) -> &mut Self::Item {

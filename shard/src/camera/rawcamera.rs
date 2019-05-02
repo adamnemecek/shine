@@ -1,5 +1,6 @@
 use crate::camera::Camera;
 use nalgebra::{Isometry3, Perspective3};
+use shine_ecs::entities::es;
 
 /// Raw camera
 pub struct RawCamera {
@@ -51,4 +52,8 @@ impl Camera for RawCamera {
     fn get_perspective(&self) -> Perspective3<f32> {
         self.perspective.clone()
     }
+}
+
+impl es::Component for RawCamera {
+    type Store = es::HashStore<Self>;
 }

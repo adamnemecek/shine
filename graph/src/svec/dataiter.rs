@@ -1,5 +1,5 @@
 use crate::bits::BitIter;
-use crate::svec::{Store, VectorMask};
+use crate::svec::{Store, StoreMut, VectorMask};
 use std::mem;
 
 /// Iterate over the non-zero (non-mutable) elements of a vector
@@ -25,7 +25,7 @@ where
 /// Iterate over the non-zero (mutable) elements of a vector
 pub struct DataIterMut<'a, S>
 where
-    S: Store,
+    S: StoreMut,
 {
     pub(crate) iterator: BitIter<&'a VectorMask>,
     pub(crate) store: &'a mut S,
@@ -33,7 +33,7 @@ where
 
 impl<'a, S> Iterator for DataIterMut<'a, S>
 where
-    S: 'a + Store,
+    S: 'a + StoreMut,
 {
     type Item = &'a mut S::Item;
 

@@ -9,8 +9,8 @@ use shine_stdext::time::{FrameLimit, FrameLimiter};
 use std::env;
 use std::sync::{Arc, Weak};
 use std::time::Duration;
-use winit::{EventsLoop, WindowBuilder};
 use std::time::Instant;
+use winit::{EventsLoop, WindowBuilder};
 
 mod app;
 mod demo;
@@ -43,14 +43,13 @@ fn logic<A: App>(app: &A, app_logic: &RwLock<AppLogic>, app_render: &RwLock<AppR
     let mut app = app.create_logic_handler();
 
     while stop_signal.upgrade().is_some() {
-
         let start = Instant::now();
         let world_frame_length = {
             log::info!("logic update");
             frame_limiter.start();
             let mut app_logic = app_logic.write();
             let logic_world = &mut app_logic.world;
-            
+
             logic_world.resource_mut::<logic::FrameInfo>().start_frame();
             app.update(logic_world);
             let world_frame_length = logic_world.resource::<logic::FrameInfo>().world_frame_length;
@@ -60,7 +59,7 @@ fn logic<A: App>(app: &A, app_logic: &RwLock<AppLogic>, app_render: &RwLock<AppR
             world_frame_length
         };
         log::info!("logic update duration: {:?} {:?}", start.elapsed(), world_frame_length);
-        
+
         {
             log::info!("sync render to logic");
             let mut app_logic = app_logic.write();
@@ -69,7 +68,9 @@ fn logic<A: App>(app: &A, app_logic: &RwLock<AppLogic>, app_render: &RwLock<AppR
             let logic_world = &mut app_logic.world;
             let render_world = &mut app_render.world;
 
-            render_world.resource_mut::<render::FrameInfo>().start_logic(world_frame_length);
+            render_world
+                .resource_mut::<render::FrameInfo>()
+                .start_logic(world_frame_length);
             app.sync(logic_world, &mut *render_world);
 
             RwLockWriteGuard::unlock_fair(app_render);
@@ -143,7 +144,7 @@ fn render<A: App>(app: &A, app_render: &RwLock<AppRender>, mut stop_signal: Opti
     let (mut factory, mut families): (Factory<render::Backend>, _) = rendy::factory::init(config).unwrap();
     let mut graph: Option<render::Graph> = None;
 
-    let mut app = app.create_render_handler();    
+    let mut app = app.create_render_handler();
     let mut frame_limiter = FrameLimiter::new();
 
     loop {

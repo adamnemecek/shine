@@ -1,4 +1,4 @@
-use shine_ecs::entities::{es, EntityComponent};
+use shine_ecs::entities::es;
 use shine_math::voxel::{
     implicit::{Function, ImplicitCell},
     Cell, ConstantCell,
@@ -11,7 +11,7 @@ pub struct VoxelCell {
 unsafe impl Sync for VoxelCell {}
 unsafe impl Send for VoxelCell {}
 
-impl EntityComponent for VoxelCell {
+impl es::Component for VoxelCell {
     type Store = es::HashStore<Self>;
 }
 

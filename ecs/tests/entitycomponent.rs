@@ -1,6 +1,6 @@
 #![feature(custom_attribute)]
 
-use shine_ecs::entities::{es, Entity, EntityComponent, IntoJoinExt};
+use shine_ecs::entities::{es, Entity, IntoJoinExt};
 use shine_ecs::world::{EntityWorld, World};
 use shine_testutils::init_test;
 
@@ -10,7 +10,7 @@ struct Pos {
     y: i32,
     z: i32,
 }
-impl EntityComponent for Pos {
+impl es::Component for Pos {
     type Store = es::DenseStore<Self>;
 }
 
@@ -20,7 +20,7 @@ struct Velocity {
     y: i32,
     z: i32,
 }
-impl EntityComponent for Velocity {
+impl es::Component for Velocity {
     type Store = es::HashStore<Self>;
 }
 
