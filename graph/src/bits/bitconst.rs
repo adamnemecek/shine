@@ -1,6 +1,5 @@
+use crate::bits::{BitBlock, BitSetView, MAX_LEVEL};
 use std::marker::PhantomData;
-
-use bits::{BitBlock, BitSetView, MAX_LEVEL};
 
 pub struct BitSetTrue<B: BitBlock>(PhantomData<B>);
 

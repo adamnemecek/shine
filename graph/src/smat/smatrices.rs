@@ -1,4 +1,4 @@
-use smat::{ArenaStore, CSMatrixMask, DenseStore, HCSMatrixMask, SMatrix, UnitStore};
+use crate::smat::{ArenaStore, CSMatrixMask, DenseStore, HCSMatrixMask, SMatrix, UnitStore};
 
 pub type SDMatrix<T> = SMatrix<CSMatrixMask, DenseStore<T>>;
 pub fn new_dmat<T>() -> SDMatrix<T> {

@@ -1,15 +1,15 @@
-use bits::BitSetViewExt;
-use join::{IntoJoin, Join};
+use crate::bits::BitSetViewExt;
+use crate::join::{IntoJoin, Join};
+use crate::svec::{Entry, SVector, Store, StoreMut};
+use crate::traits::{IndexExcl, IndexLowerBound};
 use std::mem;
-use svec::{Entry, SVector, Store};
-use traits::{IndexExcl, IndexLowerBound};
 
 /// Wrapper to allow immutable access to the elments of an SVector in join and merge oprations.
 pub struct WrapRead<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
-    crate vec: &'a SVector<S>,
+    pub(crate) vec: &'a SVector<S>,
 }
 
 impl<'a, S> IndexExcl<usize> for WrapRead<'a, S>
@@ -46,14 +46,14 @@ where
 /// Wrapper to allow mutable access to the elments of an SVector in join and merge oprations.
 pub struct WrapUpdate<'a, S>
 where
-    S: 'a + Store,
+    S: StoreMut,
 {
-    crate vec: &'a mut SVector<S>,
+    pub(crate) vec: &'a mut SVector<S>,
 }
 
 impl<'a, S> IndexExcl<usize> for WrapUpdate<'a, S>
 where
-    S: Store,
+    S: StoreMut,
 {
     type Item = &'a mut S::Item;
 
@@ -64,7 +64,7 @@ where
 
 impl<'a, S> IndexLowerBound<usize> for WrapUpdate<'a, S>
 where
-    S: Store,
+    S: StoreMut,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         self.vec.mask.lower_bound(idx)
@@ -73,7 +73,7 @@ where
 
 impl<'a, S> IntoJoin for WrapUpdate<'a, S>
 where
-    S: 'a + Store,
+    S: StoreMut,
 {
     type Store = Self;
 
@@ -85,14 +85,14 @@ where
 /// Wrapper to allow Entry based access to the elments of an SVector in join and merge oprations.
 pub struct WrapWrite<'a, S>
 where
-    S: 'a + Store,
+    S: StoreMut,
 {
-    crate vec: &'a mut SVector<S>,
+    pub(crate) vec: &'a mut SVector<S>,
 }
 
 impl<'a, S> IndexExcl<usize> for WrapWrite<'a, S>
 where
-    S: Store,
+    S: StoreMut,
 {
     type Item = Entry<'a, S>;
 
@@ -103,7 +103,7 @@ where
 
 impl<'a, S> IndexLowerBound<usize> for WrapWrite<'a, S>
 where
-    S: Store,
+    S: StoreMut,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         Some(idx)
@@ -112,7 +112,7 @@ where
 
 impl<'a, S> IntoJoin for WrapWrite<'a, S>
 where
-    S: 'a + Store,
+    S: 'a + StoreMut,
 {
     type Store = Self;
 

@@ -1,16 +1,17 @@
 [package]
 name = "shine-graph-macro"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "SHINE. Graph and sparse matrix macro-module for the shine engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["graph", "matrix", "spares"]
+edition = "2018"
 
 [lib]
 proc-macro = true
 
 [dependencies]
-proc-macro2 = "0.4.19"
-syn = {version = "0.15.6", features = ["full"] }
-quote = "0.6.8"
+proc-macro2 = "0.4"
+syn = {version = "0.15", features = ["full"] }
+quote = "0.6"

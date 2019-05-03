@@ -1,4 +1,4 @@
-use bits::{bitconst, BitSet};
+use crate::bits::{bitconst, BitSet};
 
 /// TODO: banchmark and select the optimal.
 pub type VectorMaskBlock = u32;

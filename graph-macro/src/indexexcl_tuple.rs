@@ -1,8 +1,8 @@
-use proc_macro;
 use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use syn::parse::Parser;
 use syn::punctuated::Punctuated;
-use syn::{Ident, IntSuffix, LitInt};
+use syn::{Ident, IntSuffix, LitInt, Token};
 
 fn impl_indexexcl_for_tuple(count: usize) -> TokenStream {
     let generics: Vec<_> = (0..count)
@@ -15,7 +15,7 @@ fn impl_indexexcl_for_tuple(count: usize) -> TokenStream {
         .collect();
     let index = &index;
 
-    let type_impl = quote!{
+    let type_impl = quote! {
         /// Implement IndexExcl for tuple of IndexExcl
         /// The Item is a tuple of the Items made of the Items of the underlying InexExcl
         impl<I, #(#generics),*> IndexExcl<I> for (#(#generics,)*)
@@ -47,5 +47,5 @@ pub fn impl_indexexcl_for_indexexcl_tuple(input: proc_macro::TokenStream) -> Res
         gen.push(tuple_impl);
     }
 
-    Ok(quote!{#(#gen)*})
+    Ok(quote! {#(#gen)*})
 }

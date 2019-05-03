@@ -1,18 +1,13 @@
-extern crate shine_graph;
-extern crate shine_testutils;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-extern crate rand;
+use rand;
 
+use log::{debug, trace};
 use rand::Rng;
-
-use shine_graph::smat::*;
-use shine_testutils::*;
+use shine_graph::smat::{new_amat, new_dmat, MatrixMask, SMatrix, StoreMut};
+use shine_testutils::init_test;
 
 type Data = (usize, usize);
 
-fn test_simple_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
+fn test_simple_<M: MatrixMask, S: StoreMut<Item = Data>>(mut matrix: SMatrix<M, S>) {
     for i in 0..2 {
         debug!("pass: {}", i);
 
@@ -71,7 +66,7 @@ fn test_simple_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>)
 
 #[test]
 fn test_simple() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SparseDMatrix");
     test_simple_(new_dmat::<Data>());
@@ -79,7 +74,7 @@ fn test_simple() {
     test_simple_(new_amat::<Data>());
 }
 
-fn test_stress_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>, size: usize, cnt: usize) {
+fn test_stress_<M: MatrixMask, S: StoreMut<Item = Data>>(mut matrix: SMatrix<M, S>, size: usize, cnt: usize) {
     let mut mx = vec![vec![0; size]; size];
 
     let mut rng = rand::thread_rng();
@@ -109,7 +104,7 @@ fn test_stress_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>,
 
 #[test]
 fn test_stress() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SparseDMatrix - big");
     test_stress_(new_dmat::<Data>(), 1024, 100000);
@@ -122,7 +117,7 @@ fn test_stress() {
     }
 }
 
-fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, S>) {
+fn test_data_iter_<M: MatrixMask, S: StoreMut<Item = Data>>(mut matrix: SMatrix<M, S>) {
     assert_eq!(matrix.data_iter().next(), None);
 
     matrix.add(14, 8, (14, 8));
@@ -162,7 +157,7 @@ fn test_data_iter_<M: MatrixMask, S: Store<Item = Data>>(mut matrix: SMatrix<M, 
 
 #[test]
 fn test_data_iter() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SparseDMatrix/CSMatrix");
     test_data_iter_(new_dmat::<Data>());

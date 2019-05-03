@@ -1,4 +1,4 @@
-use svec::{DenseStore, HashStore, SVector, UnitStore, VectorMask};
+use crate::svec::{DenseStore, HashStore, SVector, UnitStore, VectorMask};
 
 pub type SDVector<T> = SVector<DenseStore<T>>;
 pub fn new_dvec<T>() -> SDVector<T> {

@@ -1,9 +1,9 @@
-use bits::BitSetViewExt;
-use smat::{
-    DataIter, DataIterMut, DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, RowRead, RowUpdate, RowWrite,
-    Store, WrapRowRead, WrapRowUpdate, WrapRowWrite,
+use crate::bits::BitSetViewExt;
+use crate::smat::{
+    DataIter, DataIterMut, DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, RowRead, RowUpdate, RowWrite, Store,
+    StoreMut, WrapRowRead, WrapRowUpdate, WrapRowWrite,
 };
-use svec::VectorMask;
+use crate::svec::VectorMask;
 
 /// Sparse (Square) Row matrix
 pub struct SMatrix<M, S>
@@ -11,10 +11,10 @@ where
     M: MatrixMask,
     S: Store,
 {
-    crate nnz: usize,
-    crate row_mask: VectorMask,
-    crate mask: M,
-    crate store: S,
+    pub(crate) nnz: usize,
+    pub(crate) row_mask: VectorMask,
+    pub(crate) mask: M,
+    pub(crate) store: S,
 }
 
 impl<M, S> SMatrix<M, S>
@@ -39,6 +39,54 @@ where
         self.row_mask.capacity()
     }
 
+    pub fn contains(&self, r: usize, c: usize) -> bool {
+        self.row_mask.get(r) && self.mask.get_data_position(r, c).is_some()
+    }
+
+    pub fn get(&self, r: usize, c: usize) -> Option<&S::Item> {
+        if !self.row_mask.get(r) {
+            None
+        } else {
+            match self.mask.get_data_position(r, c) {
+                Some(DataPosition(pos)) => Some(self.store.get(pos)),
+                None => None,
+            }
+        }
+    }
+
+    pub fn data_iter(&self) -> DataIter<'_, S> {
+        DataIter::new(0..self.nnz(), &self.store)
+    }
+
+    pub fn read(&self) -> WrapRowRead<'_, M, S> {
+        WrapRowRead { mat: self }
+    }
+
+    pub fn read_row(&self, r: usize) -> RowRead<'_, M, S> {
+        let data_range = self.mask.get_data_range(r);
+        RowRead {
+            mask: &self.mask,
+            store: &self.store,
+            data_range,
+        }
+    }
+}
+
+impl<M, S> Default for SMatrix<M, S>
+where
+    M: Default + MatrixMask,
+    S: Default + Store,
+{
+    fn default() -> SMatrix<M, S> {
+        SMatrix::new(Default::default(), Default::default())
+    }
+}
+
+impl<M, S> SMatrix<M, S>
+where
+    M: MatrixMask,
+    S: StoreMut,
+{
     pub fn clear(&mut self) {
         self.mask.clear();
         self.store.clear();
@@ -75,19 +123,8 @@ where
         }
     }
 
-    pub fn contains(&self, r: usize, c: usize) -> bool {
-        self.row_mask.get(r) && self.mask.get_data_position(r, c).is_some()
-    }
-
-    pub fn get(&self, r: usize, c: usize) -> Option<&S::Item> {
-        if !self.row_mask.get(r) {
-            None
-        } else {
-            match self.mask.get_data_position(r, c) {
-                Some(DataPosition(pos)) => Some(self.store.get(pos)),
-                None => None,
-            }
-        }
+    pub fn get_entry(&mut self, r: usize, c: usize) -> Entry<'_, M, S> {
+        Entry::new(self, r, c)
     }
 
     pub fn get_mut(&mut self, r: usize, c: usize) -> Option<&mut S::Item> {
@@ -101,40 +138,19 @@ where
         }
     }
 
-    pub fn get_entry(&mut self, r: usize, c: usize) -> Entry<M, S> {
-        Entry::new(self, r, c)
-    }
-
-    pub fn data_iter(&self) -> DataIter<S> {
-        DataIter::new(0..self.nnz(), &self.store)
-    }
-
-    pub fn data_iter_mut(&mut self) -> DataIterMut<S> {
+    pub fn data_iter_mut(&mut self) -> DataIterMut<'_, S> {
         DataIterMut::new(0..self.nnz(), &mut self.store)
     }
 
-    pub fn read(&self) -> WrapRowRead<M, S> {
-        WrapRowRead { mat: self }
-    }
-
-    pub fn update(&mut self) -> WrapRowUpdate<M, S> {
+    pub fn update(&mut self) -> WrapRowUpdate<'_, M, S> {
         WrapRowUpdate { mat: self }
     }
 
-    pub fn write(&mut self) -> WrapRowWrite<M, S> {
+    pub fn write(&mut self) -> WrapRowWrite<'_, M, S> {
         WrapRowWrite { mat: self }
     }
 
-    pub fn read_row(&self, r: usize) -> RowRead<M, S> {
-        let data_range = self.mask.get_data_range(r);
-        RowRead {
-            mask: &self.mask,
-            store: &self.store,
-            data_range,
-        }
-    }
-
-    pub fn update_row(&mut self, r: usize) -> RowUpdate<M, S> {
+    pub fn update_row(&mut self, r: usize) -> RowUpdate<'_, M, S> {
         let data_range = self.mask.get_data_range(r);
         RowUpdate {
             mask: &self.mask,
@@ -143,7 +159,7 @@ where
         }
     }
 
-    pub fn write_row(&mut self, r: usize) -> RowWrite<M, S> {
+    pub fn write_row(&mut self, r: usize) -> RowWrite<'_, M, S> {
         RowWrite { row: r, mat: self }
     }
 }
@@ -152,19 +168,9 @@ impl<T, M, S> SMatrix<M, S>
 where
     T: Default,
     M: MatrixMask,
-    S: Store<Item = T>,
+    S: StoreMut<Item = T>,
 {
     pub fn add_default(&mut self, r: usize, c: usize) -> Option<S::Item> {
         self.add_with(r, c, Default::default)
-    }
-}
-
-impl<M, S> Default for SMatrix<M, S>
-where
-    M: Default + MatrixMask,
-    S: Default + Store,
-{
-    fn default() -> SMatrix<M, S> {
-        SMatrix::new(Default::default(), Default::default())
     }
 }

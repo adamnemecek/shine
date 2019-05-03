@@ -1,6 +1,5 @@
+use crate::smat::{Store, StoreMut};
 use std::mem;
-
-use smat::Store;
 
 pub struct DenseStore<T> {
     values: Vec<T>,
@@ -26,7 +25,12 @@ impl<T> Default for DenseStore<T> {
 
 impl<T> Store for DenseStore<T> {
     type Item = T;
+    fn get(&self, idx: usize) -> &Self::Item {
+        &self.values[idx]
+    }
+}
 
+impl<T> StoreMut for DenseStore<T> {
     fn clear(&mut self) {
         self.values.clear();
     }
@@ -41,10 +45,6 @@ impl<T> Store for DenseStore<T> {
 
     fn replace(&mut self, idx: usize, value: Self::Item) -> Self::Item {
         mem::replace(&mut self.values[idx], value)
-    }
-
-    fn get(&self, idx: usize) -> &Self::Item {
-        &self.values[idx]
     }
 
     fn get_mut(&mut self, idx: usize) -> &mut Self::Item {

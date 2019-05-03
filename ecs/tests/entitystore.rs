@@ -1,13 +1,9 @@
-extern crate env_logger;
-extern crate shine_ecs as ecs;
-extern crate shine_testutils;
-
-use ecs::*;
-use shine_testutils::*;
+use shine_ecs::entities::EntityStore;
+use shine_testutils::init_test;
 
 #[test]
 fn entity_create() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut store = EntityStore::new();
     let e0 = store.create();
@@ -18,7 +14,7 @@ fn entity_create() {
     assert_eq!(e1.id(), 1);
     assert_eq!(e2.id(), 2);
 
-    store.release(e1);
+    store.destroy(e1);
     assert_eq!(store.len(), 2);
     drop(store.drain_killed());
     assert_eq!(store.len(), 2);
@@ -33,10 +29,10 @@ fn entity_create() {
     let _ = store.drain_raised();
     assert_eq!(store.len(), 4);
 
-    store.release(e3);
-    store.release(e1);
-    store.release(e2);
-    store.release(e0);
+    store.destroy(e3);
+    store.destroy(e1);
+    store.destroy(e2);
+    store.destroy(e0);
     let _ = store.drain_killed();
     assert_eq!(store.len(), 0);
 

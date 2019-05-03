@@ -1,18 +1,13 @@
-extern crate shine_graph;
-extern crate shine_testutils;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-extern crate rand;
+use log::debug;
 
-use shine_graph::join::*;
-use shine_graph::smat::*;
-use shine_graph::svec::*;
-use shine_testutils::*;
+use shine_graph::join::IntoJoinExt;
+use shine_graph::smat::new_amat;
+use shine_graph::svec::new_dvec;
+use shine_testutils::init_test;
 
 #[test]
 fn test_vec_mat_join() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut v1 = new_dvec::<usize>();
     let mut v2 = new_dvec::<usize>();
@@ -107,7 +102,8 @@ fn test_vec_mat_join() {
         });
         s = format!("{}, ({})", s, s2);
     });
-    assert_eq!(s,
+    assert_eq!(
+        s,
         ", (, (3,4, 3 -> 35), (3,5, 3 -> 36), (3,6, 3 -> 37)), (, (14,14, 14 -> 1414), (14,17, 14 -> 1417)), (, (17,1, 17 -> 172), (17,7, 17 -> 178))"
     );
 
@@ -121,7 +117,8 @@ fn test_vec_mat_join() {
         });
         s = format!("{}, ({})", s, s2);
     });
-    assert_eq!(s,
+    assert_eq!(
+        s,
         ", (, (3,4, 3 -> 36), (3,5, 3 -> 37), (3,6, 3 -> 38)), (, (14,14, 14 -> 1415), (14,17, 14 -> 1418)), (, (17,1, 17 -> 173), (17,7, 17 -> 179))"
     );
 
@@ -135,7 +132,8 @@ fn test_vec_mat_join() {
         });
         s = format!("{}, ({})", s, s2);
     });
-    assert_eq!(s,
+    assert_eq!(
+        s,
         ", (, (3,4, 4 -> 36), (3,5, 5 -> 37), (3,6, 6 -> 38)), (, (14,14, 15 -> 1415), (14,17, 16 -> 1418)), (, (17,1, 18 -> 173), (17,7, 19 -> 179))"
     );
 
@@ -164,10 +162,11 @@ fn test_vec_mat_join() {
         s = format!("{}, ({})", s, s2);
         id1 < 3
     });
-    assert_eq!(s,
+    assert_eq!(
+        s,
         ", (, (0,0, None -> None), (0,1, None -> None), (0,2, None -> None), (0,3, None -> None), (0,4, None -> None), (0,5, None -> None))\
-        , (, (1,0, None -> None), (1,1, None -> None), (1,2, None -> None), (1,3, None -> None), (1,4, None -> None), (1,5, None -> None))\
-        , (, (2,0, None -> None), (2,1, None -> None), (2,2, None -> None), (2,3, None -> None), (2,4, None -> None), (2,5, None -> None))\
-        , (, (3,0, Some(6) -> None), (3,1, Some(6) -> None), (3,2, Some(6) -> None), (3,3, Some(6) -> None), (3,4, Some(6) -> Some(36)), (3,5, Some(6) -> Some(37)))"
+         , (, (1,0, None -> None), (1,1, None -> None), (1,2, None -> None), (1,3, None -> None), (1,4, None -> None), (1,5, None -> None))\
+         , (, (2,0, None -> None), (2,1, None -> None), (2,2, None -> None), (2,3, None -> None), (2,4, None -> None), (2,5, None -> None))\
+         , (, (3,0, Some(6) -> None), (3,1, Some(6) -> None), (3,2, Some(6) -> None), (3,3, Some(6) -> None), (3,4, Some(6) -> Some(36)), (3,5, Some(6) -> Some(37)))"
     );
 }

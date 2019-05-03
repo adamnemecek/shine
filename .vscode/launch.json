@@ -5,13 +5,9 @@
             "name": "(Windows) Launch",
             "type": "cppvsdbg",
             "request": "launch",
-            //"program": "${workspaceRoot}/target/debug/${workspaceRootFolderName}",
-            "program": "${workspaceRoot}/target/debug/deps/bitset-c3dc8ee09697867d.exe",
-            "args": [
-                "--nocapture"
-            ],
+            "preLaunchTask": "build",
+            "program": "${workspaceRoot}/target/debug/${workspaceRootFolderName}",
             "stopAtEntry": false,
-            "cwd": "${workspaceFolder}",
             "externalConsole": true
         }
     ]

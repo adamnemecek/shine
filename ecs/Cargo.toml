@@ -1,20 +1,23 @@
 [package]
 name = "shine-ecs"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "SHINE. Entity component system for the shine engine."
 repository = "https://github.com/zpgaal/shine"
 keywords = ["shine", "render", "opengl", "game"]
+edition = "2018"
 
 [dependencies]
-log = "0.4.5"
-shred = "0.7.0"
-itertools = "0.7.8"
+log = "0.4"
+shred = { version = "0.8", features = ["nightly"]}
+itertools = "0.8"
 
-shine-graph = {path = "../graph", version = "0.1.0"}
-shine-store = {path = "../store", version = "0.2.0"}
+shine-graph = {path = "../graph"}
+shine-stdext = {path = "../stdext"}
+shine-ecs-macro = {path = "../ecs-macro"}
 
 [dev-dependencies]
-env_logger = "0.5.13"
-shine-testutils = {path = "../testutils", version = "0.1.0"}
+env_logger = "0.6"
+shine-testutils = {path = "../testutils"}
+

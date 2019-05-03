@@ -1,10 +1,9 @@
-#[macro_use]
-extern crate log;
-extern crate shine_ecs as ecs;
-extern crate shine_testutils;
+#![feature(custom_attribute)]
 
-use ecs::*;
-use shine_testutils::*;
+use log::{debug, trace};
+use shine_ecs::entities::{ds, es, Edge, Entity, IntoJoinExt};
+use shine_ecs::world::{EntityWorld, World};
+use shine_testutils::init_test;
 
 #[derive(Debug, PartialEq)]
 struct Force {
@@ -12,43 +11,46 @@ struct Force {
     y: i32,
     z: i32,
 }
-impl EntityComponent for Force {
-    type StorageCategory = DenseStorage;
+impl es::Component for Force {
+    type Store = es::DenseStore<Self>;
 }
 
 #[derive(Debug, PartialEq)]
+//#[derive(EntityComponent<DenseStore>)]
 struct Acceleration {
     x: i32,
     y: i32,
     z: i32,
 }
-impl EntityComponent for Acceleration {
-    type StorageCategory = DenseStorage;
+impl es::Component for Acceleration {
+    type Store = es::DenseStore<Self>;
 }
 
 #[derive(Debug)]
 struct Weight {
     w: i32,
 }
-impl EdgeComponent for Weight {
-    type StorageCategory = SparseStorage;
+impl ds::Component for Weight {
+    type Mask = ds::CSMatrixMask;
+    type Store = ds::ArenaStore<Self>;
 }
 
 #[test]
+#[ignore]
 fn test_component() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     let mut world = World::new();
 
-    world.register_entity::<Force>();
-    world.register_entity::<Acceleration>();
-    world.register_edge::<Weight>();
+    world.register_entity_component::<Force>();
+    world.register_entity_component::<Acceleration>();
+    world.register_edge_component::<Weight>();
 
     debug!("create instances");
     {
         let mut ent = world.entities_mut();
-        let mut force = world.get_entity_mut::<Force>();
-        let mut weight = world.get_edge_mut::<Weight>();
+        let mut force = world.entity_components_mut::<Force>();
+        let mut weight = world.edge_components_mut::<Weight>();
 
         for i in 0..30 {
             let e = ent.create();
@@ -63,9 +65,9 @@ fn test_component() {
 
     debug!("update instances");
     {
-        let force = world.get_entity::<Force>();
-        let weight = world.get_edge::<Weight>();
-        let mut acc = world.get_entity_mut::<Acceleration>();
+        let force = world.entity_components::<Force>();
+        let weight = world.edge_components::<Weight>();
+        let mut acc = world.entity_components_mut::<Acceleration>();
 
         (force.read(), weight.read()).join_all(|source, (f, w)| {
             trace!("source: {:?} = {:?}", source, f);
@@ -82,7 +84,7 @@ fn test_component() {
 
     debug!("get");
     {
-        let acc = world.get_entity::<Acceleration>();
+        let acc = world.entity_components::<Acceleration>();
         assert_eq!(acc.count(), 3);
         assert_eq!(acc.get(Entity::from_id(2)), Some(&Acceleration { x: 1, y: 2, z: 0 }));
         assert_eq!(acc.get(Entity::from_id(3)), Some(&Acceleration { x: 8, y: 16, z: 0 }));

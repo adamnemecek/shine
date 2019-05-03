@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta http-equiv="Cache-Control" content="no-cache,no-store,must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <style style="text/css">
+        body {
+            margin: 0;  
+            max-height: 100vh;
+            height: 100vh;
+
+            height: 100%;
+            background: #343a3f;
+            color: #FFF;
+            font-family: Helvetica;
+            text-align: center;
+
+            display: grid;
+            grid-template-rows: 1fr 5fr;
+            grid-template-columns: 1fr 4fr;
+            grid-template-areas: 
+                "header header"
+                "nav main";
+            grid-gap: .25em;        
+        }
+        header {
+            grid-area: header;
+        }
+        nav {
+            grid-area: nav;
+            overflow: auto;
+        }
+        main {
+            grid-area: main;
+            overflow: hidden;
+        }
+        header, nav, main {
+            border: 1px solid rgba(255,255,255,0.8);
+            border-radius: 3px;
+        }
+
+        .controls button {
+            background-color: #4CAF50;
+            color: white;
+            border: 0;
+            font-family: Helvetica;
+            text-decoration: none;
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 3px;
+        }
+        .controls button:hover {
+            background-color: #ddd;
+            color: black;
+        }  
+
+        .groups ul { 
+            padding: 0 0 0 0;
+            list-style: none;
+            text-align: left;
+        }
+        .groups li { 
+            padding: 2px 0 2px 32px;
+        }
+    </style>
+</head>
+
+<script src="jscript/shine/shine.js"></script>
+<script src="jscript/three/three.min.js" type="text/javascript"></script>
+<script src="jscript/three/TrackballControls.js" type="text/javascript"></script>
+<script src="jscript/three/OrbitControls.js" type="text/javascript"></script>
+<script src="jscript/three/GLTFLoader.js" type="text/javascript"></script>
+<script src="jscript/stats/stats.min.js"></script>
+
+<script type="text/javascript">
+    var models = {{ model_list | safe }};
+    var model_id = 0;
+    var container, stats, shine;
+    var renderer, scene, lights, model;
+    var camera, cameraControl;
+    var vertexNormalHelper;
+
+    function init() {
+        container = document.getElementById('modelContainer');
+        shine = new Shine();
+
+        stats = new Stats();
+        document.body.appendChild(stats.dom);
+
+        // LOADER
+        loader = new THREE.GLTFLoader();
+        //THREE.DRACOLoader.setDecoderPath('js/libs/draco/gltf/');
+        //loader.setDRACOLoader(new THREE.DRACOLoader());
+
+        // RENDERER
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.gammaOutput = true;
+        renderer.physicallyCorrectLights = true;
+        //renderer.shadowMap.enabled = true;
+        //renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        container.appendChild(renderer.domElement);
+
+        // CAMERA
+        camera = new THREE.PerspectiveCamera(45, container.offsetWidth / container.offsetHeight, 0.001, 1000);
+        camera.position.z = 500;
+
+        cameraControl = new THREE.TrackballControls(camera);
+        cameraControl.rotateSpeed = 1.0;
+        cameraControl.zoomSpeed = 1.2;
+        cameraControl.panSpeed = 0.8;
+        cameraControl.noZoom = false;
+        cameraControl.noPan = false;
+        cameraControl.staticMoving = false;
+        cameraControl.dynamicDampingFactor = 0.3;
+        cameraControl.keys = [65, 83, 68];
+        cameraControl.addEventListener('change', render);
+
+        // LIGHTS
+        lights = {}
+
+        lights.keyLight = new THREE.DirectionalLight(new THREE.Color('hsl(30, 100%, 75%)'), 1.0);
+        lights.keyLight.position.set(-100, 0, 100);
+        lights.fillLight = new THREE.DirectionalLight(new THREE.Color('hsl(240, 100%, 75%)'), 0.75);
+        lights.fillLight.position.set(100, 0, 100);
+        lights.backLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        lights.backLight.position.set(100, 0, -100).normalize();
+
+        /*// ambient        
+        lights.ambient = new THREE.AmbientLight(0x222222);
+        //directional
+        lights.directional = new THREE.DirectionalLight(0xdddddd, 4);
+        lights.directional.position.set(0, 0, 1).normalize();
+        //spot            
+        lights.spot = new THREE.SpotLight(0xffffff, 1);
+        lights.spot.position.set(5, 10, 5);
+        lights.spot.angle = 0.50;
+        lights.spot.penumbra = 0.75;
+        lights.spot.intensity = 100;
+        lights.spot.decay = 2;
+        lights.spot.castShadow = true;
+        lights.spot.shadow.bias = 0.0001;
+        lights.spot.shadow.mapSize.width = 2048;
+        lights.spot.shadow.mapSize.height = 2048;*/
+    }
+
+    function zoomToBBox(bbox) {
+        if (bbox == null || bbox.isEmpty()) {
+            return;
+        }
+
+        camera.rotation.set(0, 0, 0); // reset rotation
+
+        var boxCenter = new THREE.Vector3();
+        bbox.getCenter(boxCenter);
+        var boxSize = new THREE.Vector3();
+        bbox.getSize(boxSize);
+        var sphereSize = boxSize.length() * 0.5;
+        var distToCenter = sphereSize / Math.sin(Math.PI / 180.0 * camera.fov * 0.5);
+
+        var eye = new THREE.Vector3(0, 0, 1);
+        eye.setLength(distToCenter);
+        eye.addVectors(boxCenter, eye);
+        var target = boxCenter;
+
+        //console.log("box:", bbox);
+        //console.log("eye:", eye);
+        //console.log("target:", target);
+        cameraControl.position0.set(eye.x, eye.y, eye.z);
+        cameraControl.target0.set(target.x, target.y, target.z);
+        cameraControl.up0.set(0, 1, 0);
+        cameraControl.reset();
+
+        render();
+    };
+
+    function zoomToObject(object) {
+        var bbox = new THREE.Box3().setFromObject(object);
+        zoomToBBox(bbox);
+    }
+
+    function toggleVertexNormals(object) {
+        if (vertexNormalHelper === undefined || vertexNormalHelper === null) {
+            /*var wireframe = new THREE.WireframeGeometry(object.geometry);
+            vertexNormalHelper = new THREE.LineSegments(wireframe);
+            vertexNormalHelper.material.depthTest = false;
+            vertexNormalHelper.material.opacity = 0.25;
+            vertexNormalHelper.material.transparent = true;
+            //vertexNormalHelper.position.x = 4;
+            scene.add(vertexNormalHelper);*/
+            vertexNormalHelper = new THREE.VertexNormalsHelper(object, 50);
+            scene.add(vertexNormalHelper);
+        } else {
+            scene.remove(vertexNormalHelper);
+            vertexNormalHelper = null
+        }
+        console.log(vertexNormalHelper);
+    }
+
+    function updateMaterials(object, twoSided, wireframe) {
+        if (!object) {
+            return;
+        }
+
+        object.traverse(function (node) {
+            if (node.material) {
+                if (twoSided) {
+                    node.material.side = THREE.DoubleSide;
+                }
+                else {
+                    node.material.side = node.material.originial_side;
+                }
+
+                if (wireframe) {
+                    node.material.wireframe = true
+                }
+                else {
+                    node.material.wireframe = node.material.originial_wireframe;
+                }
+            }
+        });
+    }
+
+    function releaseModel(model) {
+    }
+
+    function createModel() {
+        var titleContent = document.getElementById('title');
+
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x222222);
+        scene.add(camera);
+        Object.values(lights).forEach(function (value) { scene.add(value); });
+
+        if (model_id < 0 || model_id >= models.length) {
+            // no model
+            titleContent.innerHTML = "Model - None" + "/" + (models.length).toString()
+            return;
+        }
+
+        titleContent.innerHTML = "Model - " + (model_id + 1).toString() + "/" + (models.length).toString()
+
+        loader.parse(models[model_id], "",
+            function (gltf) {
+                var isFirst = (model === undefined);
+                model = gltf.scene;
+                if (model) {
+                    model.traverse(function (node) {
+                        if (node.isMesh || node.isLight) node.castShadow = true;
+                        if (node.material) {
+                            node.material.originial_side = node.material.side;
+                            node.material.originial_wireframe = !!node.material.wireframe;
+                        }
+                    });
+                    scene.add(model);
+                }
+
+                let preserveCamera = document.getElementById("preserveCamera").checked;
+                if (isFirst || !preserveCamera) {
+                    zoomToObject(model);
+                }
+                updateModelMaterials();
+
+                onWindowResize();
+            }, undefined, function (error) {
+                console.error(error);
+            });
+    }
+
+    function selectModel(id) {
+        model_id = id
+        if (model_id < 0) model_id = 0;
+        if (model_id >= models.length) model_id = models.length - 1;
+
+        releaseModel(model);
+        createModel();
+    }
+
+    function updateModelMaterials() {
+        let twoSided = document.getElementById("render_twoSided").checked;
+        let wrieframe = document.getElementById("render_wireframe").checked;
+
+        updateMaterials(model, twoSided, wrieframe);
+        render();
+    }
+
+    function updateVertexNormals() {
+        toggleVertexNormals(model);
+        render();
+    }
+
+    function exportModel() {
+        if (model_id < 0 || model_id >= models.length) {
+            return;
+        }
+
+        var pom = document.createElement('a');
+        pom.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(models[model_id]));
+        pom.setAttribute('download', "model.gltf");
+
+        if (document.createEvent) {
+            var event = document.createEvent('MouseEvents');
+            event.initEvent('click', true, true);
+            pom.dispatchEvent(event);
+        }
+        else {
+            pom.click();
+        }
+    }
+
+    function onWindowResize() {
+        camera.aspect = container.offsetWidth / container.offsetHeight;
+        camera.updateProjectionMatrix();
+
+        renderer.setSize(container.offsetWidth, container.offsetHeight);
+        cameraControl.handleResize();
+        render();
+    }
+
+    function render() {
+        renderer.render(scene, camera);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        cameraControl.update();
+        //render();
+        stats.update();
+    }
+
+    window.onload = function () {
+        init();
+        selectModel(0);
+        animate();
+    }
+    window.onresize = function () {
+        onWindowResize()
+    }
+</script>
+
+<body>
+    <header>
+        <h1 id="title">Model</h1>
+        <div class="controls">
+            <button onclick="selectModel(0)">First</button>
+            <button onclick="selectModel(model_id - 10)">&laquo; &laquo; Previous</button>
+            <button onclick="selectModel(model_id - 1)">&laquo; Previous</button>
+            <button onclick="selectModel(model_id + 1)">Next &raquo;</button>
+            <button onclick="selectModel(model_id + 10)">Next &raquo; &raquo;</button>
+            <button onclick="selectModel(model_id + Number.MAX_SAFE_INTEGER)">Last</button>
+        </div>
+        <div class="controls">
+            <button onclick="location.reload(true)">Refresh</button>
+            <button onclick="shine.notifyUser();location.reload(true)">Continue</button>
+            <button onclick="exportModel()">Export</button>
+        </div>
+    </header>
+    <nav>
+        <div id="groups" class="groups">
+            <ul>
+                <li><label>Control</label></li>
+                <ul>
+                    <li><input id="preserveCamera" type="checkbox" checked><label>Preserve camera</label></li>
+                </ul>
+                <li><label>Render</label></li>
+                <ul>
+                    <li><input id="render_twoSided" type="checkbox" onchange="updateModelMaterials()">
+                        <label>Two Sided</label>
+                    </li>
+                    <li><input id="render_wireframe" type="checkbox" onchange="updateModelMaterials()">
+                        <label>Wireframe</label>
+                    </li>
+                    <li><input id="render_normals" type="checkbox" onchange="updateVertexNormals()">
+                        <label>Normals</label>
+                    </li>
+                </ul>
+            </ul>
+        </div>
+        <div id="groups" class="groups" />
+    </nav>
+    <main>
+        <div id="modelContainer" style="height: 100%;" />
+    </main>
+</body>
+
+</html>

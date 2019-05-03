@@ -1,4 +1,4 @@
-use smat::{DataPosition, DataRange, MatrixMask};
+use crate::smat::{DataPosition, DataRange, MatrixMask};
 use std::collections::HashMap;
 
 /// Compressed Sparse (Square) Row matrix.

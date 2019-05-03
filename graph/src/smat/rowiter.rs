@@ -1,24 +1,24 @@
-use join::{IntoJoin, Join};
-use smat::{DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, SMatrix, Store};
+use crate::join::{IntoJoin, Join};
+use crate::smat::{DataPosition, DataRange, Entry, MatrixMask, MatrixMaskExt, SMatrix, Store, StoreMut};
+use crate::traits::{IndexExcl, IndexLowerBound};
 use std::mem;
-use traits::{IndexExcl, IndexLowerBound};
 
 /// Access a single row in the matrix.
 pub struct RowRead<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     //crate row_index: usize,
-    crate mask: &'a M,
-    crate store: &'a S,
-    crate data_range: DataRange,
+    pub(crate) mask: &'a M,
+    pub(crate) store: &'a S,
+    pub(crate) data_range: DataRange,
 }
 
 impl<'a, M, S> IndexExcl<usize> for RowRead<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     type Item = &'a S::Item;
 
@@ -30,8 +30,8 @@ where
 
 impl<'a, M, S> IndexLowerBound<usize> for RowRead<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         self.mask
@@ -42,8 +42,8 @@ where
 
 impl<'a, M, S> IntoJoin for RowRead<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: Store,
 {
     type Store = Self;
 
@@ -55,21 +55,21 @@ where
 /// Access a single row in the matrix.
 pub struct RowUpdate<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: StoreMut,
 {
     //crate row_index: usize,
-    crate mask: &'a M,
-    crate store: &'a mut S,
-    crate data_range: DataRange,
+    pub(crate) mask: &'a M,
+    pub(crate) store: &'a mut S,
+    pub(crate) data_range: DataRange,
 }
 
 impl<'a, M, S> IndexExcl<usize> for RowUpdate<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: StoreMut,
 {
-    type Item = &'a mut S::Item;
+    type Item = &'a mut <S as Store>::Item;
 
     fn index(&mut self, idx: usize) -> Self::Item {
         let DataPosition(pos) = self.mask.find_column_position(idx, self.data_range).unwrap();
@@ -79,8 +79,8 @@ where
 
 impl<'a, M, S> IndexLowerBound<usize> for RowUpdate<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: StoreMut,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         //perf: we could also increment data range if it's guranted that no "step" occures.
@@ -92,8 +92,8 @@ where
 
 impl<'a, M, S> IntoJoin for RowUpdate<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: StoreMut,
 {
     type Store = Self;
 
@@ -105,18 +105,18 @@ where
 /// Access a single row in the matrix.
 pub struct RowWrite<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: StoreMut,
 {
-    //crate row_index: usize,
-    crate row: usize,
-    crate mat: &'a mut SMatrix<M, S>,
+    //pub(crate) row_index: usize,
+    pub(crate) row: usize,
+    pub(crate) mat: &'a mut SMatrix<M, S>,
 }
 
 impl<'a, M, S> IndexExcl<usize> for RowWrite<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: StoreMut,
 {
     type Item = Entry<'a, M, S>;
 
@@ -127,8 +127,8 @@ where
 
 impl<'a, M, S> IndexLowerBound<usize> for RowWrite<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: StoreMut,
 {
     fn lower_bound(&mut self, idx: usize) -> Option<usize> {
         Some(idx)
@@ -137,8 +137,8 @@ where
 
 impl<'a, M, S> IntoJoin for RowWrite<'a, M, S>
 where
-    M: 'a + MatrixMask,
-    S: 'a + Store,
+    M: MatrixMask,
+    S: StoreMut,
 {
     type Store = Self;
 

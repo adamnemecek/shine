@@ -1,18 +1,14 @@
-extern crate shine_graph;
-extern crate shine_testutils;
-#[macro_use]
-extern crate log;
-extern crate env_logger;
-extern crate rand;
+use rand;
 
+use log::{debug, trace};
 use rand::Rng;
 
-use shine_graph::svec::*;
-use shine_testutils::*;
+use shine_graph::svec::{new_dvec, new_hvec, SVector, StoreMut};
+use shine_testutils::init_test;
 
 type Data = usize;
 
-fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
+fn test_simple_<S: StoreMut<Item = Data>>(mut vector: SVector<S>) {
     for i in 0..2 {
         debug!("pass: {}", i);
 
@@ -86,7 +82,7 @@ fn test_simple_<S: Store<Item = Data>>(mut vector: SVector<S>) {
 
 #[test]
 fn test_simple() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SDVector");
     test_simple_(new_dvec());
@@ -94,7 +90,7 @@ fn test_simple() {
     test_simple_(new_hvec());
 }
 
-fn test_stress_<S: Store<Item = Data>>(mut vector: SVector<S>, size: usize, cnt: usize) {
+fn test_stress_<S: StoreMut<Item = Data>>(mut vector: SVector<S>, size: usize, cnt: usize) {
     let mut vc = vec![0; size];
 
     let mut rng = rand::thread_rng();
@@ -121,7 +117,7 @@ fn test_stress_<S: Store<Item = Data>>(mut vector: SVector<S>, size: usize, cnt:
 
 #[test]
 fn test_stress() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     for _ in 0..10 {
         trace!("SDVector");
@@ -131,7 +127,7 @@ fn test_stress() {
     }
 }
 
-fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
+fn test_data_iter_<S: StoreMut<Item = Data>>(mut vector: SVector<S>) {
     assert_eq!(vector.data_iter().next(), None);
 
     vector.add(14, 14);
@@ -169,7 +165,7 @@ fn test_data_iter_<S: Store<Item = Data>>(mut vector: SVector<S>) {
 
 #[test]
 fn test_data_iter() {
-    init_test_logger(module_path!());
+    init_test(module_path!());
 
     debug!("SDVector");
     test_data_iter_(new_dvec::<Data>());

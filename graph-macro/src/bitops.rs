@@ -1,8 +1,8 @@
-use proc_macro;
 use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use syn::parse::Parser;
 use syn::punctuated::Punctuated;
-use syn::{Ident, IntSuffix, LitInt};
+use syn::{Ident, IntSuffix, LitInt, Token};
 
 enum Op {
     And,
@@ -32,9 +32,9 @@ fn bitop_impl(count: usize, op: &Op) -> TokenStream {
         let (mut empty, mut get_level_count, mut get_block) = {
             let m = &members[0];
             (
-                quote!{ self.#m.is_empty() },
-                quote!{ self.#m.get_level_count() },
-                quote!{ self.#m.get_block(level, block) },
+                quote! { self.#m.is_empty() },
+                quote! { self.#m.get_level_count() },
+                quote! { self.#m.get_block(level, block) },
             )
         };
         let mut i = 1;
@@ -43,15 +43,15 @@ fn bitop_impl(count: usize, op: &Op) -> TokenStream {
 
             match op {
                 Op::And => {
-                    empty = quote!{ #empty || self.#m.is_empty() };
-                    get_level_count = quote!{ cmp::min( self.#m.get_level_count(), #get_level_count ) };
-                    get_block = quote!{ #get_block & self.#m.get_block(level, block) };
+                    empty = quote! { #empty || self.#m.is_empty() };
+                    get_level_count = quote! { cmp::min( self.#m.get_level_count(), #get_level_count ) };
+                    get_block = quote! { #get_block & self.#m.get_block(level, block) };
                 }
 
                 Op::Or => {
-                    empty = quote!{ #empty && self.#m.is_empty() };
-                    get_level_count = quote!{ cmp::max( self.#m.get_level_count(), #get_level_count ) };
-                    get_block = quote!{ #get_block | self.#m.get_block(level, block) };
+                    empty = quote! { #empty && self.#m.is_empty() };
+                    get_level_count = quote! { cmp::max( self.#m.get_level_count(), #get_level_count ) };
+                    get_block = quote! { #get_block | self.#m.get_block(level, block) };
                 }
             }
 
@@ -61,7 +61,7 @@ fn bitop_impl(count: usize, op: &Op) -> TokenStream {
         (empty, get_level_count, get_block)
     };
 
-    let type_impl = quote!{
+    let type_impl = quote! {
         pub struct #type_ident<B, #(#generics),*>
         where
             B: BitBlock,
@@ -128,7 +128,7 @@ fn bitop_tuple_impl(count: usize) -> TokenStream {
         .collect();
     let index = &index;
 
-    let type_impl = quote!{
+    let type_impl = quote! {
         impl<B, #(#generics),*> BitOp<B> for (#(#generics,)*)
         where
             B: BitBlock,
@@ -165,5 +165,5 @@ pub fn impl_bitops_macro(input: proc_macro::TokenStream) -> Result<TokenStream, 
         ops.push(bitop);
     }
 
-    Ok(quote!{#(#ops)*})
+    Ok(quote! {#(#ops)*})
 }

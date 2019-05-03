@@ -1,5 +1,5 @@
+use crate::traits::{IndexExcl, IndexLowerBound};
 use std::ops::Range;
-use traits::{IndexExcl, IndexLowerBound};
 
 /// Iterator like trait that performs the merge.
 pub struct Join<S>
@@ -83,4 +83,4 @@ pub trait IntoJoinExt: IntoJoin {
 impl<T: ?Sized> IntoJoinExt for T where T: IntoJoin {}
 
 use shine_graph_macro::impl_intojoin_for_intojoin_tuple;
-impl_intojoin_for_intojoin_tuple!{2,3,4,5,6,7,8,9,10}
+impl_intojoin_for_intojoin_tuple! {2,3,4,5,6,7,8,9,10}

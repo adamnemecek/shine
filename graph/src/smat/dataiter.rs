@@ -1,11 +1,11 @@
-use smat::Store;
+use crate::smat::{Store, StoreMut};
 use std::mem;
 use std::ops::Range;
 
 /// Immutable iterator over the non-zero items of matrix
 pub struct DataIter<'a, S>
 where
-    S: 'a + Store,
+    S: Store,
 {
     iterator: Range<usize>,
     store: &'a S,
@@ -15,7 +15,7 @@ impl<'a, S> DataIter<'a, S>
 where
     S: 'a + Store,
 {
-    crate fn new<'b>(iterator: Range<usize>, store: &'b S) -> DataIter<'b, S> {
+    pub(crate) fn new<'b>(iterator: Range<usize>, store: &'b S) -> DataIter<'b, S> {
         DataIter { iterator, store }
     }
 }
@@ -34,7 +34,7 @@ where
 /// Mutable iterate over the non-zero items of matrix
 pub struct DataIterMut<'a, S>
 where
-    S: 'a + Store,
+    S: StoreMut,
 {
     iterator: Range<usize>,
     store: &'a mut S,
@@ -42,16 +42,16 @@ where
 
 impl<'a, S> DataIterMut<'a, S>
 where
-    S: 'a + Store,
+    S: 'a + StoreMut,
 {
-    crate fn new<'b>(iterator: Range<usize>, store: &'b mut S) -> DataIterMut<'b, S> {
+    pub(crate) fn new<'b>(iterator: Range<usize>, store: &'b mut S) -> DataIterMut<'b, S> {
         DataIterMut { iterator, store }
     }
 }
 
 impl<'a, S> Iterator for DataIterMut<'a, S>
 where
-    S: 'a + Store,
+    S: 'a + StoreMut,
 {
     type Item = &'a mut S::Item;
 

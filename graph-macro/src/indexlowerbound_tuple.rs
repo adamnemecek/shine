@@ -1,8 +1,8 @@
-use proc_macro;
 use proc_macro2::{Span, TokenStream};
+use quote::quote;
 use syn::parse::Parser;
 use syn::punctuated::Punctuated;
-use syn::{Ident, IntSuffix, LitInt};
+use syn::{Ident, IntSuffix, LitInt, Token};
 
 fn impl_indexlowerbound_for_tuple(count: usize) -> TokenStream {
     let generics: Vec<_> = (0..count)
@@ -15,7 +15,7 @@ fn impl_indexlowerbound_for_tuple(count: usize) -> TokenStream {
         .collect();
     let index = &index;
 
-    let type_impl = quote!{
+    let type_impl = quote! {
         /// Implement IndexLowerBound for tuple of IndexLowerBound
         /// The Item is a tuple of the Items made of the Items of the underlying InexLowerBound
         impl<I, #(#generics),*> IndexLowerBound<I> for (#(#generics,)*)
@@ -66,5 +66,5 @@ pub fn impl_indexlowerbound_for_indexlowerbound_tuple(input: proc_macro::TokenSt
         gen.push(tuple_impl);
     }
 
-    Ok(quote!{#(#gen)*})
+    Ok(quote! {#(#gen)*})
 }

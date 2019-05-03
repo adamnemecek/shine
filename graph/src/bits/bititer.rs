@@ -1,6 +1,5 @@
+use crate::bits::{BitBlock, BitSetView, MAX_LEVEL};
 use num_traits::{One, Zero};
-
-use bits::{BitBlock, BitSetView, MAX_LEVEL};
 
 /// Iterator over the set bits.
 pub struct BitIter<B: BitSetView> {

@@ -1,4 +1,4 @@
-use bits::{BitBlock, BitIter};
+use crate::bits::{BitBlock, BitIter};
 use num_traits::{ToPrimitive, Zero};
 use std::fmt;
 use std::marker::PhantomData;
@@ -54,12 +54,7 @@ impl<B: BitBlock> BitPos<B> {
 
     #[inline(always)]
     pub fn set_offset(&mut self, offset: usize) {
-        assert!(
-            offset <= B::bit_mask(),
-            "Offset is too bif {}/{}",
-            offset,
-            B::bit_mask()
-        );
+        assert!(offset <= B::bit_mask(), "Offset is too bif {}/{}", offset, B::bit_mask());
         self.offset = offset;
     }
 
