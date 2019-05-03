@@ -59,7 +59,7 @@ impl Service {
                         .service(web::resource("/rest/v1/d3datas").route(web::get().to(handle_d3datas_request)))
                         .service(web::resource("/rest/v1/control/notify").route(web::post().to(handle_notify_user)))
                         .service(actix_files::Files::new("/", "www").index_file("index.html"))
-                        .service(actix_files::Files::new("/", "../testutils/www").index_file("index.html"))
+                        .service(actix_files::Files::new("/", "../shine-testutils/www").index_file("index.html"))
                 })
                 .workers(1)
                 .bind(bind_address.clone())

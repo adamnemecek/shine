@@ -1,6 +1,6 @@
 [package]
 name = "shine-stdext"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "SHINE. General utilities for the general purpose multi-threaded rendering engine."
@@ -18,4 +18,4 @@ num_cpus="1.10"
 env_logger = "0.6"
 rand = "0.6"
 permutohedron = "0.2"
-shine-testutils = {path = "../testutils"}
+shine-testutils = {path = "../shine-testutils", version = "0.2.0"}

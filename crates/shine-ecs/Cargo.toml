@@ -13,10 +13,10 @@ log = "0.4"
 shred = { version = "0.8", features = ["nightly"]}
 itertools = "0.8"
 
-shine-graph = {path = "../graph"}
-shine-stdext = {path = "../stdext"}
-shine-ecs-macro = {path = "../ecs-macro"}
+shine-graph = {path = "../shine-graph", version = "0.2.0"}
+shine-stdext = {path = "../shine-stdext", version = "0.2.0"}
+shine-ecs-macro = {path = "../shine-ecs-macro", version = "0.2.0"}
 
 [dev-dependencies]
 env_logger = "0.6"
-shine-testutils = {path = "../testutils"}
+shine-testutils = {path = "../shine-testutils", version = "0.2.0"}
