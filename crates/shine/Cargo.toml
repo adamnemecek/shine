@@ -8,9 +8,6 @@ repository = "https://github.com/gzp/shine"
 keywords = ["component system", "game"]
 edition = "2018"
 
-[workspace]
-members = [ "testutils", "stdext", "graph", "graph-macro", "gltf", "gltf-macro", "ecs", "ecs-macro", "math", "input", "shard" ]
-
 [features]
 alma = []
 render-dx12 = ["rendy/dx12"]
