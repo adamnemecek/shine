@@ -13,7 +13,7 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
 
-shine-gltf-macro = {path = "../gltf-macro"}
+shine-gltf-macro = {path = "../shine-gltf-macro", version = "0.2.0"}
 
 [features]
 default = []

@@ -108,14 +108,14 @@
             "type": "pickString",
             "default": "shard",
             "options": [
-                "math",
-                "ecs",
-                "gltf",
-                "graph",
+                "testutils"
                 "stdext",
+                "gltf",
+                "math",
+                "graph",
+                "ecs",
                 "input",
                 "shard",
-                "testutils"
             ]
         },
     ]

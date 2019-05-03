@@ -19,4 +19,4 @@ nalgebra-glm = "0.4"
 [dev-dependencies]
 env_logger = "0.6"
 quickcheck = "0.8"
-shine-testutils = {path = "../testutils"}
+shine-testutils = {path = "../shine-testutils", version = "0.2.0"}
