@@ -1,5 +1,6 @@
 [workspace]
 members = [ 
+    "crates/shine",
     "crates/shine-testutils", 
     "crates/shine-stdext", 
     "crates/shine-graph", 
