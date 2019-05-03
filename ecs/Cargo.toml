@@ -1,6 +1,6 @@
 [package]
 name = "shine-ecs"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "SHINE. Entity component system module of a general purpose multi-threaded rendering engine."
@@ -9,14 +9,14 @@ keywords = ["shine", "render", "opengl", "game"]
 edition = "2018"
 
 [dependencies]
-log = "*"
-shred = { version = "*", features = ["nightly"]}
-itertools = "*"
+log = "0.4"
+shred = { version = "0.8", features = ["nightly"]}
+itertools = "0.8"
 
 shine-graph = {path = "../graph"}
 shine-stdext = {path = "../stdext"}
 shine-ecs-macro = {path = "../ecs-macro"}
 
 [dev-dependencies]
-env_logger = "*"
+env_logger = "0.6"
 shine-testutils = {path = "../testutils"}

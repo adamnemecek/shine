@@ -1,6 +1,6 @@
 [package]
 name = "shine-input"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "SHINE. Input handling for the shine engine."
@@ -9,10 +9,10 @@ keywords = ["input", "gamepad", "controller", "guestures"]
 edition = "2018"
 
 [dependencies]
-log = "*"
-env_logger = "*"
-failure = "*"
-lazy_static = "*"
+log = "0.4"
+env_logger = "0.6"
+failure = "0.1"
+lazy_static = "1.3"
 
-gilrs = "*"
-winit = "0.18"
+gilrs = "0.7"
+winit = "0.19"

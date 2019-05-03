@@ -1,17 +1,17 @@
 [package]
 name = "shine-gltf"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
-description = "JSON parsing for the gltf crate based https://github.com/gltf-rs/gltf"
+description = "JSON parsing for the gltf crate based on https://github.com/gltf-rs/gltf"
 repository = "https://github.com/gzp/shine"
 keywords = ["gltf", "mesh", "exporter", "importer"]
 edition = "2018"
 
 [dependencies]
-serde = "*"
-serde_derive = "*"
-serde_json = "*"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
 
 shine-gltf-macro = {path = "../gltf-macro"}
 

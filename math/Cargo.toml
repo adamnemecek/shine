@@ -1,6 +1,6 @@
 [package]
 name = "shine-math"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "SHINE. Math module for the shine engine."
@@ -9,14 +9,14 @@ keywords = ["shine", "geometry", "triangulation", "voxel"]
 edition = "2018"
 
 [dependencies]
-log = "*"
-rand = "*"
-alga = "*"
-nalgebra = "*"
-num-traits = "*"
-nalgebra-glm = "*"
+log = "0.4"
+rand = "0.6"
+alga = "0.9"
+nalgebra = "0.18"
+num-traits = "0.2"
+nalgebra-glm = "0.4"
 
 [dev-dependencies]
-env_logger = "*"
-quickcheck = "*"
+env_logger = "0.6"
+quickcheck = "0.8"
 shine-testutils = {path = "../testutils"}

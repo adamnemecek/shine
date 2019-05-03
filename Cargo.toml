@@ -1,6 +1,6 @@
 [package]
 name = "shine"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "General purpose multi-threaded sanbox engine."
@@ -18,24 +18,24 @@ render-vulkan = ["rendy/vulkan"]
 default = ["render-vulkan"]
 
 [dependencies]
-log = "*"
-env_logger = "*"
-interact = "*"
-interact_prompt = "*"
-failure = "*"
-lazy_static = "*"
+log = "0.4"
+env_logger = "0.6"
+interact = "0.3"
+interact_prompt = "0.3"
+failure = "0.1"
+lazy_static = "1.3"
 
-nalgebra = "*"
-nalgebra-glm = "*"
+nalgebra = "0.18"
+nalgebra-glm = "0.4"
 
-gfx-hal = {version = "*"}
-winit = "0.18"
-gilrs = "*"
+gfx-hal = "0.1"
+winit = "0.19"
+gilrs = "0.7"
 rendy = {git = "https://github.com/omni-viral/rendy.git"}
 
-parking_lot = "*"
-crossbeam = "*"
-rayon = "*"
+parking_lot = "0.7"
+crossbeam = "0.7"
+rayon = "1.0"
 
 shine-stdext = {path = "stdext"}
 shine-graph = {path = "graph"}

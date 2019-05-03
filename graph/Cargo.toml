@@ -1,6 +1,6 @@
 [package]
 name = "shine-graph"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["gzp <z.p.gaal.devel@gmail.com>"]
 license = "MIT/Apache-2.0"
 description = "SHINE. Graph and sparse matrix library for the shine engine."
@@ -9,17 +9,17 @@ keywords = ["graph", "matrix", "spares"]
 edition = "2018"
 
 [dependencies]
-libc = "*"
-log = "*"
-lazy_static = "*"
-num-traits = "*"
-arrayvec = "*"
+libc = "0.2"
+log = "0.4"
+lazy_static = "1.3"
+num-traits = "0.2"
+arrayvec = "0.4"
 
 shine-stdext = {path = "../stdext"}
 shine-graph-macro = {path = "../graph-macro"}
 
 [dev-dependencies]
-env_logger = "*"
-rand = "*"
-permutohedron = "*"
+env_logger = "0.6"
+rand = "0.6"
+permutohedron = "0.2"
 shine-testutils = {path = "../testutils"}

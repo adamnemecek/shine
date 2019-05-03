@@ -9,13 +9,13 @@ keywords = ["shine", "render", "opengl", "game"]
 edition = "2018"
 
 [dependencies]
-libc = "*"
-log = "*"
-lazy_static = "*"
-num_cpus="*"
+libc = "0.2"
+log = "0.4"
+lazy_static = "1.3"
+num_cpus="1.10"
 
 [dev-dependencies]
-env_logger = "*"
-rand = "*"
-permutohedron = "*"
+env_logger = "0.6"
+rand = "0.6"
+permutohedron = "0.2"
 shine-testutils = {path = "../testutils"}
