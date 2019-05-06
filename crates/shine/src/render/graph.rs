@@ -1,4 +1,4 @@
-use crate::render::{Backend, Buffer, DescriptorSet, DescriptorSetLayout, Factory, GraphContext, PipelineLayout, ShaderModule};
+use crate::render::{Backend, Buffer, DescriptorSet, DescriptorSetLayout, Factory, GraphContext, PipelineLayout, ShaderSet};
 use crate::render::{FrameInfo, FrameParameters};
 use gfx_hal::device::Device;
 use lazy_static::lazy_static;
@@ -11,7 +11,7 @@ use rendy::graph::{GraphBuilder, NodeBuffer, NodeImage};
 use rendy::memory::MemoryUsageValue;
 use rendy::mesh::{AsVertex, PosColor};
 use rendy::resource::{BufferInfo, Escape, Handle};
-use rendy::shader::{Shader, ShaderKind, SourceLanguage, StaticShaderInfo};
+use rendy::shader::{ShaderKind, SourceLanguage, StaticShaderInfo};
 use rendy::wsi::Surface;
 use shine_ecs::world::{ResourceWorld, World};
 use shine_shard::camera::RenderCamera;
@@ -19,10 +19,9 @@ use shine_shard::camera::RenderCamera;
 pub type Graph = rendy::graph::Graph<Backend, World>;
 
 lazy_static! {
-    static ref VERTEX: StaticShaderInfo =
-        StaticShaderInfo::new("assets/shaders/tri.vert", ShaderKind::Vertex, SourceLanguage::GLSL, "main",);
-    static ref FRAGMENT: StaticShaderInfo =
-        StaticShaderInfo::new("assets/shaders/tri.frag", ShaderKind::Fragment, SourceLanguage::GLSL, "main",);
+    static ref SHADERS: rendy::shader::ShaderSetBuilder = rendy::shader::ShaderSetBuilder::default()
+        .with_vertex(&StaticShaderInfo::new("assets/shaders/tri.vert", ShaderKind::Vertex, SourceLanguage::GLSL, "main",)).unwrap()
+        .with_fragment(&StaticShaderInfo::new("assets/shaders/tri.frag", ShaderKind::Fragment, SourceLanguage::GLSL, "main",)).unwrap();
 }
 /*
 struct Context {
@@ -61,38 +60,11 @@ impl SimpleGraphicsPipelineDesc<Backend, World> for TriangleRenderPipelineDesc {
         gfx_hal::pso::ElemStride,
         gfx_hal::pso::InstanceRate,
     )> {
-        vec![PosColor::VERTEX.gfx_vertex_input_desc(0)]
+        vec![PosColor::vertex().gfx_vertex_input_desc(0)]
     }
 
-    fn load_shader_set<'a>(
-        &self,
-        storage: &'a mut Vec<ShaderModule>,
-        factory: &mut Factory,
-        _world: &World,
-    ) -> gfx_hal::pso::GraphicsShaderSet<'a, Backend> {
-        storage.clear();
-
-        log::trace!("Load shader module '{:#?}'", *VERTEX);
-        storage.push(unsafe { VERTEX.module(factory).unwrap() });
-
-        log::trace!("Load shader module '{:#?}'", *FRAGMENT);
-        storage.push(unsafe { FRAGMENT.module(factory).unwrap() });
-
-        gfx_hal::pso::GraphicsShaderSet {
-            vertex: gfx_hal::pso::EntryPoint {
-                entry: "main",
-                module: &storage[0],
-                specialization: gfx_hal::pso::Specialization::default(),
-            },
-            fragment: Some(gfx_hal::pso::EntryPoint {
-                entry: "main",
-                module: &storage[1],
-                specialization: gfx_hal::pso::Specialization::default(),
-            }),
-            hull: None,
-            domain: None,
-            geometry: None,
-        }
+    fn load_shader_set<'a>(&self, factory: &mut Factory, _world: &World) -> ShaderSet {
+        SHADERS.build(factory).unwrap()
     }
 
     fn build<'a>(
@@ -163,7 +135,7 @@ impl SimpleGraphicsPipeline<Backend, World> for TriangleRenderPipeline {
             let mut vbuf = factory
                 .create_buffer(
                     BufferInfo {
-                        size: PosColor::VERTEX.stride as u64 * 3,
+                        size: PosColor::vertex().stride as u64 * 3,
                         usage: gfx_hal::buffer::Usage::VERTEX,
                     },
                     MemoryUsageValue::Dynamic,
