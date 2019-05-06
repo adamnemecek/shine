@@ -26,9 +26,9 @@ nalgebra = "0.18"
 nalgebra-glm = "0.4"
 
 gfx-hal = "0.1"
-winit = "0.19"
+winit = "0.18"
 gilrs = "0.7"
-rendy = {git = "https://github.com/omni-viral/rendy.git"}
+rendy = {git = "https://github.com/amethyst/rendy.git"}
 
 parking_lot = "0.7"
 crossbeam = "0.7"

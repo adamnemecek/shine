@@ -15,7 +15,7 @@ pub type GraphContext = rendy::graph::GraphContext<Backend>;
 pub type DescriptorSet = rendy::resource::DescriptorSet<Backend>;
 pub type DescriptorSetLayout = rendy::resource::DescriptorSetLayout<Backend>;
 pub type PipelineLayout = <Backend as gfx_hal::Backend>::PipelineLayout;
-pub type ShaderModule = <Backend as gfx_hal::Backend>::ShaderModule;
+pub type ShaderSet = rendy::shader::ShaderSet<Backend>;
 
 pub type Mesh = rendy::mesh::Mesh<Backend>;
 pub type MeshBuilder<'a> = rendy::mesh::MeshBuilder<'a>;
